@@ -13,22 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import copy
-import logging
-import hashlib
+import ctypes
+from enum import IntEnum
+
 import cbor
 
-LOGGER = logging.getLogger(__name__)
+from sawtooth_validator import ffi
 
+
+# This is included for legacy reasons.
 INIT_ROOT_KEY = ''
-
-# prototype node with value and list of child branch:hash pairs
-NODE_PROTO = {
-    "v": None,
-    "c": {}
-}
-
-TOKEN_SIZE = 2
 
 
 def _decode(encoded):
@@ -39,45 +33,26 @@ def _encode(value):
     return cbor.dumps(value, sort_keys=True)
 
 
-def _hash(stuff):
-    return hashlib.sha512(stuff).hexdigest()[:64]
-
-
-def _encode_and_hash(value):
-    packed = _encode(value)
-    return _hash(packed), packed
-
-
-NODE_PROTO_PACKED = _encode(NODE_PROTO)
-
-NODE_PROTO_HASHED = _hash(NODE_PROTO_PACKED)
-
-
 class MerkleDatabase(object):
-    def __init__(self, database, merkle_root=INIT_ROOT_KEY):
-        self._database = database
-        self.set_merkle_root(merkle_root)
+    def __init__(self, database, merkle_root=None):
+        self._merkle_db_ptr = ctypes.c_void_p()
+
+        if merkle_root:
+            init_root = ctypes.c_char_p(merkle_root.encode())
+            _libexec('merkle_db_new_with_root', database.pointer,
+                     init_root, ctypes.byref(self._merkle_db_ptr))
+        else:
+            _libexec('merkle_db_new', database.pointer,
+                     ctypes.byref(self._merkle_db_ptr))
+
+    def __del__(self):
+        # check that it has not been deleted, nor is it null
+        if self._merkle_db_ptr:
+            _libexec('merkle_db_drop', self._merkle_db_ptr)
+            self._merkle_db_ptr = None
 
     def __iter__(self):
-        for item in self._yield_iter('', self._root_hash):
-            yield item
-
-    def _yield_iter(self, path, hash_key):
-        try:
-            node = self._get_by_addr(path)
-        except KeyError:
-            # pylint: disable=stop-iteration-return
-            raise StopIteration()
-
-        if path == INIT_ROOT_KEY:
-            node = self._get_by_hash(hash_key)
-
-        if node["v"] is not None:
-            yield (path, _decode(node["v"]))
-
-        for child in node["c"]:
-            for value in self._yield_iter(path + child, node["c"][child]):
-                yield value
+        return self.leaves()
 
     def __contains__(self, item):
         """Does the tree contain an address.
@@ -88,115 +63,64 @@ class MerkleDatabase(object):
         Returns:
             (bool): True if it does contain, False otherwise.
         """
-
         try:
-            self.get(item)
+            _libexec('merkle_db_contains', self._merkle_db_ptr,
+                     item.encode())
+            # No error implies found
+            return True
         except KeyError:
             return False
 
-        return True
-
     def get_merkle_root(self):
-        return self._root_hash
+        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
+        _libexec('merkle_db_get_merkle_root', self._merkle_db_ptr,
+                 ctypes.byref(c_merkle_root), ctypes.byref(c_merkle_root_len))
+
+        return ffi.from_c_bytes(
+            c_merkle_root, c_merkle_root_len).decode()
 
     def set_merkle_root(self, merkle_root):
-        if merkle_root == INIT_ROOT_KEY:
-            self._root_hash = self._set_kv()
-            self._root_node = self._get_by_hash(self._root_hash)
-        else:
-            self._root_node = self._get_by_hash(merkle_root)
-            self._root_hash = merkle_root
-
-    @classmethod
-    def hash(cls, stuff):
-        return hashlib.sha512(stuff).hexdigest()[:64]
-
-    def _get_by_hash(self, key_hash):
-        try:
-            return _decode(self._database.get(key_hash))
-        except ValueError:   # value returned from database was None
-            raise KeyError("hash {} not found in database".format(key_hash))
+        c_root = ctypes.c_char_p(merkle_root.encode())
+        _libexec('merkle_db_set_merkle_root', self._merkle_db_ptr, c_root)
 
     def __getitem__(self, address):
         return self.get(address)
 
     def get(self, address):
-        return _decode(self.get_node(address).get('v'))
+        c_address = ctypes.c_char_p(address.encode())
+        (c_data, c_data_len) = ffi.prepare_byte_result()
 
-    def get_node(self, address):
-        return self._get_by_addr(address)
+        _libexec('merkle_db_get', self._merkle_db_ptr, c_address,
+                 ctypes.byref(c_data), ctypes.byref(c_data_len))
+
+        return _decode(ffi.from_c_bytes(c_data, c_data_len))
 
     def __setitem__(self, address, value):
         return self.set(address, value)
 
     def set(self, address, value):
-        return self._set_by_addr(address, value)
+        c_address = ctypes.c_char_p(address.encode())
 
-    def _tokenize_address(self, address):
-        return (
-            address[i:i + TOKEN_SIZE]
-            for i in range(0, len(address), TOKEN_SIZE)
-        )
+        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
 
-    def _get_by_addr(self, address):
-        tokens = self._tokenize_address(address)
+        data = _encode(value)
+        _libexec('merkle_db_set', self._merkle_db_ptr, c_address,
+                 data, len(data),
+                 ctypes.byref(c_merkle_root),
+                 ctypes.byref(c_merkle_root_len))
 
-        node = self._root_node
-
-        for token in tokens:
-            try:
-                node = self._get_by_hash(node['c'][token])
-            except KeyError:
-                raise KeyError(
-                    "invalid address {} from root {}".format(
-                        address, self._root_hash))
-        return node
-
-    def _get_path_by_addr(self, address):
-        tokens = self._tokenize_address(address)
-        node = copy.deepcopy(self._root_node)
-        path = ''
-        nodes = {path: node}
-
-        new_branch = False
-
-        for token in tokens:
-            path += token
-            node_token = node['c'].get(token)
-
-            if node_token is not None and not new_branch:
-                node = self._get_by_hash(node_token)
-                nodes[path] = node
-            else:
-                nodes[path] = {"v": None, "c": {}}
-                new_branch = True
-
-        return nodes
+        return ffi.from_c_bytes(
+            c_merkle_root, c_merkle_root_len).decode()
 
     def delete(self, address):
-        path_map = self._get_path_by_addr(address)
+        c_address = ctypes.c_char_p(address.encode())
+        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
+        _libexec('merkle_db_delete', self._merkle_db_ptr, c_address,
+                 ctypes.byref(c_merkle_root),
+                 ctypes.byref(c_merkle_root_len))
 
-        batch = []
-        leaf_branch = True
-        for path in sorted(path_map, key=len, reverse=True):
-            parent_address = path[:-TOKEN_SIZE]
-            path_branch = path[-TOKEN_SIZE:]
-
-            if path_map[path]['c'] or path == '':
-                leaf_branch = False
-
-            if not leaf_branch:
-                (hash_key, packed) = _encode_and_hash(path_map[path])
-                batch.append((hash_key, packed))
-                if path != '':
-                    path_map[parent_address]['c'][path_branch] = hash_key
-            else:
-                if path != '':
-                    del path_map[parent_address]['c'][path_branch]
-
-        self._database.put_multi(batch)
-
-        return hash_key
+        return ffi.from_c_bytes(
+            c_merkle_root, c_merkle_root_len).decode()
 
     def update(self, set_items, delete_items=None, virtual=True):
         """
@@ -204,101 +128,32 @@ class MerkleDatabase(object):
         Args:
             set_items (dict): dict key, values where keys are addresses
             delete_items (list): list of addresses
-            virtual (boolean): True if not committing to disk
-                               eg speculative root hash
+            virtual (boolean): True if not committing to disk. I.e.,
+                speculative root hash
         Returns:
             the state root after the operations
         """
-        path_map = {}
-        update_batch = []
-        key_hash = None
+        c_set_items = (ctypes.POINTER(_Entry) * len(set_items))()
+        for (i, (key, value)) in enumerate(set_items.items()):
+            c_set_items[i] = ctypes.pointer(_Entry.new(key, _encode(value)))
 
-        for set_address in set_items:
-            # the set items are added to the Path map second,
-            # since they may add children to paths
-            path_map.update(self._get_path_by_addr(set_address))
-            path_map[set_address]["v"] = _encode(set_items[set_address])
+        if delete_items is None:
+            delete_items = []
 
-        if delete_items is not None:
-            for del_address in delete_items:
-                path_map.update(self._get_path_by_addr(del_address))
+        c_delete_items = (ctypes.c_char_p * len(delete_items))()
+        for (i, address) in enumerate(delete_items):
+            c_delete_items[i] = ctypes.c_char_p(address.encode())
 
-            for del_address in delete_items:
-                del path_map[del_address]
+        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
+        _libexec('merkle_db_update', self._merkle_db_ptr,
+                 c_set_items, ctypes.c_size_t(len(set_items)),
+                 c_delete_items, ctypes.c_size_t(len(delete_items)),
+                 virtual,
+                 ctypes.byref(c_merkle_root),
+                 ctypes.byref(c_merkle_root_len))
 
-                path_branch = del_address[-TOKEN_SIZE:]
-                parent_address = del_address[:-TOKEN_SIZE]
-                while parent_address:
-                    pa_map = path_map[parent_address]
-                    del pa_map["c"][path_branch]
-                    if not pa_map["c"]:
-                        # empty node delete it.
-                        del path_map[parent_address]
-                    else:
-                        # found a node that is not empty no need to continue
-                        break
-                    path_branch = parent_address[-TOKEN_SIZE:]
-                    parent_address = parent_address[:-TOKEN_SIZE]
-
-                    if not parent_address:
-                        if not pa_map['c']:
-                            del path_map['']['c'][path_branch]
-
-        # Rebuild the hashes to the new root
-        for path in sorted(path_map, key=len, reverse=True):
-            (key_hash, packed) = _encode_and_hash(path_map[path])
-            update_batch.append((key_hash, packed))
-            if path != '':
-                parent_address = path[:-TOKEN_SIZE]
-                path_branch = path[-TOKEN_SIZE:]
-                path_map[parent_address]['c'][path_branch] = key_hash
-
-        if not virtual:
-            # Apply all new hash, value pairs to the database
-            self._database.put_multi(update_batch)
-        return key_hash
-
-    def _set_by_addr(self, address, value):
-        tokens = list(self._tokenize_address(address))
-
-        path_addresses = [
-            ''.join(tokens[0:i])
-            for i in range(len(tokens), 0, -1)
-        ]
-
-        path_map = self._get_path_by_addr(address)
-
-        # Set the value in the leaf node
-        path_map[path_addresses[0]]["v"] = _encode(value)
-
-        child = path_map[path_addresses[0]]
-
-        batch = []
-        for path_address in path_addresses:
-            (key_hash, packed) = _encode_and_hash(child)
-            parent_address = path_address[:-TOKEN_SIZE]
-            path_branch = path_address[-TOKEN_SIZE:]
-            path_map[parent_address]["c"][path_branch] = key_hash
-            batch.append((key_hash, packed))
-            child = path_map[parent_address]
-
-        # Update the child of the root node to the prior hash
-        root_node = copy.deepcopy(self._root_node)
-        root_node["c"][tokens[0]] = key_hash
-        (root_hash, packed) = _encode_and_hash(root_node)
-
-        batch.append((root_hash, packed))
-
-        self._database.put_multi(batch)
-
-        return root_hash
-
-    def _set_kv(self):
-        self._database.set(
-            NODE_PROTO_HASHED,
-            NODE_PROTO_PACKED)
-
-        return NODE_PROTO_HASHED
+        return ffi.from_c_bytes(
+            c_merkle_root, c_merkle_root_len).decode()
 
     def addresses(self):
         addresses = []
@@ -307,11 +162,105 @@ class MerkleDatabase(object):
 
         return addresses
 
-    def leaves(self, prefix):
-        leaves = {}
-        for address, value in self._yield_iter(prefix, self._root_hash):
-            leaves[address] = value
-        return leaves
+    def leaves(self, prefix=None):
+        """Returns an iterator which returns tuples of (address, data) values
+        """
+        try:
+            return _LeafIterator(self._merkle_db_ptr, prefix)
+        except KeyError:
+            # The prefix doesn't exist
+            return iter([])
 
     def close(self):
-        self._database.close()
+        pass
+
+
+def _libexec(name, *args):
+    res = ffi.LIBRARY.call(name, *args)
+    if res == ErrorCode.Success:
+        return
+    elif res == ErrorCode.NullPointerProvided:
+        raise TypeError("Provided null pointer(s)")
+    elif res == ErrorCode.NotFound:
+        raise KeyError("Value was not found")
+    elif res == ErrorCode.DatabaseError:
+        raise ValueError("A Database Error occurred")
+    elif res == ErrorCode.InvalidHashString:
+        raise KeyError(
+            "merkle root was not a valid hash")
+    elif res == ErrorCode.InvalidAddress:
+        raise KeyError(
+            "Address was not valid ")
+    elif res == ErrorCode.StopIteration:
+        raise StopIteration()
+    elif res == ErrorCode.Unknown:
+        raise ValueError("An unknown error occurred")
+    else:
+        raise ValueError("An unknown error occurred: {}".format(res))
+
+
+class _LeafIterator:
+    def __init__(self, merkle_db_ptr, prefix=None):
+        if prefix is None:
+            prefix = ''
+
+        c_prefix = ctypes.c_char_p(prefix.encode())
+
+        self._c_iter_ptr = ctypes.c_void_p()
+
+        _libexec('merkle_db_leaf_iterator_new',
+                 merkle_db_ptr, c_prefix, ctypes.byref(self._c_iter_ptr))
+
+    def __del__(self):
+        if self._c_iter_ptr:
+            _libexec('merkle_db_leaf_iterator_drop', self._c_iter_ptr)
+            self._c_iter_ptr = None
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._c_iter_ptr:
+            raise StopIteration()
+
+        (c_address, c_address_len) = ffi.prepare_byte_result()
+        (c_value, c_value_len) = ffi.prepare_byte_result()
+
+        _libexec('merkle_db_leaf_iterator_next', self._c_iter_ptr,
+                 ctypes.byref(c_address),
+                 ctypes.byref(c_address_len),
+                 ctypes.byref(c_value),
+                 ctypes.byref(c_value_len))
+
+        address = ffi.from_c_bytes(c_address, c_address_len).decode()
+        value = _decode(ffi.from_c_bytes(c_value, c_value_len))
+
+        return (address, value)
+
+
+class _Entry(ctypes.Structure):
+    _fields_ = [('address', ctypes.c_char_p),
+                ('data', ctypes.c_char_p),
+                ('data_len', ctypes.c_size_t)]
+
+    @staticmethod
+    def new(address, data):
+        return _Entry(
+            ctypes.c_char_p(address.encode()),
+            data,
+            len(data)
+        )
+
+
+class ErrorCode(IntEnum):
+    Success = 0
+    # Input errors
+    NullPointerProvided = 1
+    InvalidHashString = 2
+    InvalidAddress = 3
+
+    # output errors
+    DatabaseError = 0x11
+    NotFound = 0x12
+    StopIteration = 0x13
+    Unknown = 0xFF
