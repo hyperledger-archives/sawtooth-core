@@ -46,6 +46,7 @@
 /cli/**/__pycache__/
 
 /families/**/__pycache__/
+/families/settings/build/
 /families/settings/sawtooth_settings/protobuf/
 /families/smallbank/smallbank_go/src/protobuf/
 /families/smallbank/smallbank_go/bin/
@@ -77,9 +78,11 @@
 /sdk/javascript/node_modules
 /sdk/javascript/package-lock.json
 /sdk/javascript/protobuf/protobuf_bundle.json
+/sdk/examples/xo_python/build/
 /sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
 /sdk/examples/xo_javascript/package-lock.json
+/sdk/examples/intkey_python/build/
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_javascript/package-lock.json
