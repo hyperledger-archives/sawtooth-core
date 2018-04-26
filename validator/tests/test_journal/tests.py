@@ -591,6 +591,21 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
 
+    def test_block_unknown_predecessor(self):
+        """"
+        Test the case where a new block has an unknown predecessor
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_cache': True})
+
+        # Mark the head as invalid
+        chain[3].status = BlockStatus.Unknown
+
+        self.validate_block(head)
+
+        self.assert_unknown_block(head)
+        self.assert_new_block_not_committed()
+
     def test_block_bad_consensus(self):
         """
         Test the case where the new block has a bad batch
@@ -885,6 +900,18 @@ class TestChainController(unittest.TestCase):
 
         # make sure initial head is still chain head
         self.assert_is_chain_head(self.init_head)
+
+    def test_blocks_out_of_order(self):
+        '''Tests that receiving blocks out of order works, even though the
+        completer should guarantee this never happens
+        '''
+        chain, head = self.generate_chain(self.init_head, 5)
+
+        for i in (2, 1, 0, 3, 4):
+            self.receive_and_process_blocks(chain[i])
+
+        # make sure initial head is still chain head
+        self.assert_is_chain_head(head)
 
     def test_bad_blocks(self):
         '''Tests bad blocks extending current chain
