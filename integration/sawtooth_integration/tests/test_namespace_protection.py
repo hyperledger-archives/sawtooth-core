@@ -103,18 +103,21 @@ def send_xo_cmd(cmd_str):
         check=True)
 
 
-class TestNamespacePermission(unittest.TestCase):
+class TestNamespaceProtection(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         wait_for_rest_apis(['rest-api:8008'])
 
-    def test_namespace_permission(self):
-        """Tests that namespace permission stored onchain control which
-        transaction family is allowed to be executed by:
-        - allowing block_info transactions
-        - disallowing intkey transactions
-        - allowing xo transactions
+    def test_namespace_protection(self):
+        """
+        Tests that namespaces stored on-chain are enforced by the
+        validators. According to the sawtooth_settings declared in the docker
+        compose file, the transaciton families are expected to behave
+        as follows:
+        - block_info transactions are allowed
+        - intkey transactions are banned
+        - xo transactions are allowed
         """
         batches = make_batches('abcdef')
 
