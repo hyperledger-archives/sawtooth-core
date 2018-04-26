@@ -120,6 +120,7 @@
 /validator/target/
 /validator/Cargo.lock
 /validator/bin/
+/validator/lib/
 
 /sdk/cxx/build/
 

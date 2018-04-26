@@ -17,6 +17,7 @@
 
 CORE=$(cd $(dirname $(dirname $0)) && pwd)
 export PYTHONPATH=$PYTHONPATH:$CORE/validator:$CORE/signing
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CORE/validator/lib
 
 bin=$CORE/validator/bin/sawtooth-validator
 

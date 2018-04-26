@@ -16,6 +16,7 @@
 # ------------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+target_dir=./target/release
 
 unset PYTHONPATH
 
@@ -38,8 +39,12 @@ done
 echo -e "\033[0;32m--- Building validator ---\n\033[0m"
 rm -rf $top_dir/validator/bin/
 mkdir -p $top_dir/validator/bin/
+rm -rf $top_dir/validator/lib/
+mkdir -p $top_dir/validator/lib/
 cd $top_dir/validator
-cargo build && cp ./target/debug/sawtooth-validator $top_dir/validator/bin/sawtooth-validator
+cargo build --release && \
+    cp $target_dir/sawtooth-validator $top_dir/validator/bin/sawtooth-validator && \
+    cp $target_dir/libsawtooth_validator.so $top_dir/validator/lib/libsawtooth_validator.so
 
 for pkg in $pkgs
 do
