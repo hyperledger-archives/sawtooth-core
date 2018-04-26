@@ -17,12 +17,15 @@ import logging
 import hashlib
 import unittest
 import os
+import shutil
+import tempfile
 import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
 from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -178,10 +181,21 @@ def create_block(batch, block_num, previous_block_id, state_root_hash, signer):
 
 
 class TestStateVerifier(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
+    def setUp(self):
+        self._temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
+
     def test_state_verifier(self):
         blockstore = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
-        global_state_db = DictDatabase()
+        global_state_db = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_state_verifier.lmdb'))
 
         precalculated_state_roots = [
             "e35490eac6f77453675c3399da7efe451e791272bbc8cf1b032c75030fb455c3",

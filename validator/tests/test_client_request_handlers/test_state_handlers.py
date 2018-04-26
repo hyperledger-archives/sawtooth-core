@@ -13,6 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import shutil
+import tempfile
+
 import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_state_pb2
 from test_client_request_handlers.base_case import ClientHandlerTestCase
@@ -27,13 +30,17 @@ class TestStateListRequests(ClientHandlerTestCase):
         return [l for l in entries if l.address == address][0].data
 
     def setUp(self):
-        db, store, roots = make_db_and_store()
+        self._temp_dir = tempfile.mkdtemp()
+        db, store, roots = make_db_and_store(self._temp_dir)
         self.initialize(
             handlers.StateListRequest(db, store),
             client_state_pb2.ClientStateListRequest,
             client_state_pb2.ClientStateListResponse,
             store=store,
             roots=roots)
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
 
     def test_state_list_request(self):
         """Verifies requests for data lists without parameters work properly.
@@ -426,13 +433,17 @@ class TestStateListRequests(ClientHandlerTestCase):
 
 class TestStateGetRequests(ClientHandlerTestCase):
     def setUp(self):
-        db, store, roots = make_db_and_store()
+        self._temp_dir = tempfile.mkdtemp()
+        db, store, roots = make_db_and_store(self._temp_dir)
         self.initialize(
             handlers.StateGetRequest(db, store),
             client_state_pb2.ClientStateGetRequest,
             client_state_pb2.ClientStateGetResponse,
             store=store,
             roots=roots)
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
 
     def test_state_get_request(self):
         """Verifies requests for specific data by address work properly.

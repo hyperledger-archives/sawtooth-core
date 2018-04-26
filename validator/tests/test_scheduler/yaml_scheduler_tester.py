@@ -20,6 +20,7 @@ from collections import deque
 import hashlib
 import itertools
 import logging
+import os
 import time
 import uuid
 import yaml
@@ -27,8 +28,8 @@ import yaml
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
@@ -369,7 +370,7 @@ class SchedulerTester(object):
 
         return batch_results, transactions_to_assert_state
 
-    def compute_state_hashes_wo_scheduler(self):
+    def compute_state_hashes_wo_scheduler(self, base_dir):
         """Creates a state hash from the state updates from each txn in a
         valid batch.
 
@@ -378,7 +379,11 @@ class SchedulerTester(object):
 
         """
 
-        tree = MerkleDatabase(database=DictDatabase())
+        database = NativeLmdbDatabase(
+            os.path.join(base_dir, 'compute_state_hashes_wo_scheduler.lmdb'),
+            _size=10 * 1024 * 1024)
+
+        tree = MerkleDatabase(database=database)
         state_hashes = []
         updates = {}
         for batch in self._batches:

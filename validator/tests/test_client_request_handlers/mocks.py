@@ -16,6 +16,7 @@
 # pylint: disable=attribute-defined-outside-init,abstract-method
 
 import logging
+import os
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -25,6 +26,7 @@ from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
@@ -117,7 +119,7 @@ class MockBlockStore(BlockStore):
         self.update_chain([BlockWrapper(block)], [])
 
 
-def make_db_and_store(size=3):
+def make_db_and_store(base_dir, size=3):
     """
     Creates and returns three related objects for testing:
         * database - dict database with evolving state
@@ -130,7 +132,9 @@ def make_db_and_store(size=3):
         * 3 - {'000...1': b'4', '000...2': b'6',
                '000...3': b'8', '000...4': b'10'}
     """
-    database = DictDatabase()
+    database = NativeLmdbDatabase(
+        os.path.join(base_dir, 'client_handlers_mock_db.lmdb'),
+        _size=10 * 1024 * 1024)
     store = MockBlockStore(size=0)
     roots = []
 
