@@ -33,6 +33,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.block_validator import BlockValidationFailure
+from sawtooth_validator.journal.block_validator import BlockValidationError
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
@@ -556,172 +557,162 @@ class TestBlockValidator(unittest.TestCase):
 
         self.block_tree_manager = BlockTreeManager()
         self.root = self.block_tree_manager.chain_head
+        self.root.status = BlockStatus.Valid
 
-        self.block_validation_handler = self.BlockValidationHandler()
         self.permission_verifier = MockPermissionVerifier()
+
+        self.block_validator = BlockValidator(
+            state_view_factory=self.state_view_factory,
+            block_cache=self.block_tree_manager.block_cache,
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=None),
+            squash_handler=None,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
+        self.block_validator._load_consensus = lambda block: mock_consensus
 
     def test_block_missing_predecessor(self):
         """"
         Test the case where a new block is missing a predecessor
         """
-        # generate candidate chain 5 long off the current head.
         chain, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_cache': True})
+            self.root, 2, {'add_to_cache': True})
 
         # remove one of the new blocks
-        del self.block_tree_manager.block_cache[chain[3].identifier]
+        del self.block_tree_manager.block_cache[chain[0].identifier]
 
-        self.validate_block(head)
-
+        with self.assertRaises(BlockValidationError):
+            self.validate_blocks(head)
         self.assert_unknown_block(head)
-        self.assert_new_block_not_committed()
 
     def test_block_invalid_predecessor(self):
         """"
         Test the case where a new block has an invalid predecessor
         """
         chain, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_cache': True})
+            self.root, 2, {'add_to_cache': True})
 
-        # Mark the head as invalid
-        chain[3].status = BlockStatus.Invalid
+        chain[0].status = BlockStatus.Invalid
 
-        self.validate_block(head)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(head)
         self.assert_invalid_block(head)
-        self.assert_new_block_not_committed()
 
     def test_block_unknown_predecessor(self):
         """"
         Test the case where a new block has an unknown predecessor
         """
         chain, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_cache': True})
+            self.root, 2, {'add_to_cache': True})
 
-        # Mark the head as invalid
-        chain[3].status = BlockStatus.Unknown
+        chain[0].status = BlockStatus.Unknown
 
-        self.validate_block(head)
-
+        with self.assertRaises(BlockValidationError):
+            self.validate_blocks(head)
         self.assert_unknown_block(head)
-        self.assert_new_block_not_committed()
 
     def test_block_bad_consensus(self):
         """
         Test the case where the new block has a bad batch
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_consensus=True)
 
-        self.validate_block(new_block)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_bad_batch(self):
         """
         Test the case where the new block has a bad batch
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True)
 
-        self.validate_block(new_block)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_missing_batch_dependency(self):
         """
         Test the case where the new block has a batch that is missing a
         dependency.
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         txn = self.block_tree_manager.generate_transaction(deps=["missing"])
         batch = self.block_tree_manager.generate_batch(txns=[txn])
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
 
-        self.validate_block(new_block)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_batch(self):
         """
         Test the case where the new block has a batch that already committed to
         the chain.
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         batch = self.block_tree_manager.generate_batch()
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
-        self.validate_block(new_block)
+
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
+        self.assert_invalid_block(new_block)
 
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
-        self.validate_block(new_block)
 
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_batch_in_block(self):
         """
         Test the case where the new block has a duplicate batches.
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         batch = self.block_tree_manager.generate_batch()
 
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch, batch])
-        self.validate_block(new_block)
 
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_transaction(self):
         """
         Test the case where the new block has a transaction that is already
         committed.
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn])
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
-        self.validate_block(new_block)
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
+        self.assert_invalid_block(new_block)
 
         txn2 = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn, txn2])
@@ -730,30 +721,25 @@ class TestBlockValidator(unittest.TestCase):
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
-        self.validate_block(new_block)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_transaction_in_batch(self):
         """
         Test the case where the new block has a batch that contains duplicate
         transactions.
         """
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True}, False)
-
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
         new_block = self.block_tree_manager.generate_block(
-            previous_block=head,
+            previous_block=self.root,
             add_to_cache=True,
             invalid_batch=True,
             batches=[batch])
-        self.validate_block(new_block)
-
+        with self.assertRaises(BlockValidationFailure):
+            self.validate_blocks(new_block)
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     # assertions
 
@@ -772,54 +758,11 @@ class TestBlockValidator(unittest.TestCase):
             block.status, BlockStatus.Unknown,
             "Block should be unknown")
 
-    def assert_new_block_committed(self):
-        self.assert_handler_has_result()
-        self.assertTrue(
-            self.block_validation_handler.commit_new_block,
-            "New block not committed, should be")
-
-    def assert_new_block_not_committed(self):
-        self.assert_handler_has_result()
-        self.assertFalse(
-            self.block_validation_handler.commit_new_block,
-            "New block committed, shouldn't be")
-
-    def assert_handler_has_result(self):
-        msg = "Validation handler doesn't have result"
-        self.assertTrue(self.block_validation_handler.has_result(), msg)
-
     # block validation
 
-    def validate_block(self, block):
-        validator = self.create_block_validator()
-        validator._load_consensus = lambda block: mock_consensus
-        validator.process_block_verification(
-            block,
-            self.block_validation_handler.on_block_validated)
-
-    def create_block_validator(self):
-        return BlockValidator(
-            state_view_factory=self.state_view_factory,
-            block_cache=self.block_tree_manager.block_cache,
-            transaction_executor=MockTransactionExecutor(
-                batch_execution_result=None),
-            squash_handler=None,
-            identity_signer=self.block_tree_manager.identity_signer,
-            data_dir=None,
-            config_dir=None,
-            permission_verifier=self.permission_verifier)
-
-    class BlockValidationHandler(object):
-        def __init__(self):
-            self.commit_new_block = None
-            self.result = None
-
-        def on_block_validated(self, block):
-            self.commit_new_block = (block.status == BlockStatus.Valid)
-            self.result = block
-
-        def has_result(self):
-            return not (self.result is None or self.commit_new_block is None)
+    def validate_blocks(self, *blocks):
+        for block in blocks:
+            self.block_validator.validate_block(block)
 
     # block tree manager interface
 
@@ -876,11 +819,12 @@ class TestChainController(unittest.TestCase):
             chain_observers=[])
 
         init_root = self.chain_ctrl.chain_head
+        init_root.status = BlockStatus.Valid
         self.assert_is_chain_head(init_root)
 
         # create a chain of length 5 extending the root
-        _, head = self.generate_chain(init_root, 5)
-        self.receive_and_process_blocks(head)
+        chain, head = self.generate_chain(init_root, 5)
+        self.receive_and_process_blocks(*chain)
         self.assert_is_chain_head(head)
 
         self.init_head = head
@@ -967,14 +911,14 @@ class TestChainController(unittest.TestCase):
     def test_fork_lengths(self):
         '''Tests competing forks of different lengths
         '''
-        _, head_2 = self.generate_chain(self.init_head, 2)
-        _, head_7 = self.generate_chain(self.init_head, 7)
-        _, head_5 = self.generate_chain(self.init_head, 5)
+        chain_2, _ = self.generate_chain(self.init_head, 2)
+        chain_7, head_7 = self.generate_chain(self.init_head, 7)
+        chain_5, _ = self.generate_chain(self.init_head, 5)
 
         self.receive_and_process_blocks(
-            head_2,
-            head_7,
-            head_5)
+            *chain_2,
+            *chain_7,
+            *chain_5)
 
         self.assert_is_chain_head(head_7)
 
@@ -982,51 +926,38 @@ class TestChainController(unittest.TestCase):
         '''Tests the chain being advanced between a fork's
         creation and validation
         '''
-        _, fork_5 = self.generate_chain(self.init_head, 5)
-        _, fork_3 = self.generate_chain(self.init_head, 3)
+        fork_5, head_5 = self.generate_chain(self.init_head, 5)
+        fork_3, head_3 = self.generate_chain(self.init_head, 3)
 
-        self.receive_and_process_blocks(fork_3)
-        self.assert_is_chain_head(fork_3)
+        self.receive_and_process_blocks(*fork_3)
+        self.assert_is_chain_head(head_3)
 
         # fork_5 is longer than fork_3, so it should be accepted
-        self.receive_and_process_blocks(fork_5)
-        self.assert_is_chain_head(fork_5)
+        self.receive_and_process_blocks(*fork_5)
+        self.assert_is_chain_head(head_5)
 
     def test_fork_missing_block(self):
         '''Tests a fork with a missing block
         '''
         # make new chain
-        new_chain, new_head = self.generate_chain(self.init_head, 5)
-
-        self.chain_ctrl.on_block_received(new_head)
-
-        # delete a block from the new chain
-        del self.chain_ctrl._block_cache[new_chain[3].identifier]
-
-        self.executor.process_all()
+        new_chain, _ = self.generate_chain(self.init_head, 5)
+        self.receive_and_process_blocks(*new_chain[:3], *new_chain[4:])
 
         # chain shouldn't advance
-        self.assert_is_chain_head(self.init_head)
-
-        # try again, chain still shouldn't advance
-        self.receive_and_process_blocks(new_head)
-
-        self.assert_is_chain_head(self.init_head)
+        self.assert_is_chain_head(new_chain[2])
 
     def test_fork_bad_block(self):
         '''Tests a fork with a bad block in the middle
         '''
         # make two chains extending chain
-        _, good_head = self.generate_chain(self.init_head, 5)
-        bad_chain, bad_head = self.generate_chain(self.init_head, 5)
-
-        self.chain_ctrl.on_block_received(bad_head)
-        self.chain_ctrl.on_block_received(good_head)
+        good_chain, good_head = self.generate_chain(self.init_head, 5)
+        bad_chain, _ = self.generate_chain(self.init_head, 5)
 
         # invalidate block in the middle of bad_chain
         bad_chain[3].status = BlockStatus.Invalid
 
-        self.executor.process_all()
+        self.receive_and_process_blocks(*bad_chain)
+        self.receive_and_process_blocks(*good_chain)
 
         # good_chain should be accepted
         self.assert_is_chain_head(good_head)
@@ -1034,18 +965,19 @@ class TestChainController(unittest.TestCase):
     def test_advancing_fork(self):
         '''Tests a fork advancing before getting validated
         '''
-        _, fork_head = self.generate_chain(self.init_head, 5)
+        fork_chain, fork_head = self.generate_chain(self.init_head, 5)
 
-        self.chain_ctrl.on_block_received(fork_head)
+        for block in fork_chain:
+            self.chain_ctrl.on_block_received(block)
 
         # advance fork before it gets accepted
-        _, ext_head = self.generate_chain(fork_head, 3)
+        ext_fork_chain, ext_head = self.generate_chain(fork_head, 3)
 
         self.executor.process_all()
 
         self.assert_is_chain_head(fork_head)
 
-        self.receive_and_process_blocks(ext_head)
+        self.receive_and_process_blocks(*ext_fork_chain)
 
         self.assert_is_chain_head(ext_head)
 
@@ -1089,40 +1021,40 @@ class TestChainController(unittest.TestCase):
         '''
 
         # create forks of various lengths
-        _, a_0 = self.generate_chain(self.init_head, 3)
-        _, b_0 = self.generate_chain(self.init_head, 5)
-        _, c_0 = self.generate_chain(self.init_head, 7)
+        chain_a_0, a_0 = self.generate_chain(self.init_head, 3)
+        chain_b_0, b_0 = self.generate_chain(self.init_head, 5)
+        chain_c_0, c_0 = self.generate_chain(self.init_head, 7)
 
-        self.receive_and_process_blocks(a_0, b_0, c_0)
+        self.receive_and_process_blocks(*chain_a_0, *chain_b_0, *chain_c_0)
         self.assert_is_chain_head(c_0)
 
         # extend every fork by 2
-        _, a_1 = self.generate_chain(a_0, 2)
-        _, b_1 = self.generate_chain(b_0, 2)
-        _, c_1 = self.generate_chain(c_0, 2)
+        chain_a_1, a_1 = self.generate_chain(a_0, 2)
+        chain_b_1, b_1 = self.generate_chain(b_0, 2)
+        chain_c_1, c_1 = self.generate_chain(c_0, 2)
 
-        self.receive_and_process_blocks(a_1, b_1, c_1)
+        self.receive_and_process_blocks(*chain_a_1, *chain_b_1, *chain_c_1)
         self.assert_is_chain_head(c_1)
 
         # extend the forks by different lengths
-        _, a_2 = self.generate_chain(a_1, 1)
-        _, b_2 = self.generate_chain(b_1, 6)
-        _, c_2 = self.generate_chain(c_1, 3)
+        chain_a_2, a_2 = self.generate_chain(a_1, 1)
+        chain_b_2, b_2 = self.generate_chain(b_1, 6)
+        chain_c_2, c_2 = self.generate_chain(c_1, 3)
 
-        self.receive_and_process_blocks(a_2, b_2, c_2)
+        self.receive_and_process_blocks(*chain_a_2, *chain_b_2, *chain_c_2)
         self.assert_is_chain_head(b_2)
 
         # extend every fork by 2
-        _, a_3 = self.generate_chain(a_2, 8)
-        _, b_3 = self.generate_chain(b_2, 8)
-        _, c_3 = self.generate_chain(c_2, 8)
+        chain_a_3, _ = self.generate_chain(a_2, 8)
+        chain_b_3, b_3 = self.generate_chain(b_2, 8)
+        chain_c_3, _ = self.generate_chain(c_2, 8)
 
-        self.receive_and_process_blocks(a_3, b_3, c_3)
+        self.receive_and_process_blocks(*chain_a_3, *chain_b_3, *chain_c_3)
         self.assert_is_chain_head(b_3)
 
         # create a new longest chain
-        _, wow = self.generate_chain(self.init_head, 30)
-        self.receive_and_process_blocks(wow)
+        wow_chain, wow = self.generate_chain(self.init_head, 30)
+        self.receive_and_process_blocks(*wow_chain)
         self.assert_is_chain_head(wow)
 
     # next multi threaded
@@ -1148,7 +1080,7 @@ class TestChainController(unittest.TestCase):
         but occasionally the chain itself is used.
         '''
         if params is None:
-            params = {'add_to_cache': True}
+            params = {'add_to_cache': False}
 
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
@@ -1328,6 +1260,7 @@ class TestJournal(unittest.TestCase):
                 data_dir=None,
                 config_dir=None,
                 chain_observers=[])
+            chain_controller.chain_head.status = BlockStatus.Valid
 
             self.gossip.on_batch_received = block_publisher.queue_batch
             self.gossip.on_block_received = chain_controller.queue_block
