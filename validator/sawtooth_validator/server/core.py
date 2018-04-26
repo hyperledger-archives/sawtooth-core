@@ -25,6 +25,7 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
@@ -111,7 +112,7 @@ class Validator(object):
             data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug(
             'global state database file is %s', global_state_db_filename)
-        global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
+        global_state_db = NativeLmdbDatabase(global_state_db_filename)
         state_view_factory = StateViewFactory(global_state_db)
 
         # -- Setup Receipt Store -- #
