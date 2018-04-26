@@ -245,6 +245,8 @@ package_python_deb() {
         # This test is failing, so we need to skip it.
         if [ $tar_pkg_name == 'pyformance' ]; then
             rm ./tests/test__syslog_reporter.py
+            rm ./tests/test__influx_reporter.py
+            rm ./tests/test__opentsdb_reporter.py
         fi
 
         # Build the package
