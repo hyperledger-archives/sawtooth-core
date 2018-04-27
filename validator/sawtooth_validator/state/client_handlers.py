@@ -508,9 +508,9 @@ class _Sorter(object):
             """Applies sort control logic to fetch from two resources the
             values that should actually be compared.
             """
-            if (self._had_explicit_header or
-                    self._header_proto and
-                    not hasattr(resource_a, self._keys[0])):
+            if (self._had_explicit_header
+                    or self._header_proto
+                    and not hasattr(resource_a, self._keys[0])):
                 resource_a = self._get_header(resource_a)
                 resource_b = self._get_header(resource_b)
 

@@ -227,15 +227,15 @@ class _CandidateBlock(object):
         is already in the pending queue.
         :param batch: the batch to check
         """
-        return (self._block_store.has_batch(batch.header_signature) or
-                batch.header_signature in self._pending_batch_ids)
+        return (self._block_store.has_batch(batch.header_signature)
+                or batch.header_signature in self._pending_batch_ids)
 
     def _is_txn_already_committed(self, txn, committed_txn_cache):
         """ Test if a transaction is already committed to the chain or
         is already in the pending queue.
         """
-        return (self._block_store.has_batch(txn.header_signature) or
-                txn.header_signature in committed_txn_cache)
+        return (self._block_store.has_batch(txn.header_signature)
+                or txn.header_signature in committed_txn_cache)
 
     def _poll_injectors(self, poller, batch_list):
         for injector in self._batch_injectors:
@@ -377,7 +377,7 @@ class _CandidateBlock(object):
                                                       committed_txn_cache):
                     LOGGER.debug("Batch %s invalid, due to missing txn "
                                  "dependency.", batch.header_signature)
-                    LOGGER.debug("Abandoning block %s:" +
+                    LOGGER.debug("Abandoning block %s:"
                                  "root state hash has invalid txn applied",
                                  builder)
                     # Update the pending batch list to be all the
@@ -747,10 +747,11 @@ class BlockPublisher(object):
                         and self._pending_batches):
                     self._build_candidate_block(self._chain_head)
 
-                if self._candidate_block and (
-                    force or
-                    self._candidate_block.has_pending_batches()) and \
-                        self._candidate_block.check_publish_block():
+                if (self._candidate_block
+                        and (
+                            force
+                            or self._candidate_block.has_pending_batches())
+                        and self._candidate_block.check_publish_block()):
 
                     pending_batches = []  # will receive the list of batches
                     # that were not added to the block

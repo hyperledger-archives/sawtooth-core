@@ -131,8 +131,7 @@ class TestDynamicNetwork(unittest.TestCase):
                     # If the process doesn't shut down cleanly, kill it
                     proc.kill()
 
-
-# utilities
+    # utilities
 
     def send_txns_all_at_once(self, batches, time_between_batches):
         for client in self.clients.values():

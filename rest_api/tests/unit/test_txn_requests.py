@@ -245,7 +245,8 @@ class TransactionListTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_txn_list_with_head_and_ids(self):
-        """Verifies GET /transactions with head and id parameters work properly.
+        """Verifies GET /transactions with head and id parameters work
+        properly.
 
         It should send a Protobuf request with:
             - a head_id property of ID_B
@@ -538,7 +539,8 @@ class TransactionGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_txn_get_with_bad_id(self):
-        """Verifies a GET /transactions/{transaction_id} with unfound id breaks.
+        """Verifies a GET /transactions/{transaction_id} with unfound id
+        breaks.
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE

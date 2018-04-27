@@ -161,8 +161,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
-                                                           self.public_key])
+        self._identity_view_factory.add_policy(
+            "policy1", ["PERMIT_KEY " + self.public_key])
         self._identity_view_factory.add_role("transactor", "policy1")
         batch = self._create_batches(1, 1)[0]
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
@@ -181,8 +181,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
-                                                           self.public_key])
+        self._identity_view_factory.add_policy(
+            "policy1", ["PERMIT_KEY " + self.public_key])
         self._identity_view_factory.add_role("transactor.batch_signer",
                                              "policy1")
         batch = self._create_batches(1, 1)[0]
@@ -203,8 +203,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
-                                                           self.public_key])
+        self._identity_view_factory.add_policy(
+            "policy1", ["PERMIT_KEY " + self.public_key])
         self._identity_view_factory.add_role("transactor.transaction_signer",
                                              "policy1")
         batch = self._create_batches(1, 1)[0]
@@ -226,8 +226,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
-                                                           self.public_key])
+        self._identity_view_factory.add_policy(
+            "policy1", ["PERMIT_KEY " + self.public_key])
         self._identity_view_factory.add_role(
             "transactor.transaction_signer.intkey",
             "policy1")

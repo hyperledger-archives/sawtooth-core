@@ -59,8 +59,8 @@ class ConsensusFactory(object):
 
     @staticmethod
     def get_configured_consensus_module(block_id, state_view):
-        """Returns the consensus_module based on the consensus module set by the
-        "sawtooth_settings" transaction family.
+        """Returns the consensus_module based on the consensus module set by
+        the "sawtooth_settings" transaction family.
 
         Args:
             block_id (str): the block id associated with the current state_view

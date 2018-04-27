@@ -728,8 +728,8 @@ class ParallelScheduler(Scheduler):
         """
 
         for pred_id in chain:
-            if (prior_txn_id in self._txn_predecessors[pred_id] or
-                prior_txn_id in chain) and \
+            if (prior_txn_id in self._txn_predecessors[pred_id]
+                or prior_txn_id in chain) and \
                     self._txn_is_in_valid_batch(pred_id):
                 return False
         return True
