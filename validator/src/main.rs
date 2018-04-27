@@ -58,12 +58,21 @@ fn main() {
     py_cli_module
         .call(
             *py,
+            "configure_logging",
+            (&path_config, &init_errors, &verbosity),
+            None,
+        )
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    py_cli_module
+        .call(
+            *py,
             "main",
             (
                 &path_config,
                 &validator_config,
                 &identity_signer,
-                &verbosity,
                 &init_errors,
             ),
             None,

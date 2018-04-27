@@ -109,15 +109,15 @@ def get_validator_config(args, config_dir):
         sys.exit(1)
 
 
-def configure_logging(log_dir, init_errors, verbosity):
+def configure_logging(path_config, init_errors, verbosity):
     if init_errors:
-        log_configuration(log_dir=log_dir, name="validator")
+        log_configuration(log_dir=path_config.log_dir, name="validator")
         return
 
     log_config = get_log_config()
 
     if log_config is None:
-        log_configuration(log_dir=log_dir, name="validator")
+        log_configuration(log_dir=path_config.log_dir, name="validator")
         return
 
     log_configuration(log_config=log_config)
@@ -190,10 +190,7 @@ def get_identity_signer(path_config):
         return None
 
 
-def main(path_config, validator_config,
-         identity_signer, verbosity, init_errors):
-    configure_logging(path_config.log_dir, init_errors, verbosity)
-
+def main(path_config, validator_config, identity_signer, init_errors):
     log_version()
 
     log_path_config(path_config)
