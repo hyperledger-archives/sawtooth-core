@@ -109,32 +109,24 @@ def get_validator_config(args, config_dir):
         sys.exit(1)
 
 
-def main(path_config, validator_config, verbosity):
-    # Process initial initialization errors, delaying the sys.exit(1) until
-    # all errors have been reported to the user (via LOGGER.error()).  This
-    # is intended to provide enough information to the user so they can correct
-    # multiple errors before restarting the validator.
-    init_errors = False
-    try:
-        identity_signer = load_identity_signer(
-            key_dir=path_config.key_dir,
-            key_name='validator')
-    except LocalConfigurationError as e:
-        log_configuration(log_dir=path_config.log_dir,
-                          name="validator")
-        LOGGER.error(str(e))
-        init_errors = True
+def configure_logging(log_dir, init_errors, verbosity):
+    if init_errors:
+        log_configuration(log_dir=log_dir, name="validator")
+        return
 
     log_config = get_log_config()
-    if not init_errors:
-        if log_config is not None:
-            log_configuration(log_config=log_config)
-            if log_config.get('root') is not None:
-                init_console_logging(verbose_level=verbosity)
-        else:
-            log_configuration(log_dir=path_config.log_dir,
-                              name="validator")
 
+    if log_config is None:
+        log_configuration(log_dir=log_dir, name="validator")
+        return
+
+    log_configuration(log_config=log_config)
+
+    if log_config.get('root') is not None:
+        init_console_logging(verbose_level=verbosity)
+
+
+def log_version():
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
     except pkg_resources.DistributionNotFound:
@@ -142,6 +134,8 @@ def main(path_config, validator_config, verbosity):
     LOGGER.info(
         '%s (Hyperledger Sawtooth) version %s', DISTRIBUTION_NAME, version)
 
+
+def log_path_config(path_config):
     if LOGGER.isEnabledFor(logging.INFO):
         LOGGER.info(
             '; '.join([
@@ -150,6 +144,10 @@ def main(path_config, validator_config, verbosity):
             ])
         )
 
+
+def check_directories(path_config):
+    init_errors = False
+
     if not check_directory(path=path_config.data_dir,
                            human_readable_name='Data'):
         init_errors = True
@@ -157,24 +155,67 @@ def main(path_config, validator_config, verbosity):
                            human_readable_name='Log'):
         init_errors = True
 
-    endpoint = validator_config.endpoint
-    if endpoint is None:
-        # Need to use join here to get the string "0.0.0.0". Otherwise,
-        # bandit thinks we are binding to all interfaces and returns a
-        # Medium security risk.
-        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
-        interfaces += netifaces.interfaces()
-        endpoint = validator_config.bind_network
-        for interface in interfaces:
-            if interface in validator_config.bind_network:
-                LOGGER.error("Endpoint must be set when using %s", interface)
-                init_errors = True
-                break
+    return init_errors
 
+
+def exit_if_errors(init_errors):
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "
                      "ERROR messages), shutting down.")
         sys.exit(1)
+
+
+def check_interfaces(endpoint):
+    # Need to use join here to get the string "0.0.0.0". Otherwise,
+    # bandit thinks we are binding to all interfaces and returns a
+    # Medium security risk.
+    interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+    interfaces += netifaces.interfaces()
+
+    for interface in interfaces:
+        if interface in endpoint:
+            LOGGER.error("Endpoint must be set when using %s", interface)
+            return True
+
+    return False
+
+
+def get_identity_signer(path_config):
+    try:
+        return load_identity_signer(
+            key_dir=path_config.key_dir,
+            key_name='validator')
+    except LocalConfigurationError as e:
+        LOGGER.error(str(e))
+        return None
+
+
+def main(path_config, validator_config, verbosity):
+    # Process initial initialization errors, delaying the sys.exit(1) until
+    # all errors have been reported to the user (via LOGGER.error()).  This
+    # is intended to provide enough information to the user so they can correct
+    # multiple errors before restarting the validator.
+    init_errors = False
+
+    identity_signer = get_identity_signer(path_config)
+
+    init_errors = not bool(identity_signer)
+
+    configure_logging(path_config.log_dir, init_errors, verbosity)
+
+    log_version()
+
+    log_path_config(path_config)
+
+    init_errors = check_directories(path_config) or init_errors
+
+    endpoint = validator_config.endpoint
+    if endpoint is None:
+        endpoint = validator_config.bind_network
+        init_errors = check_interfaces(endpoint) or init_errors
+
+    exit_if_errors(init_errors)
+
     bind_network = validator_config.bind_network
     bind_component = validator_config.bind_component
 
