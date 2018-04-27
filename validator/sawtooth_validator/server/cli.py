@@ -295,11 +295,11 @@ def main(args=None):
         interfaces = ["*", ".".join(["0", "0", "0", "0"])]
         interfaces += netifaces.interfaces()
         endpoint = validator_config.bind_network
+        parsed_endpoint = urlparse(validator_config.bind_network)
         for interface in interfaces:
-            if interface in validator_config.bind_network:
+            if interface == parsed_endpoint.hostname:
                 LOGGER.error("Endpoint must be set when using %s", interface)
                 init_errors = True
-                break
 
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "

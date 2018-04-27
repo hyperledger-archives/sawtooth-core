@@ -52,11 +52,21 @@ from test_authorization_handlers.mock import MockGossip
 
 
 class TestAuthorizationHandlers(unittest.TestCase):
+    def test_bad_endpoint_host(self):
+        """
+        Test error when the endpoint host is the same as a network interface
+        name.
+        """
+        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+        endpoint = "tcp://*:80"
+        result = ConnectHandler.is_valid_endpoint_host(interfaces, endpoint)
+        self.assertEqual(result, False)
+
     def test_connect(self):
         """
         Test the ConnectHandler correctly responds to a ConnectionRequest.
         """
-        connect_message = ConnectionRequest(endpoint="endpoint")
+        connect_message = ConnectionRequest(endpoint="tcp://host:80")
         roles = {"network": AuthorizationType.TRUST}
         network = MockNetwork(roles)
         handler = ConnectHandler(network)
@@ -87,7 +97,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the ConnectHandler closes the connection if the role has an
         unsupported role type.
         """
-        connect_message = ConnectionRequest(endpoint="endpoint")
+        connect_message = ConnectionRequest(endpoint="tcp://host:80")
         roles = {"network": "other"}
         network = MockNetwork(roles)
         handler = ConnectHandler(network)
@@ -103,7 +113,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the ConnectHandler closes a connection if we are not accepting
         incoming connections
         """
-        connect_message = ConnectionRequest(endpoint="endpoint")
+        connect_message = ConnectionRequest(endpoint="tcp://host:80")
         roles = {"network": AuthorizationType.TRUST}
         network = MockNetwork(roles, allow_inbound=False)
         handler = ConnectHandler(network)
@@ -119,7 +129,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the ConnectHandler closes a connection if any authorization
         message has been recieved before this connection request.
         """
-        connect_message = ConnectionRequest(endpoint="endpoint")
+        connect_message = ConnectionRequest(endpoint="tcp://host:80")
         roles = {"network": AuthorizationType.TRUST}
         network = MockNetwork(roles,
                               connection_status={"connection_id": "other"})

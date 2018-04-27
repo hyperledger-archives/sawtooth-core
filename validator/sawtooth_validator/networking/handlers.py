@@ -15,6 +15,9 @@
 import logging
 import os
 import time
+
+from urllib.parse import urlparse
+
 import netifaces
 
 from sawtooth_signing import create_context
@@ -58,6 +61,22 @@ class ConnectHandler(Handler):
     def __init__(self, network):
         self._network = network
 
+    @staticmethod
+    def is_valid_endpoint_host(interfaces, endpoint):
+        """
+        An endpoint host name is valid if it is a URL and if the
+        host is not the name of a network interface.
+        """
+        result = urlparse(endpoint)
+        hostname = result.hostname
+        if hostname is None:
+            return False
+        else:
+            for interface in interfaces:
+                if interface == hostname:
+                    return False
+        return True
+
     def handle(self, connection_id, message_content):
         """
         A connection must use one of the supported authorization types
@@ -84,19 +103,17 @@ class ConnectHandler(Handler):
         # Medium security risk.
         interfaces = ["*", ".".join(["0", "0", "0", "0"])]
         interfaces += netifaces.interfaces()
-        for interface in interfaces:
-            if interface in message.endpoint:
-                LOGGER.debug("Endpoint cannot include '%s': %s",
-                             interface,
-                             message.endpoint)
-
-                connection_response = ConnectionResponse(
-                    status=ConnectionResponse.ERROR)
-                return HandlerResult(
-                    HandlerStatus.RETURN_AND_CLOSE,
-                    message_out=connection_response,
-                    message_type=validator_pb2.Message.
-                    AUTHORIZATION_CONNECTION_RESPONSE)
+        if self.is_valid_endpoint_host(interfaces, message.endpoint) is False:
+            LOGGER.warning("Connecting peer provided an invalid endpoint: %s; "
+                           "Ignoring connection request.",
+                           message.endpoint)
+            connection_response = ConnectionResponse(
+                status=ConnectionResponse.ERROR)
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=connection_response,
+                message_type=validator_pb2.Message.
+                AUTHORIZATION_CONNECTION_RESPONSE)
 
         LOGGER.debug("Endpoint of connecting node is %s", message.endpoint)
         self._network.update_connection_endpoint(connection_id,
