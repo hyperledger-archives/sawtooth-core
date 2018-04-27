@@ -86,6 +86,39 @@ fn main() {
             .map_err(|err| err.print(*py))
             .unwrap();
 
+    let endpoint = {
+        let config_endpoint = validator_config
+            .getattr(*py, "endpoint")
+            .map_err(|err| err.print(*py))
+            .unwrap();
+
+        if config_endpoint
+            .is_true(*py)
+            .map_err(|err| err.print(*py))
+            .unwrap()
+        {
+            config_endpoint
+        } else {
+            let bind_endpoint = validator_config
+                .getattr(*py, "bind_network")
+                .map_err(|err| err.print(*py))
+                .unwrap();
+
+            let check_interfaces_result = py_cli_module
+                .call(*py, "check_interfaces", (&bind_endpoint,), None)
+                .map_err(|err| err.print(*py))
+                .unwrap();
+
+            init_errors = init_errors
+                || check_interfaces_result
+                    .is_true(*py)
+                    .map_err(|err| err.print(*py))
+                    .unwrap();
+
+            bind_endpoint
+        }
+    };
+
     py_cli_module
         .call(
             *py,
@@ -94,6 +127,7 @@ fn main() {
                 &path_config,
                 &validator_config,
                 &identity_signer,
+                &endpoint,
                 &init_errors,
             ),
             None,
