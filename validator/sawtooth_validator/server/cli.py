@@ -191,15 +191,6 @@ def get_identity_signer(path_config):
 
 
 def main(path_config, validator_config, identity_signer, endpoint):
-    bind_network = validator_config.bind_network
-    bind_component = validator_config.bind_component
-
-    if "tcp://" not in bind_network:
-        bind_network = "tcp://" + bind_network
-
-    if "tcp://" not in bind_component:
-        bind_component = "tcp://" + bind_component
-
     metrics_reporter = None
     if validator_config.opentsdb_url:
         LOGGER.info("Adding metrics reporter: url=%s, db=%s",
@@ -228,13 +219,13 @@ def main(path_config, validator_config, identity_signer, endpoint):
 
     # Verify state integrity before startup
     global_state_db, blockstore = state_verifier.get_databases(
-        bind_network,
+        validator_config.bind_network,
         path_config.data_dir)
 
     state_verifier.verify_state(
         global_state_db,
         blockstore,
-        bind_component,
+        validator_config.bind_component,
         validator_config.scheduler)
 
     LOGGER.info(
@@ -242,8 +233,8 @@ def main(path_config, validator_config, identity_signer, endpoint):
         validator_config.scheduler)
 
     validator = Validator(
-        bind_network,
-        bind_component,
+        validator_config.bind_network,
+        validator_config.bind_component,
         endpoint,
         validator_config.peering,
         validator_config.seeds,

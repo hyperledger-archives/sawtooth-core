@@ -170,6 +170,12 @@ def merge_validator_config(configs):
         if config.maximum_peer_connectivity is not None:
             maximum_peer_connectivity = config.maximum_peer_connectivity
 
+    if "tcp://" not in bind_network:
+        bind_network = "tcp://" + bind_network
+
+    if "tcp://" not in bind_component:
+        bind_component = "tcp://" + bind_component
+
     return ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
