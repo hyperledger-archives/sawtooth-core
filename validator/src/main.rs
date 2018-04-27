@@ -66,6 +66,11 @@ fn main() {
         .unwrap();
 
     py_cli_module
+        .call(*py, "log_version", cpython::NoArgs, None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    py_cli_module
         .call(
             *py,
             "main",

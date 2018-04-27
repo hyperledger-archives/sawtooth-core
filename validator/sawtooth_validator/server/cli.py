@@ -191,8 +191,6 @@ def get_identity_signer(path_config):
 
 
 def main(path_config, validator_config, identity_signer, init_errors):
-    log_version()
-
     log_path_config(path_config)
 
     init_errors = check_directories(path_config) or init_errors
