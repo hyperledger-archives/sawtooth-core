@@ -71,6 +71,11 @@ fn main() {
         .unwrap();
 
     py_cli_module
+        .call(*py, "log_path_config", (&path_config,), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    py_cli_module
         .call(
             *py,
             "main",
