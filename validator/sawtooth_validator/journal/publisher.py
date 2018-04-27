@@ -729,12 +729,10 @@ class BlockPublisher(object):
 
                 self._chain_head = chain_head
 
-                if self._candidate_block:
-                    self._candidate_block.cancel()
+                self.cancel_block()
 
-                self._candidate_block = None  # we need to make a new
-                # _CandidateBlock (if we can) since the block chain has updated
-                # under us.
+                # we need to make a new _CandidateBlock (if we can) since the
+                # block chain has updated under us.
                 if chain_head is not None:
                     self._update_pending_queue_limit(len(chain_head.batches))
                     self._rebuild_pending_batches(committed_batches,
@@ -748,6 +746,12 @@ class BlockPublisher(object):
         except Exception as exc:
             LOGGER.critical("on_chain_updated exception.")
             LOGGER.exception(exc)
+
+    def cancel_block(self):
+        if self._candidate_block:
+            self._candidate_block.cancel()
+
+        self._candidate_block = None
 
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
