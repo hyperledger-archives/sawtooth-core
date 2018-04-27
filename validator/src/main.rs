@@ -50,7 +50,7 @@ fn main() {
     // until all errors have been reported to the user. This is
     // intended to provide enough information to the user so they can
     // correct multiple errors before restarting the validator.
-    let init_errors = !identity_signer
+    let mut init_errors = !identity_signer
         .is_true(*py)
         .map_err(|err| err.print(*py))
         .unwrap();
@@ -74,6 +74,17 @@ fn main() {
         .call(*py, "log_path_config", (&path_config,), None)
         .map_err(|err| err.print(*py))
         .unwrap();
+
+    let check_directories_result = py_cli_module
+        .call(*py, "check_directories", (&path_config,), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    init_errors = init_errors
+        || check_directories_result
+            .is_true(*py)
+            .map_err(|err| err.print(*py))
+            .unwrap();
 
     py_cli_module
         .call(

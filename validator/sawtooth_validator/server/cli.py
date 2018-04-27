@@ -191,8 +191,6 @@ def get_identity_signer(path_config):
 
 
 def main(path_config, validator_config, identity_signer, init_errors):
-    init_errors = check_directories(path_config) or init_errors
-
     endpoint = validator_config.endpoint
     if endpoint is None:
         endpoint = validator_config.bind_network
