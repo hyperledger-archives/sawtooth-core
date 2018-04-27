@@ -41,11 +41,21 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
+    let identity_signer = py_cli_module
+        .call(*py, "get_identity_signer", (&path_config,), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
     py_cli_module
         .call(
             *py,
             "main",
-            (&path_config, &validator_config, &verbosity),
+            (
+                &path_config,
+                &validator_config,
+                &identity_signer,
+                &verbosity,
+            ),
             None,
         )
         .map_err(|err| err.print(*py))
