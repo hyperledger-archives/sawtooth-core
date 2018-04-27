@@ -190,10 +190,7 @@ def get_identity_signer(path_config):
         return None
 
 
-def main(path_config, validator_config,
-         identity_signer, endpoint, init_errors):
-    exit_if_errors(init_errors)
-
+def main(path_config, validator_config, identity_signer, endpoint):
     bind_network = validator_config.bind_network
     bind_component = validator_config.bind_component
 

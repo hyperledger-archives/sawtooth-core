@@ -120,16 +120,15 @@ fn main() {
     };
 
     py_cli_module
+        .call(*py, "exit_if_errors", (init_errors,), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    py_cli_module
         .call(
             *py,
             "main",
-            (
-                &path_config,
-                &validator_config,
-                &identity_signer,
-                &endpoint,
-                &init_errors,
-            ),
+            (&path_config, &validator_config, &identity_signer, &endpoint),
             None,
         )
         .map_err(|err| err.print(*py))
