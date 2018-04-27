@@ -116,20 +116,20 @@ Step 2: Start the Sawtooth Network
 
    ``validator-0``:
 
-    * ``sawtooth-poet-validator-0``
-    * ``sawtooth-poet-rest-api-0``
-    * ``sawtooth-poet-settings-tp-0``
-    * ``sawtooth-poet-intkey-tp-python-0``
-    * ``sawtooth-poet-xo-tp-python-0``
+    * ``sawtooth-validator-default-0``
+    * ``sawtooth-rest-api-default-0``
+    * ``sawtooth-settings-tp-default-0``
+    * ``sawtooth-intkey-tp-python-default-0``
+    * ``sawtooth-xo-tp-python-default-0``
     * ``sawtooth-poet-validator-registry-tp-0``
 
    ``validator-1``:
 
     * ``sawtooth-validator-default-1``
-    * ``sawtooth-poet-rest-api-1``
+    * ``sawtooth-rest-api-default-1``
     * ``sawtooth-settings-tp-default-1``
-    * ``sawtooth-poet-intkey-tp-python-1``
-    * ``sawtooth-poet-xo-tp-python-1``
+    * ``sawtooth-intkey-tp-python-default-1``
+    * ``sawtooth-xo-tp-python-default-1``
     * ``sawtooth-poet-validator-registry-tp-1``
 
    ... and so on.
@@ -141,9 +141,9 @@ Step 2: Start the Sawtooth Network
 Step 3: Verify Connectivity
 ---------------------------
 
-You can connect to a validator registry container, such as
-``sawtooth-poet-validator-registry-tp-0``, then use the following command
-to verify that ``poet-validator-registry-tp`` is running.
+You can connect to Docker container, such as
+``sawtooth-validator-registry-tp-default-0``, then use the following ``ps``
+command to verify that the component is running.
 
 .. code-block:: console
 
@@ -564,7 +564,7 @@ Confirm Network Functionality
 
           .. code-block:: console
 
-             $ curl http://sawtooth-poet-rest-api-0:8008/peers
+          $ curl http://sawtooth-rest-api-default-0:8008/peers
 
      * Ubuntu: Run the following command, replacing `{rest-api}` with the host
        name and port for the REST API on the first validator node, as determined
@@ -605,7 +605,7 @@ Confirm Network Functionality
 
         .. code-block:: console
 
-           # intkey set --url http://sawtooth-poet-rest-api-0:8008 MyKey 999
+        # intkey set --url http://sawtooth-rest-api-default-0:8008 MyKey 999
 
    * Ubuntu:
 
@@ -623,8 +623,8 @@ Confirm Network Functionality
 
         .. code-block:: console
 
-           # intkey show --url http://sawtooth-poet-rest-api-1:8008 MyKey
-           MyKey: 999
+        # intkey show --url http://sawtooth-rest-api-default-1:8008 MyKey
+        MyKey: 999
 
    * Ubuntu:
 
