@@ -124,6 +124,28 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
+    if !validator_config
+        .getattr(*py, "network_public_key")
+        .map_err(|err| err.print(*py))
+        .unwrap()
+        .is_true(*py)
+        .map_err(|err| err.print(*py))
+        .unwrap()
+        || !validator_config
+            .getattr(*py, "network_private_key")
+            .map_err(|err| err.print(*py))
+            .unwrap()
+            .is_true(*py)
+            .map_err(|err| err.print(*py))
+            .unwrap()
+    {
+        warn!(
+            "Network key pair is not configured; \
+             network communications between validators \
+             will not be authenticated or encrypted"
+        );
+    }
+
     py_cli_module
         .call(
             *py,

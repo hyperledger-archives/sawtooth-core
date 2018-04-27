@@ -200,12 +200,6 @@ def main(path_config, validator_config, identity_signer, endpoint):
     if "tcp://" not in bind_component:
         bind_component = "tcp://" + bind_component
 
-    if validator_config.network_public_key is None or \
-            validator_config.network_private_key is None:
-        LOGGER.warning("Network key pair is not configured, Network "
-                       "communications between validators will not be "
-                       "authenticated or encrypted.")
-
     metrics_reporter = None
     if validator_config.opentsdb_url:
         LOGGER.info("Adding metrics reporter: url=%s, db=%s",
