@@ -174,7 +174,6 @@ class _CandidateBlock(object):
     def batches(self):
         return self._pending_batches.copy()
 
-    @property
     def can_add_batch(self):
         return (
             self._max_batches == 0
@@ -629,7 +628,7 @@ class BlockPublisher(object):
             public_key)
 
         for batch in self._pending_batches:
-            if self._candidate_block.can_add_batch:
+            if self._candidate_block.can_add_batch():
                 self._candidate_block.add_batch(batch)
             else:
                 break
@@ -649,7 +648,7 @@ class BlockPublisher(object):
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
-                        self._candidate_block.can_add_batch:
+                        self._candidate_block.can_add_batch():
                     self._candidate_block.add_batch(batch)
             else:
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
