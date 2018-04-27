@@ -36,6 +36,7 @@ from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.server import state_verifier
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator import metrics
 
 
@@ -174,11 +175,9 @@ def main(args):
         interfaces = ["*", ".".join(["0", "0", "0", "0"])]
         interfaces += netifaces.interfaces()
         endpoint = validator_config.bind_network
-        for interface in interfaces:
-            if interface in validator_config.bind_network:
-                LOGGER.error("Endpoint must be set when using %s", interface)
-                init_errors = True
-                break
+        result = ConnectHandler.is_valid_endpoint_host(interfaces, endpoint)
+        if result is False:
+            init_errors = True
 
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "
