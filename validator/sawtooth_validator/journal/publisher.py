@@ -833,6 +833,7 @@ class PendingBatchesPool:
         last_index = self._batches.index(last_sent)
         unsent = self._batches[last_index + 1:]
         self._batches = still_pending + unsent
+        self._ids = set(b.header_signature for b in self._batches)
 
         self._update_gauge()
 
