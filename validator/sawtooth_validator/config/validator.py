@@ -190,6 +190,16 @@ def merge_validator_config(configs):
         maximum_peer_connectivity=maximum_peer_connectivity)
 
 
+def load_validator_config(first_config, config_dir):
+    default_validator_config = load_default_validator_config()
+    conf_file = os.path.join(config_dir, 'validator.toml')
+
+    toml_config = load_toml_validator_config(conf_file)
+
+    return merge_validator_config(
+        configs=[first_config, toml_config, default_validator_config])
+
+
 def parse_permissions(permissions):
     roles = {}
     path_config = load_path_config()

@@ -24,9 +24,7 @@ from pyformance.reporters import InfluxReporter
 import netifaces
 
 from sawtooth_validator.config.path import load_path_config
-from sawtooth_validator.config.validator import load_default_validator_config
-from sawtooth_validator.config.validator import load_toml_validator_config
-from sawtooth_validator.config.validator import merge_validator_config
+from sawtooth_validator.config.validator import load_validator_config
 from sawtooth_validator.config.validator import ValidatorConfig
 from sawtooth_validator.config.logs import get_log_config
 from sawtooth_validator.server.core import Validator
@@ -78,16 +76,6 @@ def check_directory(path, human_readable_name):
                      path)
         errors = False
     return errors
-
-
-def load_validator_config(first_config, config_dir):
-    default_validator_config = load_default_validator_config()
-    conf_file = os.path.join(config_dir, 'validator.toml')
-
-    toml_config = load_toml_validator_config(conf_file)
-
-    return merge_validator_config(
-        configs=[first_config, toml_config, default_validator_config])
 
 
 def get_path_config(config_dir):
