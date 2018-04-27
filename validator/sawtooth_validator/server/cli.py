@@ -190,13 +190,8 @@ def get_identity_signer(path_config):
         return None
 
 
-def main(path_config, validator_config, identity_signer, verbosity):
-    # Process initial initialization errors, delaying the sys.exit(1) until
-    # all errors have been reported to the user (via LOGGER.error()).  This
-    # is intended to provide enough information to the user so they can correct
-    # multiple errors before restarting the validator.
-    init_errors = not bool(identity_signer)
-
+def main(path_config, validator_config,
+         identity_signer, verbosity, init_errors):
     configure_logging(path_config.log_dir, init_errors, verbosity)
 
     log_version()

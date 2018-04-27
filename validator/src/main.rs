@@ -46,6 +46,15 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
+    // Process initial initialization errors, delaying the exit(1)
+    // until all errors have been reported to the user. This is
+    // intended to provide enough information to the user so they can
+    // correct multiple errors before restarting the validator.
+    let init_errors = !identity_signer
+        .is_true(*py)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
     py_cli_module
         .call(
             *py,
@@ -55,6 +64,7 @@ fn main() {
                 &validator_config,
                 &identity_signer,
                 &verbosity,
+                &init_errors,
             ),
             None,
         )
