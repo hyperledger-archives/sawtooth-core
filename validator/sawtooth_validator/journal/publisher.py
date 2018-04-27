@@ -486,9 +486,7 @@ class BlockPublisher(object):
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
-        self._pending_batches = []  # batches we are waiting for validation,
-        # arranged in the order of batches received.
-        self._pending_batch_ids = []
+        self._pending_batches = PendingBatchesPool()
         self._publish_count_average = _RollingAverage(
             NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT)
 
@@ -501,8 +499,6 @@ class BlockPublisher(object):
         self._batch_injector_factory = batch_injector_factory
 
         # For metric gathering
-        self._pending_batch_gauge = COLLECTOR.gauge(
-            'pending_batch_gauge', instance=self)
         self._blocks_published_count = COLLECTOR.counter(
             'blocks_published_count', instance=self)
 
@@ -643,8 +639,6 @@ class BlockPublisher(object):
             self._queued_batch_ids = self._queued_batch_ids[:1]
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-                self._pending_batch_gauge.set_value(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
@@ -653,38 +647,6 @@ class BlockPublisher(object):
             else:
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
                              batch.header_signature)
-
-    def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
-        """When the chain head is changed. This recomputes the list of pending
-        transactions
-        :param committed_batches: Batches committed in the current chain
-        since the root of the fork switching from.
-        :param uncommitted_batches: Batches that were committed in the old
-        fork since the common root.
-        """
-        if committed_batches is None:
-            committed_batches = []
-        if uncommitted_batches is None:
-            uncommitted_batches = []
-
-        committed_set = set([x.header_signature for x in committed_batches])
-
-        pending_batches = self._pending_batches
-
-        self._pending_batches = []
-        self._pending_batch_ids = []
-
-        # Uncommitted and pending disjoint sets
-        # since batches can only be committed to a chain once.
-        for batch in uncommitted_batches:
-            if batch.header_signature not in committed_set:
-                self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-
-        for batch in pending_batches:
-            if batch.header_signature not in committed_set:
-                self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
 
     def _update_pending_queue_limit(self, num_committed_batches):
         """Take the number of committed batches and use that to update the
@@ -735,12 +697,9 @@ class BlockPublisher(object):
                 # block chain has updated under us.
                 if chain_head is not None:
                     self._update_pending_queue_limit(len(chain_head.batches))
-                    self._rebuild_pending_batches(committed_batches,
-                                                  uncommitted_batches)
+                    self._pending_batches.rebuild(
+                        committed_batches, uncommitted_batches)
                     self._build_candidate_block(chain_head)
-
-                    self._pending_batch_gauge.set_value(
-                        len(self._pending_batches))
 
         # pylint: disable=broad-except
         except Exception as exc:
@@ -783,13 +742,7 @@ class BlockPublisher(object):
                     self._candidate_block = None
                     # Update the _pending_batches to reflect what we learned.
 
-                    last_batch_index = self._pending_batches.index(last_batch)
-                    unsent_batches = \
-                        self._pending_batches[last_batch_index + 1:]
-                    self._pending_batches = pending_batches + unsent_batches
-
-                    self._pending_batch_gauge.set_value(
-                        len(self._pending_batches))
+                    self._pending_batches.update(pending_batches, last_batch)
 
                     if block:
                         blkw = BlockWrapper(block)
@@ -812,12 +765,79 @@ class BlockPublisher(object):
 
     def has_batch(self, batch_id):
         with self._lock:
-            if batch_id in self._pending_batch_ids:
+            if batch_id in self._pending_batches:
                 return True
             if batch_id in self._queued_batch_ids:
                 return True
 
         return False
+
+
+class PendingBatchesPool:
+
+    def __init__(self):
+        # Ordered batches waiting to be processed
+        self._batches = list()
+        self._ids = set()
+        self._gauge = COLLECTOR.gauge('pending_batch_gauge', instance=self)
+
+    def __len__(self):
+        return len(self._batches)
+
+    def __iter__(self):
+        return iter(self._batches)
+
+    def __contains__(self, batch_id):
+        return batch_id in self._ids
+
+    def reset(self):
+        self._batches = list()
+        self._ids = set()
+        self._update_gauge()
+
+    def append(self, batch):
+        self._batches.append(batch)
+        self._ids.add(batch.header_signature)
+        self._update_gauge()
+
+    def rebuild(self, committed=None, uncommitted=None):
+        """Recomputes the list of pending batches
+
+        :param committed_batches: Batches committed in the current chain
+        since the root of the fork switching from.
+        :param uncommitted_batches: Batches that were committed in the old
+        fork since the common root.
+        """
+        if committed is None:
+            committed = []
+        if uncommitted is None:
+            uncommitted = []
+
+        committed_set = set(b.header_signature for b in committed)
+
+        previous_batches = self._batches
+
+        self.reset()
+
+        # Uncommitted and pending disjoint sets
+        # since batches can only be committed to a chain once.
+        for batch in uncommitted:
+            if batch.header_signature not in committed_set:
+                self.append(batch)
+
+        for batch in previous_batches:
+            if batch.header_signature not in committed_set:
+                self.append(batch)
+
+    def update(self, still_pending, last_sent):
+        last_index = self._batches.index(last_sent)
+        unsent = self._batches[last_index + 1:]
+        self._batches = still_pending + unsent
+
+        self._update_gauge()
+
+    def _update_gauge(self):
+        self._gauge.set_value(len(self._batches))
 
 
 class _RollingAverage(object):
