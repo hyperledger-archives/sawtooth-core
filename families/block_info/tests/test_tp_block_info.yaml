@@ -36,7 +36,6 @@ services:
         -c /project/sawtooth-core/families/block_info/nose2.cfg
         -v
         -s /project/sawtooth-core/families/block_info/tests
-        test_tp_block_info
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
