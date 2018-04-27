@@ -90,13 +90,15 @@ def load_validator_config(first_config, config_dir):
         configs=[first_config, toml_config, default_validator_config])
 
 
-def main(args):
+def get_path_config(config_dir):
     try:
-        path_config = load_path_config(config_dir=args['config_dir'])
+        return load_path_config(config_dir)
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
+
+def get_validator_config(args, config_dir):
     try:
         opts_config = ValidatorConfig(
             bind_component=args['bind_component'],
@@ -113,12 +115,13 @@ def main(args):
             seeds=args['seeds'],
         )
 
-        validator_config = \
-            load_validator_config(opts_config, path_config.config_dir)
+        return load_validator_config(opts_config, config_dir)
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
+
+def main(path_config, validator_config, verbosity):
     # Process initial initialization errors, delaying the sys.exit(1) until
     # all errors have been reported to the user (via LOGGER.error()).  This
     # is intended to provide enough information to the user so they can correct
@@ -139,7 +142,7 @@ def main(args):
         if log_config is not None:
             log_configuration(log_config=log_config)
             if log_config.get('root') is not None:
-                init_console_logging(verbose_level=args['verbose'])
+                init_console_logging(verbose_level=verbosity)
         else:
             log_configuration(log_dir=path_config.log_dir,
                               name="validator")
