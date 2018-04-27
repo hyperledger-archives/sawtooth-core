@@ -480,13 +480,15 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
 
     match unsafe { (*(iterator as *mut MerkleLeafIterator)).next() } {
         Some(Ok((entry_addr, entry_bytes))) => unsafe {
-            *address = entry_addr.as_ptr();
-            *address_len = entry_addr.as_bytes().len();
+            let address_bytes = entry_addr.into_bytes().into_boxed_slice();
+            *address_len = address_bytes.len();
+            *address = address_bytes.as_ptr();
 
             let data = entry_bytes.into_boxed_slice();
             *bytes_len = data.len();
             *bytes = data.as_ptr();
 
+            mem::forget(address_bytes);
             mem::forget(data);
 
             ErrorCode::Success
