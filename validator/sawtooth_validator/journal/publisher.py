@@ -556,24 +556,24 @@ class BlockPublisher(object):
     def chain_head_lock(self):
         return self._lock
 
-    def _build_candidate_block(self, chain_head):
+    def _build_candidate_block(self, previous_block):
         """ Build a candidate block and construct the consensus object to
         validate it.
-        :param chain_head: The block to build on top of.
+        :param previous_block_id: The block to build on top of.
         :return: (BlockBuilder) - The candidate block in a BlockBuilder
         wrapper.
         """
         state_view = BlockWrapper.state_view_for_block(
-            chain_head,
+            previous_block,
             self._state_view_factory)
         consensus_module = ConsensusFactory.get_configured_consensus_module(
-            chain_head.header_signature,
+            previous_block.header_signature,
             state_view)
 
-        # using chain_head so so we can use the setting_cache
+        # using previous_block so so we can use the setting_cache
         max_batches = int(self._settings_cache.get_setting(
             'sawtooth.publisher.max_batches_per_block',
-            chain_head.state_root_hash,
+            previous_block.state_root_hash,
             default_value=0))
 
         public_key = self._identity_signer.get_public_key().as_hex()
@@ -588,13 +588,13 @@ class BlockPublisher(object):
         batch_injectors = []
         if self._batch_injector_factory is not None:
             batch_injectors = self._batch_injector_factory.create_injectors(
-                chain_head.identifier)
+                previous_block.identifier)
             if batch_injectors:
                 LOGGER.debug("Loaded batch injectors: %s", batch_injectors)
 
         block_header = BlockHeader(
-            block_num=chain_head.block_num + 1,
-            previous_block_id=chain_head.header_signature,
+            block_num=previous_block.block_num + 1,
+            previous_block_id=previous_block.header_signature,
             signer_public_key=public_key)
         block_builder = BlockBuilder(block_header)
 
@@ -610,7 +610,7 @@ class BlockPublisher(object):
 
         # create a new scheduler
         scheduler = self._transaction_executor.create_scheduler(
-            self._squash_handler, chain_head.state_root_hash)
+            self._squash_handler, previous_block.state_root_hash)
 
         # build the TransactionCommitCache
         committed_txn_cache = TransactionCommitCache(
