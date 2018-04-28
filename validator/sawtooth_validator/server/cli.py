@@ -233,13 +233,12 @@ def verify_state(path_config, validator_config):
         validator_config.scheduler)
 
 
-def main(path_config, validator_config, identity_signer,
-         endpoint, metrics_reporter):
+def make_validator(path_config, validator_config, identity_signer, endpoint):
     LOGGER.info(
         'Starting validator with %s scheduler',
         validator_config.scheduler)
 
-    validator = Validator(
+    return Validator(
         validator_config.bind_network,
         validator_config.bind_component,
         endpoint,
@@ -257,6 +256,8 @@ def main(path_config, validator_config, identity_signer,
         validator_config.network_private_key,
         roles=validator_config.roles)
 
+
+def run_validator(validator, metrics_reporter):
     # pylint: disable=broad-except
     try:
         validator.start()

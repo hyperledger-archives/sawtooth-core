@@ -157,19 +157,18 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
-    py_cli_module
+    let validator = py_cli_module
         .call(
             *py,
-            "main",
-            (
-                &path_config,
-                &validator_config,
-                &identity_signer,
-                &endpoint,
-                &metrics_reporter,
-            ),
+            "make_validator",
+            (&path_config, &validator_config, &identity_signer, &endpoint),
             None,
         )
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
+    py_cli_module
+        .call(*py, "run_validator", (&validator, &metrics_reporter), None)
         .map_err(|err| err.print(*py))
         .unwrap();
 }
