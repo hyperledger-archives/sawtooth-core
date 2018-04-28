@@ -235,9 +235,6 @@ def verify_state(path_config, validator_config):
 
 def main(path_config, validator_config, identity_signer,
          endpoint, metrics_reporter):
-    # Verify state integrity before startup
-    verify_state(path_config, validator_config)
-
     LOGGER.info(
         'Starting validator with %s scheduler',
         validator_config.scheduler)

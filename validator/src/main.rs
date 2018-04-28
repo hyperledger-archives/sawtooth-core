@@ -151,6 +151,12 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
+    // Verify state integrity before startup
+    py_cli_module
+        .call(*py, "verify_state", (&path_config, &validator_config), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
     py_cli_module
         .call(
             *py,
