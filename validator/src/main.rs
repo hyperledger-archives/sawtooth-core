@@ -146,11 +146,22 @@ fn main() {
         );
     }
 
+    let metrics_reporter = py_cli_module
+        .call(*py, "start_metrics", (&validator_config,), None)
+        .map_err(|err| err.print(*py))
+        .unwrap();
+
     py_cli_module
         .call(
             *py,
             "main",
-            (&path_config, &validator_config, &identity_signer, &endpoint),
+            (
+                &path_config,
+                &validator_config,
+                &identity_signer,
+                &endpoint,
+                &metrics_reporter,
+            ),
             None,
         )
         .map_err(|err| err.print(*py))

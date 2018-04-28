@@ -190,34 +190,38 @@ def get_identity_signer(path_config):
         return None
 
 
-def main(path_config, validator_config, identity_signer, endpoint):
-    metrics_reporter = None
-    if validator_config.opentsdb_url:
-        LOGGER.info("Adding metrics reporter: url=%s, db=%s",
-                    validator_config.opentsdb_url,
-                    validator_config.opentsdb_db)
-
-        url = urlparse(validator_config.opentsdb_url)
-        proto, db_server, db_port, = url.scheme, url.hostname, url.port
-
-        registry = MetricsRegistry()
-        metrics.init_metrics(registry=registry)
-
-        metrics_reporter = InfluxReporter(
-            registry=registry,
-            reporting_interval=10,
-            database=validator_config.opentsdb_db,
-            prefix="sawtooth_validator",
-            port=db_port,
-            protocol=proto,
-            server=db_server,
-            username=validator_config.opentsdb_username,
-            password=validator_config.opentsdb_password)
-        metrics_reporter.start()
-    else:
+def start_metrics(validator_config):
+    if not validator_config.opentsdb_url:
         metrics.init_metrics()
+        return None
 
-    # Verify state integrity before startup
+    LOGGER.info("Adding metrics reporter: url=%s, db=%s",
+                validator_config.opentsdb_url,
+                validator_config.opentsdb_db)
+
+    url = urlparse(validator_config.opentsdb_url)
+    proto, db_server, db_port, = url.scheme, url.hostname, url.port
+
+    registry = MetricsRegistry()
+    metrics.init_metrics(registry=registry)
+
+    metrics_reporter = InfluxReporter(
+        registry=registry,
+        reporting_interval=10,
+        database=validator_config.opentsdb_db,
+        prefix="sawtooth_validator",
+        port=db_port,
+        protocol=proto,
+        server=db_server,
+        username=validator_config.opentsdb_username,
+        password=validator_config.opentsdb_password)
+
+    metrics_reporter.start()
+
+    return metrics_reporter
+
+
+def verify_state(path_config, validator_config):
     global_state_db, blockstore = state_verifier.get_databases(
         validator_config.bind_network,
         path_config.data_dir)
@@ -227,6 +231,12 @@ def main(path_config, validator_config, identity_signer, endpoint):
         blockstore,
         validator_config.bind_component,
         validator_config.scheduler)
+
+
+def main(path_config, validator_config, identity_signer,
+         endpoint, metrics_reporter):
+    # Verify state integrity before startup
+    verify_state(path_config, validator_config)
 
     LOGGER.info(
         'Starting validator with %s scheduler',
