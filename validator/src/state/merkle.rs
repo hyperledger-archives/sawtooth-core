@@ -660,7 +660,7 @@ mod tests {
 
     #[test]
     fn node_deserialize() {
-        let packed = from_hex("a26163a162303063616263617647676f6f64627965");
+        let packed = ::hex::decode("a26163a162303063616263617647676f6f64627965").expect("proper hex");
 
         let unpacked = Node::from_bytes(&packed).unwrap();
         assert_eq!(
@@ -986,25 +986,4 @@ mod tests {
         temp_dir.to_str().unwrap().to_string()
     }
 
-    fn from_hex(s: &str) -> Vec<u8> {
-        assert!(s.len() % 2 == 0);
-        let mut res = Vec::with_capacity(s.len() / 2);
-        let mut buf = 0;
-
-        for (i, b) in s.bytes().enumerate() {
-            buf <<= 4;
-            match b {
-                b'A'...b'F' => buf |= b - b'A' + 10,
-                b'a'...b'f' => buf |= b - b'a' + 10,
-                b'0'...b'9' => buf |= b - b'0',
-                _ => continue,
-            }
-
-            if (i + 1) % 2 == 0 {
-                res.push(buf);
-            }
-        }
-
-        res
-    }
 }
