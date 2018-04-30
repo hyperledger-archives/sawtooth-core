@@ -53,6 +53,12 @@ NUM_PUBLISH_COUNT_SAMPLES = 5
 INITIAL_PUBLISH_COUNT = 30
 
 
+class ConsensusNotReady(Exception):
+    """
+    Consensus is not ready to build a block.
+    """
+
+
 class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch
     has begun being processed.
@@ -427,10 +433,10 @@ class _CandidateBlock(object):
 
 class _PublisherLoggingStates:
     """Collects and tracks the changes in various states of the Publisher.  For
-    example it tracks 'consensus_not_ready', which denotes entering or exiting
-    of that state."""
-    def __init__(self, consensus_not_ready=False):
-        self.consensus_not_ready = False
+    example it tracks 'consensus_ready', which denotes entering or exiting of
+    that state."""
+    def __init__(self, consensus_ready=True):
+        self.consensus_ready = True
 
 
 class BlockPublisher(object):
@@ -574,11 +580,14 @@ class BlockPublisher(object):
             return []
 
     def initialize_block(self, previous_block):
-        """ Build a candidate block and construct the consensus object to
-        validate it.
-        :param previous_block_id: The block to build on top of.
-        :return: (BlockBuilder) - The candidate block in a BlockBuilder
-        wrapper.
+        """Begin building a new candidate block.
+
+        Args:
+            previous_block (BlockWrapper): The block to base the new block on.
+
+        Raises:
+            ConsensusNotReady
+                Consensus is not ready to build a block
         """
 
         # using previous_block so so we can use the setting_cache
@@ -603,14 +612,7 @@ class BlockPublisher(object):
         block_builder = BlockBuilder(block_header)
 
         if not consensus.initialize_block(block_builder.block_header):
-            if not self._logging_states.consensus_not_ready:
-                self._logging_states.consensus_not_ready = True
-                LOGGER.debug("Consensus not ready to build candidate block.")
-            return None
-
-        if self._logging_states.consensus_not_ready:
-            self._logging_states.consensus_not_ready = False
-            LOGGER.debug("Consensus is ready to build candidate block.")
+            raise ConsensusNotReady()
 
         # create a new scheduler
         scheduler = self._transaction_executor.create_scheduler(
@@ -688,7 +690,10 @@ class BlockPublisher(object):
                     self._pending_batches.update_limit(len(chain_head.batches))
                     self._pending_batches.rebuild(
                         committed_batches, uncommitted_batches)
-                    self.initialize_block(chain_head)
+                    try:
+                        self.initialize_block(self._chain_head)
+                    except ConsensusNotReady:
+                        self._log_consensus_state()
 
         # pylint: disable=broad-except
         except Exception as exc:
@@ -707,6 +712,14 @@ class BlockPublisher(object):
         """
         return self._candidate_block is not None
 
+    def _log_consensus_state(self):
+        if self._logging_states.consensus_ready:
+            LOGGER.debug("Consensus is ready to build candidate block.")
+            self._logging_states.consensus_ready = True
+        else:
+            self._logging_states.consensus_ready = False
+            LOGGER.debug("Consensus not ready to build candidate block.")
+
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
         if it is then, claim it and tell the world about it.
@@ -718,7 +731,10 @@ class BlockPublisher(object):
                 if (self._chain_head is not None
                         and not self._building()
                         and self._pending_batches):
-                    self.initialize_block(self._chain_head)
+                    try:
+                        self.initialize_block(self._chain_head)
+                    except ConsensusNotReady:
+                        self._log_consensus_state()
 
                 if (self._building()
                         and (
