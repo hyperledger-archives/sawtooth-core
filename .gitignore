@@ -121,6 +121,7 @@
 /validator/Cargo.lock
 /validator/bin/
 /validator/lib/
+/validator/src/proto
 
 /sdk/cxx/build/
 

@@ -10,10 +10,15 @@ log = { version = "0.4", features = ["std"] }
 libc = ">=0.2.35"
 lmdb-zero = ">=0.4.1"
 cbor-codec = "0.7"
+protobuf = "1.4"
 rust-crypto = "0.2"
 
 [dev-dependencies]
 rand = "0.4"
+
+[build-dependencies]
+protoc-rust = "1.4"
+glob = "0.2"
 
 [lib]
 crate-type = ["dylib"]
