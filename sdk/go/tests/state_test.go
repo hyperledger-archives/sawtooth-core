@@ -61,7 +61,13 @@ func TestAddEvent(t *testing.T) {
 	context := processor.NewContext(connection, "asdf")
 
 	event_attributes := make([]*events_pb2.Event_Attribute, 0)
-	event_attributes = append(event_attributes, &events_pb2.Event_Attribute{"key", "value"})
+	event_attributes = append(
+		event_attributes,
+		&events_pb2.Event_Attribute{
+			Key:   "key",
+			Value: "value",
+		},
+	)
 
 	event := &events_pb2.Event{
 		EventType:  "test",

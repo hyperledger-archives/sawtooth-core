@@ -309,7 +309,13 @@ func (self *Context) AddReceiptData(data []byte) error {
 func (self *Context) AddEvent(event_type string, attributes []Attribute, event_data []byte) error {
 	event_attributes := make([]*events_pb2.Event_Attribute, 0, len(attributes))
 	for _, attribute := range attributes {
-		event_attributes = append(event_attributes, &events_pb2.Event_Attribute{attribute.Key, attribute.Value})
+		event_attributes = append(
+			event_attributes,
+			&events_pb2.Event_Attribute{
+				Key:   attribute.Key,
+				Value: attribute.Value,
+			},
+		)
 	}
 
 	event := &events_pb2.Event{
