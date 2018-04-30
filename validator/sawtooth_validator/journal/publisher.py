@@ -701,6 +701,12 @@ class BlockPublisher(object):
 
         self._candidate_block = None
 
+    def _building(self):
+        """Returns whether the block publisher is in the process of building
+        a block or not.
+        """
+        return self._candidate_block is not None
+
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
         if it is then, claim it and tell the world about it.
@@ -710,11 +716,11 @@ class BlockPublisher(object):
         try:
             with self._lock:
                 if (self._chain_head is not None
-                        and self._candidate_block is None
+                        and not self._building()
                         and self._pending_batches):
                     self._build_candidate_block(self._chain_head)
 
-                if (self._candidate_block
+                if (self._building()
                         and (
                             force
                             or self._candidate_block.has_pending_batches())
