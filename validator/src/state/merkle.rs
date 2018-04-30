@@ -140,7 +140,7 @@ impl MerkleDatabase {
 
         let mut batch = Vec::with_capacity(path_addresses.len());
         // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
+        let mut key_hash = Vec::with_capacity(0);
         for path_address in path_addresses {
             let (child_key, child_packed) = encode_and_hash(child)?;
             key_hash = child_key;
@@ -152,7 +152,7 @@ impl MerkleDatabase {
 
             parent
                 .children
-                .insert(path_branch.to_string(), key_hash.clone());
+                .insert(path_branch.to_string(), ::hex::encode(key_hash.clone()));
 
             batch.push((key_hash.clone(), child_packed));
 
@@ -162,7 +162,7 @@ impl MerkleDatabase {
         let mut new_root = self.root_node.clone();
         new_root
             .children
-            .insert(tokens[0].to_string(), key_hash.clone());
+            .insert(tokens[0].to_string(), ::hex::encode(key_hash.clone()));
 
         let (root_hash, packed) = encode_and_hash(new_root)?;
 
@@ -170,7 +170,7 @@ impl MerkleDatabase {
 
         self.put_batch(batch)?;
 
-        Ok(root_hash)
+        Ok(::hex::encode(root_hash))
     }
 
     /// Deletes the value at the given address.
@@ -189,7 +189,7 @@ impl MerkleDatabase {
         let paths = path_addresses_from_tokens(&tokens, true);
 
         // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
+        let mut key_hash = Vec::with_capacity(0);
         let mut batch = Vec::with_capacity(paths.len());
         for path in paths {
             let (parent_address, path_branch) = parent_and_branch(&path);
@@ -212,10 +212,10 @@ impl MerkleDatabase {
                         .expect("Path map not correctly generated");
                     parent
                         .children
-                        .insert(path_branch.to_string(), hash_key.clone());
+                        .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()));
                 }
 
-                batch.push((hash_key, packed));
+                batch.push((hash_key.clone(), packed));
             } else if path != "" {
                 let mut parent = path_map
                     .get_mut(parent_address)
@@ -230,7 +230,7 @@ impl MerkleDatabase {
         }
 
         self.put_batch(batch)?;
-        Ok(key_hash)
+        Ok(::hex::encode(key_hash))
     }
 
     /// Updates the tree with multiple changes.  Applies both set and deletes,
@@ -306,7 +306,7 @@ impl MerkleDatabase {
         sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
 
         // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
+        let mut key_hash = Vec::with_capacity(0);
         let mut batch = Vec::with_capacity(sorted_paths.len());
         for path in sorted_paths {
             let node = path_map
@@ -322,7 +322,7 @@ impl MerkleDatabase {
                     .expect("Path map not correctly generated");
                 parent
                     .children
-                    .insert(path_branch.to_string(), hash_key.clone());
+                    .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()));
             }
 
             batch.push((hash_key, packed));
@@ -332,7 +332,7 @@ impl MerkleDatabase {
             self.put_batch(batch)?;
         }
 
-        Ok(key_hash)
+        Ok(::hex::encode(key_hash))
     }
 
     pub fn leaves<'a>(
@@ -343,10 +343,10 @@ impl MerkleDatabase {
     }
 
     /// Puts all the items into the database.
-    fn put_batch(&self, batch: Vec<(String, Vec<u8>)>) -> Result<(), MerkleDatabaseError> {
+    fn put_batch(&self, batch: Vec<(Vec<u8>, Vec<u8>)>) -> Result<(), MerkleDatabaseError> {
         let mut db_writer = self.db.writer()?;
         for (key, value) in batch {
-            db_writer.put(key.as_bytes(), &value)?;
+            db_writer.put(::hex::encode(key).as_bytes(), &value)?;
         }
         db_writer.commit()?;
         Ok(())
@@ -458,13 +458,14 @@ fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
     let (hash, packed) = encode_and_hash(Node::default())?;
 
     let mut db_writer = db.writer()?;
-    db_writer.put(hash.as_bytes(), &packed)?;
+    let hex_hash = ::hex::encode(hash);
+    db_writer.put(hex_hash.as_bytes(), &packed)?;
     db_writer.commit()?;
 
-    Ok(hash)
+    Ok(hex_hash)
 }
 
-fn encode_and_hash(node: Node) -> Result<(String, Vec<u8>), MerkleDatabaseError> {
+fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), MerkleDatabaseError> {
     let packed = node.into_bytes()?;
     let hash = hash(&packed);
     Ok((hash, packed))
@@ -616,10 +617,15 @@ fn text_to_string(text_val: Value) -> Result<String, MerkleDatabaseError> {
 }
 
 /// Creates a hash of the given bytes
-fn hash(input: &[u8]) -> String {
+fn hash(input: &[u8]) -> Vec<u8> {
     let mut sha = Sha512::new();
     sha.input(input);
-    String::from(&(sha.result_str())[..64])
+
+    let mut vec: Vec<u8> = vec![0; sha.output_bytes()];
+    sha.result(vec.as_mut_slice());
+
+    let (hash, _rest) = vec.split_at(vec.len() / 2);
+    hash.to_vec()
 }
 
 #[cfg(test)]
@@ -660,7 +666,8 @@ mod tests {
 
     #[test]
     fn node_deserialize() {
-        let packed = ::hex::decode("a26163a162303063616263617647676f6f64627965").expect("proper hex");
+        let packed =
+            ::hex::decode("a26163a162303063616263617647676f6f64627965").expect("improper hex");
 
         let unpacked = Node::from_bytes(&packed).unwrap();
         assert_eq!(
@@ -749,7 +756,7 @@ mod tests {
             let key_hashes = (0..1000)
                 .map(|i| {
                     let key = format!("{:016x}", i);
-                    let hash = hash(key.as_bytes());
+                    let hash = hex_hash(key.as_bytes());
                     (key, hash)
                 })
                 .collect::<Vec<_>>();
@@ -767,7 +774,7 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
-                let hash_key = hash(format!("{:016x}", i).as_bytes());
+                let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
@@ -776,7 +783,7 @@ mod tests {
             let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
                 .unwrap()
                 .into_iter()
-                .map(|i| hash(format!("{:016x}", i).as_bytes()))
+                .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
                 .collect::<Vec<String>>();
 
             for hash in delete_items.iter() {
@@ -984,6 +991,10 @@ mod tests {
         let thread_id = thread::current().id();
         temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
         temp_dir.to_str().unwrap().to_string()
+    }
+
+    fn hex_hash(b: &[u8]) -> String {
+        ::hex::encode(hash(b))
     }
 
 }
