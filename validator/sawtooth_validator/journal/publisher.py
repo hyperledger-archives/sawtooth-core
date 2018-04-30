@@ -546,27 +546,13 @@ class BlockPublisher(object):
     def chain_head_lock(self):
         return self._lock
 
-    def _build_candidate_block(self, previous_block):
-        """ Build a candidate block and construct the consensus object to
-        validate it.
-        :param previous_block_id: The block to build on top of.
-        :return: (BlockBuilder) - The candidate block in a BlockBuilder
-        wrapper.
-        """
-        state_view = BlockWrapper.state_view_for_block(
-            previous_block,
-            self._state_view_factory)
+    def _load_consensus(self, block, state_view, public_key):
+        """Load the configured consensus module's BlockPublisher to use for
+        blocks built on this block."""
         consensus_module = ConsensusFactory.get_configured_consensus_module(
-            previous_block.header_signature,
+            block.header_signature,
             state_view)
 
-        # using previous_block so so we can use the setting_cache
-        max_batches = int(self._settings_cache.get_setting(
-            'sawtooth.publisher.max_batches_per_block',
-            previous_block.state_root_hash,
-            default_value=0))
-
-        public_key = self._identity_signer.get_public_key().as_hex()
         consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view_factory=self._state_view_factory,
@@ -574,6 +560,30 @@ class BlockPublisher(object):
                            data_dir=self._data_dir,
                            config_dir=self._config_dir,
                            validator_id=public_key)
+
+        return consensus
+
+    def _build_candidate_block(self, previous_block):
+        """ Build a candidate block and construct the consensus object to
+        validate it.
+        :param previous_block_id: The block to build on top of.
+        :return: (BlockBuilder) - The candidate block in a BlockBuilder
+        wrapper.
+        """
+
+        # using previous_block so so we can use the setting_cache
+        max_batches = int(self._settings_cache.get_setting(
+            'sawtooth.publisher.max_batches_per_block',
+            previous_block.state_root_hash,
+            default_value=0))
+
+        state_view = BlockWrapper.state_view_for_block(
+            previous_block,
+            self._state_view_factory)
+
+        public_key = self._identity_signer.get_public_key().as_hex()
+        consensus = self._load_consensus(
+            previous_block, state_view, public_key)
 
         batch_injectors = []
         if self._batch_injector_factory is not None:
