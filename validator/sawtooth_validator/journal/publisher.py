@@ -563,6 +563,16 @@ class BlockPublisher(object):
 
         return consensus
 
+    def _load_injectors(self, block):
+        if self._batch_injector_factory is not None:
+            batch_injectors = self._batch_injector_factory.create_injectors(
+                block.identifier)
+            if batch_injectors:
+                LOGGER.debug("Loaded batch injectors: %s", batch_injectors)
+            return batch_injectors
+        else:
+            return []
+
     def _build_candidate_block(self, previous_block):
         """ Build a candidate block and construct the consensus object to
         validate it.
@@ -584,13 +594,7 @@ class BlockPublisher(object):
         public_key = self._identity_signer.get_public_key().as_hex()
         consensus = self._load_consensus(
             previous_block, state_view, public_key)
-
-        batch_injectors = []
-        if self._batch_injector_factory is not None:
-            batch_injectors = self._batch_injector_factory.create_injectors(
-                previous_block.identifier)
-            if batch_injectors:
-                LOGGER.debug("Loaded batch injectors: %s", batch_injectors)
+        batch_injectors = self._load_injectors(previous_block)
 
         block_header = BlockHeader(
             block_num=previous_block.block_num + 1,
