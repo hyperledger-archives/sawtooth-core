@@ -573,7 +573,7 @@ class BlockPublisher(object):
         else:
             return []
 
-    def _build_candidate_block(self, previous_block):
+    def initialize_block(self, previous_block):
         """ Build a candidate block and construct the consensus object to
         validate it.
         :param previous_block: The block to build on top of.
@@ -688,7 +688,7 @@ class BlockPublisher(object):
                     self._pending_batches.update_limit(len(chain_head.batches))
                     self._pending_batches.rebuild(
                         committed_batches, uncommitted_batches)
-                    self._build_candidate_block(chain_head)
+                    self.initialize_block(chain_head)
 
         # pylint: disable=broad-except
         except Exception as exc:
@@ -718,7 +718,7 @@ class BlockPublisher(object):
                 if (self._chain_head is not None
                         and not self._building()
                         and self._pending_batches):
-                    self._build_candidate_block(self._chain_head)
+                    self.initialize_block(self._chain_head)
 
                 if (self._building()
                         and (
