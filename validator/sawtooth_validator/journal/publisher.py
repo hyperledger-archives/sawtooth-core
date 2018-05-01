@@ -712,6 +712,11 @@ class BlockPublisher(object):
         """
         return self._candidate_block is not None
 
+    def _can_build(self):
+        """Returns whether the block publisher is ready to build a block.
+        """
+        return self._chain_head is not None and self._pending_batches
+
     def _log_consensus_state(self):
         if self._logging_states.consensus_ready:
             LOGGER.debug("Consensus is ready to build candidate block.")
@@ -728,9 +733,7 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                if (self._chain_head is not None
-                        and not self._building()
-                        and self._pending_batches):
+                if not self._building() and self._can_build():
                     try:
                         self.initialize_block(self._chain_head)
                     except ConsensusNotReady:
