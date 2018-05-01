@@ -27,13 +27,14 @@ use std::time::{Duration, UNIX_EPOCH};
 const PROTO_FILES_DIR: &str = "../protos";
 const PROTOBUF_TARGET_DIR: &str = "src/proto";
 const GENERATED_SOURCE_HEADER: &str = r#"
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 /*
  * THIS IS A GENERATED FILE: DO NOT MODIFY
  *
  * This is the module which contains the generated sources for the Protocol
  * buffers messages.
  */
-
 "#;
 
 #[derive(Debug, Clone)]
@@ -83,7 +84,7 @@ fn main() {
         };
 
         let content = format!(
-            "{}\n{}",
+            "{}\n{}\n",
             GENERATED_SOURCE_HEADER,
             proto_src_files
                 .iter()
