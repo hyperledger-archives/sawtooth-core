@@ -59,6 +59,18 @@ class ConsensusNotReady(Exception):
     """
 
 
+class NoPendingBatchesRemaining(Exception):
+    """There are pending batches remaining to be processed."""
+
+
+class FinalizeBlockResult:
+    def __init__(self, block, remaining_batches, last_batch, injected_batches):
+        self.block = block
+        self.remaining_batches = remaining_batches
+        self.last_batch = last_batch
+        self.injected_batches = injected_batches
+
+
 class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch
     has begun being processed.
@@ -158,18 +170,10 @@ class _CandidateBlock(object):
         self._scheduler.cancel()
 
     @property
-    def injected_batch_ids(self):
-        return self._injected_batch_ids
-
-    @property
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
-    def has_pending_batches(self):
-        return len(self._pending_batches) != 0
-
-    @property
-    def last_batch(self):
+    def _last_batch(self):
         if self._pending_batches:
             return self._pending_batches[-1]
         raise ValueError(
@@ -302,12 +306,6 @@ class _CandidateBlock(object):
             LOGGER.debug("Dropping batch due to missing dependencies: %s",
                          batch.header_signature)
 
-    def check_publish_block(self):
-        """Check if it is okay to publish this candidate.
-        """
-        return self._consensus.check_publish_block(
-            self._block_builder.block_header)
-
     def _sign_block(self, block):
         """ The block should be complete and the final
         signature from the publishing validator(this validator) needs to
@@ -319,19 +317,23 @@ class _CandidateBlock(object):
         signature = self._identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize(self, pending_batches):
+    def finalize(self, force=False):
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
-        :param identity_signer: the cryptographic signer to sign the block
-            with.
-        :param pending_batches: list to receive any batches that were
-        submitted to add to the block but were not validated before this
-        call.
         :return: The generated Block, or None if Block failed to finalize.
         In both cases the pending_batches will contain the list of batches
         that need to be added to the next Block that is built.
         """
+        if not (force or self._pending_batches):
+            raise NoPendingBatchesRemaining()
+
+        if not self._consensus.check_publish_block(
+                self._block_builder.block_header):
+            raise ConsensusNotReady()
+
+        pending_batches = []
+
         self._scheduler.unschedule_incomplete_batches()
         self._scheduler.finalize()
         self._scheduler.complete(block=True)
@@ -402,7 +404,8 @@ class _CandidateBlock(object):
                         x for x in self._pending_batches
                         if x not in bad_batches
                     ])
-                    return None
+                    return self._build_result(None, pending_batches)
+
                 else:
                     builder.add_batch(batch)
                     committed_txn_cache.add_batch(batch)
@@ -415,7 +418,7 @@ class _CandidateBlock(object):
 
         if state_hash is None or not builder.batches:
             LOGGER.debug("Abandoning block %s: no batches added", builder)
-            return None
+            return self._build_result(None, pending_batches)
 
         if not self._consensus.finalize_block(builder.block_header):
             LOGGER.debug("Abandoning block %s, consensus failed to finalize "
@@ -424,11 +427,18 @@ class _CandidateBlock(object):
             pending_batches.clear()
             pending_batches.extend([x for x in self._pending_batches
                                     if x not in bad_batches])
-            return None
+            return self._build_result(None, pending_batches)
 
         builder.set_state_hash(state_hash)
         self._sign_block(builder)
-        return builder.build_block()
+        return self._build_result(builder.build_block(), pending_batches)
+
+    def _build_result(self, block, remaining):
+        return FinalizeBlockResult(
+            block=block,
+            remaining_batches=remaining,
+            last_batch=self._last_batch(),
+            injected_batches=self._injected_batch_ids)
 
 
 class _PublisherLoggingStates:
@@ -739,30 +749,25 @@ class BlockPublisher(object):
                     except ConsensusNotReady:
                         self._log_consensus_state()
 
-                if (self._building()
-                        and (
-                            force
-                            or self._candidate_block.has_pending_batches())
-                        and self._candidate_block.check_publish_block()):
+                if self._building():
+                    try:
+                        result = self._candidate_block.finalize(force)
+                    except (ConsensusNotReady, NoPendingBatchesRemaining):
+                        return
 
-                    pending_batches = []  # will receive the list of batches
-                    # that were not added to the block
-                    injected_batch_ids = \
-                        self._candidate_block.injected_batch_ids
-                    last_batch = self._candidate_block.last_batch
-                    block = self._candidate_block.finalize(
-                        self._identity_signer,
-                        pending_batches)
                     self._candidate_block = None
+
                     # Update the _pending_batches to reflect what we learned.
+                    self._pending_batches.update(
+                        result.remaining_batches,
+                        result.last_batch)
 
-                    self._pending_batches.update(pending_batches, last_batch)
-
-                    if block:
-                        blkw = BlockWrapper(block)
+                    if result.block:
+                        blkw = BlockWrapper(result.block)
                         LOGGER.info("Claimed Block: %s", blkw)
                         self._block_sender.send(
-                            blkw.block, keep_batches=injected_batch_ids)
+                            blkw.block,
+                            keep_batches=result.injected_batches)
                         self._blocks_published_count.inc()
 
                         # We built our candidate, disable processing until
