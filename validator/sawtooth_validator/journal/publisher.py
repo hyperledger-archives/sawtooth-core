@@ -548,11 +548,7 @@ class BlockPublisher(object):
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
-    def can_accept_batch(self):
-        """Returns whether new batches can be accepted for soft limiting."""
-        return len(self._pending_batches) < self._pending_batches.limit()
-
-    def get_current_queue_info(self):
+    def pending_batch_info(self):
         """Returns a tuple of the current size of the pending batch queue
         and the current queue limit.
         """
