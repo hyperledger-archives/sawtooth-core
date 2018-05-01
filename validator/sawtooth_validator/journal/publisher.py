@@ -751,16 +751,9 @@ class BlockPublisher(object):
 
                 if self._building():
                     try:
-                        result = self._candidate_block.finalize(force)
+                        result = self.finalize_block(force)
                     except (ConsensusNotReady, NoPendingBatchesRemaining):
                         return
-
-                    self._candidate_block = None
-
-                    # Update the _pending_batches to reflect what we learned.
-                    self._pending_batches.update(
-                        result.remaining_batches,
-                        result.last_batch)
 
                     if result.block:
                         blkw = BlockWrapper(result.block)
@@ -781,6 +774,18 @@ class BlockPublisher(object):
         except Exception:
             LOGGER.exception(
                 "Unhandled exception in BlockPublisher.on_check_publish_block")
+
+    def finalize_block(self, force=False):
+        result = self._candidate_block.finalize(force)
+
+        self._candidate_block = None
+
+        # Update the _pending_batches to reflect what we learned.
+        self._pending_batches.update(
+            result.remaining_batches,
+            result.last_batch)
+
+        return result
 
     def has_batch(self, batch_id):
         with self._lock:
