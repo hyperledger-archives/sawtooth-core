@@ -756,19 +756,8 @@ class BlockPublisher(object):
                         return
 
                     if result.block:
-                        blkw = BlockWrapper(result.block)
-                        LOGGER.info("Claimed Block: %s", blkw)
-                        self._block_sender.send(
-                            blkw.block,
-                            keep_batches=result.injected_batches)
-                        self._blocks_published_count.inc()
-
-                        # We built our candidate, disable processing until
-                        # the chain head is updated. Only set this if
-                        # we succeeded. Otherwise try again, this
-                        # can happen in cases where txn dependencies
-                        # did not validate when building the block.
-                        self.on_chain_updated(None)
+                        self.publish_block(
+                            result.block, result.injected_batches)
 
         # pylint: disable=broad-except
         except Exception:
@@ -786,6 +775,18 @@ class BlockPublisher(object):
             result.last_batch)
 
         return result
+
+    def publish_block(self, block, injected_batches):
+        blkw = BlockWrapper(block)
+        LOGGER.info("Claimed Block: %s", blkw)
+        self._block_sender.send(blkw.block, keep_batches=injected_batches)
+        self._blocks_published_count.inc()
+
+        # We built our candidate, disable processing until the chain head is
+        # updated. Only set this if we succeeded. Otherwise try again, this can
+        # happen in cases where txn dependencies did not validate when building
+        # the block.
+        self.on_chain_updated(None)
 
     def has_batch(self, batch_id):
         with self._lock:
