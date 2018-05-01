@@ -132,7 +132,7 @@ class _CandidateBlock(object):
                  max_batches,
                  batch_injectors,
                  settings_view,
-                 signer_public_key,
+                 identity_signer,
                  ):
         self._pending_batches = []
         self._pending_batch_ids = set()
@@ -149,7 +149,7 @@ class _CandidateBlock(object):
         self._batch_injectors = batch_injectors
 
         self._settings_view = settings_view
-        self._signer_public_key = signer_public_key
+        self._identity_signer = identity_signer
 
     def __del__(self):
         self.cancel()
@@ -286,7 +286,7 @@ class _CandidateBlock(object):
 
             if not enforce_validation_rules(
                     self._settings_view,
-                    self._signer_public_key,
+                    self._identity_signer.get_public_key().as_hex(),
                     self._pending_batches + batches_to_add):
                 return
 
@@ -308,7 +308,7 @@ class _CandidateBlock(object):
         return self._consensus.check_publish_block(
             self._block_builder.block_header)
 
-    def _sign_block(self, block, identity_signer):
+    def _sign_block(self, block):
         """ The block should be complete and the final
         signature from the publishing validator(this validator) needs to
         be added.
@@ -316,10 +316,10 @@ class _CandidateBlock(object):
         :param identity_signer: the singer to sign the block with.
         """
         header_bytes = block.block_header.SerializeToString()
-        signature = identity_signer.sign(header_bytes)
+        signature = self._identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize(self, identity_signer, pending_batches):
+    def finalize(self, pending_batches):
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
@@ -427,7 +427,7 @@ class _CandidateBlock(object):
             return None
 
         builder.set_state_hash(state_hash)
-        self._sign_block(builder, identity_signer)
+        self._sign_block(builder)
         return builder.build_block()
 
 
@@ -631,7 +631,7 @@ class BlockPublisher(object):
             max_batches,
             batch_injectors,
             SettingsView(state_view),
-            public_key)
+            self._identity_signer)
 
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch():
@@ -751,7 +751,6 @@ class BlockPublisher(object):
                         self._candidate_block.injected_batch_ids
                     last_batch = self._candidate_block.last_batch
                     block = self._candidate_block.finalize(
-                        self._identity_signer,
                         pending_batches)
                     self._candidate_block = None
                     # Update the _pending_batches to reflect what we learned.
