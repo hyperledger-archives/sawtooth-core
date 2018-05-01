@@ -486,8 +486,7 @@ class BlockPublisher(object):
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
-        self._pending_batches = PendingBatchesPool()
-        self._publish_count_average = _RollingAverage(
+        self._pending_batches = PendingBatchesPool(
             NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT)
 
         self._chain_head = chain_head  # block (BlockWrapper)
@@ -535,18 +534,14 @@ class BlockPublisher(object):
             observer.notify_batch_pending(batch)
 
     def can_accept_batch(self):
-        return len(self._pending_batches) < self._get_current_queue_limit()
-
-    def _get_current_queue_limit(self):
-        # Limit the number of batches to 2 times the publishing average.  This
-        # allows the queue to grow geometrically, if the queue is drained.
-        return 2 * self._publish_count_average.value
+        """Returns whether new batches can be accepted for soft limiting."""
+        return len(self._pending_batches) < self._pending_batches.limit()
 
     def get_current_queue_info(self):
         """Returns a tuple of the current size of the pending batch queue
         and the current queue limit.
         """
-        return (len(self._pending_batches), self._get_current_queue_limit())
+        return (len(self._pending_batches), self._pending_batches.limit())
 
     @property
     def chain_head_lock(self):
@@ -648,24 +643,6 @@ class BlockPublisher(object):
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
                              batch.header_signature)
 
-    def _update_pending_queue_limit(self, num_committed_batches):
-        """Take the number of committed batches and use that to update the
-        rolling average of batches, if it is a significant enough change.
-
-        Args:
-            num_committed_batches (int): the number committed batches in a
-                block
-        """
-        if num_committed_batches > 0:
-            # Only update the average if either:
-            # a. Not drained below the current average
-            # b. Drained the queue, but the queue was not bigger than the
-            #    current running average
-            remainder = len(self._pending_batches) - num_committed_batches
-            if remainder > self._publish_count_average.value or \
-                    num_committed_batches > self._publish_count_average.value:
-                self._publish_count_average.update(num_committed_batches)
-
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
                          uncommitted_batches=None):
@@ -696,7 +673,7 @@ class BlockPublisher(object):
                 # we need to make a new _CandidateBlock (if we can) since the
                 # block chain has updated under us.
                 if chain_head is not None:
-                    self._update_pending_queue_limit(len(chain_head.batches))
+                    self._pending_batches.update_limit(len(chain_head.batches))
                     self._pending_batches.rebuild(
                         committed_batches, uncommitted_batches)
                     self._build_candidate_block(chain_head)
@@ -775,11 +752,12 @@ class BlockPublisher(object):
 
 class PendingBatchesPool:
 
-    def __init__(self):
+    def __init__(self, sample_size, initial_value):
         # Ordered batches waiting to be processed
         self._batches = list()
         self._ids = set()
         self._gauge = COLLECTOR.gauge('pending_batch_gauge', instance=self)
+        self._limit = QueueLimit(sample_size, initial_value)
 
     def __len__(self):
         return len(self._batches)
@@ -844,8 +822,41 @@ class PendingBatchesPool:
 
         self._update_gauge()
 
+    def update_limit(self, consumed):
+        self._limit.update(len(self._batches), consumed)
+
+    def limit(self):
+        return self._limit.get()
+
     def _update_gauge(self):
         self._gauge.set_value(len(self._batches))
+
+
+class QueueLimit:
+    def __init__(self, sample_size, initial_value):
+        self._avg = _RollingAverage(sample_size, initial_value)
+
+    def update(self, queue_length, consumed):
+        """Use the current queue size and the number of items consumed to
+        update the queue limit, if there was a significant enough change.
+
+        Args:
+            queue_length (int): the current size of the queue
+            consumed (int): the number items consumed
+        """
+        if consumed > 0:
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = queue_length - consumed
+            if remainder > self._avg.value or consumed > self._avg.value:
+                self._avg.update(consumed)
+
+    def get(self):
+        # Limit the number of items to 2 times the publishing average.  This
+        # allows the queue to grow geometrically, if the queue is drained.
+        return 2 * self._avg.value
 
 
 class _RollingAverage(object):
