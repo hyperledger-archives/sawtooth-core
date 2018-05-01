@@ -22,6 +22,7 @@ import queue
 from threading import RLock
 import time
 
+from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
@@ -501,8 +502,7 @@ class BlockPublisher(object):
         self._blocks_published_count = COLLECTOR.counter(
             'blocks_published_count', instance=self)
 
-        self._batch_queue = queue.Queue()
-        self._queued_batch_ids = []
+        self._batch_queue = IncomingBatchQueue()
         self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
@@ -529,7 +529,6 @@ class BlockPublisher(object):
         inclusion in the next block.
         """
         self._batch_queue.put(batch)
-        self._queued_batch_ids.append(batch.header_signature)
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
@@ -631,7 +630,6 @@ class BlockPublisher(object):
         :return: None
         """
         with self._lock:
-            self._queued_batch_ids = self._queued_batch_ids[:1]
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
                 # if we are building a block then send schedule it for
@@ -744,10 +742,37 @@ class BlockPublisher(object):
         with self._lock:
             if batch_id in self._pending_batches:
                 return True
-            if batch_id in self._queued_batch_ids:
+            if batch_id in self._batch_queue:
                 return True
 
         return False
+
+
+class IncomingBatchQueue:
+    """This queue keeps track of the batch ids so that components on the edge
+    can filter out duplicates early. However, there is still an opportunity for
+    duplicates to make it into this queue, which is intentional to avoid
+    blocking threads trying to put/get from the queue. Any duplicates
+    introduced by this must be filtered out later.
+    """
+    def __init__(self):
+        self._queue = queue.Queue()
+        self._ids = ConcurrentSet()
+
+    def put(self, batch):
+        if batch.header_signature not in self._ids:
+            self._queue.put(batch)
+
+    def get(self, timeout=None):
+        batch = self._queue.get(timeout=timeout)
+        try:
+            self._ids.remove(batch.header_signature)
+        except KeyError:
+            pass
+        return batch
+
+    def __contains__(self, batch_id):
+        return batch_id in self._ids
 
 
 class PendingBatchesPool:
