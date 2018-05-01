@@ -696,9 +696,9 @@ class BlockPublisher(object):
                         self._log_consensus_state()
 
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.critical("on_chain_updated exception.")
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in BlockPublisher.on_chain_updated")
 
     def cancel_block(self):
         if self._candidate_block:
@@ -770,9 +770,9 @@ class BlockPublisher(object):
                         self.on_chain_updated(None)
 
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.critical("on_check_publish_block exception.")
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in BlockPublisher.on_check_publish_block")
 
     def has_batch(self, batch_id):
         with self._lock:
