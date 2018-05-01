@@ -319,7 +319,7 @@ class _CandidateBlock(object):
         signature = identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize_block(self, identity_signer, pending_batches):
+    def finalize(self, identity_signer, pending_batches):
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
@@ -747,7 +747,7 @@ class BlockPublisher(object):
                     injected_batch_ids = \
                         self._candidate_block.injected_batch_ids
                     last_batch = self._candidate_block.last_batch
-                    block = self._candidate_block.finalize_block(
+                    block = self._candidate_block.finalize(
                         self._identity_signer,
                         pending_batches)
                     self._candidate_block = None
