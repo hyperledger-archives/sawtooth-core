@@ -806,6 +806,98 @@ mod tests {
     }
 
     #[test]
+    /// This test is similar to the update test except that it will ensure that
+    /// there are no index errors in path_map within update function in case
+    /// there are addresses within set_items & delete_items which have a common
+    /// prefix (of any length).
+    ///
+    /// A Merkle trie is created with some initial values which is then updated
+    /// (set & delete).
+    fn merkle_trie_update_same_address_space() {
+        run_test(|merkle_path| {
+            let mut merkle_db = make_db(merkle_path);
+            let init_root = merkle_db.get_merkle_root();
+            let key_hashes = vec![
+                // matching prefix e55420
+                (
+                    "asdfg",
+                    "e5542002d3e2892516fa461cde69e05880609fbad3d38ab69435a189e126de672b620c",
+                ),
+                (
+                    "qwert",
+                    "c946ee72d38b8c51328f1a5f31eb5bd3300362ad0ca69dab54eff996775c7069216bda",
+                ),
+                (
+                    "zxcvb",
+                    "487a6a63c71c9b7b63146ef68858e5d010b4978fd70dda0404d4fad5e298ccc9a560eb",
+                ),
+                // matching prefix e55420
+                (
+                    "yuiop",
+                    "e55420c026596ee643e26fd93927249ea28fb5f359ddbd18bc02562dc7e8dbc93e89b9",
+                ),
+                (
+                    "hjklk",
+                    "cc1370ce67aa16c89721ee947e9733b2a3d2460db5b0ea6410288f426ad8d8040ea641",
+                ),
+                (
+                    "bnmvc",
+                    "d07e69664286712c3d268ca71464f2b3b2604346f833106f3e0f6a72276e57a16f3e0f",
+                ),
+            ];
+            let mut values = HashMap::new();
+            for &(ref key, ref hashed) in key_hashes.iter() {
+                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+                values.insert(hashed.to_string(), key.to_string());
+                merkle_db.set_merkle_root(new_root).unwrap();
+            }
+
+            assert_ne!(init_root, merkle_db.get_merkle_root());
+            let mut set_items = HashMap::new();
+            // Perform some updates on the lower keys
+            for &(_, ref key_hash) in key_hashes.iter() {
+                set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
+                values.insert(key_hash.clone().to_string(), "2.0".to_string());
+            }
+
+            // The first item below(e55420...89b9) shares a common prefix
+            // with the first in set_items(e55420...620c)
+            let delete_items = vec![
+                "e55420c026596ee643e26fd93927249ea28fb5f359ddbd18bc02562dc7e8dbc93e89b9"
+                    .to_string(),
+                "cc1370ce67aa16c89721ee947e9733b2a3d2460db5b0ea6410288f426ad8d8040ea641"
+                    .to_string(),
+                "d07e69664286712c3d268ca71464f2b3b2604346f833106f3e0f6a72276e57a16f3e0f"
+                    .to_string(),
+            ];
+
+            for hash in delete_items.iter() {
+                values.remove(hash);
+            }
+
+            let virtual_root = merkle_db.update(&set_items, &delete_items, true).unwrap();
+
+            // virtual root shouldn't match actual contents of tree
+            assert!(merkle_db.set_merkle_root(virtual_root.clone()).is_err());
+
+            let actual_root = merkle_db.update(&set_items, &delete_items, false).unwrap();
+            // the virtual root should be the same as the actual root
+            assert_eq!(virtual_root, actual_root);
+            assert_ne!(actual_root, merkle_db.get_merkle_root());
+
+            merkle_db.set_merkle_root(actual_root).unwrap();
+
+            for (address, value) in values {
+                assert_value_at_address(&merkle_db, &address, &value);
+            }
+
+            for address in delete_items {
+                assert!(merkle_db.get(&address).is_err());
+            }
+        })
+    }
+
+    #[test]
     fn leaf_iteration() {
         run_test(|merkle_path| {
             let mut merkle_db = make_db(merkle_path);
