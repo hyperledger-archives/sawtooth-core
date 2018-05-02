@@ -251,6 +251,11 @@ class MerkleDatabase(object):
             if path != '':
                 parent_address = path[:-TOKEN_SIZE]
                 path_branch = path[-TOKEN_SIZE:]
+                # Check to re-instate the path_map for an address which
+                # shares it's prefix both in set_items & delete_items
+                if path_map.get(parent_address) is None:
+                    path_map[parent_address] = {"v": None, "c": {}}
+                    path_map[parent_address]['c'].update({path_branch: None})
                 path_map[parent_address]['c'][path_branch] = key_hash
 
         if not virtual:
