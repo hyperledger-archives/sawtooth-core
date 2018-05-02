@@ -250,7 +250,7 @@ impl MerkleDatabase {
 
         for (set_address, set_value) in set_items {
             let tokens = tokenize_address(set_address);
-            let mut set_path_map = self.get_path_by_tokens(&tokens)?;
+            let mut set_path_map = self.get_path_by_tokens(&tokens, false)?;
 
             {
                 let node = set_path_map
@@ -263,7 +263,7 @@ impl MerkleDatabase {
 
         for del_address in delete_items.iter() {
             let tokens = tokenize_address(del_address);
-            let del_path_map = self.get_path_by_tokens(&tokens)?;
+            let del_path_map = self.get_path_by_tokens(&tokens, true)?;
             path_map.extend(del_path_map);
         }
 
@@ -375,6 +375,7 @@ impl MerkleDatabase {
     fn get_path_by_tokens(
         &self,
         tokens: &[&str],
+        strict: bool,
     ) -> Result<HashMap<String, Node>, MerkleDatabaseError> {
         let mut nodes = HashMap::new();
 
@@ -390,8 +391,14 @@ impl MerkleDatabase {
                 if !new_branch && child_address.is_some() {
                     get_node_by_hash(&self.db, child_address.unwrap())?
                 } else {
-                    new_branch = true;
-                    Node::default()
+                    if strict {
+                        return Err(MerkleDatabaseError::NotFound(format!(
+                            "invalid address {} from root {}",
+                            tokens.join(""), self.root_hash)));
+                    } else {
+                        new_branch = true;
+                        Node::default()
+                    }
                 }
             };
 
