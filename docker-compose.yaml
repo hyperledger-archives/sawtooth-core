@@ -118,8 +118,10 @@ services:
         python3 setup.py clean --all
         python3 setup.py build
         mkdir -p bin
-        cargo build
-        cp ./target/debug/sawtooth-validator bin/sawtooth-validator
+        mkdir -p lib
+        cargo build --release
+        cp ./target/release/sawtooth-validator bin/sawtooth-validator
+        cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so
         sawadm keygen
         sawadm genesis
         sawtooth-validator -vv \
