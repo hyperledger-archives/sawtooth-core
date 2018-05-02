@@ -13,10 +13,13 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 
+import os
+import shutil
+import tempfile
 import unittest
 import hashlib
 
-from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.protobuf import identity_pb2
 from sawtooth_validator.state import identity_view
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -24,9 +27,20 @@ from sawtooth_validator.state.state_view import StateViewFactory
 
 
 class TestIdentityView(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
     def setUp(self):
-        self._database = DictDatabase()
+        self._temp_dir = tempfile.mkdtemp()
+
+        self._database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_identity_view.lmdb'),
+            _size=10 * 1024 * 1024)
         self._tree = MerkleDatabase(self._database)
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
 
     def test_identityview_roles(self):
         """Tests get_role and get_roles get the correct Roles and the

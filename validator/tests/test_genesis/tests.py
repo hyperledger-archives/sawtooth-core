@@ -24,6 +24,7 @@ from unittest.mock import patch
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -68,7 +69,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             self.make_block_store(),  # Empty block store
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -88,7 +89,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -107,7 +108,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -131,7 +132,7 @@ class TestGenesisController(unittest.TestCase):
             Mock(name='txn_executor'),
             Mock('completer'),
             block_store,
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -158,7 +159,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -186,7 +187,7 @@ class TestGenesisController(unittest.TestCase):
             Mock('txn_executor'),
             Mock('completer'),
             block_store,
-            StateViewFactory(DictDatabase()),
+            Mock('StateViewFactory'),
             self._signer,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
@@ -211,7 +212,9 @@ class TestGenesisController(unittest.TestCase):
         genesis_file = self._with_empty_batch_file()
         block_store = self.make_block_store()
 
-        state_database = DictDatabase()
+        state_database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_genesis.lmdb'),
+            _size=10 * 1024 * 1024)
         merkle_db = MerkleDatabase(state_database)
 
         ctx_mgr = Mock(name='ContextManager')

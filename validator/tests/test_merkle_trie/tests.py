@@ -13,14 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import hashlib
 import os
 import unittest
 import random
+import shutil
 import tempfile
 from string import ascii_lowercase
 
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.database import lmdb_nolock_database
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 
 class TestSawtoothMerkleTrie(unittest.TestCase):
@@ -28,14 +30,15 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.dir = tempfile.mkdtemp()
         self.file = os.path.join(self.dir, 'merkle.lmdb')
 
-        self.lmdb = lmdb_nolock_database.LMDBNoLockDatabase(
+        self.lmdb = NativeLmdbDatabase(
             self.file,
-            'n')
+            _size=120 * 1024 * 1024)
 
         self.trie = MerkleDatabase(self.lmdb)
 
     def tearDown(self):
         self.trie.close()
+        shutil.rmtree(self.dir)
 
     def test_merkle_trie_root_advance(self):
         value = {'name': 'foo', 'value': 1}
@@ -140,6 +143,31 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
             with self.assertRaises(KeyError):
                 self.get(address, ishash=True)
 
+    def test_merkle_trie_leaf_iteration(self):
+        new_root = self.update({
+            "010101": {"my_data": 1},
+            "010202": {"my_data": 2},
+            "010303": {"my_data": 3}
+        }, [], virtual=False)
+
+        # iterate over the empty trie
+        iterator = iter(self.trie)
+        with self.assertRaises(StopIteration):
+            next(iterator)
+
+        self.set_merkle_root(new_root)
+
+        # Test complete trie iteration
+        self.assertEqual(
+            [("010101", {"my_data": 1}),
+             ("010202", {"my_data": 2}),
+             ("010303", {"my_data": 3})],
+            [entry for entry in iter(self.trie)])
+
+        # Test prefixed iteration
+        self.assertEqual([("010202", {"my_data": 2})],
+                         [entry for entry in self.trie.leaves('0102')])
+
     # assertions
     def assert_value_at_address(self, address, value, ishash=False):
         self.assertEqual(
@@ -193,7 +221,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 
 
 def _hash(key):
-    return MerkleDatabase.hash(key.encode())
+    return hashlib.sha512(key.encode()).hexdigest()[:64]
 
 
 def _random_string(length):

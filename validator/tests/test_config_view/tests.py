@@ -13,10 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
+import shutil
+import tempfile
 import hashlib
 import unittest
 
-from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 
 from sawtooth_validator.state.settings_view import SettingsViewFactory
@@ -28,11 +31,15 @@ from sawtooth_validator.state.merkle import MerkleDatabase
 class TestSettingsView(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
+        self._temp_dir = None
         self._settings_view_factory = None
         self._current_root_hash = None
 
     def setUp(self):
-        database = DictDatabase()
+        self._temp_dir = tempfile.mkdtemp()
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_config_view.lmdb'),
+            _size=10 * 1024 * 1024)
         state_view_factory = StateViewFactory(database)
         self._settings_view_factory = SettingsViewFactory(state_view_factory)
 
@@ -45,6 +52,9 @@ class TestSettingsView(unittest.TestCase):
             TestSettingsView._address('my.other.list'):
                 TestSettingsView._setting_entry('my.other.list', '13;14;15')
         }, virtual=False)
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
 
     def test_get_setting(self):
         """Verifies the correct operation of get_setting() by using it to get

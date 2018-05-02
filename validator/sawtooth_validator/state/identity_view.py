@@ -117,10 +117,9 @@ class IdentityView(object):
         """
 
         prefix = _IDENTITY_NS + _ROLE_NS
-        role_list_bytes_dict = self._state_view.leaves(prefix=prefix)
         rolelist_list = [
             _create_from_bytes(d, identity_pb2.RoleList)
-            for d in role_list_bytes_dict.values()
+            for _, d in self._state_view.leaves(prefix=prefix)
         ]
         roles = []
         for role_list in rolelist_list:
@@ -163,10 +162,9 @@ class IdentityView(object):
         """
 
         prefix = _IDENTITY_NS + _POLICY_NS
-        policy_list_bytes_dict = self._state_view.leaves(prefix=prefix)
         policylist_list = [
             _create_from_bytes(d, identity_pb2.PolicyList)
-            for d in policy_list_bytes_dict.values()
+            for _, d in self._state_view.leaves(prefix=prefix)
         ]
         policies = []
         for policy_list in policylist_list:

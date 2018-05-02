@@ -691,7 +691,7 @@ class StateListRequest(_ClientRequestHandler):
         self._validate_namespace(request.address)
         entries = [
             client_state_pb2.ClientStateListResponse.Entry(address=a, data=v)
-            for a, v in self._tree.leaves(request.address or '').items()]
+            for a, v in self._tree.leaves(request.address or '')]
 
         # Order entries, remove if tree.entries refactored to be ordered
         entries.sort(key=lambda l: l.address)

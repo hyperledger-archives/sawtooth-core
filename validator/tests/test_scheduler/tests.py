@@ -17,6 +17,9 @@
 
 import unittest
 import hashlib
+import os
+import shutil
+import tempfile
 import threading
 import time
 
@@ -29,7 +32,7 @@ from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
-from sawtooth_validator.database import dict_database
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 
 from test_scheduler.yaml_scheduler_tester import create_batch
@@ -49,14 +52,25 @@ def create_address(payload):
 
 
 class TestSchedulers(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
     def setUp(self):
-        self._context_manager = ContextManager(dict_database.DictDatabase())
+        self._temp_dir = tempfile.mkdtemp()
+
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_schedulers.lmdb'),
+            _size=10 * 1024 * 1024)
+
+        self._context_manager = ContextManager(database)
 
         self._context = create_context('secp256k1')
         self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self._context_manager.stop()
+        shutil.rmtree(self._temp_dir)
 
     def _setup_serial_scheduler(self):
         context_manager = self._context_manager
@@ -851,7 +865,11 @@ class TestSchedulers(unittest.TestCase):
         txn_info_e = next(sched2)
         address_e = _get_address_from_txn(txn_info_e)
 
-        merkle_database = MerkleDatabase(dict_database.DictDatabase())
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir,
+                         '_add_valid_batch_invalid_batch.lmdb'),
+            _size=10 * 1024 * 1024)
+        merkle_database = MerkleDatabase(database)
         state_root_end = merkle_database.update(
             {address_a: b"1", address_b: b"1",
              address_d: b"1", address_e: b"1"},
@@ -992,8 +1010,18 @@ class TestSchedulers(unittest.TestCase):
 
 
 class TestSerialScheduler(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase())
+        self._temp_dir = tempfile.mkdtemp()
+
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_serial_schedulers.lmdb'),
+            _size=10 * 1024 * 1024)
+
+        self.context_manager = ContextManager(database)
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = SerialScheduler(squash_handler,
@@ -1005,6 +1033,7 @@ class TestSerialScheduler(unittest.TestCase):
 
     def tearDown(self):
         self.context_manager.stop()
+        shutil.rmtree(self._temp_dir)
 
     def test_transaction_order(self):
         """Tests the that transactions are returned in order added.
@@ -1217,8 +1246,18 @@ class TestSerialScheduler(unittest.TestCase):
 
 
 class TestParallelScheduler(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase())
+        self._temp_dir = tempfile.mkdtemp()
+
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_serial_schedulers.lmdb'),
+            _size=10 * 1024 * 1024)
+
+        self.context_manager = ContextManager(database)
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = ParallelScheduler(squash_handler,
@@ -1230,6 +1269,7 @@ class TestParallelScheduler(unittest.TestCase):
 
     def tearDown(self):
         self.context_manager.stop()
+        shutil.rmtree(self._temp_dir)
 
     def test_add_to_finalized_scheduler(self):
         """Tests that a finalized scheduler raise exception on add_batch().

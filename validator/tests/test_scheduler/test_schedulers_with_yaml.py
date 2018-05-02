@@ -16,8 +16,10 @@
 import unittest
 import logging
 import os
+import shutil
+import tempfile
 
-from sawtooth_validator.database import dict_database
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
@@ -29,6 +31,22 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestSchedulersWithYaml(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
+    def setUp(self):
+        self._temp_dir = tempfile.mkdtemp()
+
+        database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_state_view.lmdb'),
+            _size=10 * 1024 * 1024)
+
+        self._context_manager = ContextManager(database)
+
+    def tearDown(self):
+        self._context_manager.stop()
+        shutil.rmtree(self._temp_dir)
 
     def _setup_serial_scheduler(self):
         context_manager = self._context_manager
@@ -183,19 +201,14 @@ class TestSchedulersWithYaml(unittest.TestCase):
         sched_state_roots = self._get_state_roots(
             batch_results=batch_results)
 
-        calc_state_hash = tester.compute_state_hashes_wo_scheduler()
+        calc_state_hash = tester.compute_state_hashes_wo_scheduler(
+            self._temp_dir)
 
         self.assertEqual(
             sched_state_roots,
             calc_state_hash,
             "The state hashes calculated by the scheduler for yaml file {}"
             " must be the same as calculated by the tester".format(name))
-
-    def setUp(self):
-        self._context_manager = ContextManager(dict_database.DictDatabase())
-
-    def tearDown(self):
-        self._context_manager.stop()
 
     def _get_state_roots(self, batch_results):
         return [r.state_hash for _, r in batch_results

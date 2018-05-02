@@ -20,12 +20,14 @@ import sys
 from setuptools import setup, find_packages
 
 bin_dir = "/usr/bin"
+lib_dir = "/usr/lib"
 conf_dir = "/etc/sawtooth"
 data_dir = "/var/lib/sawtooth"
 log_dir = "/var/log/sawtooth"
 
 data_files = [
     (bin_dir, ['bin/sawtooth-validator']),
+    (lib_dir, ['lib/libsawtooth_validator.so']),
     (conf_dir, ['packaging/path.toml.example',
                 'packaging/log_config.toml.example',
                 'packaging/validator.toml.example']),

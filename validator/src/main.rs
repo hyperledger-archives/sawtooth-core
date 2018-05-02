@@ -23,10 +23,15 @@ fn main() {
         .map_err(|err| err.print(*py))
         .unwrap();
 
-    let cli = py.import("sawtooth_validator.server.cli")
-        .map_err(|err| err.print(*py))
-        .unwrap();
-    cli.call(*py, "main", (pydict,), None)
-        .map_err(|err| err.print(*py))
-        .unwrap();
+    let cli = match py.import("sawtooth_validator.server.cli") {
+        Ok(module) => module,
+        Err(err) => {
+            err.print(*py);
+            return;
+        }
+    };
+
+    if let Err(err) = cli.call(*py, "main", (pydict,), None) {
+        err.print(*py);
+    }
 }

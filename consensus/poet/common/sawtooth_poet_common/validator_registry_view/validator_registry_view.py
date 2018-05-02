@@ -51,7 +51,7 @@ class ValidatorRegistryView(object):
         leaves = self._state_view.leaves(_NAMESPACE)
         infos = [
             ValidatorRegistryView._parse_validator_info(state_data)
-            for address, state_data in leaves.items()
+            for address, state_data in leaves
             if address != validator_map_addr
         ]
         return {info.id: info for info in infos}

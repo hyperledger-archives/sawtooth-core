@@ -19,9 +19,12 @@ import unittest
 
 from collections import namedtuple
 import hashlib
+import os
+import shutil
+import tempfile
 import time
 
-from sawtooth_validator.database import dict_database
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.protobuf.events_pb2 import Event
@@ -32,17 +35,29 @@ TestAddresses = namedtuple('TestAddresses',
 
 
 class TestContextManager(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
     def setUp(self):
-        self.database_of_record = dict_database.DictDatabase()
+        self._temp_dir = tempfile.mkdtemp()
+
+        self.database_of_record = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'db_of_record.lmdb'),
+            _size=10 * 1024 * 1024)
+
         self.context_manager = context_manager.ContextManager(
             self.database_of_record)
         self.first_state_hash = self.context_manager.get_first_root()
 
         # used for replicating state hash through direct merkle tree updates
-        self.database_results = dict_database.DictDatabase()
+        self.database_results = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'db_results.lmdb'),
+            _size=10 * 1024 * 1024)
 
     def tearDown(self):
         self.context_manager.stop()
+        shutil.rmtree(self._temp_dir)
 
     def _create_address(self, value=None):
         """

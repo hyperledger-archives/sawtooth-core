@@ -13,15 +13,32 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
+import shutil
+import tempfile
 import unittest
 
-from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 
 from sawtooth_validator.state.state_view import StateViewFactory
 
 
 class StateViewTest(unittest.TestCase):
+    def __init__(self, test_name):
+        super().__init__(test_name)
+        self._temp_dir = None
+
+    def setUp(self):
+        self._temp_dir = tempfile.mkdtemp()
+
+        self.database = NativeLmdbDatabase(
+            os.path.join(self._temp_dir, 'test_state_view.lmdb'),
+            _size=10 * 1024 * 1024)
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
+
     def test_state_view(self):
         """Tests the StateViewFactory and its creation of StateViews
 
@@ -35,17 +52,16 @@ class StateViewTest(unittest.TestCase):
            new item.
         """
 
-        database = DictDatabase()
-        merkle_db = MerkleDatabase(database)
+        merkle_db = MerkleDatabase(self.database)
 
-        state_view_factory = StateViewFactory(database)
+        state_view_factory = StateViewFactory(self.database)
 
         initial_state_view = state_view_factory.create_view(
             merkle_db.get_merkle_root())
 
         # test that the initial state view returns empty values
         self.assertEqual([], initial_state_view.addresses())
-        self.assertEqual({}, initial_state_view.leaves(''))
+        self.assertEqual({}, {k: v for k, v in initial_state_view.leaves('')})
         with self.assertRaises(KeyError):
             initial_state_view.get('abcd')
 
@@ -61,4 +77,4 @@ class StateViewTest(unittest.TestCase):
         # Check that the values can be properly read back
         self.assertEqual('hello', next_state_view.get('abcd').decode())
         self.assertEqual({'abcd': 'hello'.encode()},
-                         next_state_view.leaves(''))
+                         {k: v for k, v in next_state_view.leaves('')})
