@@ -89,8 +89,12 @@ RUN dpkg -i /tmp/python3-sawtooth-signing*.deb || true \
  && python3 setup.py --command-packages=stdeb.command debianize \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && if [ -d "bin" ]; then rm -rf bin; fi \
- && mkdir -p bin \
- && cargo build && cp ./target/debug/sawtooth-validator bin/sawtooth-validator \
+ && mkdir bin \
+ && if [ -d "lib" ]; then rm -rf lib; fi \
+ && mkdir lib \
+ && cargo build --release \
+ && cp ./target/release/sawtooth-validator bin/sawtooth-validator \
+ && cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
 
