@@ -454,6 +454,7 @@ impl<'a> Iterator for MerkleLeafIterator<'a> {
     }
 }
 
+/// Initializes a database with an empty Trie
 fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
     let (hash, packed) = encode_and_hash(Node::default())?;
 
@@ -465,12 +466,23 @@ fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
     Ok(hex_hash)
 }
 
+/// Encodes the given node, and returns the hash of the bytes.
 fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), MerkleDatabaseError> {
     let packed = node.into_bytes()?;
     let hash = hash(&packed);
     Ok((hash, packed))
 }
 
+/// Given a path, split it into its parent's path and the specific branch for
+/// this path, such that the following assertion is true:
+///
+/// ```
+/// let (parent_path, branch) = parent_and_branch(some_path);
+/// let mut path = String::new();
+/// path.push(parent_path);
+/// path.push(branch);
+/// assert_eq!(some_path, &path);
+/// ```
 fn parent_and_branch(path: &str) -> (&str, &str) {
     let parent_address = if !path.is_empty() {
         &path[..path.len() - TOKEN_SIZE]
@@ -487,6 +499,7 @@ fn parent_and_branch(path: &str) -> (&str, &str) {
     (parent_address, path_branch)
 }
 
+/// Splits an address into tokens
 fn tokenize_address(address: &str) -> Box<[&str]> {
     let mut tokens: Vec<&str> = Vec::with_capacity(address.len() / 2);
     let mut i = 0;
