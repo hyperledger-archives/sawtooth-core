@@ -138,10 +138,18 @@ class BlockValidator(object):
         # Blocks that are currently being processed
         self._blocks_processing = ConcurrentSet()
 
+        self._blocks_processing_gauge = COLLECTOR.gauge(
+            'blocks_processing', instance=self)
+        self._blocks_processing_gauge.set_value(0)
+
         # Descendant blocks that are waiting for an in process block
         # to complete
         self._blocks_pending = ConcurrentSet()
         self._blocks_pending_descendants = ConcurrentMultiMap()
+
+        self._blocks_pending_gauge = COLLECTOR.gauge(
+            'blocks_pending', instance=self)
+        self._blocks_pending_gauge.set_value(0)
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -400,9 +408,15 @@ class BlockValidator(object):
             # Add the block to the set of blocks being processed
             self._blocks_processing.add(block.identifier)
 
+            self._update_gauges()
+
             # Schedule the block for processing
             self._thread_pool.submit(
                 self.process_block_verification, block, callback)
+
+    def _update_gauges(self):
+        self._blocks_pending_gauge.set_value(len(self._blocks_pending))
+        self._blocks_processing_gauge.set_value(len(self._blocks_processing))
 
     def _release_pending(self, block):
         """Removes the block from processing and returns any blocks that should

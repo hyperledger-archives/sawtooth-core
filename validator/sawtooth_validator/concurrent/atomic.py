@@ -66,6 +66,10 @@ class ConcurrentSet:
         with self._lock:
             return element in self._set
 
+    def __len__(self):
+        with self._lock:
+            return len(self._set)
+
 
 class ConcurrentMultiMap:
     """A dictionary that maps keys to lists of items. All methods are
