@@ -196,9 +196,9 @@ class TransactionExecutorThread(object):
                         d.get('family'),
                         d.get('version')) for d in transaction_families]
             except ValueError:
-                LOGGER.warning("sawtooth.validator.transaction_families "
-                               "misconfigured. Expecting a json array, found"
-                               " %s", transaction_families)
+                LOGGER.error("sawtooth.validator.transaction_families "
+                             "misconfigured. Expecting a json array, found"
+                             " %s", transaction_families)
                 required_transaction_processors = []
 
             # First check if the transaction should be failed
@@ -234,10 +234,10 @@ class TransactionExecutorThread(object):
                 # inserted by default
                 namespaces = transaction_family.get('namespaces', [''])
                 if not isinstance(namespaces, list):
-                    LOGGER.warning("namespaces should be a list for "
-                                   "transaction family (name=%s, version=%s)",
-                                   processor_type.name,
-                                   processor_type.version)
+                    LOGGER.error("namespaces should be a list for "
+                                 "transaction family (name=%s, version=%s)",
+                                 processor_type.name,
+                                 processor_type.version)
                 prefixes = header.outputs
                 bad_prefixes = [
                     prefix for prefix in prefixes
@@ -269,7 +269,7 @@ class TransactionExecutorThread(object):
                     inputs=list(header.inputs),
                     outputs=list(header.outputs))
             except KeyError:
-                LOGGER.warning(
+                LOGGER.error(
                     "Error creating context for transaction %s, "
                     "scheduler provided a base context that was not "
                     "in the context manager.", txn.header_signature)
@@ -278,8 +278,8 @@ class TransactionExecutorThread(object):
                     is_valid=False,
                     context_id=None)
                 continue
-            except CreateContextException as cce:
-                LOGGER.info("Exception creating context: %s", cce)
+            except CreateContextException:
+                LOGGER.exception("Exception creating context")
                 self._scheduler.set_transaction_execution_result(
                     txn_signature=txn.header_signature,
                     is_valid=False,
@@ -458,7 +458,7 @@ class TransactionExecutor(object):
                     try:
                         fut.result(timeout=10)
                     except FutureTimeoutError:
-                        LOGGER.info(
+                        LOGGER.warning(
                             "%s did not respond to the Ping, removing "
                             "transaction processor.", futures[fut])
                         self._remove_broken_connection(futures[fut])

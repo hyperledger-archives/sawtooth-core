@@ -28,11 +28,16 @@ from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_validator import BlockValidator
+from sawtooth_validator.journal.block_validator import BlockValidationError
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
+from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
+from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
+from sawtooth_validator.journal.chain_commit_state import MissingDependency
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.event_extractors \
@@ -45,6 +50,8 @@ from sawtooth_validator.journal.batch_injector import \
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -841,9 +848,9 @@ class TestBlockValidator(unittest.TestCase):
 
     def validate_block(self, block):
         validator = self.create_block_validator()
+        validator._load_consensus = lambda block: mock_consensus
         validator.process_block_verification(
             block,
-            mock_consensus,
             self.block_validation_handler.on_block_validated)
 
     def create_block_validator(self):
@@ -1293,7 +1300,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         with patch.object(BlockValidator,
                           'validate_block',
-                          return_value=False):
+                          side_effect=BlockValidationError):
             self.chain_ctrl.on_block_received(my_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
@@ -1446,130 +1453,358 @@ class TestTimedCache(unittest.TestCase):
 
 
 class TestChainCommitState(unittest.TestCase):
-    def setUp(self):
-        self.commit_state = None
-        self.block_tree_manager = BlockTreeManager()
+    """Test for:
+    - No duplicates found for batches
+    - No duplicates found for transactions
+    - Duplicate batch found in current chain
+    - Duplicate batch found in fork
+    - Duplicate transaction found in current chain
+    - Duplicate transaction found in fork
+    - Missing dependencies caught
+    - Dependencies found for transactions in current chain
+    - Dependencies found for transactions in fork
+    """
 
-    def test_fall_thru(self):
-        """ Test that the requests correctly fall thru to the
-        underlying BlockStore.
+    def gen_block(self, block_id, prev_id, num, batches):
+        return BlockWrapper(
+            Block(
+                header_signature=block_id,
+                batches=batches,
+                header=BlockHeader(
+                    block_num=num,
+                    previous_block_id=prev_id).SerializeToString()))
+
+    def gen_batch(self, batch_id, transactions):
+        return Batch(header_signature=batch_id, transactions=transactions)
+
+    def gen_txn(self, txn_id, deps=None):
+        return Transaction(
+            header_signature=txn_id,
+            header=TransactionHeader(dependencies=deps).SerializeToString())
+
+    # Batches
+    def test_no_duplicate_batch_found(self):
+        """Verify that DuplicateBatch is not raised for a completely new
+        batch.
         """
-        blocks = self.generate_chain(1)
-        commit_state = self.create_chain_commit_state(blocks)
-        self.commit_state = commit_state
+        _, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
 
-        self.assert_block_present(blocks[0])
-
-        self.assert_missing()
-
-    def test_uncommitted_blocks(self):
-        """ Test that the ChainCommitState can simulate blocks being
-        uncommited from the BlockStore
-        """
-        blocks = self.generate_chain(2)
-        block, uncommitted_block = blocks
         commit_state = self.create_chain_commit_state(
-            blocks=blocks,
-            uncommitted_blocks=[uncommitted_block],
-        )
-        self.commit_state = commit_state
+            committed_blocks, uncommitted_blocks, 'B6')
 
-        # the first block is still present
-        self.assert_block_present(block)
-        # batch from the uncommited block should not be present
-        self.assert_block_not_present(uncommitted_block)
+        commit_state.check_for_duplicate_batches([self.gen_batch('b10', [])])
 
-        self.assert_missing()
-
-    def test_add_remove_batch(self):
-        """ Test that we can incrementatlly build the commit state and
-        roll it back
+    def test_duplicate_batch_in_both_chains(self):
+        """Verify that DuplicateBatch is raised for a batch in both the current
+        chain and the fork.
         """
-        blocks = self.generate_chain(2)
-        block, uncommitted_block = blocks
+        _, batches, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
         commit_state = self.create_chain_commit_state(
-            blocks=blocks,
-            uncommitted_blocks=[uncommitted_block],
-        )
-        self.commit_state = commit_state
+            committed_blocks, uncommitted_blocks, 'B6')
 
-        # the first block is still present
-        self.assert_block_present(block)
-        # batch from the uncommited block should not be present
-        self.assert_block_not_present(uncommitted_block)
+        with self.assertRaises(DuplicateBatch) as cm:
+            commit_state.check_for_duplicate_batches(
+                [batches[2]])
 
-        batch = uncommitted_block.batches[0]
-        commit_state.add_batch(batch)
+        self.assertEqual(cm.exception.batch_id, 'b2')
 
-        # the batch should appear present
-        self.assert_batch_present(batch)
+    def test_duplicate_batch_in_current_chain(self):
+        """Verify that DuplicateBatch is raised for a batch in the current
+        chain.
+        """
+        _, batches, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
 
-        # check that we can remove the batch again.
-        commit_state.remove_batch(batch)
-        self.assert_batch_not_present(batch)
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
 
-        # Do an incremental add of the batch
-        for txn in batch.transactions:
-            commit_state.add_txn(txn.header_signature)
-            self.assert_txn_present(txn)
-        self.assertFalse(commit_state.has_batch(
-            batch.header_signature))
+        with self.assertRaises(DuplicateBatch) as cm:
+            commit_state.check_for_duplicate_batches(
+                [batches[5]])
 
-        commit_state.add_batch(batch, add_transactions=False)
-        self.assert_batch_present(batch)
+        self.assertEqual(cm.exception.batch_id, 'b5')
 
-        # check that we can remove the batch again.
-        commit_state.remove_batch(batch)
-        self.assert_batch_not_present(batch)
+    def test_duplicate_batch_in_fork(self):
+        """Verify that DuplicateBatch is raised for a batch in the fork.
+        """
+        _, batches, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
 
-    def generate_chain(self, block_count):
-        return self.block_tree_manager.generate_chain(
-            None, [{} for _ in range(block_count)])
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
 
-    def create_chain_commit_state(self, blocks, uncommitted_blocks=None,
-                                  chain_head=None):
+        with self.assertRaises(DuplicateBatch) as cm:
+            commit_state.check_for_duplicate_batches(
+                [batches[8]])
+
+        self.assertEqual(cm.exception.batch_id, 'b8')
+
+    def test_no_duplicate_batch_in_current_chain(self):
+        """Verify that DuplicateBatch is not raised for a batch that is in the
+        current chain but not the fork when head is on the fork.
+        """
+        _, batches, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
+
+        commit_state.check_for_duplicate_batches(
+            [batches[5]])
+
+    def test_no_duplicate_batch_in_fork(self):
+        """Verify that DuplicateBatch is not raised for a batch that is in the
+        fork but not the current chain when head is on the current chain.
+        """
+        _, batches, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_duplicate_batches(
+            [batches[8]])
+
+    # Transactions
+    def test_no_duplicate_txn_found(self):
+        """Verify that DuplicateTransaction is not raised for a completely new
+        transaction.
+        """
+        _, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_duplicate_transactions([self.gen_txn('t10')])
+
+    def test_duplicate_txn_in_both_chains(self):
+        """Verify that DuplicateTransaction is raised for a transaction in both
+        the current chain and the fork.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        with self.assertRaises(DuplicateTransaction) as cm:
+            commit_state.check_for_duplicate_transactions(
+                [transactions[2]])
+
+        self.assertEqual(cm.exception.transaction_id, 't2')
+
+    def test_duplicate_txn_in_current_chain(self):
+        """Verify that DuplicateTransaction is raised for a transaction in the
+        current chain.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        with self.assertRaises(DuplicateTransaction) as cm:
+            commit_state.check_for_duplicate_transactions(
+                [transactions[5]])
+
+        self.assertEqual(cm.exception.transaction_id, 't5')
+
+    def test_duplicate_txn_in_fork(self):
+        """Verify that DuplicateTransaction is raised for a transaction in the
+        fork.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
+
+        with self.assertRaises(DuplicateTransaction) as cm:
+            commit_state.check_for_duplicate_transactions(
+                [transactions[8]])
+
+        self.assertEqual(cm.exception.transaction_id, 't8')
+
+    def test_no_duplicate_txn_in_current_chain(self):
+        """Verify that DuplicateTransaction is not raised for a transaction
+        that is in the current chain but not the fork when head is on the fork.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
+
+        commit_state.check_for_duplicate_transactions(
+            [transactions[5]])
+
+    def test_no_duplicate_txn_in_fork(self):
+        """Verify that DuplicateTransaction is not raised for a transaction
+        that is in the fork but not the current chain when head is on the
+        current chain.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_duplicate_transactions(
+            [transactions[8]])
+
+    # Dependencies
+    def test_present_dependency(self):
+        """Verify that a present dependency is found."""
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_transaction_dependencies([
+            self.gen_txn('t10', deps=[transactions[2].header_signature])
+        ])
+
+    def test_missing_dependency_in_both_chains(self):
+        """Verifies that MissingDependency is raised when a dependency is not
+        committed anywhere.
+        """
+        _, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        with self.assertRaises(MissingDependency) as cm:
+            commit_state.check_for_transaction_dependencies([
+                self.gen_txn('t10', deps=['t11'])
+            ])
+
+        self.assertEqual(cm.exception.transaction_id, 't11')
+
+    def test_present_dependency_in_current_chain(self):
+        """Verify that a dependency present in the current chain is found.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_transaction_dependencies([
+            self.gen_txn('t10', deps=[transactions[5].header_signature])
+        ])
+
+    def test_present_dependency_in_fork(self):
+        """Verify that a dependency present in the fork is found.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
+
+        commit_state.check_for_transaction_dependencies([
+            self.gen_txn('t10', deps=[transactions[8].header_signature])
+        ])
+
+    def test_missing_dependency_in_current_chain(self):
+        """Verify that MissingDependency is raised for a dependency that is
+        committed to the current chain but not the fork when head is on the
+        fork.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B9')
+
+        commit_state.check_for_duplicate_transactions(
+            [transactions[5]])
+
+    def test_missing_dependency_in_fork(self):
+        """Verify that MissingDependency is raised for a dependency that is
+        committed to the fork but not the current chain when head is on the
+        current chain.
+        """
+        transactions, _, committed_blocks, uncommitted_blocks =\
+            self.create_new_chain()
+
+        commit_state = self.create_chain_commit_state(
+            committed_blocks, uncommitted_blocks, 'B6')
+
+        commit_state.check_for_duplicate_transactions(
+            [transactions[8]])
+
+    def create_new_chain(self):
+        """
+        NUM     0  1  2  3  4  5  6
+        CURRENT B0-B1-B2-B3-B4-B5-B6
+                         |
+        FORK             +--B7-B8-B9
+        """
+        txns = [
+            self.gen_txn('t' + format(i, 'x'))
+            for i in range(10)
+        ]
+        batches = [
+            self.gen_batch('b' + format(i, 'x'), [txns[i]])
+            for i in range(10)
+        ]
+        committed_blocks = [
+            self.gen_block(
+                block_id='B0',
+                prev_id=NULL_BLOCK_IDENTIFIER,
+                num=0,
+                batches=[batches[0]])
+        ]
+        committed_blocks.extend([
+            self.gen_block(
+                block_id='B' + format(i, 'x'),
+                prev_id='B' + format(i - 1, 'x'),
+                num=i,
+                batches=[batches[i]])
+            for i in range(1, 7)
+        ])
+        uncommitted_blocks = [
+            self.gen_block(
+                block_id='B7',
+                prev_id='B3',
+                num=4,
+                batches=[batches[0]])
+        ]
+        uncommitted_blocks.extend([
+            self.gen_block(
+                block_id='B' + format(i, 'x'),
+                prev_id='B' + format(i - 1, 'x'),
+                num=5 + (i - 8),
+                batches=[batches[i]])
+            for i in range(8, 10)
+        ])
+
+        return txns, batches, committed_blocks, uncommitted_blocks
+
+    def create_chain_commit_state(
+        self,
+        committed_blocks,
+        uncommitted_blocks,
+        head_id,
+    ):
         block_store = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
-        block_store.update_chain(blocks)
-        if chain_head is None:
-            chain_head = block_store.chain_head.identifier
-        if uncommitted_blocks is None:
-            uncommitted_blocks = []
-        return ChainCommitState(block_store, uncommitted_blocks)
+        block_store.update_chain(committed_blocks)
 
-    def assert_txn_present(self, txn):
-        self.assertTrue(self.commit_state.has_transaction(
-            txn.header_signature))
+        block_cache = BlockCache(
+            block_store=block_store)
 
-    def assert_batch_present(self, batch):
-        self.assertTrue(self.commit_state.has_batch(
-            batch.header_signature))
-        for txn in batch.transactions:
-            self.assert_txn_present(txn)
+        for block in uncommitted_blocks:
+            block_cache[block.header_signature] = block
 
-    def assert_block_present(self, block):
-        for batch in block.batches:
-            self.assert_batch_present(batch)
-
-    def assert_txn_not_present(self, txn):
-        self.assertFalse(self.commit_state.has_transaction(
-            txn.header_signature))
-
-    def assert_batch_not_present(self, batch):
-        self.assertFalse(self.commit_state.has_batch(
-            batch.header_signature))
-        for txn in batch.transactions:
-            self.assert_txn_not_present(txn)
-
-    def assert_block_not_present(self, block):
-        for batch in block.batches:
-            self.assert_batch_not_present(batch)
-
-    def assert_missing(self):
-        """check missing keys behave as expected.
-        """
-        self.assertFalse(self.commit_state.has_batch("missing"))
-        self.assertFalse(self.commit_state.has_transaction("missing"))
+        return ChainCommitState(head_id, block_cache, block_store)
 
 
 class TestBlockEventExtractor(unittest.TestCase):

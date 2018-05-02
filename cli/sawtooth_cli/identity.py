@@ -318,8 +318,8 @@ def _do_identity_policy_list(args):
             width = width if width > _MIN_PRINT_WIDTH else _MIN_PRINT_WIDTH
             value = "Entries:\n"
             for entry in policy.entries:
-                entry_string = (" " * 4) + Policy.Type.Name(entry.type) + " " \
-                    + entry.key
+                entry_string = (" " * 4) + Policy.EntryType.Name(entry.type) \
+                    + " " + entry.key
                 value += (entry_string[:width] + '...'
                           if len(entry_string) > width
                           else entry_string) + "\n"
