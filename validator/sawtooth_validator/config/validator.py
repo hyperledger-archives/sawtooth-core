@@ -170,6 +170,12 @@ def merge_validator_config(configs):
         if config.maximum_peer_connectivity is not None:
             maximum_peer_connectivity = config.maximum_peer_connectivity
 
+    if "tcp://" not in bind_network:
+        bind_network = "tcp://" + bind_network
+
+    if "tcp://" not in bind_component:
+        bind_component = "tcp://" + bind_component
+
     return ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
@@ -188,6 +194,16 @@ def merge_validator_config(configs):
         opentsdb_password=opentsdb_password,
         minimum_peer_connectivity=minimum_peer_connectivity,
         maximum_peer_connectivity=maximum_peer_connectivity)
+
+
+def load_validator_config(first_config, config_dir):
+    default_validator_config = load_default_validator_config()
+    conf_file = os.path.join(config_dir, 'validator.toml')
+
+    toml_config = load_toml_validator_config(conf_file)
+
+    return merge_validator_config(
+        configs=[first_config, toml_config, default_validator_config])
 
 
 def parse_permissions(permissions):

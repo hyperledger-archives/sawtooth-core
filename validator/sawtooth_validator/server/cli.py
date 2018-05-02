@@ -24,9 +24,7 @@ from pyformance.reporters import InfluxReporter
 import netifaces
 
 from sawtooth_validator.config.path import load_path_config
-from sawtooth_validator.config.validator import load_default_validator_config
-from sawtooth_validator.config.validator import load_toml_validator_config
-from sawtooth_validator.config.validator import merge_validator_config
+from sawtooth_validator.config.validator import load_validator_config
 from sawtooth_validator.config.validator import ValidatorConfig
 from sawtooth_validator.config.logs import get_log_config
 from sawtooth_validator.server.core import Validator
@@ -80,23 +78,15 @@ def check_directory(path, human_readable_name):
     return errors
 
 
-def load_validator_config(first_config, config_dir):
-    default_validator_config = load_default_validator_config()
-    conf_file = os.path.join(config_dir, 'validator.toml')
-
-    toml_config = load_toml_validator_config(conf_file)
-
-    return merge_validator_config(
-        configs=[first_config, toml_config, default_validator_config])
-
-
-def main(args):
+def get_path_config(config_dir):
     try:
-        path_config = load_path_config(config_dir=args['config_dir'])
+        return load_path_config(config_dir)
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
+
+def get_validator_config(args, config_dir):
     try:
         opts_config = ValidatorConfig(
             bind_component=args['bind_component'],
@@ -113,37 +103,30 @@ def main(args):
             seeds=args['seeds'],
         )
 
-        validator_config = \
-            load_validator_config(opts_config, path_config.config_dir)
+        return load_validator_config(opts_config, config_dir)
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
-    # Process initial initialization errors, delaying the sys.exit(1) until
-    # all errors have been reported to the user (via LOGGER.error()).  This
-    # is intended to provide enough information to the user so they can correct
-    # multiple errors before restarting the validator.
-    init_errors = False
-    try:
-        identity_signer = load_identity_signer(
-            key_dir=path_config.key_dir,
-            key_name='validator')
-    except LocalConfigurationError as e:
-        log_configuration(log_dir=path_config.log_dir,
-                          name="validator")
-        LOGGER.error(str(e))
-        init_errors = True
+
+def configure_logging(path_config, init_errors, verbosity):
+    if init_errors:
+        log_configuration(log_dir=path_config.log_dir, name="validator")
+        return
 
     log_config = get_log_config()
-    if not init_errors:
-        if log_config is not None:
-            log_configuration(log_config=log_config)
-            if log_config.get('root') is not None:
-                init_console_logging(verbose_level=args['verbose'])
-        else:
-            log_configuration(log_dir=path_config.log_dir,
-                              name="validator")
 
+    if log_config is None:
+        log_configuration(log_dir=path_config.log_dir, name="validator")
+        return
+
+    log_configuration(log_config=log_config)
+
+    if log_config.get('root') is not None:
+        init_console_logging(verbose_level=verbosity)
+
+
+def log_version():
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
     except pkg_resources.DistributionNotFound:
@@ -151,6 +134,8 @@ def main(args):
     LOGGER.info(
         '%s (Hyperledger Sawtooth) version %s', DISTRIBUTION_NAME, version)
 
+
+def log_path_config(path_config):
     if LOGGER.isEnabledFor(logging.INFO):
         LOGGER.info(
             '; '.join([
@@ -159,6 +144,10 @@ def main(args):
             ])
         )
 
+
+def check_directories(path_config):
+    init_errors = False
+
     if not check_directory(path=path_config.data_dir,
                            human_readable_name='Data'):
         init_errors = True
@@ -166,83 +155,92 @@ def main(args):
                            human_readable_name='Log'):
         init_errors = True
 
-    endpoint = validator_config.endpoint
-    if endpoint is None:
-        # Need to use join here to get the string "0.0.0.0". Otherwise,
-        # bandit thinks we are binding to all interfaces and returns a
-        # Medium security risk.
-        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
-        interfaces += netifaces.interfaces()
-        endpoint = validator_config.bind_network
-        for interface in interfaces:
-            if interface in validator_config.bind_network:
-                LOGGER.error("Endpoint must be set when using %s", interface)
-                init_errors = True
-                break
+    return init_errors
 
+
+def exit_if_errors(init_errors):
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "
                      "ERROR messages), shutting down.")
         sys.exit(1)
-    bind_network = validator_config.bind_network
-    bind_component = validator_config.bind_component
 
-    if "tcp://" not in bind_network:
-        bind_network = "tcp://" + bind_network
 
-    if "tcp://" not in bind_component:
-        bind_component = "tcp://" + bind_component
+def check_interfaces(endpoint):
+    # Need to use join here to get the string "0.0.0.0". Otherwise,
+    # bandit thinks we are binding to all interfaces and returns a
+    # Medium security risk.
+    interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+    interfaces += netifaces.interfaces()
 
-    if validator_config.network_public_key is None or \
-            validator_config.network_private_key is None:
-        LOGGER.warning("Network key pair is not configured, Network "
-                       "communications between validators will not be "
-                       "authenticated or encrypted.")
+    for interface in interfaces:
+        if interface in endpoint:
+            LOGGER.error("Endpoint must be set when using %s", interface)
+            return True
 
-    metrics_reporter = None
-    if validator_config.opentsdb_url:
-        LOGGER.info("Adding metrics reporter: url=%s, db=%s",
-                    validator_config.opentsdb_url,
-                    validator_config.opentsdb_db)
+    return False
 
-        url = urlparse(validator_config.opentsdb_url)
-        proto, db_server, db_port, = url.scheme, url.hostname, url.port
 
-        registry = MetricsRegistry()
-        metrics.init_metrics(registry=registry)
+def get_identity_signer(path_config):
+    try:
+        return load_identity_signer(
+            key_dir=path_config.key_dir,
+            key_name='validator')
+    except LocalConfigurationError as e:
+        LOGGER.error(str(e))
+        return None
 
-        metrics_reporter = InfluxReporter(
-            registry=registry,
-            reporting_interval=10,
-            database=validator_config.opentsdb_db,
-            prefix="sawtooth_validator",
-            port=db_port,
-            protocol=proto,
-            server=db_server,
-            username=validator_config.opentsdb_username,
-            password=validator_config.opentsdb_password)
-        metrics_reporter.start()
-    else:
+
+def start_metrics(validator_config):
+    if not validator_config.opentsdb_url:
         metrics.init_metrics()
+        return None
 
-    # Verify state integrity before startup
+    LOGGER.info("Adding metrics reporter: url=%s, db=%s",
+                validator_config.opentsdb_url,
+                validator_config.opentsdb_db)
+
+    url = urlparse(validator_config.opentsdb_url)
+    proto, db_server, db_port, = url.scheme, url.hostname, url.port
+
+    registry = MetricsRegistry()
+    metrics.init_metrics(registry=registry)
+
+    metrics_reporter = InfluxReporter(
+        registry=registry,
+        reporting_interval=10,
+        database=validator_config.opentsdb_db,
+        prefix="sawtooth_validator",
+        port=db_port,
+        protocol=proto,
+        server=db_server,
+        username=validator_config.opentsdb_username,
+        password=validator_config.opentsdb_password)
+
+    metrics_reporter.start()
+
+    return metrics_reporter
+
+
+def verify_state(path_config, validator_config):
     global_state_db, blockstore = state_verifier.get_databases(
-        bind_network,
+        validator_config.bind_network,
         path_config.data_dir)
 
     state_verifier.verify_state(
         global_state_db,
         blockstore,
-        bind_component,
+        validator_config.bind_component,
         validator_config.scheduler)
 
+
+def make_validator(path_config, validator_config, identity_signer, endpoint):
     LOGGER.info(
         'Starting validator with %s scheduler',
         validator_config.scheduler)
 
-    validator = Validator(
-        bind_network,
-        bind_component,
+    return Validator(
+        validator_config.bind_network,
+        validator_config.bind_component,
         endpoint,
         validator_config.peering,
         validator_config.seeds,
@@ -258,6 +256,8 @@ def main(args):
         validator_config.network_private_key,
         roles=validator_config.roles)
 
+
+def run_validator(validator, metrics_reporter):
     # pylint: disable=broad-except
     try:
         validator.start()
