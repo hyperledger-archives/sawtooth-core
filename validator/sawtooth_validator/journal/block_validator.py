@@ -476,7 +476,7 @@ class BlockValidator(object):
     def _add_block_to_pending(self, block):
         self._blocks_pending.add(block.identifier)
         previous = block.previous_block_id
-        self._blocks_pending_descendants.append(previous, block)
+        self._blocks_pending_descendants.append_if_unique(previous, block)
 
     def process_block_verification(self, block, callback):
         """
