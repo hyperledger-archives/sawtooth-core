@@ -419,11 +419,11 @@ fn parent_and_branch(path: &str) -> (&str, &str) {
 
 /// Splits an address into tokens
 fn tokenize_address(address: &str) -> Box<[&str]> {
-    let mut tokens: Vec<&str> = Vec::with_capacity(address.len() / 2);
+    let mut tokens: Vec<&str> = Vec::with_capacity(address.len() / TOKEN_SIZE);
     let mut i = 0;
     while i < address.len() {
-        tokens.push(&address[i..i + 2]);
-        i += 2;
+        tokens.push(&address[i..i + TOKEN_SIZE]);
+        i += TOKEN_SIZE;
     }
     tokens.into_boxed_slice()
 }
