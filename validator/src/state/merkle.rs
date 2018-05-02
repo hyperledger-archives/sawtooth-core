@@ -127,50 +127,9 @@ impl MerkleDatabase {
     /// Note, continued calls to get, without changing the merkle root to the
     /// result of this function, will not retrieve the results provided here.
     pub fn set(&self, address: &str, data: &[u8]) -> Result<String, MerkleDatabaseError> {
-        let tokens = tokenize_address(address);
-
-        let path_addresses = path_addresses_from_tokens(&tokens, false);
-
-        let mut path_map = self.get_path_by_tokens(&tokens)?;
-
-        let mut child = path_map
-            .remove(&path_addresses[0])
-            .expect("Path map not correctly generated");
-        child.value = Some(data.to_vec());
-
-        let mut batch = Vec::with_capacity(path_addresses.len());
-        // initializing this to empty, to make the compiler happy
-        let mut key_hash = Vec::with_capacity(0);
-        for path_address in path_addresses {
-            let (child_key, child_packed) = encode_and_hash(child)?;
-            key_hash = child_key;
-
-            let (parent_address, path_branch) = parent_and_branch(&path_address);
-            let mut parent = path_map
-                .remove(parent_address)
-                .expect("Path map not correctly generated");
-
-            parent
-                .children
-                .insert(path_branch.to_string(), ::hex::encode(key_hash.clone()));
-
-            batch.push((key_hash.clone(), child_packed));
-
-            child = parent;
-        }
-
-        let mut new_root = self.root_node.clone();
-        new_root
-            .children
-            .insert(tokens[0].to_string(), ::hex::encode(key_hash.clone()));
-
-        let (root_hash, packed) = encode_and_hash(new_root)?;
-
-        batch.push((root_hash.clone(), packed));
-
-        self.put_batch(batch)?;
-
-        Ok(::hex::encode(root_hash))
+        let mut updates = HashMap::with_capacity(1);
+        updates.insert(address.to_string(), data.to_vec());
+        self.update(&updates, &[], false)
     }
 
     /// Deletes the value at the given address.
@@ -182,55 +141,7 @@ impl MerkleDatabase {
     /// result of this function, will still retrieve the data at the address
     /// provided
     pub fn delete(&self, address: &str) -> Result<String, MerkleDatabaseError> {
-        let tokens = tokenize_address(address);
-        let mut path_map = self.get_path_by_tokens(&tokens)?;
-        let mut leaf_branch = true;
-
-        let paths = path_addresses_from_tokens(&tokens, true);
-
-        // initializing this to empty, to make the compiler happy
-        let mut key_hash = Vec::with_capacity(0);
-        let mut batch = Vec::with_capacity(paths.len());
-        for path in paths {
-            let (parent_address, path_branch) = parent_and_branch(&path);
-
-            let node = path_map
-                .remove(&path)
-                .expect("Path map not correctly generated");
-
-            if path == "" || !node.children.is_empty() {
-                leaf_branch = false;
-            }
-
-            if !leaf_branch {
-                let (hash_key, packed) = encode_and_hash(node)?;
-                key_hash = hash_key.clone();
-
-                if path != "" {
-                    let mut parent = path_map
-                        .get_mut(parent_address)
-                        .expect("Path map not correctly generated");
-                    parent
-                        .children
-                        .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()));
-                }
-
-                batch.push((hash_key.clone(), packed));
-            } else if path != "" {
-                let mut parent = path_map
-                    .get_mut(parent_address)
-                    .expect("Path map not correctly generated");
-                if parent.children.remove(path_branch).is_none() {
-                    return Err(MerkleDatabaseError::NotFound(format!(
-                        "{} is not a key of an existing record",
-                        address
-                    )));
-                }
-            }
-        }
-
-        self.put_batch(batch)?;
-        Ok(::hex::encode(key_hash))
+        self.update(&HashMap::with_capacity(0), &[address.to_string()], false)
     }
 
     /// Updates the tree with multiple changes.  Applies both set and deletes,
@@ -515,28 +426,6 @@ fn tokenize_address(address: &str) -> Box<[&str]> {
         i += 2;
     }
     tokens.into_boxed_slice()
-}
-
-fn path_addresses_from_tokens(tokens: &[&str], include_root: bool) -> Vec<String> {
-    let mut path_addresses = Vec::new();
-    let mut i = tokens.len();
-    while i > 0 {
-        path_addresses.push(
-            tokens
-                .iter()
-                .take(i)
-                .map(|s| String::from(*s))
-                .collect::<Vec<_>>()
-                .join(""),
-        );
-        i -= 1;
-    }
-
-    if include_root {
-        path_addresses.push(String::new())
-    }
-
-    path_addresses
 }
 
 /// Fetch a node by its hash
