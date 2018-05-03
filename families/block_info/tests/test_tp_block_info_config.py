@@ -21,20 +21,37 @@ import load_default_block_info_config,\
     load_toml_block_info_config, merge_block_info_config
 from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 
+def read_file(flag):
+        if flag == 1:
+            filename = "/tmp/test_block_info1.toml"
+            
+            with open(filename, 'w') as fd:
+                    fd.write('connect = "tcp://blarg:1234"')
+                    fd.write(os.linesep)
+                    return filename
+           
+        elif flag == 2:
+            filename = "/tmp/test_block_info2.toml"
+           
+            with open(filename, 'w') as fd:
+                    fd.write('connect = "tcp://test:1234"')
+                    fd.write(os.linesep)
+                    return filename
+        
 class TestBlockInfoConfig(unittest.TestCase):
     def test_load_default_block_info_config(self):
-        """ Tests the default return value of config file """
+        """ Tests the default value is returned properly from BlockInfoConfig Object """
         block_config_default = load_default_block_info_config()
         self.assertEqual(block_config_default.connect, "tcp://localhost:4004")
 
     def test_load_toml_block_info_config_ne(self):
-        """ Tests toml load file if it is not present """
+        """ Tests to create BlockInfoConfig object through toml file, if toml file does not exists """
         filename = "test.toml"
         block_config_default = load_toml_block_info_config(filename)
         self.assertEqual(block_config_default.connect, None)
 
     def test_load_toml_block_info_config(self):
-        """ Tests value inside toml load file """
+        """ Tests the value BlockInfoConfig object created through toml file """
         filename = "test_block_info.toml"
         try:
             with open(filename, 'w') as fd:
@@ -44,33 +61,81 @@ class TestBlockInfoConfig(unittest.TestCase):
         finally:
             os.remove(filename)
 
-    def test_merge_config(self):
-        """ Tests the merge of all toml config files """
-        l = []
-        block_config_default_1 = load_default_block_info_config()
-        block_config_default_2 = load_default_block_info_config()
-        block_config_default_3 = load_default_block_info_config()
-        l.append(block_config_default_1)
-        l.append(block_config_default_2)
-        l.append(block_config_default_3)
-        mc = merge_block_info_config(l)
-        self.assertEqual(mc.connect, "tcp://localhost:4004")
-
+    def test_merge_default_config(self):
+        """ Tests the merge of BlockInfoConfig object created through toml config files - Scenario 1"""
+        configs_list = []
+        try:
+            filename_1=read_file(flag=1)
+            block_toml_config_default_1 = load_toml_block_info_config(filename_1)
+            block_config_default_3 = load_default_block_info_config()
+            filename_2=read_file(flag=2)
+            block_toml_config_default_2 = load_toml_block_info_config(filename_2)
+            configs_list.append(block_config_default_3)
+            configs_list.append(block_toml_config_default_2)
+            configs_list.append(block_toml_config_default_1)
+            merge_configs = merge_block_info_config(configs_list)
+            self.assertEqual(merge_configs.connect, "tcp://localhost:4004")
+        finally:
+            os.remove(filename_1)
+            os.remove(filename_2)
+        
+    def test_merge_toml_config(self):
+        """ Tests the merge of BlockInfoConfig object created through toml config files - Scenario 2"""
+        configs_list = []
+        try:
+            filename_1=read_file(flag=1)
+            block_toml_config_default_1 = load_toml_block_info_config(filename_1)
+            block_config_default_3 = load_default_block_info_config()
+            filename_2=read_file(flag=2)
+            block_toml_config_default_2 = load_toml_block_info_config(filename_2)
+            configs_list.append(block_toml_config_default_2)
+            configs_list.append(block_config_default_3)
+            configs_list.append(block_toml_config_default_1)
+            merge_configs = merge_block_info_config(configs_list)
+            self.assertEqual(merge_configs.connect, "tcp://test:1234")
+        finally:
+            os.remove(filename_1)
+            os.remove(filename_2)
+       
     def test_to_toml(self):
-        block_config_default = load_default_block_info_config()
-        self.assertEqual(block_config_default.to_toml_string(),
-                        ['connect = "tcp://localhost:4004"'])
-
+        """ Tests the string representation of BlockInfoConfig object connect key """
+        filename = "/tmp/test_block_info.toml"
+        try:
+            with open(filename, 'w') as fd:
+                fd.write('connect = "tcp://blarg:1234"')
+                fd.write(os.linesep)
+            block_config_filename = load_toml_block_info_config(filename)
+            self.assertIn('connect = "tcp://blarg:1234"', block_config_filename.to_toml_string())
+        finally:
+            os.remove(filename)
+            
+    def test_to_dict(self):
+        """ Tests the key, value from OrderedDict representation of BlockInfoConfig object created by toml file """
+        filename = "/tmp/test_block_info.toml"
+        try:
+            with open(filename, 'w') as fd:
+                fd.write('connect = "tcp://blarg:1234"')
+                fd.write(os.linesep)
+            block_config_filename = load_toml_block_info_config(filename)
+            block_info_dict=block_config_filename.to_dict()           
+            for k, v in block_info_dict.items():
+                self.assertEqual(k, 'connect')
+                self.assertEqual(v, 'tcp://blarg:1234')
+        finally:
+            os.remove(filename)
+            
     def test_repr(self):
+        """ Tests the oject representation of BlockInfoConfig object connect key """
         block_config_default = load_default_block_info_config()
         self.assertEqual(block_config_default.__repr__(),
                          "BlockInfoConfig(connect='tcp://localhost:4004')")
 
     def test_load_toml_block_info_config_invalidkeys(self):
-        filename = "a.toml"
+        """ Tests exception raised, when trying to create BlockInfoConfig object through toml file with invalid keys """
+        filename = "/tmp/test_block_info.toml"
         try:
             with open(filename, 'w') as fd:
-                fd.write('ty = "tcp://test:4004"')
+                fd.write('connection = "tcp://test:4004"')
             with self.assertRaises(LocalConfigurationError):
                 load_toml_block_info_config(filename)
         finally:
