@@ -27,7 +27,7 @@ node ('master') {
             checkout scm
         }
 
-        if (!(env.BRANCH_NAME == '1-0' && env.JOB_BASE_NAME == '1-0')) {
+        if (!(env.BRANCH_NAME == '1-0' && env.JOB_BASE_NAME == '1-0') && !(env.BRANCH_NAME ==~ /1-0-staging-\d{2}/ && env.JOB_BASE_NAME ==~ /1-0-staging-\d{2}/)) {
             stage("Check Whitelist") {
                 readTrusted 'bin/whitelist'
                 sh './bin/whitelist "$CHANGE_AUTHOR" /etc/jenkins-authorized-builders'
