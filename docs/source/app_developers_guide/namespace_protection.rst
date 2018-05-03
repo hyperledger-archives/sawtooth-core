@@ -6,15 +6,26 @@ A transaction family is defined by a set of parameters including a
 name, some version numbers, an *apply* function and namespaces. The
 apply function is what defines the behavior of a transaction family
 according to the `get` and `set` operations on addresses of the Global
-State. The goal of having a family declaring namespaces is to reserve
-a set of addresses for its own use, to avoid transaction families
-tampering unexpectedly one another's addresses. When desired, the validators can
-verify that transaction processors only perform `set` operations whose
-addresses have a prefix in common with one of the family’s specified
-namespace prefix(es). By default and for better flexibility, this
-namespace protection is not enforced by the validators, but when
-activated, this feature augments enforcement of the transaction
-processors declaration done during registration.
+State. The goal of having a family declaring namespaces is to indicate
+the subset of addresses it will use for its `get` (read, inputs) and
+`set` (write, outputs) operations. It is important to remind that the
+namespace is not a 1-to-1 relationship between namespaces and
+transaction families.  Some transaction families like :doc:`Settings
+Transaction Family
+<../transaction_family_specifications/settings_transaction_family>` or
+:doc:`BlockInfo Transaction Family
+<../transaction_family_specifications/blockinfo_transaction_family>`
+write data at addresses that other transaction families could use,
+e.g. an onchain setting or the timestamp of the latest
+block. Nevertheless, for security reasons, it is important to make
+sure transaction families cannot tamper data at addresses they only
+intend to read.  To this end, and when explicitly activated, the
+validators can verify that transaction processors only perform `set`
+operations whose addresses have a prefix in common with one of the
+family’s specified namespace prefix(es). By default and for better
+flexibility, this namespace protection is not enforced by the
+validators, but when activated, this feature augments enforcement of
+the transaction processors declaration done during registration.
 
 
 In order to make validators enable namespace protection,
