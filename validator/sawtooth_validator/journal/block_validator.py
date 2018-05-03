@@ -14,11 +14,10 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from threading import RLock
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
-from sawtooth_validator.concurrent.atomic import ConcurrentSet
-from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -135,21 +134,7 @@ class BlockValidator(object):
         self._thread_pool = InstrumentedThreadPoolExecutor(1) \
             if thread_pool is None else thread_pool
 
-        # Blocks that are currently being processed
-        self._blocks_processing = ConcurrentSet()
-
-        self._blocks_processing_gauge = COLLECTOR.gauge(
-            'blocks_processing', instance=self)
-        self._blocks_processing_gauge.set_value(0)
-
-        # Descendant blocks that are waiting for an in process block
-        # to complete
-        self._blocks_pending = ConcurrentSet()
-        self._blocks_pending_descendants = ConcurrentMultiMap()
-
-        self._blocks_pending_gauge = COLLECTOR.gauge(
-            'blocks_pending', instance=self)
-        self._blocks_pending_gauge.set_value(0)
+        self._block_scheduler = BlockScheduler(block_cache)
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -363,134 +348,43 @@ class BlockValidator(object):
         return ConsensusFactory.get_consensus_module('genesis')
 
     def submit_blocks_for_verification(self, blocks, callback):
-        for block in blocks:
-            if self.in_process(block.header_signature):
-                LOGGER.debug("Block already in process: %s", block)
-                continue
-
-            if self.in_process(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' in process,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
-            if self.in_pending(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' is pending,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
-            try:
-                prev_block = self._block_cache[block.previous_block_id]
-            except KeyError:
-                LOGGER.error(
-                    "Block %s submitted for processing but predecessor %s is"
-                    " missing. Adding to pending.",
-                    block,
-                    block.previous_block_id)
-                self._add_block_to_pending(block)
-                continue
-            else:
-                if prev_block.status == BlockStatus.Unknown:
-                    LOGGER.warning(
-                        "Block %s submitted for processing but predecessor %s"
-                        " has not been validated and is not pending. Adding to"
-                        " pending.", block, prev_block)
-                    self._add_block_to_pending(block)
-
-            LOGGER.debug(
-                "Adding block %s for processing", block.identifier)
-
-            # Add the block to the set of blocks being processed
-            self._blocks_processing.add(block.identifier)
-
-            self._update_gauges()
-
+        ready = self._block_scheduler.schedule(blocks)
+        for block in ready:
             # Schedule the block for processing
             self._thread_pool.submit(
                 self.process_block_verification, block, callback)
-
-    def _update_gauges(self):
-        self._blocks_pending_gauge.set_value(len(self._blocks_pending))
-        self._blocks_processing_gauge.set_value(len(self._blocks_processing))
 
     def _release_pending(self, block):
         """Removes the block from processing and returns any blocks that should
         now be scheduled for processing, cleaning up the pending block trackers
         in the process.
         """
-        LOGGER.debug("Removing block from processing %s", block.identifier)
-        try:
-            self._blocks_processing.remove(block.identifier)
-        except KeyError:
-            LOGGER.warning(
-                "Tried to remove block from in process but it wasn't in"
-                " processes: %s",
-                block.identifier)
-
+        ready = []
         if block.status == BlockStatus.Valid:
-            # Submit all pending blocks for validation
-            blocks_now_ready = self._blocks_pending_descendants.pop(
-                block.identifier, [])
-            for blk in blocks_now_ready:
-                self._blocks_pending.remove(blk.identifier)
-            return blocks_now_ready
+            ready.extend(self._block_scheduler.done(block))
 
-        if block.status == BlockStatus.Invalid:
+        elif block.status == BlockStatus.Invalid:
             # Mark all pending blocks as invalid
-            blocks_now_invalid = self._blocks_pending_descendants.pop(
-                block.identifier, [])
+            invalid = self._block_scheduler.done(block, and_descendants=True)
+            for blk in invalid:
+                blk.status = BlockStatus.Invalid
+                LOGGER.debug('Marking descendant block invalid: %s', blk)
 
-            while blocks_now_invalid:
-                invalid_block = blocks_now_invalid.pop()
-                invalid_block.status = BlockStatus.Invalid
-                self._blocks_pending.remove(invalid_block.identifier)
-
+        else:
+            # An error occured during validation, something is wrong internally
+            # and we need to abort validation of this block and all its
+            # children without marking them as invalid.
+            unknown = self._block_scheduler.done(block, and_descendants=True)
+            for blk in unknown:
                 LOGGER.debug(
-                    'Marking descendant block invalid: %s',
-                    invalid_block)
+                    'Removing block from cache and pending due to error '
+                    'during validation: %s', block)
+                del self._block_cache[block.identifier]
 
-                # Get descendants of the descendant
-                blocks_now_invalid.extend(
-                    self._blocks_pending_descendants.pop(
-                        invalid_block.identifier, []))
-            return []
+        return ready
 
-        # An error occured during validation, something is wrong internally
-        # and we need to abort validation of this block and all its
-        # children without marking them as invalid.
-        blocks_to_remove = self._blocks_pending_descendants.pop(
-            block.identifier, [])
-
-        while blocks_to_remove:
-            block = blocks_to_remove.pop()
-            self._blocks_pending.remove(block.identifier)
-
-            LOGGER.debug(
-                'Removing block from cache and pending due to error '
-                'during validation: %s', block)
-
-            del self._block_cache[block.identifier]
-
-            # Get descendants of the descendant
-            blocks_to_remove.extend(
-                self._blocks_pending_descendants.pop(block.identifier, []))
-        return []
-
-    def in_process(self, block_id):
-        return block_id in self._blocks_processing
-
-    def in_pending(self, block_id):
-        return block_id in self._blocks_pending
-
-    def _add_block_to_pending(self, block):
-        self._blocks_pending.add(block.identifier)
-        previous = block.previous_block_id
-        self._blocks_pending_descendants.append_if_unique(previous, block)
+    def has_block(self, block_id):
+        return block_id in self._block_scheduler
 
     def process_block_verification(self, block, callback):
         """
@@ -544,3 +438,147 @@ class BlockValidator(object):
                 block)
 
         callback(block)
+
+
+class BlockScheduler:
+
+    def __init__(self, block_cache):
+        # Blocks that are currently being processed
+        self._processing = set()
+
+        self._processing_gauge = COLLECTOR.gauge(
+            'blocks_processing', instance=self)
+        self._processing_gauge.set_value(0)
+
+        # Descendant blocks that are waiting for an in process block
+        # to complete
+        self._pending = set()
+        self._descendants = dict()
+
+        self._pending_gauge = COLLECTOR.gauge(
+            'blocks_pending', instance=self)
+        self._pending_gauge.set_value(0)
+
+        self._block_cache = block_cache
+
+        self._lock = RLock()
+
+    def schedule(self, blocks):
+        """Add the blocks to the scheduler and return any blocks that are
+        ready to be processed immediately.
+        """
+        ready = []
+        with self._lock:
+            for block in blocks:
+                block_id = block.header_signature
+                prev_id = block.previous_block_id
+
+                if block_id in self._processing:
+                    LOGGER.debug("Block already in process: %s", block)
+                    continue
+
+                if block_id in self._pending:
+                    LOGGER.debug("Block already pending: %s", block)
+                    continue
+
+                if prev_id in self._processing:
+                    LOGGER.debug(
+                        "Previous block '%s' in process, adding '%s' to "
+                        " pending",
+                        block.previous_block_id, block)
+                    self._add_block_to_pending(block)
+                    continue
+
+                if prev_id in self._pending:
+                    LOGGER.debug(
+                        "Previous block '%s' is pending, adding '%s' to "
+                        " pending",
+                        block.previous_block_id, block)
+                    self._add_block_to_pending(block)
+                    continue
+
+                try:
+                    prev_block = self._block_cache[block.previous_block_id]
+                except KeyError:
+                    LOGGER.error(
+                        "Block %s submitted for processing but predecessor %s"
+                        " is missing. Adding to pending.",
+                        block,
+                        block.previous_block_id)
+                    self._add_block_to_pending(block)
+                    continue
+                else:
+                    if prev_block.status == BlockStatus.Unknown:
+                        LOGGER.warning(
+                            "Block %s submitted for processing but predecessor"
+                            " %s has not been validated and is not pending."
+                            " Adding to pending.", block, prev_block)
+                        self._add_block_to_pending(block)
+
+                LOGGER.debug(
+                    "Adding block %s for processing", block.identifier)
+
+                # Add the block to the set of blocks being processed
+                self._processing.add(block.identifier)
+                ready.append(block)
+
+        self._update_gauges()
+
+        return ready
+
+    def done(self, block, and_descendants=False):
+        """Mark the given in process block as done and return any blocks that
+        are now ready to be processed.
+
+        Args:
+            block: The block to mark as done
+            and_descendants: If true, also mark all descendants as done and
+                return them.
+
+        Returns:
+            A list of blocks ready to be processed
+        """
+        block_id = block.header_signature
+        ready = []
+        with self._lock:
+            LOGGER.debug("Removing block from processing %s", block_id)
+            try:
+                self._processing.remove(block_id)
+            except KeyError:
+                LOGGER.warning(
+                    "Tried to remove block from in process but it wasn't in"
+                    " processes: %s",
+                    block_id)
+
+            if and_descendants:
+                descendants = self._descendants.pop(block_id, [])
+                while descendants:
+                    blk = descendants.pop()
+                    self._pending.remove(blk.header_signature)
+                    descendants.extend(self._descendants.pop(
+                        blk.header_signature, []))
+                    ready.append(blk)
+
+            else:
+                ready.extend(self._descendants.pop(block_id, []))
+                for blk in ready:
+                    self._pending.remove(blk.header_signature)
+
+        return ready
+
+    def __contains__(self, block_id):
+        with self._lock:
+            return block_id in self._processing or block_id in self._pending
+
+    def _add_block_to_pending(self, block):
+        self._pending.add(block.identifier)
+        previous = block.previous_block_id
+        if previous not in self._descendants:
+            self._descendants[previous] = [block]
+        else:
+            if block not in self._descendants[previous]:
+                self._descendants[previous].append(block)
+
+    def _update_gauges(self):
+        self._pending_gauge.set_value(len(self._pending))
+        self._processing_gauge.set_value(len(self._processing))

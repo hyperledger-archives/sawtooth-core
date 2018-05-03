@@ -521,10 +521,7 @@ class ChainController(object):
             if block_id in self._block_cache:
                 return True
 
-            if self._block_validator.in_process(block_id):
-                return True
-
-            if self._block_validator.in_pending(block_id):
+            if self._block_validator.has_block(block_id):
                 return True
 
             return False
