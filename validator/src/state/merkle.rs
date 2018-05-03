@@ -17,6 +17,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Cursor;
 
@@ -31,10 +32,20 @@ use cbor::value::Text;
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 
+use protobuf;
+use protobuf::Message;
+use protobuf::ProtobufError;
+
 use database::database::DatabaseError;
 use database::lmdb::LmdbDatabase;
+use database::lmdb::DatabaseReader;
+
+use proto::merkle::ChangeLogEntry;
+use proto::merkle::ChangeLogEntry_Successor;
 
 const TOKEN_SIZE: usize = 2;
+
+pub const CHANGE_LOG_INDEX: &str = "change_log";
 
 /// Merkle Database
 pub struct MerkleDatabase {
@@ -48,6 +59,7 @@ pub enum MerkleDatabaseError {
     NotFound(String),
     DeserializationError(DecodeError),
     SerializationError(EncodeError),
+    ChangeLogEncodingError(String),
     InvalidRecord,
     DatabaseError(DatabaseError),
     UnknownError,
@@ -68,6 +80,20 @@ impl From<EncodeError> for MerkleDatabaseError {
 impl From<DecodeError> for MerkleDatabaseError {
     fn from(err: DecodeError) -> Self {
         MerkleDatabaseError::DeserializationError(err)
+    }
+}
+
+impl From<ProtobufError> for MerkleDatabaseError {
+    fn from(error: ProtobufError) -> Self {
+        use self::ProtobufError::*;
+        match error {
+            IoError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            WireError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{:?}", err)),
+            Utf8(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            MessageNotInitialized { message: err } => {
+                MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err))
+            }
+        }
     }
 }
 
@@ -159,6 +185,8 @@ impl MerkleDatabase {
     ) -> Result<String, MerkleDatabaseError> {
         let mut path_map = HashMap::new();
 
+        let mut deletions = HashSet::new();
+
         for (set_address, set_value) in set_items {
             let tokens = tokenize_address(set_address);
             let mut set_path_map = self.get_path_by_tokens(&tokens, false)?;
@@ -186,7 +214,10 @@ impl MerkleDatabase {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated");
-                    parent_node.children.remove(path_branch);
+
+                    if let Some(old_hash_key) = parent_node.children.remove(path_branch) {
+                        deletions.insert(old_hash_key);
+                    }
 
                     parent_node.children.is_empty()
                 };
@@ -207,7 +238,10 @@ impl MerkleDatabase {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated");
-                    parent_node.children.remove(path_branch);
+
+                    if let Some(old_hash_key) = parent_node.children.remove(path_branch) {
+                        deletions.insert(old_hash_key);
+                    }
                 }
             }
         }
@@ -231,16 +265,24 @@ impl MerkleDatabase {
                 let mut parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated");
-                parent
+                if let Some(old_hash_key) = parent
                     .children
-                    .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()));
+                    .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()))
+                {
+                    deletions.insert(old_hash_key);
+                }
             }
 
             batch.push((hash_key, packed));
         }
 
         if !is_virtual {
-            self.put_batch(batch)?;
+            let deletions: Vec<Vec<u8>> = deletions
+                .iter()
+                // We expect this to be hex, since we generated it
+                .map(|s| ::hex::decode(s).expect("Improper hex"))
+                .collect();
+            self.store_changes(&key_hash, &batch, &deletions)?;
         }
 
         Ok(::hex::encode(key_hash))
@@ -254,13 +296,67 @@ impl MerkleDatabase {
     }
 
     /// Puts all the items into the database.
-    fn put_batch(&self, batch: Vec<(Vec<u8>, Vec<u8>)>) -> Result<(), MerkleDatabaseError> {
+    fn store_changes(
+        &self,
+        successor_root_hash: &[u8],
+        batch: &[(Vec<u8>, Vec<u8>)],
+        deletions: &[Vec<u8>],
+    ) -> Result<(), MerkleDatabaseError> {
         let mut db_writer = self.db.writer()?;
-        for (key, value) in batch {
+
+        // We expect this to be hex, since we generated it
+        let root_hash_bytes = ::hex::decode(&self.root_hash).expect("Improper hex");
+
+        for &(ref key, ref value) in batch {
             db_writer.put(::hex::encode(key).as_bytes(), &value)?;
         }
+
+        let mut current_change_log = self.get_change_log(&db_writer, &root_hash_bytes)?;
+        if let Some(change_log) = current_change_log.as_mut() {
+            let mut successors = change_log.mut_successors();
+            let mut successor = ChangeLogEntry_Successor::new();
+            successor.set_successor(Vec::from(successor_root_hash));
+            successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
+            successors.push(successor);
+        }
+
+        let mut next_change_log = ChangeLogEntry::new();
+        next_change_log.set_parent(root_hash_bytes.clone());
+        next_change_log.set_additions(protobuf::RepeatedField::from(
+            batch.iter().map(|&(ref hash, _)| hash.clone()).collect(),
+        ));
+
+        if current_change_log.is_some() {
+            db_writer.index_put(
+                CHANGE_LOG_INDEX,
+                &root_hash_bytes,
+                &current_change_log.unwrap().write_to_bytes()?,
+            )?;
+        }
+        db_writer.index_put(
+            CHANGE_LOG_INDEX,
+            successor_root_hash,
+            &next_change_log.write_to_bytes()?,
+        )?;
+
         db_writer.commit()?;
         Ok(())
+    }
+
+    fn get_change_log<R>(
+        &self,
+        db_reader: &R,
+        root_hash: &[u8],
+    ) -> Result<Option<ChangeLogEntry>, MerkleDatabaseError>
+    where
+        R: DatabaseReader,
+    {
+        let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
+
+        Ok(match log_bytes {
+            Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+            None => None,
+        })
     }
 
     fn get_by_address(&self, address: &str) -> Result<Node, MerkleDatabaseError> {
@@ -305,7 +401,9 @@ impl MerkleDatabase {
                     if strict {
                         return Err(MerkleDatabaseError::NotFound(format!(
                             "invalid address {} from root {}",
-                            tokens.join(""), self.root_hash)));
+                            tokens.join(""),
+                            self.root_hash
+                        )));
                     } else {
                         new_branch = true;
                         Node::default()
@@ -543,6 +641,8 @@ mod tests {
     use database::database::DatabaseError;
     use database::lmdb::LmdbContext;
     use database::lmdb::LmdbDatabase;
+    use database::lmdb::DatabaseReader;
+    use proto::merkle::ChangeLogEntry;
 
     use std::env;
     use std::fs::remove_file;
@@ -551,6 +651,7 @@ mod tests {
     use std::str::from_utf8;
     use std::thread;
     use rand::{seq, thread_rng};
+    use protobuf;
 
     #[test]
     fn node_serialize() {
@@ -616,10 +717,25 @@ mod tests {
     #[test]
     fn merkle_trie_root_advance() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).unwrap();
 
             let orig_root = merkle_db.get_merkle_root();
+            let orig_root_bytes = &::hex::decode(orig_root.clone()).unwrap();
+
+            {
+                // check that there is no ChangeLogEntry for the initial root
+                let reader = db.reader().unwrap();
+                assert!(
+                    reader
+                        .index_get(CHANGE_LOG_INDEX, orig_root_bytes)
+                        .expect("A database error occurred")
+                        .is_none()
+                );
+            }
+
             let new_root = merkle_db.set("abcd", "data_value".as_bytes()).unwrap();
+            let new_root_bytes = &::hex::decode(new_root.clone()).unwrap();
 
             assert_eq!(merkle_db.get_merkle_root(), orig_root, "Incorrect root");
             assert_ne!(orig_root, new_root, "root was not changed");
@@ -627,6 +743,20 @@ mod tests {
                 !merkle_db.contains("abcd").unwrap(),
                 "Should not contain the value"
             );
+
+            let change_log: ChangeLogEntry = {
+                // check that we have a change log entry for the new root
+                let reader = db.reader().unwrap();
+                let entry_bytes = &reader
+                    .index_get(CHANGE_LOG_INDEX, new_root_bytes)
+                    .expect("A database error occurred")
+                    .expect("Did not return a change log entry");
+                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+            };
+
+            assert_eq!(orig_root_bytes, &change_log.get_parent());
+            assert_eq!(3, change_log.get_additions().len());
+            assert_eq!(0, change_log.get_successors().len());
 
             merkle_db.set_merkle_root(new_root.clone()).unwrap();
             assert_eq!(merkle_db.get_merkle_root(), new_root, "Incorrect root");
@@ -884,14 +1014,17 @@ mod tests {
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
-    fn make_db(merkle_path: &str) -> MerkleDatabase {
+    fn make_lmdb(merkle_path: &str) -> LmdbDatabase {
         let ctx = LmdbContext::new(Path::new(merkle_path), 1, Some(120 * 1024 * 1024))
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap();
-        let lmdb_db = LmdbDatabase::new(ctx, &[])
+        LmdbDatabase::new(ctx, &[CHANGE_LOG_INDEX])
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
-            .unwrap();
-        MerkleDatabase::new(lmdb_db, None).unwrap()
+            .unwrap()
+    }
+
+    fn make_db(merkle_path: &str) -> MerkleDatabase {
+        MerkleDatabase::new(make_lmdb(merkle_path), None).unwrap()
     }
 
     fn temp_db_path() -> String {
