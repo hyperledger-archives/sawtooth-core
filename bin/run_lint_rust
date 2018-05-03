@@ -38,7 +38,7 @@ for dir in $dirs; do
 
     echo "-- rustfmt"
 
-    _=$(cargo fmt -- --write-mode=diff)
+    diff=$(cargo fmt -- --write-mode=diff)
     rustfmt_exit=$?
 
     # rustfmt returns the following exit codes:
@@ -63,7 +63,8 @@ for dir in $dirs; do
         elif [[ $rustfmt_exit == 2 ]]; then
             echo "Parsing error in $dir"
         else
-            echo "Incorrect formatting: $dir"
+            echo "Incorrect formatting: $dir (error code: $rustfmt_exit)"
+            echo -e $diff
         fi
     fi
 
