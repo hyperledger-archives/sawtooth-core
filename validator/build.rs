@@ -111,30 +111,22 @@ fn main() {
 
 fn glob_simple(pattern: &str) -> Vec<ProtoFile> {
     glob::glob(pattern)
-        .expect("glob")
+        .expect("Search did not result in files")
         .map(|g| protofile_info(g.expect("item").as_path()))
         .collect()
 }
 
 fn protofile_info(path: &Path) -> ProtoFile {
     let module_name = path.file_stem()
-        .expect("file stem")
+        .expect("Unable to get file stem")
         .to_str()
-        .expect("utf-8")
+        .expect("File name should be utf-8")
         .to_owned();
 
     let file_path = path.to_str().expect("utf-8").to_owned();
 
     let file = fs::File::open(path).expect("Unable to open file");
-    let last_modified = file.metadata()
-        .expect("file to have metadata")
-        .modified()
-        .map(|sys_time| {
-            sys_time
-                .duration_since(UNIX_EPOCH)
-                .expect("after UNIX_EPOCH")
-        })
-        .expect("file to have modified time");
+    let last_modified = get_modified_time(file);
 
     ProtoFile {
         module_name,
@@ -154,14 +146,18 @@ fn read_last_build_time() -> Duration {
             );
             Duration::new(0, 0)
         }
-        Ok(file) => file.metadata()
-            .expect("file to have metadata")
-            .modified()
-            .map(|sys_time| {
-                sys_time
-                    .duration_since(UNIX_EPOCH)
-                    .expect("after UNIX_EPOCH")
-            })
-            .expect("file to have modified time"),
+        Ok(file) => get_modified_time(file),
     }
+}
+
+fn get_modified_time(file: fs::File) -> Duration {
+    file.metadata()
+        .expect("File should have metadata")
+        .modified()
+        .map(|sys_time| {
+            sys_time
+                .duration_since(UNIX_EPOCH)
+                .expect("System time should be after UNIX_EPOCH")
+        })
+        .expect("File should have modified time")
 }
