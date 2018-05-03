@@ -108,19 +108,42 @@ impl LmdbDatabase {
     }
 }
 
+/// A DatabaseReader provides read access to a database instance.
+pub trait DatabaseReader {
+    /// Returns the bytes stored at the given key, if found.
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
+
+    /// Returns the bytes stored at the given key on a specified index, if found.
+    fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError>;
+
+    /// Returns a cursor against the main database. The cursor iterates over
+    /// the entries in the natural key order.
+    fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError>;
+
+    /// Returns a cursor against the given index. The cursor iterates over
+    /// the entries in the index's natural key order.
+    fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError>;
+
+    /// Returns the number of entries in the main database.
+    fn count(&self) -> Result<usize, DatabaseError>;
+
+    /// Returns the number of entries in the given index.
+    fn index_count(&self, index: &str) -> Result<usize, DatabaseError>;
+}
+
 pub struct LmdbDatabaseReader<'a> {
     db: &'a LmdbDatabase,
     txn: lmdb::ReadTransaction<'a>,
 }
 
-impl<'a> LmdbDatabaseReader<'a> {
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+impl<'a> DatabaseReader for LmdbDatabaseReader<'a> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(&self.db.main, key);
         val.ok().map(Vec::from)
     }
 
-    pub fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
+    fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
         let index = self.db
             .indexes
             .get(index)
@@ -130,7 +153,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         Ok(val.ok().map(Vec::from))
     }
 
-    pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
+    fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
         let cursor = self.txn
             .cursor(self.db.main.clone())
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
@@ -138,7 +161,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         Ok(LmdbDatabaseReaderCursor { access, cursor })
     }
 
-    pub fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
+    fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
         let index = self.db
             .indexes
             .get(index)
@@ -150,7 +173,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         Ok(LmdbDatabaseReaderCursor { access, cursor })
     }
 
-    pub fn count(&self) -> Result<usize, DatabaseError> {
+    fn count(&self) -> Result<usize, DatabaseError> {
         self.txn
             .db_stat(&self.db.main)
             .map_err(|err| {
@@ -159,7 +182,7 @@ impl<'a> LmdbDatabaseReader<'a> {
             .map(|stat| stat.entries)
     }
 
-    pub fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
+    fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
         let index = self.db
             .indexes
             .get(index)
@@ -245,6 +268,66 @@ impl<'a> LmdbDatabaseWriter<'a> {
         self.txn
             .commit()
             .map_err(|err| DatabaseError::WriterError(format!("{}", err)))
+    }
+}
+
+impl<'a> DatabaseReader for LmdbDatabaseWriter<'a> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        let access = self.txn.access();
+        let val: Result<&[u8], _> = access.get(&self.db.main, key);
+        val.ok().map(Vec::from)
+    }
+
+    fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
+        let index = self.db
+            .indexes
+            .get(index)
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
+        let access = self.txn.access();
+        let val: Result<&[u8], _> = access.get(index, key);
+        Ok(val.ok().map(Vec::from))
+    }
+
+    fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
+        let cursor = self.txn
+            .cursor(self.db.main.clone())
+            .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
+        let access = (*self.txn).access();
+        Ok(LmdbDatabaseReaderCursor { access, cursor })
+    }
+
+    fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
+        let index = self.db
+            .indexes
+            .get(index)
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
+        let cursor = self.txn
+            .cursor(index)
+            .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
+        let access = (*self.txn).access();
+        Ok(LmdbDatabaseReaderCursor { access, cursor })
+    }
+
+    fn count(&self) -> Result<usize, DatabaseError> {
+        self.txn
+            .db_stat(&self.db.main)
+            .map_err(|err| {
+                DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
+            })
+            .map(|stat| stat.entries)
+    }
+
+    fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
+        let index = self.db
+            .indexes
+            .get(index)
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
+        self.txn
+            .db_stat(index)
+            .map_err(|err| {
+                DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
+            })
+            .map(|stat| stat.entries)
     }
 }
 
