@@ -275,6 +275,7 @@ test_validator() {
     run_docker_test test_namespace_permission
     copy_coverage .coverage.namespace_permission
     run_docker_test test_state_verifier --timeout 30
+    run_docker_test ./validator/tests/unit_rust_validator.yaml
 }
 
 test_go_sdk() {
