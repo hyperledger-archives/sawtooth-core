@@ -696,10 +696,6 @@ class BlockPublisher(object):
                     self._pending_batches.update_limit(len(chain_head.batches))
                     self._pending_batches.rebuild(
                         committed_batches, uncommitted_batches)
-                    try:
-                        self.initialize_block(self._chain_head)
-                    except ConsensusNotReady:
-                        self._log_consensus_state()
 
         # pylint: disable=broad-except
         except Exception:
