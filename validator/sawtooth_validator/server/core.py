@@ -42,6 +42,7 @@ from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.settings_cache import SettingsObserver
 from sawtooth_validator.state.settings_cache import SettingsCache
@@ -112,7 +113,9 @@ class Validator(object):
             data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug(
             'global state database file is %s', global_state_db_filename)
-        global_state_db = NativeLmdbDatabase(global_state_db_filename)
+        global_state_db = NativeLmdbDatabase(
+            global_state_db_filename,
+            indexes=MerkleDatabase.create_index_configuration())
         state_view_factory = StateViewFactory(global_state_db)
 
         # -- Setup Receipt Store -- #

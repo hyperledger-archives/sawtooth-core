@@ -26,6 +26,7 @@ from sawtooth_signing import CryptoFactory
 
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -195,7 +196,8 @@ class TestStateVerifier(unittest.TestCase):
         blockstore = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
         global_state_db = NativeLmdbDatabase(
-            os.path.join(self._temp_dir, 'test_state_verifier.lmdb'))
+            os.path.join(self._temp_dir, 'test_state_verifier.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration())
 
         precalculated_state_roots = [
             "e35490eac6f77453675c3399da7efe451e791272bbc8cf1b032c75030fb455c3",

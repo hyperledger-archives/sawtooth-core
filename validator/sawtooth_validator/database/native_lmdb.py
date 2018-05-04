@@ -28,7 +28,7 @@ class NativeLmdbDatabase(object):
             raise TypeError("Path cannot be null")
         elif res == ErrorCode.InvalidFilePath:
             raise TypeError("Invalid file path {}".format(path))
-        elif res = ErrorCode.InvalidIndexString:
+        elif res == ErrorCode.InvalidIndexString:
             raise TypeError("Invalid index string {}".format(indexes))
         elif res == ErrorCode.InitializeContextError:
             raise TypeError("Unable to initialize LMDB Context")

@@ -44,6 +44,7 @@ class TestContextManager(unittest.TestCase):
 
         self.database_of_record = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'db_of_record.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         self.context_manager = context_manager.ContextManager(
@@ -53,6 +54,7 @@ class TestContextManager(unittest.TestCase):
         # used for replicating state hash through direct merkle tree updates
         self.database_results = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'db_results.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
     def tearDown(self):

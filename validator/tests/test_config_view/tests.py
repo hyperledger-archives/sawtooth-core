@@ -39,6 +39,7 @@ class TestSettingsView(unittest.TestCase):
         self._temp_dir = tempfile.mkdtemp()
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_config_view.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
         state_view_factory = StateViewFactory(database)
         self._settings_view_factory = SettingsViewFactory(state_view_factory)

@@ -32,6 +32,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 
         self.lmdb = NativeLmdbDatabase(
             self.file,
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=120 * 1024 * 1024)
 
         self.trie = MerkleDatabase(self.lmdb)

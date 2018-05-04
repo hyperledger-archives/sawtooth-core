@@ -214,6 +214,7 @@ class TestGenesisController(unittest.TestCase):
 
         state_database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_genesis.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
         merkle_db = MerkleDatabase(state_database)
 
