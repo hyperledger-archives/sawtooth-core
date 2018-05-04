@@ -31,7 +31,11 @@ pub struct LmdbContext {
 }
 
 impl LmdbContext {
-    pub fn new(filepath: &Path, indexes: u32, size: Option<usize>) -> Result<Self, DatabaseError> {
+    pub fn new(
+        filepath: &Path,
+        indexes: usize,
+        size: Option<usize>,
+    ) -> Result<Self, DatabaseError> {
         let flags = lmdb::open::MAPASYNC | lmdb::open::WRITEMAP | lmdb::open::NORDAHEAD
             | lmdb::open::NOSUBDIR;
 
@@ -43,7 +47,7 @@ impl LmdbContext {
             DatabaseError::InitError(format!("Failed to initialize environment: {}", err))
         })?;
         builder
-            .set_maxdbs(indexes + 1)
+            .set_maxdbs((indexes + 1) as u32)
             .map_err(|err| DatabaseError::InitError(format!("Failed to set MAX_DBS: {}", err)))?;
         builder
             .set_mapsize(size.unwrap_or(DEFAULT_SIZE))
