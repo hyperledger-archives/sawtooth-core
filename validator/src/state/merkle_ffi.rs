@@ -93,7 +93,10 @@ fn make_merkle_db(
             }
             ErrorCode::Success
         }
-        Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+        Err(MerkleDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
@@ -154,7 +157,10 @@ pub extern "C" fn merkle_db_set_merkle_root(
 
     match unsafe { (*(merkle_db as *mut MerkleDatabase)).set_merkle_root(state_root) } {
         Ok(()) => ErrorCode::Success,
-        Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+        Err(MerkleDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
@@ -185,7 +191,10 @@ pub extern "C" fn merkle_db_contains(merkle_db: *mut c_void, address: *const c_c
         match (*(merkle_db as *mut MerkleDatabase)).contains(address_str) {
             Ok(true) => ErrorCode::Success,
             Ok(false) => ErrorCode::NotFound,
-            Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+            Err(MerkleDatabaseError::DatabaseError(err)) => {
+                error!("A Database Error occurred: {}", err);
+                ErrorCode::DatabaseError
+            }
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
@@ -229,7 +238,10 @@ pub extern "C" fn merkle_db_get(
                 ErrorCode::Success
             }
             Ok(None) => ErrorCode::NotFound,
-            Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+            Err(MerkleDatabaseError::DatabaseError(err)) => {
+                error!("A Database Error occurred: {}", err);
+                ErrorCode::DatabaseError
+            }
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
@@ -278,7 +290,10 @@ pub extern "C" fn merkle_db_set(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+            Err(MerkleDatabaseError::DatabaseError(err)) => {
+                error!("A Database Error occurred: {}", err);
+                ErrorCode::DatabaseError
+            }
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
@@ -318,7 +333,10 @@ pub extern "C" fn merkle_db_delete(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+            Err(MerkleDatabaseError::DatabaseError(err)) => {
+                error!("A Database Error occurred: {}", err);
+                ErrorCode::DatabaseError
+            }
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
@@ -409,7 +427,10 @@ pub extern "C" fn merkle_db_update(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+            Err(MerkleDatabaseError::DatabaseError(err)) => {
+                error!("A Database Error occurred: {}", err);
+                ErrorCode::DatabaseError
+            }
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
@@ -447,7 +468,10 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
 
             ErrorCode::Success
         }
-        Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
+        Err(MerkleDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
@@ -494,7 +518,10 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
             ErrorCode::Success
         },
         None => ErrorCode::StopIteration,
-        Some(Err(MerkleDatabaseError::DatabaseError(_))) => ErrorCode::DatabaseError,
+        Some(Err(MerkleDatabaseError::DatabaseError(err))) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
         Some(Err(err)) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
