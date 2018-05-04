@@ -28,7 +28,7 @@ Python SDKs.
    app_developers_guide/using_the_sdks
    app_developers_guide/no_sdk
    app_developers_guide/address_and_namespace
-   app_developers_guide/namespace_protection
+   app_developers_guide/namespace_restriction
    app_developers_guide/event_subscriptions
 
 .. Licensed under Creative Commons Attribution 4.0 International License
