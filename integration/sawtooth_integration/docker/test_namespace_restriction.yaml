@@ -117,7 +117,7 @@ services:
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
-  test-namespace-protection:
+  test-namespace-restriction:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -130,7 +130,7 @@ services:
           -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
           -v
           -s /project/sawtooth-core/integration/sawtooth_integration/tests
-          test_namespace_protection.TestNamespaceProtection
+          test_namespace_restriction.TestNamespaceRestriction
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

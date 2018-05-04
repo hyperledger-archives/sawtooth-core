@@ -103,13 +103,13 @@ def send_xo_cmd(cmd_str):
         check=True)
 
 
-class TestNamespaceProtection(unittest.TestCase):
+class TestNamespaceRestriction(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         wait_for_rest_apis(['rest-api:8008'])
 
-    def test_namespace_protection(self):
+    def test_namespace_restriction(self):
         """
         Tests that namespaces stored on-chain are enforced by the
         validators. According to the sawtooth_settings declared in the docker
