@@ -14,24 +14,20 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
 
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
+#[derive(Clone, Debug, PartialEq)]
+pub struct Transaction {
+    pub header_signature: String,
+    pub payload: Vec<u8>,
+    pub batcher_public_key: String,
+    pub dependencies: Vec<String>,
+    pub family_name: String,
+    pub family_version: String,
+    pub inputs: Vec<String>,
+    pub outputs: Vec<String>,
+    pub nonce: String,
+    pub payload_sha512: String,
+    pub signer_public_key: String,
 
-// exported modules
-pub mod database;
-pub mod proto;
-pub mod state;
-
-pub mod batch;
-pub mod block;
-pub mod transaction;
+    pub header_bytes: Vec<u8>,
+}
