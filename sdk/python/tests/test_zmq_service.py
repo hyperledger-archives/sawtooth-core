@@ -95,14 +95,17 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusFinalizeBlockResponse(
-                status=consensus_pb2.ConsensusFinalizeBlockResponse.OK))
+                status=consensus_pb2.ConsensusFinalizeBlockResponse.OK,
+                block_id=b'block_id'))
 
-        self.service.finalize_block(data=b'test')
+        result = self.service.finalize_block(data=b'test')
 
         self.mock_stream.send.assert_called_with(
             message_type=Message.CONSENSUS_FINALIZE_BLOCK_REQUEST,
             content=consensus_pb2.ConsensusFinalizeBlockRequest(
                 data=b'test').SerializeToString())
+
+        self.assertEqual(result, b'block_id')
 
     def test_cancel_block(self):
         self.mock_stream.send.return_value = self._make_future(
