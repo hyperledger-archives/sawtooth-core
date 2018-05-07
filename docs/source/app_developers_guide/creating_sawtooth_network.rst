@@ -142,7 +142,7 @@ Step 3: Verify Connectivity
 ---------------------------
 
 You can connect to Docker container, such as
-``sawtooth-validator-registry-tp-default-0``, then use the following ``ps``
+``sawtooth-poet-validator-registry-tp-0``, then use the following ``ps``
 command to verify that the component is running.
 
 .. code-block:: console
