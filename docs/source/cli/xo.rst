@@ -27,7 +27,7 @@ or X's and O's). This command handles the construction and submission of
 transactions to a running validator via the URL of the validator's REST API.
 
 Before playing a game, you must start a validator, the XO transaction processor,and the REST API. The XO client sends requests to update and query the
-blockchain to the URL of the REST API (by default, ``http://127.0.0.1:8080``).
+blockchain to the URL of the REST API (by default, ``http://127.0.0.1:8008``).
 
 For more information on requirements and game rules, see
 :doc:`../app_developers_guide/intro_xo_transaction_family`.
