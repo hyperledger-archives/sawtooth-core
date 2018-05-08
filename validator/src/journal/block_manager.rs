@@ -16,6 +16,8 @@
  */
 
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::RwLock;
 
 use block::Block;
 use journal::{BlockStore, NULL_BLOCK_IDENTIFIER};
@@ -35,10 +37,10 @@ struct Anchor {
 
 #[derive(Default)]
 pub struct BlockManager {
-    block_by_block_id: HashMap<String, (Block, i64)>,
-    blockstore_by_name: HashMap<String, Box<BlockStore>>,
+    block_by_block_id: Rc<RwLock<HashMap<String, (Block, i64)>>>,
+    blockstore_by_name: Rc<RwLock<HashMap<String, Box<BlockStore>>>>,
 
-    anchors: HashMap<String, Anchor>,
+    anchors: Rc<RwLock<HashMap<String, Anchor>>>,
 }
 
 /// The BlockManager maintains integrity of all the blocks it contains,
@@ -47,21 +49,23 @@ pub struct BlockManager {
 impl BlockManager {
     pub fn new() -> Self {
         BlockManager {
-            block_by_block_id: HashMap::new(),
-            blockstore_by_name: HashMap::new(),
+            block_by_block_id: Rc::new(RwLock::new(HashMap::new())),
+            blockstore_by_name: Rc::new(RwLock::new(HashMap::new())),
 
-            anchors: HashMap::new(),
+            anchors: Rc::new(RwLock::new(HashMap::new())),
         }
     }
 
     fn garbage_collect(&mut self) {
         let blocks_to_remove: Vec<String> = self.block_by_block_id
+            .read()
+            .unwrap()
             .iter()
             .filter(|&(_, &(_, count))| count <= 0)
             .map(|(block_id, &(_, _))| block_id.to_owned())
             .collect();
         blocks_to_remove.iter().for_each(|block_id| {
-            self.block_by_block_id.remove(block_id);
+            self.block_by_block_id.write().unwrap().remove(block_id);
         });
     }
 
@@ -78,10 +82,15 @@ impl BlockManager {
     pub fn put(&mut self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
         match branch.split_first() {
             Some((head, tail)) => {
-                let predecessor_of_head_in_memory =
-                    self.block_by_block_id.contains_key(&head.previous_block_id);
-                let predecessor_of_head_in_any_blockstore =
-                    self.blockstore_by_name.values().any(|blockstore| {
+                let predecessor_of_head_in_memory = self.block_by_block_id
+                    .read()
+                    .unwrap()
+                    .contains_key(&head.previous_block_id);
+                let predecessor_of_head_in_any_blockstore = self.blockstore_by_name
+                    .read()
+                    .unwrap()
+                    .values()
+                    .any(|blockstore| {
                         blockstore
                             .get(vec![head.previous_block_id.as_str()])
                             .count() > 0
@@ -109,6 +118,8 @@ impl BlockManager {
                         return Err(BlockManagerError::MissingPredecessorInBranch);
                     } else {
                         match self.block_by_block_id
+                            .write()
+                            .unwrap()
                             .get_mut(head.previous_block_id.as_str())
                         {
                             Some(mut tup) => {
@@ -116,8 +127,10 @@ impl BlockManager {
                                 *count += 1;
                             }
                             None => {
-                                if let Some(anchor) =
-                                    self.anchors.get_mut(head.previous_block_id.as_str())
+                                if let Some(anchor) = self.anchors
+                                    .write()
+                                    .unwrap()
+                                    .get_mut(head.previous_block_id.as_str())
                                 {
                                     anchor.ref_count += 1
                                 }
@@ -131,23 +144,36 @@ impl BlockManager {
         let blocks_not_added_yet: Vec<Block> = branch
             .into_iter()
             .filter(|block| {
-                !self.block_by_block_id.contains_key(&block.header_signature)
-                    && !self.blockstore_by_name.values().any(|blockstore| {
-                        blockstore
-                            .get(vec![block.header_signature.as_str()])
-                            .count() > 0
-                    })
+                !self.block_by_block_id
+                    .read()
+                    .unwrap()
+                    .contains_key(&block.header_signature)
+                    && !self.blockstore_by_name
+                        .read()
+                        .unwrap()
+                        .values()
+                        .any(|blockstore| {
+                            blockstore
+                                .get(vec![block.header_signature.as_str()])
+                                .count() > 0
+                        })
             })
             .collect();
         for block in blocks_not_added_yet {
             self.block_by_block_id
+                .write()
+                .unwrap()
                 .insert(block.header_signature.clone(), (block, 1));
         }
         Ok(())
     }
 
-    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Block>> {
-        unimplemented!()
+    pub fn get(&self, block_ids: Vec<String>) -> Box<Iterator<Item = Block>> {
+        Box::new(GetBlockIterator::new(
+            Rc::clone(&self.block_by_block_id),
+            Rc::clone(&self.blockstore_by_name),
+            block_ids,
+        ))
     }
 
     pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
@@ -163,7 +189,7 @@ impl BlockManager {
     }
 
     pub fn unref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
-        if let Some(tup) = self.block_by_block_id.get_mut(block_id) {
+        if let Some(tup) = self.block_by_block_id.write().unwrap().get_mut(block_id) {
             let &mut (_, ref mut ref_count) = tup;
             *ref_count -= 1;
         }
@@ -182,6 +208,52 @@ impl BlockManager {
 
     pub fn persist(&mut self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
         unimplemented!()
+    }
+}
+
+struct GetBlockIterator {
+    block_by_block_id: Rc<RwLock<HashMap<String, (Block, i64)>>>,
+    blockstore_by_name: Rc<RwLock<HashMap<String, Box<BlockStore>>>>,
+    block_ids: Vec<String>,
+    index: usize,
+}
+
+impl GetBlockIterator {
+    pub fn new(
+        block_by_block_id: Rc<RwLock<HashMap<String, (Block, i64)>>>,
+        blockstore_by_name: Rc<RwLock<HashMap<String, Box<BlockStore>>>>,
+        block_ids: Vec<String>,
+    ) -> Self {
+        GetBlockIterator {
+            block_by_block_id,
+            blockstore_by_name,
+            block_ids,
+            index: 0,
+        }
+    }
+}
+
+impl Iterator for GetBlockIterator {
+    type Item = Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = match self.block_ids.get(self.index) {
+            Some(block_id) => {
+                let block_by_block_id = self.block_by_block_id.read().unwrap();
+                match block_by_block_id.get(block_id) {
+                    Some(&(ref block, _)) => Some(block.clone()),
+                    None => self.blockstore_by_name
+                        .read()
+                        .unwrap()
+                        .values()
+                        .find(|blockstore| blockstore.get(vec![block_id]).count() > 0)
+                        .map(|blockstore| blockstore.get(vec![block_id]).nth(0).unwrap()),
+                }
+            }
+            None => None,
+        };
+        self.index += 1;
+        item
     }
 }
 
@@ -249,5 +321,25 @@ mod tests {
                 "Missing predecessor of block A: o"
             )))
         );
+    }
+
+    #[test]
+    fn test_get_blocks() {
+        let mut block_manager = BlockManager::new();
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 2);
+
+        block_manager
+            .put(vec![a.clone(), b.clone(), c.clone()])
+            .unwrap();
+
+        let mut get_block_iter =
+            block_manager.get(vec!["A".to_string(), "C".to_string(), "D".to_string()]);
+
+        assert_eq!(get_block_iter.next(), Some(a));
+        assert_eq!(get_block_iter.next(), Some(c));
+        assert_eq!(get_block_iter.next(), None);
+        assert_eq!(get_block_iter.next(), None);
     }
 }
