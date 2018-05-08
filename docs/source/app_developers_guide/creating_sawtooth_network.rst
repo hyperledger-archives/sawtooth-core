@@ -558,24 +558,30 @@ Confirm Network Functionality
 =============================
 
 #. To check whether peering has occurred on the network, submit a peers query
-   to the local REST API from the first validator node.
+   to the REST API on the first validator node.
 
-     * Docker: Run this command:
-
-          .. code-block:: console
-
-          $ curl http://sawtooth-rest-api-default-0:8008/peers
-
-     * Ubuntu: Run the following command, replacing `{rest-api}` with the host
-       name and port for the REST API on the first validator node, as determined
-       in :ref:`prereqs-multi-ubuntu-label`.
+     * Docker: Run the following command from the shell container,
+       ``sawtooth-poet-shell``.  This command specifies the container name and
+       port for the first node's REST API.
 
           .. code-block:: console
 
-             $ curl http://{rest-api}/peers
+             $ curl http://sawtooth-rest-api-default-0:8008/peers
 
-       On a node that is running the REST API and client on the same system,
-       the default value for `{rest-api}` is ``http://localhost:8008``.
+     * Ubuntu: Open a terminal window on the first validator node and run the
+       following command.
+
+          .. code-block:: console
+
+             $ curl http://localhost:8008/peers
+
+          .. note::
+
+             This environment runs a local REST API on each validator node. For
+             a node that is not running a local REST API, you must replace
+             ``localhost:8008`` with the externally advertised IP address and
+             port.  (Non-default values are set with the ``--bind`` option when
+             starting the REST API.)
 
    If this query returns a 503 error, the nodes have not yet peered with the
    Sawtooth network. Repeat the query until you see output that resembles the
@@ -590,51 +596,49 @@ Confirm Network Functionality
           "link": "http://rest-api:8008/peers"
         }
 
-#. You can also use Sawtooth commands to show peer information.
+#. (Optional) You can also run Sawtooth commands on a validator node to show
+   the other nodes on the network, called `peers`.
 
-   * Use ``sawtooth peer list`` to list the peers of a particular node. For more
-     information, run ``sawtooth peer list --help``.
+   * Use ``sawtooth peer list`` to show the peers of a particular node.
 
    * Use ``sawnet peers list`` to display a complete graph of peers on the
-     network. For more information, run ``sawnet peers list --help``.
+     network.
 
-#. Submit a transaction on the first validator node. This example sets a key
-   named ``MyKey`` to the value 999.
+#. Submit a transaction to the REST API on the first validator node. This
+   example sets a key named ``MyKey`` to the value 999.
 
-   * Docker:
+   * Docker: Use the shell container to run the following command.
 
         .. code-block:: console
 
-        # intkey set --url http://sawtooth-rest-api-default-0:8008 MyKey 999
+           # intkey set --url http://sawtooth-rest-api-default-0:8008 MyKey 999
 
-   * Ubuntu:
+   * Ubuntu: Run the following command in a terminal window on the first
+     validator node.
 
         .. code-block:: console
 
            $ intkey set MyKey 999
 
-     If the REST API does not use the default URL and port, you must use the
-     ``--url`` option to provide the actual value for your network.
+#. Watch for this transaction to appear on the second validator node. The
+   following command requests the value of ``MyKey`` from the REST API on the
+   second validator node.
 
-#. On the second validator node, watch for this transaction to appear on the
-   blockchain. Run the following command:
-
-   * Docker:
+   * Docker: Use the shell container to run the following command.
 
         .. code-block:: console
 
-        # intkey show --url http://sawtooth-rest-api-default-1:8008 MyKey
-        MyKey: 999
+           # intkey show --url http://sawtooth-rest-api-default-1:8008 MyKey
+           MyKey: 999
 
-   * Ubuntu:
+   * Ubuntu: Open a terminal window on the second validator node to run the
+     following command.
+
 
         .. code-block:: console
 
            $ intkey show MyKey
            MyKey: 999
-
-     If necessary, use the ``--url`` option to specify the REST API, as in the
-     previous command on the first node.
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
