@@ -375,8 +375,8 @@ impl BlockManager {
             .map(|blockstore| blockstore.get(vec![block_id]).nth(0).unwrap())
     }
 
-    pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
-        unimplemented!()
+    pub fn branch<'a>(&'a self, tip: &str) -> Box<Iterator<Item = &Block> + 'a> {
+        Box::new(BranchIterator::new(self, tip.into()))
     }
 
     pub fn branch_diff(&self, tip: &str, exclude: &str) -> Box<Iterator<Item = Block>> {
@@ -553,6 +553,58 @@ impl<'a> Iterator for GetBlockIterator<'a> {
     }
 }
 
+struct BranchIterator<'a> {
+    block_manager: &'a BlockManager,
+    next_block_id: String,
+    blockstore: Option<String>,
+}
+
+impl<'a> BranchIterator<'a> {
+    pub fn new(block_manager: &'a BlockManager, first_block_id: String) -> Self {
+        BranchIterator {
+            block_manager,
+            next_block_id: first_block_id,
+            blockstore: None,
+        }
+    }
+}
+
+impl<'a> Iterator for BranchIterator<'a> {
+    type Item = &'a Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_block_id == NULL_BLOCK_IDENTIFIER {
+            None
+        } else if self.blockstore.is_none() {
+            let (block_option, blockstore_name_option) = self.block_manager
+                .get_block_from_main_cache_or_blockstore_name(self.next_block_id.as_str());
+            let block = block_option.or_else(|| {
+                blockstore_name_option
+                    .map(|blockstore_name| {
+                        self.blockstore = Some(blockstore_name.into());
+                        self.block_manager
+                            .get_block_from_blockstore(self.next_block_id.clone(), blockstore_name)
+                            .expect("Blockstore referenced by anchor does not exist")
+                    })
+                    .unwrap_or(None)
+            });
+            if let Some(block) = block {
+                self.next_block_id = block.previous_block_id.clone();
+            }
+            block
+        } else {
+            let blockstore_id = self.blockstore.as_ref().unwrap();
+            let block = self.block_manager
+                .get_block_from_blockstore(self.next_block_id.clone(), blockstore_id)
+                .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
+                .expect(
+                    "The block was not in the blockstore referenced by a successor block's anchor",
+                );
+            Some(block)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -680,5 +732,28 @@ mod tests {
         assert_eq!(get_block_iter.next(), Some(&c));
         assert_eq!(get_block_iter.next(), None);
         assert_eq!(get_block_iter.next(), None);
+    }
+
+    #[test]
+    fn test_branch_in_memory() {
+        let mut block_manager = BlockManager::new();
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 2);
+
+        block_manager
+            .put(vec![a.clone(), b.clone(), c.clone()])
+            .unwrap();
+
+        let mut branch_iter = block_manager.branch("C");
+
+        assert_eq!(branch_iter.next(), Some(&c));
+        assert_eq!(branch_iter.next(), Some(&b));
+        assert_eq!(branch_iter.next(), Some(&a));
+        assert_eq!(branch_iter.next(), None);
+
+        let mut empty_iter = block_manager.branch("P");
+
+        assert_eq!(empty_iter.next(), None);
     }
 }
