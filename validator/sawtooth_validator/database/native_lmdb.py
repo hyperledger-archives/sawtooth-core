@@ -37,10 +37,13 @@ class NativeLmdbDatabase(object):
         else:
             raise TypeError("Unknown error occurred: {}".format(res.error))
 
-    def __del__(self):
+    def drop(self):
         if self._db_ptr:
             LIBRARY.call('lmdb_database_drop', self._db_ptr)
             self._db_ptr = None
+
+    def __del__(self):
+        self.drop()
 
     @property
     def pointer(self):
