@@ -1,0 +1,277 @@
+# Copyright 2018 Cargill Incorporated
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: '3.6'
+
+services:
+
+  settings-tp:
+    image: sawtooth-settings-tp:${ISOLATION_ID}
+    container_name: sawtooth-settings-tp-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  intkey-tp-python:
+    image: sawtooth-intkey-tp-python:${ISOLATION_ID}
+    container_name: sawtooth-intkey-tp-python-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  xo-tp-python:
+    image: sawtooth-xo-tp-python:${ISOLATION_ID}
+    container_name: sawtooth-xo-tp-python-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  validator:
+    image: sawtooth-validator:${ISOLATION_ID}
+    container_name: sawtooth-validator-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  rest-api:
+    image: sawtooth-rest-api:${ISOLATION_ID}
+    container_name: sawtooth-rest-api-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  shell:
+    image: sawtooth-shell:${ISOLATION_ID}
+    container_name: sawtooth-shell-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  admin-tools:
+    image: sawtooth-admin-tools:${ISOLATION_ID}
+    container_name: sawtooth-admin-tools
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  sawtooth-cli:
+    image: sawtooth-cli:${ISOLATION_ID}
+    container_name: sawtooth-cli-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-cli:
+    image: sawtooth-poet-cli:${ISOLATION_ID}
+    container_name: sawtooth-poet-cli-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-common:
+    image: sawtooth-poet-common:${ISOLATION_ID}
+    container_name: sawtooth-poet-common-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-core:
+    image: sawtooth-poet-core:${ISOLATION_ID}
+    container_name: sawtooth-poet-core-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-families:
+    image: sawtooth-poet-families:${ISOLATION_ID}
+    container_name: sawtooth-poet-families-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-sgx:
+    image: sawtooth-poet-sgx:${ISOLATION_ID}
+    container_name: sawtooth-poet-sgx-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  poet-simulator:
+    image: sawtooth-poet-simulator:${ISOLATION_ID}
+    container_name: sawtooth-poet-simulator-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  block-info-tp:
+    image: sawtooth-block-info-tp:${ISOLATION_ID}
+    container_name: sawtooth-block-info-tp-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  identity-tp:
+    image: sawtooth-identity-tp:${ISOLATION_ID}
+    container_name: sawtooth-identity-tp-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  smallbank-tp-go:
+    image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
+    container_name: sawtooth-smallbank-tp-go-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  cxx-sdk:
+    image: sawtooth-cxx-sdk:${ISOLATION_ID}
+    container_name: sawtooth-sdk-cxx-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  sawtooth-intkey-tp-go:
+    image: sawtooth-intkey-tp-go:${ISOLATION_ID}
+    container_name: sawtooth-intkey-tp-go-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  sawtooth-noop-tp-go:
+    image: sawtooth-noop-tp-go:${ISOLATION_ID}
+    container_name: sawtooth-noop-tp-go-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  sawtooth-xo-tp-go:
+    image: sawtooth-xo-tp-go:${ISOLATION_ID}
+    container_name: sawtooth-xo-tp-go-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  python-sdk:
+    image: sawtooth-sdk-python:${ISOLATION_ID}
+    container_name: sawtooth-sdk-python-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  signing:
+    image: sawtooth-signing:${ISOLATION_ID}
+    container_name: sawtooth-signing-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  ias_client:
+    image: sawtooth-ias-client:${ISOLATION_ID}
+    container_name: sawtooth-ias-client-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  ias_proxy:
+    image: sawtooth-ias-proxy:${ISOLATION_ID}
+    container_name: sawtooth-ias-proxy-default
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
+  meta:
+    image: sawtooth-meta:${ISOLATION_ID}
+    container_name: sawtooth-meta
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
