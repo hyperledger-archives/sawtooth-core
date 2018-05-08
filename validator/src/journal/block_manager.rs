@@ -177,7 +177,12 @@ impl BlockManager {
     }
 
     pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
-        unimplemented!()
+        Box::new(BranchIterator::new(
+            Rc::clone(&self.block_by_block_id),
+            Rc::clone(&self.blockstore_by_name),
+            tip.to_string(),
+            Rc::clone(&self.anchors),
+        ))
     }
 
     pub fn branch_diff(&self, tip: &str, exclude: &str) -> Box<Iterator<Item = Block>> {
@@ -254,6 +259,81 @@ impl Iterator for GetBlockIterator {
         };
         self.index += 1;
         item
+    }
+}
+
+struct BranchIterator {
+    block_by_block_id: Rc<RwLock<HashMap<String, (Block, i64)>>>,
+    blockstore_by_name: Rc<RwLock<HashMap<String, Box<BlockStore>>>>,
+    next_block_id: String,
+    anchors: Rc<RwLock<HashMap<String, Anchor>>>,
+    blockstore: Option<String>,
+}
+
+impl BranchIterator {
+    pub fn new(
+        block_by_block_id: Rc<RwLock<HashMap<String, (Block, i64)>>>,
+        blockstore_by_name: Rc<RwLock<HashMap<String, Box<BlockStore>>>>,
+        first_block_id: String,
+        anchors: Rc<RwLock<HashMap<String, Anchor>>>,
+    ) -> Self {
+        BranchIterator {
+            block_by_block_id,
+            blockstore_by_name,
+            next_block_id: first_block_id,
+            anchors,
+            blockstore: None,
+        }
+    }
+}
+
+impl Iterator for BranchIterator {
+    type Item = Block;
+
+    fn next(&mut self) -> Option<Block> {
+        if self.next_block_id == NULL_BLOCK_IDENTIFIER {
+            None
+        } else if self.blockstore.is_none() {
+            let block_by_block_id = self.block_by_block_id.read().unwrap();
+
+            match block_by_block_id.get(self.next_block_id.as_str()) {
+                Some(&(ref block, _)) => {
+                    self.next_block_id = block.previous_block_id.clone();
+                    Some(block.clone())
+                }
+                None => {
+                    let anchors = self.anchors.read().unwrap();
+                    let blockstore_by_name = &self.blockstore_by_name;
+                    let next_block_id = &self.next_block_id.clone();
+
+                    match anchors.get(next_block_id) {
+                        Some(anchor) => {
+                            self.blockstore = Some(anchor.blockstore.clone());
+                            let block = blockstore_by_name
+                                .read()
+                                .unwrap()
+                                .get(anchor.blockstore.as_str())
+                                    .expect("The blockmanager has lost a blockstore that is referenced by an anchor")
+                                    .get(vec![next_block_id]).nth(0)
+                                        .expect("The block was not in the blockstore referenced by the anchor for that block");
+                            self.next_block_id = block.previous_block_id.clone();
+                            Some(block.clone())
+                        }
+                        None => None,
+                    }
+                }
+            }
+        } else {
+            let blockstore_id = self.blockstore.as_ref().unwrap();
+
+            Some(self.blockstore_by_name
+                .read()
+                .unwrap()
+                .get(blockstore_id)
+                    .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
+                    .get(vec![self.next_block_id.as_str()])
+                    .nth(0).expect("The block was not in the blockstore referenced by a successor block's anchor"))
+        }
     }
 }
 
@@ -341,5 +421,28 @@ mod tests {
         assert_eq!(get_block_iter.next(), Some(c));
         assert_eq!(get_block_iter.next(), None);
         assert_eq!(get_block_iter.next(), None);
+    }
+
+    #[test]
+    fn test_branch_in_memory() {
+        let mut block_manager = BlockManager::new();
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 2);
+
+        block_manager
+            .put(vec![a.clone(), b.clone(), c.clone()])
+            .unwrap();
+
+        let mut branch_iter = block_manager.branch("C");
+
+        assert_eq!(branch_iter.next(), Some(c));
+        assert_eq!(branch_iter.next(), Some(b));
+        assert_eq!(branch_iter.next(), Some(a));
+        assert_eq!(branch_iter.next(), None);
+
+        let mut empty_iter = block_manager.branch("P");
+
+        assert_eq!(empty_iter.next(), None);
     }
 }
