@@ -379,7 +379,13 @@ class BlockValidator(object):
                 LOGGER.debug(
                     'Removing block from cache and pending due to error '
                     'during validation: %s', block)
-                del self._block_cache[block.identifier]
+                try:
+                    del self._block_cache[block.identifier]
+                except KeyError:
+                    LOGGER.exception(
+                        "Tried to delete a descendant pending block from the"
+                        " block cache because of an error, but the descendant"
+                        " was not in the cache.")
 
         return ready
 
