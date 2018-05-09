@@ -14,24 +14,17 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
 
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
+use batch::Batch;
 
-// exported modules
-pub mod database;
-pub mod journal;
-pub mod proto;
-pub mod state;
-
-pub mod batch;
-pub mod block;
-pub mod transaction;
+#[derive(Clone, Debug, PartialEq)]
+pub struct Block {
+    pub header_signature: String,
+    pub batches: Vec<Batch>,
+    pub state_root_hash: String,
+    pub consensus: Vec<u8>,
+    pub batch_ids: Vec<String>,
+    pub signer_public_key: String,
+    pub previous_block_id: String,
+    pub block_num: u64,
+}
