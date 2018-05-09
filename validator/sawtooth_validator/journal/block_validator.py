@@ -81,9 +81,7 @@ def look_ahead(iterable):
 
 class BlockValidator(object):
     """
-    Responsible for validating a block, handles both chain extensions and fork
-    will determine if the new block should be the head of the chain and return
-    the information necessary to do the switch if necessary.
+    Responsible for validating a block.
     """
 
     def __init__(self,
