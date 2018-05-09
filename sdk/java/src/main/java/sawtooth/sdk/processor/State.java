@@ -154,7 +154,7 @@ public class State {
    */
 
    
-  public Collection<String> deleteState(Collection<String> addresses)
+  public Collection<String> deleteState(ArrayList<String> addresses)
                         throws InternalError, InvalidTransactionException {
     TpStateDeleteRequest deleteRequest = TpStateDeleteRequest.newBuilder()
                                          .addAllAddresses(addresses)
