@@ -143,7 +143,7 @@ following algorithm:
 Setting keys are broken into four parts, based on the dots in the string. For
 example, the address for the key `a.b.c` is computed based on `a`, `b`, `c` and
 the empty string.  A longer key, for example `a.b.c.d.e`, is still broken into
-four parts, but the remain pieces are in the last part: `a`, `b`, `c` and `d.e`.
+four parts, but the remaining pieces are in the last part: `a`, `b`, `c` and `d.e`.
 
 Each of these pieces has a short hash computed (the first 16 characters of its
 SHA256 hash in hex) and is joined into a single address, with the settings
