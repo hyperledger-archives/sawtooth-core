@@ -16,6 +16,8 @@ BIOS Update
 
 .. Important::
 
+    `here <https://software.intel.com/en-us/>`_
+    `here <https://www.wikipedia.org/>`_
     You may need to update your BIOS with a security fix before running
     Hyperledger Sawtooth with PoET. Affected versions and instructions for
     updating can be found on
