@@ -23,12 +23,13 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.TpStateDeleteRequest;
+import sawtooth.sdk.protobuf.TpStateDeleteResponse;
 import sawtooth.sdk.protobuf.TpStateEntry;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
 import sawtooth.sdk.protobuf.TpStateGetResponse;
 import sawtooth.sdk.protobuf.TpStateSetRequest;
 import sawtooth.sdk.protobuf.TpStateSetResponse;
-
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -145,4 +146,45 @@ public class State {
     return addressesThatWereSet;
   }
 
+  /**Make a delete request on a specific context specified by contextId.
+   *
+   * @param addresses A collection of Map.Entry's
+   * @return addressesThatWereSet, A collection of address Strings that were set
+   * @throws InternalError something went wrong processing transaction
+   */
+
+   
+  public Collection<String> deleteState(Collection<String> addresses)
+                        throws InternalError, InvalidTransactionException {
+    TpStateDeleteRequest deleteRequest = TpStateDeleteRequest.newBuilder()
+                                         .addAllAddresses(addresses)
+                                         .setContextId(this.contextId)
+                                         .build();
+    Future future = stream.send(Message.MessageType.TP_STATE_DELETE_REQUEST,
+                             deleteRequest.toByteString());
+    TpStateDeleteResponse deleteResponse = null;
+    try {
+      deleteResponse = TpStateDeleteResponse
+                         .parseFrom(future.getResult(TIME_OUT));
+    } catch (InterruptedException iee) {
+      throw new InternalError(iee.toString());
+    } catch (InvalidProtocolBufferException ipbe) {
+      throw new InternalError(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
+    }
+    ArrayList<String> addressesThatWereDelete = new ArrayList<String>();
+    if (deleteResponse != null) {
+      if (deleteResponse.getStatus() == TpStateDeleteResponse.Status.AUTHORIZATION_ERROR) {
+        throw new InvalidTransactionException(
+          "Tried to delete unauthorized state address " + addresses.toString());
+      }
+      for (String address : deleteResponse.getAddressesList()) {
+        addressesThatWereDelete.add(address);
+      }
+    }
+    return addressesThatWereDelete;
+  }
 }
