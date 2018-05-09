@@ -663,20 +663,22 @@ class BlockPublisher(object):
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
                              batch.header_signature)
 
-    def on_chain_updated(self, chain_head,
-                         committed_batches=None,
-                         uncommitted_batches=None):
+    def on_chain_updated(
+            self,
+            chain_head,
+            committed_batches=None,
+            uncommitted_batches=None):
         """
-        The existing chain has been updated, the current head block has
-        changed.
+        A new chain head has been committed.
 
-        :param chain_head: the new head of block_chain, can be None if
-        no block publishing is desired.
-        :param committed_batches: the set of batches that were committed
-         as part of the new chain.
-        :param uncommitted_batches: the list of transactions if any that are
-        now de-committed when the new chain was selected.
-        :return: None
+        Args:
+            chain_head (Block): The newly committed block
+            committed_batches (List<Batch>): The list of batches committed as
+                a result of committing this new chain. This list can include
+                batches not directly in the chain head if multiple blocks were
+                committed as a result of committing the new chain.
+            uncommitted_batches (List<Batch>): The list of transactions that
+                were uncommitted as a result of committing this new chain.
         """
         try:
             with self._lock:
