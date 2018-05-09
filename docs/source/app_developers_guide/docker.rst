@@ -72,7 +72,11 @@ Compose.
 
 * Linux: Install the latest versions of
   `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_
-  and `Docker Compose <https://github.com/docker/compose/releases>`_.
+  and
+  `Docker Compose <https://docs.docker.com/compose/install/#install-compose>`_.
+  Then follow
+  `Post-Install steps
+  <https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user>`_.
 
 In this procedure, you will open six terminal windows to connect to the Docker
 containers: one for each Sawtooth component and one to use for client commands.
@@ -143,8 +147,11 @@ To start the Sawtooth Docker environment, perform the following tasks:
 
      user@host$ docker-compose -f sawtooth-default.yaml up
 
-   In this procedure, the prompt ``user@host$`` is used for commands that should
-   be run in the terminal window for the host system.
+   .. tip::
+      If you previously ran ``docker-compose ... up`` without a clean shut down,
+      run the following command first:
+
+      ``docker-compose -f sawtooth-default.yaml down``
 
 #. Downloading the Docker images for the Sawtooth environment can take
    several minutes. Wait until you see output that shows the containers
@@ -465,12 +472,23 @@ Use this information when you need to connect to any container in the Sawtooth
 application development environment. For example, you can examine the log files
 or check the status of Sawtooth components in any container.
 
-#. Use the following ``docker exec`` command from your host system to connect
-   to a Sawtooth Docker container.
+#. Use the following ``docker`` command to list all running Docker containers
 
    .. code-block:: console
 
-      user@host$ docker exec -it {ContainerName} bash
+      user@host$ docker ps
+
+   The output should resemble the following example:
+
+   .. code-block:: console
+
+      CONTAINER ID IMAGE                                     COMMAND               CREATED       STATUS       PORTS                            NAMES
+      76f6731c43a9 hyperledger/sawtooth-all:1.0              "bash -c 'sawtooth k" 7 minutes ago Up 7 minutes 4004/tcp, 8008/tcp               sawtooth-shell-default
+      9844faed9e9d hyperledger/sawtooth-intkey-tp-python:1.0 "intkey-tp-python -v" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-intkey-tp-python-default
+      44db125c2dca hyperledger/sawtooth-settings-tp:1.0      "settings-tp -vv -C " 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-settings-tp-default
+      875df9d022d6 hyperledger/sawtooth-xo-tp-python:1.0     "xo-tp-python -vv -C" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-xo-tp-python-default
+      93d048c01d30 hyperledger/sawtooth-rest-api:1.0         "sawtooth-rest-api -" 7 minutes ago Up 7 minutes 4004/tcp, 0.0.0.0:8008->8008/tcp sawtooth-rest-api-default
+      6bbcda66a5aa hyperledger/sawtooth-validator:1.0        "bash -c 'sawadm key" 7 minutes ago Up 7 minutes 0.0.0.0:4004->4004/tcp           sawtooth-validator-default
 
    The Docker Compose file defines the name of each container. It also
    specifies the TCP port and host name, if applicable. The following table
@@ -495,6 +513,13 @@ or check the status of Sawtooth components in any container.
    Note that the validator and REST API ports are exposed to other containers
    and forwarded (published) for external connections, such as from your host
    system.
+
+#. Use the following ``docker exec`` command from your host system to connect
+   to a Sawtooth Docker container.
+
+   .. code-block:: console
+
+      user@host$ docker exec -it {ContainerName} bash
 
    For example, you can use the following command from your host system to
    connect to the validator container:
