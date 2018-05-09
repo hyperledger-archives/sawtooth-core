@@ -59,8 +59,8 @@ class ConsensusNotReady(Exception):
     """
 
 
-class NoPendingBatchesRemaining(Exception):
-    """There are no pending batches remaining."""
+class BlockEmpty(Exception):
+    """There are no batches in the block."""
 
 
 class FinalizeBlockResult:
@@ -326,7 +326,7 @@ class _CandidateBlock(object):
         that need to be added to the next Block that is built.
         """
         if not (force or self._pending_batches):
-            raise NoPendingBatchesRemaining()
+            raise BlockEmpty()
 
         if not self._consensus.check_publish_block(
                 self._block_builder.block_header):
@@ -744,7 +744,7 @@ class BlockPublisher(object):
                 if self._building():
                     try:
                         result = self.finalize_block(force)
-                    except (ConsensusNotReady, NoPendingBatchesRemaining):
+                    except (ConsensusNotReady, BlockEmpty):
                         return
 
                     if result.block:
