@@ -596,54 +596,55 @@ class BlockPublisher(object):
                 Consensus is not ready to build a block
         """
 
-        # using previous_block so so we can use the setting_cache
-        max_batches = int(self._settings_cache.get_setting(
-            'sawtooth.publisher.max_batches_per_block',
-            previous_block.state_root_hash,
-            default_value=0))
+        with self._lock:
+            # using previous_block so so we can use the setting_cache
+            max_batches = int(self._settings_cache.get_setting(
+                'sawtooth.publisher.max_batches_per_block',
+                previous_block.state_root_hash,
+                default_value=0))
 
-        state_view = BlockWrapper.state_view_for_block(
-            previous_block,
-            self._state_view_factory)
+            state_view = BlockWrapper.state_view_for_block(
+                previous_block,
+                self._state_view_factory)
 
-        public_key = self._identity_signer.get_public_key().as_hex()
-        consensus = self._load_consensus(
-            previous_block, state_view, public_key)
-        batch_injectors = self._load_injectors(previous_block)
+            public_key = self._identity_signer.get_public_key().as_hex()
+            consensus = self._load_consensus(
+                previous_block, state_view, public_key)
+            batch_injectors = self._load_injectors(previous_block)
 
-        block_header = BlockHeader(
-            block_num=previous_block.block_num + 1,
-            previous_block_id=previous_block.header_signature,
-            signer_public_key=public_key)
-        block_builder = BlockBuilder(block_header)
+            block_header = BlockHeader(
+                block_num=previous_block.block_num + 1,
+                previous_block_id=previous_block.header_signature,
+                signer_public_key=public_key)
+            block_builder = BlockBuilder(block_header)
 
-        if not consensus.initialize_block(block_builder.block_header):
-            raise ConsensusNotReady()
+            if not consensus.initialize_block(block_builder.block_header):
+                raise ConsensusNotReady()
 
-        # create a new scheduler
-        scheduler = self._transaction_executor.create_scheduler(
-            self._squash_handler, previous_block.state_root_hash)
+            # create a new scheduler
+            scheduler = self._transaction_executor.create_scheduler(
+                self._squash_handler, previous_block.state_root_hash)
 
-        # build the TransactionCommitCache
-        committed_txn_cache = TransactionCommitCache(
-            self._block_cache.block_store)
+            # build the TransactionCommitCache
+            committed_txn_cache = TransactionCommitCache(
+                self._block_cache.block_store)
 
-        self._transaction_executor.execute(scheduler)
-        self._candidate_block = _CandidateBlock(
-            self._block_cache.block_store,
-            consensus, scheduler,
-            committed_txn_cache,
-            block_builder,
-            max_batches,
-            batch_injectors,
-            SettingsView(state_view),
-            self._identity_signer)
+            self._transaction_executor.execute(scheduler)
+            self._candidate_block = _CandidateBlock(
+                self._block_cache.block_store,
+                consensus, scheduler,
+                committed_txn_cache,
+                block_builder,
+                max_batches,
+                batch_injectors,
+                SettingsView(state_view),
+                self._identity_signer)
 
-        for batch in self._pending_batches:
-            if self._candidate_block.can_add_batch():
-                self._candidate_block.add_batch(batch)
-            else:
-                break
+            for batch in self._pending_batches:
+                if self._candidate_block.can_add_batch():
+                    self._candidate_block.add_batch(batch)
+                else:
+                    break
 
     def on_batch_received(self, batch):
         """
@@ -705,10 +706,11 @@ class BlockPublisher(object):
                 "Unhandled exception in BlockPublisher.on_chain_updated")
 
     def cancel_block(self):
-        if self._candidate_block:
-            self._candidate_block.cancel()
+        with self._lock:
+            if self._candidate_block:
+                self._candidate_block.cancel()
 
-        self._candidate_block = None
+            self._candidate_block = None
 
     def _building(self):
         """Returns whether the block publisher is in the process of building
@@ -758,29 +760,31 @@ class BlockPublisher(object):
             LOGGER.exception(
                 "Unhandled exception in BlockPublisher.on_check_publish_block")
 
-    def finalize_block(self, force=False):
-        result = self._candidate_block.finalize(force)
+    def finalize_block(self, consensus=None, force=False):
+        with self._lock:
+            result = self._candidate_block.finalize(consensus, force)
 
-        self._candidate_block = None
+            self._candidate_block = None
 
-        # Update the _pending_batches to reflect what we learned.
-        self._pending_batches.update(
-            result.remaining_batches,
-            result.last_batch)
+            # Update the _pending_batches to reflect what we learned.
+            self._pending_batches.update(
+                result.remaining_batches,
+                result.last_batch)
 
-        return result
+            return result
 
     def publish_block(self, block, injected_batches):
-        blkw = BlockWrapper(block)
-        LOGGER.info("Claimed Block: %s", blkw)
-        self._block_sender.send(blkw.block, keep_batches=injected_batches)
-        self._blocks_published_count.inc()
+        with self._lock:
+            blkw = BlockWrapper(block)
+            LOGGER.info("Claimed Block: %s", blkw)
+            self._block_sender.send(blkw.block, keep_batches=injected_batches)
+            self._blocks_published_count.inc()
 
-        # We built our candidate, disable processing until the chain head is
-        # updated. Only set this if we succeeded. Otherwise try again, this can
-        # happen in cases where txn dependencies did not validate when building
-        # the block.
-        self.on_chain_updated(None)
+            # We built our candidate, disable processing until the chain
+            # head is updated. Only set this if we succeeded. Otherwise try
+            # again, this can happen in cases where txn dependencies did
+            # not validate when building the block.
+            self.on_chain_updated(None)
 
     def has_batch(self, batch_id):
         with self._lock:
