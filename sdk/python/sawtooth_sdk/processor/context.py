@@ -97,7 +97,7 @@ class Context(object):
                               request).result(timeout).content)
         if response.status == \
                 state_context_pb2.TpStateSetResponse.AUTHORIZATION_ERROR:
-            addresses = [e.address for e in entries]
+            addresses = [e.address for e in state_entries]
             raise AuthorizationException(
                 'Tried to set unauthorized address: {}'.format(addresses))
         return response.addresses
