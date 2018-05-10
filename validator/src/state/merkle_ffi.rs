@@ -16,6 +16,7 @@
  */
 use database::lmdb::LmdbDatabase;
 /// This module contains all of the extern C functions for the Merkle trie
+use state::StateReader;
 use state::error::StateDatabaseError;
 use state::merkle::*;
 use std::collections::HashMap;
@@ -514,7 +515,7 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
     match unsafe { (*(merkle_db as *mut MerkleDatabase)).leaves(Some(prefix)) } {
         Ok(leaf_iterator) => {
             unsafe {
-                *iterator = Box::into_raw(Box::new(leaf_iterator)) as *const c_void;
+                *iterator = Box::into_raw(leaf_iterator) as *const c_void;
             }
 
             ErrorCode::Success

@@ -43,6 +43,7 @@ use database::lmdb::LmdbDatabaseWriter;
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
 
+use state::StateReader;
 use state::error::StateDatabaseError;
 
 const TOKEN_SIZE: usize = 2;
@@ -50,6 +51,7 @@ const TOKEN_SIZE: usize = 2;
 pub const CHANGE_LOG_INDEX: &str = "change_log";
 
 /// Merkle Database
+#[derive(Clone)]
 pub struct MerkleDatabase {
     root_hash: String,
     db: LmdbDatabase,
@@ -144,23 +146,6 @@ impl MerkleDatabase {
         self.root_node = get_node_by_hash(&self.db, &new_root)?;
         self.root_hash = new_root;
         Ok(())
-    }
-
-    /// Returns true if the given address exists in the MerkleDatabase;
-    /// false, otherwise.
-    pub fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
-        match self.get_by_address(address) {
-            Ok(_) => Ok(true),
-            Err(StateDatabaseError::NotFound(_)) => Ok(false),
-            Err(err) => Err(err),
-        }
-    }
-
-    /// Returns the data for a given address, if they exist at that node.  If
-    /// not, returns None.  Will return an StateDatabaseError::NotFound, if the
-    /// given address is not in the tree
-    pub fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
-        Ok(self.get_by_address(address)?.value)
     }
 
     /// Sets the given data at the given address.
@@ -306,13 +291,6 @@ impl MerkleDatabase {
         Ok(::hex::encode(key_hash))
     }
 
-    pub fn leaves<'a>(
-        &'a self,
-        prefix: Option<&'a str>,
-    ) -> Result<MerkleLeafIterator, StateDatabaseError> {
-        MerkleLeafIterator::new(self, prefix)
-    }
-
     /// Puts all the items into the database.
     fn store_changes(
         &self,
@@ -419,15 +397,46 @@ impl MerkleDatabase {
     }
 }
 
-pub struct MerkleLeafIterator<'a> {
-    merkle_db: &'a MerkleDatabase,
+impl StateReader for MerkleDatabase {
+    /// Returns true if the given address exists in the MerkleDatabase;
+    /// false, otherwise.
+    fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
+        match self.get_by_address(address) {
+            Ok(_) => Ok(true),
+            Err(StateDatabaseError::NotFound(_)) => Ok(false),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Returns the data for a given address, if they exist at that node.  If
+    /// not, returns None.  Will return an StateDatabaseError::NotFound, if the
+    /// given address is not in the tree
+    fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
+        Ok(self.get_by_address(address)?.value)
+    }
+
+    fn leaves(
+        &self,
+        prefix: Option<&str>,
+    ) -> Result<
+        Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+        StateDatabaseError,
+    > {
+        Ok(Box::new(MerkleLeafIterator::new(self.clone(), prefix)?))
+    }
+}
+
+/// A MerkleLeafIterator is fixed to iterate over the state address/value pairs
+/// the merkle root hash at the time of its creation.
+pub struct MerkleLeafIterator {
+    merkle_db: MerkleDatabase,
     visited: VecDeque<(String, Node)>,
 }
 
-impl<'a> MerkleLeafIterator<'a> {
+impl MerkleLeafIterator {
     fn new(
-        merkle_db: &'a MerkleDatabase,
-        prefix: Option<&'a str>,
+        merkle_db: MerkleDatabase,
+        prefix: Option<&str>,
     ) -> Result<Self, StateDatabaseError> {
         let path = prefix.unwrap_or("");
 
@@ -439,7 +448,7 @@ impl<'a> MerkleLeafIterator<'a> {
     }
 }
 
-impl<'a> Iterator for MerkleLeafIterator<'a> {
+impl Iterator for MerkleLeafIterator {
     type Item = Result<(String, Vec<u8>), StateDatabaseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
