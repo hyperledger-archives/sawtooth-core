@@ -236,6 +236,10 @@ def main(args):
         bind_component,
         validator_config.scheduler)
 
+    # Explicitly drop this, so there are not two db instances
+    global_state_db.drop()
+    global_state_db = None
+
     LOGGER.info(
         'Starting validator with %s scheduler',
         validator_config.scheduler)

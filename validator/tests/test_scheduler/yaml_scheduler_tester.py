@@ -381,6 +381,7 @@ class SchedulerTester(object):
 
         database = NativeLmdbDatabase(
             os.path.join(base_dir, 'compute_state_hashes_wo_scheduler.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         tree = MerkleDatabase(database=database)

@@ -34,6 +34,7 @@ def _encode(value):
 
 
 class MerkleDatabase(object):
+
     def __init__(self, database, merkle_root=None):
         self._merkle_db_ptr = ctypes.c_void_p()
 
@@ -44,6 +45,10 @@ class MerkleDatabase(object):
         else:
             _libexec('merkle_db_new', database.pointer,
                      ctypes.byref(self._merkle_db_ptr))
+
+    @staticmethod
+    def create_index_configuration():
+        return ['change_log']
 
     def __del__(self):
         # check that it has not been deleted, nor is it null

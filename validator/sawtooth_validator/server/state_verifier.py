@@ -26,13 +26,13 @@ from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
 
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.indexed_database import IndexedDatabase
-from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.execution.executor import TransactionExecutor
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -49,16 +49,15 @@ class ExecutionError(Exception):
     pass
 
 
-def get_databases(bind_network, data_dir=None):
+def get_databases(bind_network, data_dir):
     # Get the global state database to operate on
-    if data_dir is not None:
-        global_state_db_filename = os.path.join(
-            data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
-        LOGGER.debug(
-            'verifying state in %s', global_state_db_filename)
-        global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
-    else:
-        global_state_db = DictDatabase()
+    global_state_db_filename = os.path.join(
+        data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
+    LOGGER.debug(
+        'verifying state in %s', global_state_db_filename)
+    global_state_db = NativeLmdbDatabase(
+        global_state_db_filename,
+        indexes=MerkleDatabase.create_index_configuration())
 
     # Get the blockstore
     block_db_filename = os.path.join(

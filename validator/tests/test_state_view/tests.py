@@ -34,6 +34,7 @@ class StateViewTest(unittest.TestCase):
 
         self.database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_state_view.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
     def tearDown(self):

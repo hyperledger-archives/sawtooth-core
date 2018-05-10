@@ -20,6 +20,7 @@ import shutil
 import tempfile
 
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
@@ -40,6 +41,7 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_state_view.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         self._context_manager = ContextManager(database)

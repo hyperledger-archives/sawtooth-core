@@ -17,6 +17,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Cursor;
 
@@ -31,10 +32,20 @@ use cbor::value::Text;
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 
+use protobuf;
+use protobuf::Message;
+use protobuf::ProtobufError;
+
 use database::database::DatabaseError;
 use database::lmdb::LmdbDatabase;
+use database::lmdb::DatabaseReader;
+
+use proto::merkle::ChangeLogEntry;
+use proto::merkle::ChangeLogEntry_Successor;
 
 const TOKEN_SIZE: usize = 2;
+
+pub const CHANGE_LOG_INDEX: &str = "change_log";
 
 /// Merkle Database
 pub struct MerkleDatabase {
@@ -48,6 +59,7 @@ pub enum MerkleDatabaseError {
     NotFound(String),
     DeserializationError(DecodeError),
     SerializationError(EncodeError),
+    ChangeLogEncodingError(String),
     InvalidRecord,
     DatabaseError(DatabaseError),
     UnknownError,
@@ -68,6 +80,20 @@ impl From<EncodeError> for MerkleDatabaseError {
 impl From<DecodeError> for MerkleDatabaseError {
     fn from(err: DecodeError) -> Self {
         MerkleDatabaseError::DeserializationError(err)
+    }
+}
+
+impl From<ProtobufError> for MerkleDatabaseError {
+    fn from(error: ProtobufError) -> Self {
+        use self::ProtobufError::*;
+        match error {
+            IoError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            WireError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{:?}", err)),
+            Utf8(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            MessageNotInitialized { message: err } => {
+                MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err))
+            }
+        }
     }
 }
 
@@ -127,50 +153,9 @@ impl MerkleDatabase {
     /// Note, continued calls to get, without changing the merkle root to the
     /// result of this function, will not retrieve the results provided here.
     pub fn set(&self, address: &str, data: &[u8]) -> Result<String, MerkleDatabaseError> {
-        let tokens = tokenize_address(address);
-
-        let path_addresses = path_addresses_from_tokens(&tokens, false);
-
-        let mut path_map = self.get_path_by_tokens(&tokens)?;
-
-        let mut child = path_map
-            .remove(&path_addresses[0])
-            .expect("Path map not correctly generated");
-        child.value = Some(data.to_vec());
-
-        let mut batch = Vec::with_capacity(path_addresses.len());
-        // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
-        for path_address in path_addresses {
-            let (child_key, child_packed) = encode_and_hash(child)?;
-            key_hash = child_key;
-
-            let (parent_address, path_branch) = parent_and_branch(&path_address);
-            let mut parent = path_map
-                .remove(parent_address)
-                .expect("Path map not correctly generated");
-
-            parent
-                .children
-                .insert(path_branch.to_string(), key_hash.clone());
-
-            batch.push((key_hash.clone(), child_packed));
-
-            child = parent;
-        }
-
-        let mut new_root = self.root_node.clone();
-        new_root
-            .children
-            .insert(tokens[0].to_string(), key_hash.clone());
-
-        let (root_hash, packed) = encode_and_hash(new_root)?;
-
-        batch.push((root_hash.clone(), packed));
-
-        self.put_batch(batch)?;
-
-        Ok(root_hash)
+        let mut updates = HashMap::with_capacity(1);
+        updates.insert(address.to_string(), data.to_vec());
+        self.update(&updates, &[], false)
     }
 
     /// Deletes the value at the given address.
@@ -182,55 +167,7 @@ impl MerkleDatabase {
     /// result of this function, will still retrieve the data at the address
     /// provided
     pub fn delete(&self, address: &str) -> Result<String, MerkleDatabaseError> {
-        let tokens = tokenize_address(address);
-        let mut path_map = self.get_path_by_tokens(&tokens)?;
-        let mut leaf_branch = true;
-
-        let paths = path_addresses_from_tokens(&tokens, true);
-
-        // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
-        let mut batch = Vec::with_capacity(paths.len());
-        for path in paths {
-            let (parent_address, path_branch) = parent_and_branch(&path);
-
-            let node = path_map
-                .remove(&path)
-                .expect("Path map not correctly generated");
-
-            if path == "" || !node.children.is_empty() {
-                leaf_branch = false;
-            }
-
-            if !leaf_branch {
-                let (hash_key, packed) = encode_and_hash(node)?;
-                key_hash = hash_key.clone();
-
-                if path != "" {
-                    let mut parent = path_map
-                        .get_mut(parent_address)
-                        .expect("Path map not correctly generated");
-                    parent
-                        .children
-                        .insert(path_branch.to_string(), hash_key.clone());
-                }
-
-                batch.push((hash_key, packed));
-            } else if path != "" {
-                let mut parent = path_map
-                    .get_mut(parent_address)
-                    .expect("Path map not correctly generated");
-                if parent.children.remove(path_branch).is_none() {
-                    return Err(MerkleDatabaseError::NotFound(format!(
-                        "{} is not a key of an existing record",
-                        address
-                    )));
-                }
-            }
-        }
-
-        self.put_batch(batch)?;
-        Ok(key_hash)
+        self.update(&HashMap::with_capacity(0), &[address.to_string()], false)
     }
 
     /// Updates the tree with multiple changes.  Applies both set and deletes,
@@ -248,9 +185,11 @@ impl MerkleDatabase {
     ) -> Result<String, MerkleDatabaseError> {
         let mut path_map = HashMap::new();
 
+        let mut deletions = HashSet::new();
+
         for (set_address, set_value) in set_items {
             let tokens = tokenize_address(set_address);
-            let mut set_path_map = self.get_path_by_tokens(&tokens)?;
+            let mut set_path_map = self.get_path_by_tokens(&tokens, false)?;
 
             {
                 let node = set_path_map
@@ -263,7 +202,7 @@ impl MerkleDatabase {
 
         for del_address in delete_items.iter() {
             let tokens = tokenize_address(del_address);
-            let del_path_map = self.get_path_by_tokens(&tokens)?;
+            let del_path_map = self.get_path_by_tokens(&tokens, true)?;
             path_map.extend(del_path_map);
         }
 
@@ -275,7 +214,10 @@ impl MerkleDatabase {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated");
-                    parent_node.children.remove(path_branch);
+
+                    if let Some(old_hash_key) = parent_node.children.remove(path_branch) {
+                        deletions.insert(old_hash_key);
+                    }
 
                     parent_node.children.is_empty()
                 };
@@ -296,7 +238,10 @@ impl MerkleDatabase {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated");
-                    parent_node.children.remove(path_branch);
+
+                    if let Some(old_hash_key) = parent_node.children.remove(path_branch) {
+                        deletions.insert(old_hash_key);
+                    }
                 }
             }
         }
@@ -306,7 +251,7 @@ impl MerkleDatabase {
         sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
 
         // initializing this to empty, to make the compiler happy
-        let mut key_hash = String::new();
+        let mut key_hash = Vec::with_capacity(0);
         let mut batch = Vec::with_capacity(sorted_paths.len());
         for path in sorted_paths {
             let node = path_map
@@ -320,19 +265,27 @@ impl MerkleDatabase {
                 let mut parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated");
-                parent
+                if let Some(old_hash_key) = parent
                     .children
-                    .insert(path_branch.to_string(), hash_key.clone());
+                    .insert(path_branch.to_string(), ::hex::encode(hash_key.clone()))
+                {
+                    deletions.insert(old_hash_key);
+                }
             }
 
             batch.push((hash_key, packed));
         }
 
         if !is_virtual {
-            self.put_batch(batch)?;
+            let deletions: Vec<Vec<u8>> = deletions
+                .iter()
+                // We expect this to be hex, since we generated it
+                .map(|s| ::hex::decode(s).expect("Improper hex"))
+                .collect();
+            self.store_changes(&key_hash, &batch, &deletions)?;
         }
 
-        Ok(key_hash)
+        Ok(::hex::encode(key_hash))
     }
 
     pub fn leaves<'a>(
@@ -343,13 +296,67 @@ impl MerkleDatabase {
     }
 
     /// Puts all the items into the database.
-    fn put_batch(&self, batch: Vec<(String, Vec<u8>)>) -> Result<(), MerkleDatabaseError> {
+    fn store_changes(
+        &self,
+        successor_root_hash: &[u8],
+        batch: &[(Vec<u8>, Vec<u8>)],
+        deletions: &[Vec<u8>],
+    ) -> Result<(), MerkleDatabaseError> {
         let mut db_writer = self.db.writer()?;
-        for (key, value) in batch {
-            db_writer.put(key.as_bytes(), &value)?;
+
+        // We expect this to be hex, since we generated it
+        let root_hash_bytes = ::hex::decode(&self.root_hash).expect("Improper hex");
+
+        for &(ref key, ref value) in batch {
+            db_writer.put(::hex::encode(key).as_bytes(), &value)?;
         }
+
+        let mut current_change_log = self.get_change_log(&db_writer, &root_hash_bytes)?;
+        if let Some(change_log) = current_change_log.as_mut() {
+            let mut successors = change_log.mut_successors();
+            let mut successor = ChangeLogEntry_Successor::new();
+            successor.set_successor(Vec::from(successor_root_hash));
+            successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
+            successors.push(successor);
+        }
+
+        let mut next_change_log = ChangeLogEntry::new();
+        next_change_log.set_parent(root_hash_bytes.clone());
+        next_change_log.set_additions(protobuf::RepeatedField::from(
+            batch.iter().map(|&(ref hash, _)| hash.clone()).collect(),
+        ));
+
+        if current_change_log.is_some() {
+            db_writer.index_put(
+                CHANGE_LOG_INDEX,
+                &root_hash_bytes,
+                &current_change_log.unwrap().write_to_bytes()?,
+            )?;
+        }
+        db_writer.index_put(
+            CHANGE_LOG_INDEX,
+            successor_root_hash,
+            &next_change_log.write_to_bytes()?,
+        )?;
+
         db_writer.commit()?;
         Ok(())
+    }
+
+    fn get_change_log<R>(
+        &self,
+        db_reader: &R,
+        root_hash: &[u8],
+    ) -> Result<Option<ChangeLogEntry>, MerkleDatabaseError>
+    where
+        R: DatabaseReader,
+    {
+        let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
+
+        Ok(match log_bytes {
+            Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+            None => None,
+        })
     }
 
     fn get_by_address(&self, address: &str) -> Result<Node, MerkleDatabaseError> {
@@ -375,6 +382,7 @@ impl MerkleDatabase {
     fn get_path_by_tokens(
         &self,
         tokens: &[&str],
+        strict: bool,
     ) -> Result<HashMap<String, Node>, MerkleDatabaseError> {
         let mut nodes = HashMap::new();
 
@@ -390,8 +398,16 @@ impl MerkleDatabase {
                 if !new_branch && child_address.is_some() {
                     get_node_by_hash(&self.db, child_address.unwrap())?
                 } else {
-                    new_branch = true;
-                    Node::default()
+                    if strict {
+                        return Err(MerkleDatabaseError::NotFound(format!(
+                            "invalid address {} from root {}",
+                            tokens.join(""),
+                            self.root_hash
+                        )));
+                    } else {
+                        new_branch = true;
+                        Node::default()
+                    }
                 }
             };
 
@@ -454,22 +470,35 @@ impl<'a> Iterator for MerkleLeafIterator<'a> {
     }
 }
 
+/// Initializes a database with an empty Trie
 fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
     let (hash, packed) = encode_and_hash(Node::default())?;
 
     let mut db_writer = db.writer()?;
-    db_writer.put(hash.as_bytes(), &packed)?;
+    let hex_hash = ::hex::encode(hash);
+    db_writer.put(hex_hash.as_bytes(), &packed)?;
     db_writer.commit()?;
 
-    Ok(hash)
+    Ok(hex_hash)
 }
 
-fn encode_and_hash(node: Node) -> Result<(String, Vec<u8>), MerkleDatabaseError> {
+/// Encodes the given node, and returns the hash of the bytes.
+fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), MerkleDatabaseError> {
     let packed = node.into_bytes()?;
     let hash = hash(&packed);
     Ok((hash, packed))
 }
 
+/// Given a path, split it into its parent's path and the specific branch for
+/// this path, such that the following assertion is true:
+///
+/// ```
+/// let (parent_path, branch) = parent_and_branch(some_path);
+/// let mut path = String::new();
+/// path.push(parent_path);
+/// path.push(branch);
+/// assert_eq!(some_path, &path);
+/// ```
 fn parent_and_branch(path: &str) -> (&str, &str) {
     let parent_address = if !path.is_empty() {
         &path[..path.len() - TOKEN_SIZE]
@@ -486,36 +515,15 @@ fn parent_and_branch(path: &str) -> (&str, &str) {
     (parent_address, path_branch)
 }
 
+/// Splits an address into tokens
 fn tokenize_address(address: &str) -> Box<[&str]> {
-    let mut tokens: Vec<&str> = Vec::with_capacity(address.len() / 2);
+    let mut tokens: Vec<&str> = Vec::with_capacity(address.len() / TOKEN_SIZE);
     let mut i = 0;
     while i < address.len() {
-        tokens.push(&address[i..i + 2]);
-        i += 2;
+        tokens.push(&address[i..i + TOKEN_SIZE]);
+        i += TOKEN_SIZE;
     }
     tokens.into_boxed_slice()
-}
-
-fn path_addresses_from_tokens(tokens: &[&str], include_root: bool) -> Vec<String> {
-    let mut path_addresses = Vec::new();
-    let mut i = tokens.len();
-    while i > 0 {
-        path_addresses.push(
-            tokens
-                .iter()
-                .take(i)
-                .map(|s| String::from(*s))
-                .collect::<Vec<_>>()
-                .join(""),
-        );
-        i -= 1;
-    }
-
-    if include_root {
-        path_addresses.push(String::new())
-    }
-
-    path_addresses
 }
 
 /// Fetch a node by its hash
@@ -616,10 +624,15 @@ fn text_to_string(text_val: Value) -> Result<String, MerkleDatabaseError> {
 }
 
 /// Creates a hash of the given bytes
-fn hash(input: &[u8]) -> String {
+fn hash(input: &[u8]) -> Vec<u8> {
     let mut sha = Sha512::new();
     sha.input(input);
-    String::from(&(sha.result_str())[..64])
+
+    let mut vec: Vec<u8> = vec![0; sha.output_bytes()];
+    sha.result(vec.as_mut_slice());
+
+    let (hash, _rest) = vec.split_at(vec.len() / 2);
+    hash.to_vec()
 }
 
 #[cfg(test)]
@@ -628,6 +641,8 @@ mod tests {
     use database::database::DatabaseError;
     use database::lmdb::LmdbContext;
     use database::lmdb::LmdbDatabase;
+    use database::lmdb::DatabaseReader;
+    use proto::merkle::ChangeLogEntry;
 
     use std::env;
     use std::fs::remove_file;
@@ -636,6 +651,7 @@ mod tests {
     use std::str::from_utf8;
     use std::thread;
     use rand::{seq, thread_rng};
+    use protobuf;
 
     #[test]
     fn node_serialize() {
@@ -660,7 +676,8 @@ mod tests {
 
     #[test]
     fn node_deserialize() {
-        let packed = from_hex("a26163a162303063616263617647676f6f64627965");
+        let packed =
+            ::hex::decode("a26163a162303063616263617647676f6f64627965").expect("improper hex");
 
         let unpacked = Node::from_bytes(&packed).unwrap();
         assert_eq!(
@@ -700,10 +717,25 @@ mod tests {
     #[test]
     fn merkle_trie_root_advance() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).unwrap();
 
             let orig_root = merkle_db.get_merkle_root();
+            let orig_root_bytes = &::hex::decode(orig_root.clone()).unwrap();
+
+            {
+                // check that there is no ChangeLogEntry for the initial root
+                let reader = db.reader().unwrap();
+                assert!(
+                    reader
+                        .index_get(CHANGE_LOG_INDEX, orig_root_bytes)
+                        .expect("A database error occurred")
+                        .is_none()
+                );
+            }
+
             let new_root = merkle_db.set("abcd", "data_value".as_bytes()).unwrap();
+            let new_root_bytes = &::hex::decode(new_root.clone()).unwrap();
 
             assert_eq!(merkle_db.get_merkle_root(), orig_root, "Incorrect root");
             assert_ne!(orig_root, new_root, "root was not changed");
@@ -711,6 +743,20 @@ mod tests {
                 !merkle_db.contains("abcd").unwrap(),
                 "Should not contain the value"
             );
+
+            let change_log: ChangeLogEntry = {
+                // check that we have a change log entry for the new root
+                let reader = db.reader().unwrap();
+                let entry_bytes = &reader
+                    .index_get(CHANGE_LOG_INDEX, new_root_bytes)
+                    .expect("A database error occurred")
+                    .expect("Did not return a change log entry");
+                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+            };
+
+            assert_eq!(orig_root_bytes, &change_log.get_parent());
+            assert_eq!(3, change_log.get_additions().len());
+            assert_eq!(0, change_log.get_successors().len());
 
             merkle_db.set_merkle_root(new_root.clone()).unwrap();
             assert_eq!(merkle_db.get_merkle_root(), new_root, "Incorrect root");
@@ -749,7 +795,7 @@ mod tests {
             let key_hashes = (0..1000)
                 .map(|i| {
                     let key = format!("{:016x}", i);
-                    let hash = hash(key.as_bytes());
+                    let hash = hex_hash(key.as_bytes());
                     (key, hash)
                 })
                 .collect::<Vec<_>>();
@@ -767,7 +813,7 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
-                let hash_key = hash(format!("{:016x}", i).as_bytes());
+                let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
@@ -776,7 +822,7 @@ mod tests {
             let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
                 .unwrap()
                 .into_iter()
-                .map(|i| hash(format!("{:016x}", i).as_bytes()))
+                .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
                 .collect::<Vec<String>>();
 
             for hash in delete_items.iter() {
@@ -968,14 +1014,17 @@ mod tests {
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
-    fn make_db(merkle_path: &str) -> MerkleDatabase {
+    fn make_lmdb(merkle_path: &str) -> LmdbDatabase {
         let ctx = LmdbContext::new(Path::new(merkle_path), 1, Some(120 * 1024 * 1024))
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap();
-        let lmdb_db = LmdbDatabase::new(ctx, &[])
+        LmdbDatabase::new(ctx, &[CHANGE_LOG_INDEX])
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
-            .unwrap();
-        MerkleDatabase::new(lmdb_db, None).unwrap()
+            .unwrap()
+    }
+
+    fn make_db(merkle_path: &str) -> MerkleDatabase {
+        MerkleDatabase::new(make_lmdb(merkle_path), None).unwrap()
     }
 
     fn temp_db_path() -> String {
@@ -986,25 +1035,8 @@ mod tests {
         temp_dir.to_str().unwrap().to_string()
     }
 
-    fn from_hex(s: &str) -> Vec<u8> {
-        assert!(s.len() % 2 == 0);
-        let mut res = Vec::with_capacity(s.len() / 2);
-        let mut buf = 0;
-
-        for (i, b) in s.bytes().enumerate() {
-            buf <<= 4;
-            match b {
-                b'A'...b'F' => buf |= b - b'A' + 10,
-                b'a'...b'f' => buf |= b - b'a' + 10,
-                b'0'...b'9' => buf |= b - b'0',
-                _ => continue,
-            }
-
-            if (i + 1) % 2 == 0 {
-                res.push(buf);
-            }
-        }
-
-        res
+    fn hex_hash(b: &[u8]) -> String {
+        ::hex::encode(hash(b))
     }
+
 }

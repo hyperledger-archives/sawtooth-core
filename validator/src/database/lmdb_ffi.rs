@@ -18,12 +18,15 @@ use database::lmdb::*;
 use std::ffi::CStr;
 use std::path::Path;
 use std::os::raw::{c_char, c_void};
+use std::slice;
 
 #[repr(u32)]
+#[derive(Debug)]
 pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,
     InvalidFilePath = 0x02,
+    InvalidIndexString = 0x03,
 
     InitializeContextError = 0x11,
     InitializeDatabaseError = 0x12,
@@ -33,10 +36,32 @@ pub enum ErrorCode {
 pub extern "C" fn lmdb_database_new(
     path: *const c_char,
     file_size: usize,
+    indexes: *const *const c_char,
+    indexes_len: usize,
     db_ptr: *mut *const c_void,
 ) -> ErrorCode {
     if path.is_null() {
         return ErrorCode::NullPointerProvided;
+    }
+
+    if indexes_len > 0 && indexes.is_null() {
+        return ErrorCode::NullPointerProvided;
+    }
+
+    let indexes: Result<Vec<&str>, ErrorCode> = if indexes_len > 0 {
+        unsafe { slice::from_raw_parts(indexes, indexes_len) }
+            .iter()
+            .map(|c_str| {
+                unsafe { CStr::from_ptr(*c_str).to_str() }
+                    .map_err(|_| ErrorCode::InvalidIndexString)
+            })
+            .collect()
+    } else {
+        Ok(Vec::with_capacity(0))
+    };
+
+    if indexes.is_err() {
+        return indexes.unwrap_err();
     }
 
     let db_path = unsafe {
@@ -46,8 +71,7 @@ pub extern "C" fn lmdb_database_new(
         }
     };
 
-    // Note, no indexes are being specified yet
-    let ctx = match LmdbContext::new(Path::new(&db_path), 1, Some(file_size)) {
+    let ctx = match LmdbContext::new(Path::new(&db_path), indexes_len, Some(file_size)) {
         Ok(ctx) => ctx,
         Err(err) => {
             error!(
@@ -58,7 +82,7 @@ pub extern "C" fn lmdb_database_new(
         }
     };
 
-    match LmdbDatabase::new(ctx, &[]) {
+    match LmdbDatabase::new(ctx, &(indexes.unwrap())) {
         Ok(db) => {
             unsafe {
                 *db_ptr = Box::into_raw(Box::new(db)) as *const c_void;

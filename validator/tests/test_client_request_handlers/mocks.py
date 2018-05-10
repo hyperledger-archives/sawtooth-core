@@ -134,6 +134,7 @@ def make_db_and_store(base_dir, size=3):
     """
     database = NativeLmdbDatabase(
         os.path.join(base_dir, 'client_handlers_mock_db.lmdb'),
+        indexes=MerkleDatabase.create_index_configuration(),
         _size=10 * 1024 * 1024)
     store = MockBlockStore(size=0)
     roots = []

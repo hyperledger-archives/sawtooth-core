@@ -36,6 +36,7 @@ class TestIdentityView(unittest.TestCase):
 
         self._database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_identity_view.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
         self._tree = MerkleDatabase(self._database)
 

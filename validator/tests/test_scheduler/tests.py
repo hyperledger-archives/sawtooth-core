@@ -61,6 +61,7 @@ class TestSchedulers(unittest.TestCase):
 
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_schedulers.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         self._context_manager = ContextManager(database)
@@ -868,6 +869,7 @@ class TestSchedulers(unittest.TestCase):
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir,
                          '_add_valid_batch_invalid_batch.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
         merkle_database = MerkleDatabase(database)
         state_root_end = merkle_database.update(
@@ -1019,6 +1021,7 @@ class TestSerialScheduler(unittest.TestCase):
 
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_serial_schedulers.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         self.context_manager = ContextManager(database)
@@ -1255,6 +1258,7 @@ class TestParallelScheduler(unittest.TestCase):
 
         database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_serial_schedulers.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
             _size=10 * 1024 * 1024)
 
         self.context_manager = ContextManager(database)
