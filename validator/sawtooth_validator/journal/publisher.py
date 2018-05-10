@@ -693,8 +693,6 @@ class BlockPublisher(object):
 
                 self.cancel_block()
 
-                # we need to make a new _CandidateBlock (if we can) since the
-                # block chain has updated under us.
                 if chain_head is not None:
                     self._pending_batches.update_limit(len(chain_head.batches))
                     self._pending_batches.rebuild(
