@@ -23,6 +23,7 @@ import threading
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
@@ -60,6 +61,7 @@ from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
 
 from sawtooth_validator.server import network_handlers
 from sawtooth_validator.server import component_handlers
+from sawtooth_validator.server import consensus_handlers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -376,6 +378,14 @@ class Validator(object):
         self._network_thread_pool = network_thread_pool
 
         if consensus_engine_enabled:
+            consensus_proxy = ConsensusProxy(
+                network_service=network_service,
+                chain_controller=chain_controller,
+                block_publisher=block_publisher)
+
+            consensus_handlers.add(
+                consensus_dispatcher, consensus_thread_pool, consensus_proxy)
+
             self._consensus_dispatcher = consensus_dispatcher
             self._consensus_service = consensus_service
             self._consensus_thread_pool = consensus_thread_pool
