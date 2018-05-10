@@ -22,6 +22,7 @@ import queue
 from threading import RLock
 import time
 
+from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
@@ -50,6 +51,24 @@ COLLECTOR = metrics.get_collector(__name__)
 
 NUM_PUBLISH_COUNT_SAMPLES = 5
 INITIAL_PUBLISH_COUNT = 30
+
+
+class ConsensusNotReady(Exception):
+    """
+    Consensus is not ready to build a block.
+    """
+
+
+class NoPendingBatchesRemaining(Exception):
+    """There are no pending batches remaining."""
+
+
+class FinalizeBlockResult:
+    def __init__(self, block, remaining_batches, last_batch, injected_batches):
+        self.block = block
+        self.remaining_batches = remaining_batches
+        self.last_batch = last_batch
+        self.injected_batches = injected_batches
 
 
 class PendingBatchObserver(metaclass=abc.ABCMeta):
@@ -125,7 +144,7 @@ class _CandidateBlock(object):
                  max_batches,
                  batch_injectors,
                  settings_view,
-                 signer_public_key,
+                 identity_signer,
                  ):
         self._pending_batches = []
         self._pending_batch_ids = set()
@@ -142,7 +161,7 @@ class _CandidateBlock(object):
         self._batch_injectors = batch_injectors
 
         self._settings_view = settings_view
-        self._signer_public_key = signer_public_key
+        self._identity_signer = identity_signer
 
     def __del__(self):
         self.cancel()
@@ -151,18 +170,10 @@ class _CandidateBlock(object):
         self._scheduler.cancel()
 
     @property
-    def injected_batch_ids(self):
-        return self._injected_batch_ids
-
-    @property
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
-    def has_pending_batches(self):
-        return len(self._pending_batches) != 0
-
-    @property
-    def last_batch(self):
+    def _last_batch(self):
         if self._pending_batches:
             return self._pending_batches[-1]
         raise ValueError(
@@ -174,7 +185,6 @@ class _CandidateBlock(object):
     def batches(self):
         return self._pending_batches.copy()
 
-    @property
     def can_add_batch(self):
         return (
             self._max_batches == 0
@@ -280,7 +290,7 @@ class _CandidateBlock(object):
 
             if not enforce_validation_rules(
                     self._settings_view,
-                    self._signer_public_key,
+                    self._identity_signer.get_public_key().as_hex(),
                     self._pending_batches + batches_to_add):
                 return
 
@@ -296,13 +306,7 @@ class _CandidateBlock(object):
             LOGGER.debug("Dropping batch due to missing dependencies: %s",
                          batch.header_signature)
 
-    def check_publish_block(self):
-        """Check if it is okay to publish this candidate.
-        """
-        return self._consensus.check_publish_block(
-            self._block_builder.block_header)
-
-    def _sign_block(self, block, identity_signer):
+    def _sign_block(self, block):
         """ The block should be complete and the final
         signature from the publishing validator(this validator) needs to
         be added.
@@ -310,22 +314,26 @@ class _CandidateBlock(object):
         :param identity_signer: the singer to sign the block with.
         """
         header_bytes = block.block_header.SerializeToString()
-        signature = identity_signer.sign(header_bytes)
+        signature = self._identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize_block(self, identity_signer, pending_batches):
+    def finalize(self, force=False):
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
-        :param identity_signer: the cryptographic signer to sign the block
-            with.
-        :param pending_batches: list to receive any batches that were
-        submitted to add to the block but were not validated before this
-        call.
         :return: The generated Block, or None if Block failed to finalize.
         In both cases the pending_batches will contain the list of batches
         that need to be added to the next Block that is built.
         """
+        if not (force or self._pending_batches):
+            raise NoPendingBatchesRemaining()
+
+        if not self._consensus.check_publish_block(
+                self._block_builder.block_header):
+            raise ConsensusNotReady()
+
+        pending_batches = []
+
         self._scheduler.unschedule_incomplete_batches()
         self._scheduler.finalize()
         self._scheduler.complete(block=True)
@@ -396,7 +404,8 @@ class _CandidateBlock(object):
                         x for x in self._pending_batches
                         if x not in bad_batches
                     ])
-                    return None
+                    return self._build_result(None, pending_batches)
+
                 else:
                     builder.add_batch(batch)
                     committed_txn_cache.add_batch(batch)
@@ -409,7 +418,7 @@ class _CandidateBlock(object):
 
         if state_hash is None or not builder.batches:
             LOGGER.debug("Abandoning block %s: no batches added", builder)
-            return None
+            return self._build_result(None, pending_batches)
 
         if not self._consensus.finalize_block(builder.block_header):
             LOGGER.debug("Abandoning block %s, consensus failed to finalize "
@@ -418,19 +427,26 @@ class _CandidateBlock(object):
             pending_batches.clear()
             pending_batches.extend([x for x in self._pending_batches
                                     if x not in bad_batches])
-            return None
+            return self._build_result(None, pending_batches)
 
         builder.set_state_hash(state_hash)
-        self._sign_block(builder, identity_signer)
-        return builder.build_block()
+        self._sign_block(builder)
+        return self._build_result(builder.build_block(), pending_batches)
+
+    def _build_result(self, block, remaining):
+        return FinalizeBlockResult(
+            block=block,
+            remaining_batches=remaining,
+            last_batch=self._last_batch(),
+            injected_batches=self._injected_batch_ids)
 
 
 class _PublisherLoggingStates:
     """Collects and tracks the changes in various states of the Publisher.  For
-    example it tracks 'consensus_not_ready', which denotes entering or exiting
-    of that state."""
-    def __init__(self, consensus_not_ready=False):
-        self.consensus_not_ready = False
+    example it tracks 'consensus_ready', which denotes entering or exiting of
+    that state."""
+    def __init__(self, consensus_ready=True):
+        self.consensus_ready = True
 
 
 class BlockPublisher(object):
@@ -487,10 +503,7 @@ class BlockPublisher(object):
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
-        self._pending_batches = []  # batches we are waiting for validation,
-        # arranged in the order of batches received.
-        self._pending_batch_ids = []
-        self._publish_count_average = _RollingAverage(
+        self._pending_batches = PendingBatchesPool(
             NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT)
 
         self._chain_head = chain_head  # block (BlockWrapper)
@@ -502,13 +515,10 @@ class BlockPublisher(object):
         self._batch_injector_factory = batch_injector_factory
 
         # For metric gathering
-        self._pending_batch_gauge = COLLECTOR.gauge(
-            'pending_batch_gauge', instance=self)
         self._blocks_published_count = COLLECTOR.counter(
             'blocks_published_count', instance=self)
 
-        self._batch_queue = queue.Queue()
-        self._queued_batch_ids = []
+        self._batch_queue = IncomingBatchQueue()
         self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
@@ -535,49 +545,26 @@ class BlockPublisher(object):
         inclusion in the next block.
         """
         self._batch_queue.put(batch)
-        self._queued_batch_ids.append(batch.header_signature)
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
-    def can_accept_batch(self):
-        return len(self._pending_batches) < self._get_current_queue_limit()
-
-    def _get_current_queue_limit(self):
-        # Limit the number of batches to 2 times the publishing average.  This
-        # allows the queue to grow geometrically, if the queue is drained.
-        return 2 * self._publish_count_average.value
-
-    def get_current_queue_info(self):
+    def pending_batch_info(self):
         """Returns a tuple of the current size of the pending batch queue
         and the current queue limit.
         """
-        return (len(self._pending_batches), self._get_current_queue_limit())
+        return (len(self._pending_batches), self._pending_batches.limit())
 
     @property
     def chain_head_lock(self):
         return self._lock
 
-    def _build_candidate_block(self, chain_head):
-        """ Build a candidate block and construct the consensus object to
-        validate it.
-        :param chain_head: The block to build on top of.
-        :return: (BlockBuilder) - The candidate block in a BlockBuilder
-        wrapper.
-        """
-        state_view = BlockWrapper.state_view_for_block(
-            chain_head,
-            self._state_view_factory)
+    def _load_consensus(self, block, state_view, public_key):
+        """Load the configured consensus module's BlockPublisher to use for
+        blocks built on this block."""
         consensus_module = ConsensusFactory.get_configured_consensus_module(
-            chain_head.header_signature,
+            block.header_signature,
             state_view)
 
-        # using chain_head so so we can use the setting_cache
-        max_batches = int(self._settings_cache.get_setting(
-            'sawtooth.publisher.max_batches_per_block',
-            chain_head.state_root_hash,
-            default_value=0))
-
-        public_key = self._identity_signer.get_public_key().as_hex()
         consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view_factory=self._state_view_factory,
@@ -586,32 +573,56 @@ class BlockPublisher(object):
                            config_dir=self._config_dir,
                            validator_id=public_key)
 
-        batch_injectors = []
+        return consensus
+
+    def _load_injectors(self, block):
         if self._batch_injector_factory is not None:
             batch_injectors = self._batch_injector_factory.create_injectors(
-                chain_head.identifier)
+                block.identifier)
             if batch_injectors:
                 LOGGER.debug("Loaded batch injectors: %s", batch_injectors)
+            return batch_injectors
+        else:
+            return []
+
+    def initialize_block(self, previous_block):
+        """Begin building a new candidate block.
+
+        Args:
+            previous_block (BlockWrapper): The block to base the new block on.
+
+        Raises:
+            ConsensusNotReady
+                Consensus is not ready to build a block
+        """
+
+        # using previous_block so so we can use the setting_cache
+        max_batches = int(self._settings_cache.get_setting(
+            'sawtooth.publisher.max_batches_per_block',
+            previous_block.state_root_hash,
+            default_value=0))
+
+        state_view = BlockWrapper.state_view_for_block(
+            previous_block,
+            self._state_view_factory)
+
+        public_key = self._identity_signer.get_public_key().as_hex()
+        consensus = self._load_consensus(
+            previous_block, state_view, public_key)
+        batch_injectors = self._load_injectors(previous_block)
 
         block_header = BlockHeader(
-            block_num=chain_head.block_num + 1,
-            previous_block_id=chain_head.header_signature,
+            block_num=previous_block.block_num + 1,
+            previous_block_id=previous_block.header_signature,
             signer_public_key=public_key)
         block_builder = BlockBuilder(block_header)
 
         if not consensus.initialize_block(block_builder.block_header):
-            if not self._logging_states.consensus_not_ready:
-                self._logging_states.consensus_not_ready = True
-                LOGGER.debug("Consensus not ready to build candidate block.")
-            return None
-
-        if self._logging_states.consensus_not_ready:
-            self._logging_states.consensus_not_ready = False
-            LOGGER.debug("Consensus is ready to build candidate block.")
+            raise ConsensusNotReady()
 
         # create a new scheduler
         scheduler = self._transaction_executor.create_scheduler(
-            self._squash_handler, chain_head.state_root_hash)
+            self._squash_handler, previous_block.state_root_hash)
 
         # build the TransactionCommitCache
         committed_txn_cache = TransactionCommitCache(
@@ -626,10 +637,10 @@ class BlockPublisher(object):
             max_batches,
             batch_injectors,
             SettingsView(state_view),
-            public_key)
+            self._identity_signer)
 
         for batch in self._pending_batches:
-            if self._candidate_block.can_add_batch:
+            if self._candidate_block.can_add_batch():
                 self._candidate_block.add_batch(batch)
             else:
                 break
@@ -641,69 +652,16 @@ class BlockPublisher(object):
         :return: None
         """
         with self._lock:
-            self._queued_batch_ids = self._queued_batch_ids[:1]
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-                self._pending_batch_gauge.set_value(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
-                        self._candidate_block.can_add_batch:
+                        self._candidate_block.can_add_batch():
                     self._candidate_block.add_batch(batch)
             else:
                 LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
                              batch.header_signature)
-
-    def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
-        """When the chain head is changed. This recomputes the list of pending
-        transactions
-        :param committed_batches: Batches committed in the current chain
-        since the root of the fork switching from.
-        :param uncommitted_batches: Batches that were committed in the old
-        fork since the common root.
-        """
-        if committed_batches is None:
-            committed_batches = []
-        if uncommitted_batches is None:
-            uncommitted_batches = []
-
-        committed_set = set([x.header_signature for x in committed_batches])
-
-        pending_batches = self._pending_batches
-
-        self._pending_batches = []
-        self._pending_batch_ids = []
-
-        # Uncommitted and pending disjoint sets
-        # since batches can only be committed to a chain once.
-        for batch in uncommitted_batches:
-            if batch.header_signature not in committed_set:
-                self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-
-        for batch in pending_batches:
-            if batch.header_signature not in committed_set:
-                self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-
-    def _update_pending_queue_limit(self, num_committed_batches):
-        """Take the number of committed batches and use that to update the
-        rolling average of batches, if it is a significant enough change.
-
-        Args:
-            num_committed_batches (int): the number committed batches in a
-                block
-        """
-        if num_committed_batches > 0:
-            # Only update the average if either:
-            # a. Not drained below the current average
-            # b. Drained the queue, but the queue was not bigger than the
-            #    current running average
-            remainder = len(self._pending_batches) - num_committed_batches
-            if remainder > self._publish_count_average.value or \
-                    num_committed_batches > self._publish_count_average.value:
-                self._publish_count_average.update(num_committed_batches)
 
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
@@ -730,25 +688,44 @@ class BlockPublisher(object):
 
                 self._chain_head = chain_head
 
-                if self._candidate_block:
-                    self._candidate_block.cancel()
+                self.cancel_block()
 
-                self._candidate_block = None  # we need to make a new
-                # _CandidateBlock (if we can) since the block chain has updated
-                # under us.
+                # we need to make a new _CandidateBlock (if we can) since the
+                # block chain has updated under us.
                 if chain_head is not None:
-                    self._update_pending_queue_limit(len(chain_head.batches))
-                    self._rebuild_pending_batches(committed_batches,
-                                                  uncommitted_batches)
-                    self._build_candidate_block(chain_head)
-
-                    self._pending_batch_gauge.set_value(
-                        len(self._pending_batches))
+                    self._pending_batches.update_limit(len(chain_head.batches))
+                    self._pending_batches.rebuild(
+                        committed_batches, uncommitted_batches)
 
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.critical("on_chain_updated exception.")
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in BlockPublisher.on_chain_updated")
+
+    def cancel_block(self):
+        if self._candidate_block:
+            self._candidate_block.cancel()
+
+        self._candidate_block = None
+
+    def _building(self):
+        """Returns whether the block publisher is in the process of building
+        a block or not.
+        """
+        return self._candidate_block is not None
+
+    def _can_build(self):
+        """Returns whether the block publisher is ready to build a block.
+        """
+        return self._chain_head is not None and self._pending_batches
+
+    def _log_consensus_state(self):
+        if self._logging_states.consensus_ready:
+            LOGGER.debug("Consensus is ready to build candidate block.")
+            self._logging_states.consensus_ready = True
+        else:
+            self._logging_states.consensus_ready = False
+            LOGGER.debug("Consensus not ready to build candidate block.")
 
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
@@ -758,63 +735,195 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                if (self._chain_head is not None
-                        and self._candidate_block is None
-                        and self._pending_batches):
-                    self._build_candidate_block(self._chain_head)
+                if not self._building() and self._can_build():
+                    try:
+                        self.initialize_block(self._chain_head)
+                    except ConsensusNotReady:
+                        self._log_consensus_state()
 
-                if (self._candidate_block
-                        and (
-                            force
-                            or self._candidate_block.has_pending_batches())
-                        and self._candidate_block.check_publish_block()):
+                if self._building():
+                    try:
+                        result = self.finalize_block(force)
+                    except (ConsensusNotReady, NoPendingBatchesRemaining):
+                        return
 
-                    pending_batches = []  # will receive the list of batches
-                    # that were not added to the block
-                    injected_batch_ids = \
-                        self._candidate_block.injected_batch_ids
-                    last_batch = self._candidate_block.last_batch
-                    block = self._candidate_block.finalize_block(
-                        self._identity_signer,
-                        pending_batches)
-                    self._candidate_block = None
-                    # Update the _pending_batches to reflect what we learned.
-
-                    last_batch_index = self._pending_batches.index(last_batch)
-                    unsent_batches = \
-                        self._pending_batches[last_batch_index + 1:]
-                    self._pending_batches = pending_batches + unsent_batches
-
-                    self._pending_batch_gauge.set_value(
-                        len(self._pending_batches))
-
-                    if block:
-                        blkw = BlockWrapper(block)
-                        LOGGER.info("Claimed Block: %s", blkw)
-                        self._block_sender.send(
-                            blkw.block, keep_batches=injected_batch_ids)
-                        self._blocks_published_count.inc()
-
-                        # We built our candidate, disable processing until
-                        # the chain head is updated. Only set this if
-                        # we succeeded. Otherwise try again, this
-                        # can happen in cases where txn dependencies
-                        # did not validate when building the block.
-                        self.on_chain_updated(None)
+                    if result.block:
+                        self.publish_block(
+                            result.block, result.injected_batches)
 
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.critical("on_check_publish_block exception.")
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in BlockPublisher.on_check_publish_block")
+
+    def finalize_block(self, force=False):
+        result = self._candidate_block.finalize(force)
+
+        self._candidate_block = None
+
+        # Update the _pending_batches to reflect what we learned.
+        self._pending_batches.update(
+            result.remaining_batches,
+            result.last_batch)
+
+        return result
+
+    def publish_block(self, block, injected_batches):
+        blkw = BlockWrapper(block)
+        LOGGER.info("Claimed Block: %s", blkw)
+        self._block_sender.send(blkw.block, keep_batches=injected_batches)
+        self._blocks_published_count.inc()
+
+        # We built our candidate, disable processing until the chain head is
+        # updated. Only set this if we succeeded. Otherwise try again, this can
+        # happen in cases where txn dependencies did not validate when building
+        # the block.
+        self.on_chain_updated(None)
 
     def has_batch(self, batch_id):
         with self._lock:
-            if batch_id in self._pending_batch_ids:
+            if batch_id in self._pending_batches:
                 return True
-            if batch_id in self._queued_batch_ids:
+            if batch_id in self._batch_queue:
                 return True
 
         return False
+
+
+class IncomingBatchQueue:
+    """This queue keeps track of the batch ids so that components on the edge
+    can filter out duplicates early. However, there is still an opportunity for
+    duplicates to make it into this queue, which is intentional to avoid
+    blocking threads trying to put/get from the queue. Any duplicates
+    introduced by this must be filtered out later.
+    """
+    def __init__(self):
+        self._queue = queue.Queue()
+        self._ids = ConcurrentSet()
+
+    def put(self, batch):
+        if batch.header_signature not in self._ids:
+            self._queue.put(batch)
+
+    def get(self, timeout=None):
+        batch = self._queue.get(timeout=timeout)
+        try:
+            self._ids.remove(batch.header_signature)
+        except KeyError:
+            pass
+        return batch
+
+    def __contains__(self, batch_id):
+        return batch_id in self._ids
+
+
+class PendingBatchesPool:
+
+    def __init__(self, sample_size, initial_value):
+        # Ordered batches waiting to be processed
+        self._batches = list()
+        self._ids = set()
+        self._gauge = COLLECTOR.gauge('pending_batch_gauge', instance=self)
+        self._limit = QueueLimit(sample_size, initial_value)
+
+    def __len__(self):
+        return len(self._batches)
+
+    def __iter__(self):
+        return iter(self._batches)
+
+    def __contains__(self, batch_id):
+        return batch_id in self._ids
+
+    def _reset(self):
+        self._batches = list()
+        self._ids = set()
+
+    def append(self, batch):
+        self._append(batch)
+        self._update_gauge()
+
+    def _append(self, batch):
+        if batch.header_signature not in self._ids:
+            self._batches.append(batch)
+            self._ids.add(batch.header_signature)
+
+    def rebuild(self, committed=None, uncommitted=None):
+        """Recomputes the list of pending batches
+
+        Args:
+            committed (List<Batches>): Batches committed in the current chain
+                since the root of the fork switching from.
+            uncommitted (List<Batches): Batches that were committed in the old
+                fork since the common root.
+        """
+        if committed is None:
+            committed = []
+        if uncommitted is None:
+            uncommitted = []
+
+        committed_set = set(b.header_signature for b in committed)
+
+        previous_batches = self._batches
+
+        self._reset()
+
+        # Uncommitted and pending are disjoint sets since batches can only be
+        # committed to a chain once.
+        for batch in uncommitted:
+            if batch.header_signature not in committed_set:
+                self._append(batch)
+
+        for batch in previous_batches:
+            if batch.header_signature not in committed_set:
+                self._append(batch)
+
+        self._update_gauge()
+
+    def update(self, still_pending, last_sent):
+        last_index = self._batches.index(last_sent)
+        unsent = self._batches[last_index + 1:]
+        self._reset()
+        for batch in still_pending + unsent:
+            self._append(batch)
+
+        self._update_gauge()
+
+    def update_limit(self, consumed):
+        self._limit.update(len(self._batches), consumed)
+
+    def limit(self):
+        return self._limit.get()
+
+    def _update_gauge(self):
+        self._gauge.set_value(len(self._batches))
+
+
+class QueueLimit:
+    def __init__(self, sample_size, initial_value):
+        self._avg = _RollingAverage(sample_size, initial_value)
+
+    def update(self, queue_length, consumed):
+        """Use the current queue size and the number of items consumed to
+        update the queue limit, if there was a significant enough change.
+
+        Args:
+            queue_length (int): the current size of the queue
+            consumed (int): the number items consumed
+        """
+        if consumed > 0:
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = queue_length - consumed
+            if remainder > self._avg.value or consumed > self._avg.value:
+                self._avg.update(consumed)
+
+    def get(self):
+        # Limit the number of items to 2 times the publishing average.  This
+        # allows the queue to grow geometrically, if the queue is drained.
+        return 2 * self._avg.value
 
 
 class _RollingAverage(object):

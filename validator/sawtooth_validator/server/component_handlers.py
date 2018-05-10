@@ -121,9 +121,7 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         ClientBatchSubmitBackpressureHandler(
-            block_publisher.can_accept_batch,
-            block_publisher.get_current_queue_info,
-        ),
+            block_publisher.pending_batch_info),
         client_thread_pool)
 
     dispatcher.add_handler(
