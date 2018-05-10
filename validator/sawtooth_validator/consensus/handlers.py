@@ -132,10 +132,6 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response):
-        LOGGER.info(
-            "ConsensusInitializeBlockHandler.handle_request(%s, %s)",
-            request,
-            response)
         self._proxy.initialize_block(request.previous_id)
 
 
