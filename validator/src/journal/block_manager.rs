@@ -500,7 +500,8 @@ impl BlockManager {
         store_name: &str,
         store: Box<BlockStore>,
     ) -> Result<(), BlockManagerError> {
-        unimplemented!()
+        self.blockstore_by_name.insert(store_name.into(), store);
+        Ok(())
     }
 
     pub fn persist(&mut self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
