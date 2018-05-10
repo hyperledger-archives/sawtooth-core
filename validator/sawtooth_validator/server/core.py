@@ -23,6 +23,7 @@ import threading
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.consensus.notifier import ConsensusNotifier
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -278,6 +279,8 @@ class Validator(object):
             max_incoming_connections=20,
             monitor=True,
             max_future_callback_workers=10)
+
+        consensus_notifier = ConsensusNotifier(consensus_service)
 
         # -- Setup Journal -- #
         batch_injector_factory = DefaultBatchInjectorFactory(

@@ -988,6 +988,13 @@ class Interconnect(object):
             LOGGER.debug("Unable to complete Challenge Authorization.")
             self.remove_connection(connection_id)
 
+    def send_all(self, message_type, data):
+        futures = []
+        with self._connections_lock:
+            for connection_id in self._connections:
+                futures.append(self.send(message_type, data, connection_id))
+        return futures
+
     def send(self, message_type, data, connection_id, callback=None,
              one_way=False):
         """
