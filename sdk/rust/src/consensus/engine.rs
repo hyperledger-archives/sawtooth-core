@@ -21,6 +21,7 @@ use std::sync::{Mutex, atomic::{AtomicBool, Ordering}, mpsc::Receiver};
 use consensus::service::Service;
 
 /// An update from the validator
+#[derive(Debug)]
 pub enum Update {
     PeerConnected(PeerInfo),
     PeerDisconnected(PeerId),
@@ -31,7 +32,7 @@ pub enum Update {
     BlockCommit(BlockId),
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct BlockId(Vec<u8>);
 impl Deref for BlockId {
     type Target = Vec<u8>;
@@ -52,7 +53,7 @@ impl From<Vec<u8>> for BlockId {
 }
 
 /// All information about a block that is relevant to consensus
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Block {
     pub block_id: BlockId,
     pub previous_id: BlockId,
@@ -61,7 +62,7 @@ pub struct Block {
     pub payload: Vec<u8>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
@@ -82,13 +83,13 @@ impl From<Vec<u8>> for PeerId {
 }
 
 /// Information about a peer that is relevant to consensus
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PeerInfo {
     pub peer_id: PeerId,
 }
 
 /// A consensus-related message sent between peers
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PeerMessage {
     pub message_type: String,
     pub content: Vec<u8>,
