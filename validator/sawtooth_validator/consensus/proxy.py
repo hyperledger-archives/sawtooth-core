@@ -18,11 +18,16 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
+class UnknownBlock(Exception):
+    """The given block could not be found."""
+
+
 class ConsensusProxy:
     """Receives requests from the consensus engine handlers and delegates them
     to the appropriate components."""
 
-    def __init__(self, chain_controller, block_publisher):
+    def __init__(self, block_cache, chain_controller, block_publisher):
+        self._block_cache = block_cache
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
 
@@ -35,13 +40,28 @@ class ConsensusProxy:
 
     # Using block publisher
     def initialize_block(self, previous_id):
-        raise NotImplementedError()
+        LOGGER.debug("ConsensusProxy.initialize_block")
+
+        if previous_id:
+            try:
+                previous_block = self._block_cache[previous_id.hex()]
+            except KeyError:
+                raise UnknownBlock()
+            self._block_publisher.initialize_block(previous_block)
+        else:
+            self._block_publisher.initialize_block(
+                self._chain_controller.chain_head)
 
     def finalize_block(self, consensus_data):
-        raise NotImplementedError()
+        LOGGER.debug("ConsensusProxy.finalize_block")
+        result = self._block_publisher.finalize_block(
+            consensus=consensus_data)
+        self._block_publisher.publish_block(
+            result.block, result.injected_batches)
 
     def cancel_block(self):
-        raise NotImplementedError()
+        LOGGER.debug("ConsensusProxy.cancel_block")
+        self._block_publisher.cancel_block()
 
     # Using chain controller
     def check_block(self, block_ids):

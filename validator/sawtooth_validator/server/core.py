@@ -28,7 +28,8 @@ from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
-from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal import publisher
+from sawtooth_validator.journal import publisher_ce
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
@@ -291,22 +292,39 @@ class Validator(object):
             state_view_factory=state_view_factory,
             signer=identity_signer)
 
-        block_publisher = BlockPublisher(
-            transaction_executor=transaction_executor,
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            settings_cache=settings_cache,
-            block_sender=block_sender,
-            batch_sender=batch_sender,
-            squash_handler=context_manager.get_squash_handler(),
-            chain_head=block_store.chain_head,
-            identity_signer=identity_signer,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            permission_verifier=permission_verifier,
-            check_publish_block_frequency=0.1,
-            batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory)
+        if consensus_engine_enabled:
+            block_publisher = publisher_ce.BlockPublisher(
+                transaction_executor=transaction_executor,
+                block_cache=block_cache,
+                state_view_factory=state_view_factory,
+                settings_cache=settings_cache,
+                block_sender=block_sender,
+                batch_sender=batch_sender,
+                squash_handler=context_manager.get_squash_handler(),
+                chain_head=block_store.chain_head,
+                identity_signer=identity_signer,
+                data_dir=data_dir,
+                config_dir=config_dir,
+                permission_verifier=permission_verifier,
+                batch_observers=[batch_tracker],
+                batch_injector_factory=batch_injector_factory)
+        else:
+            block_publisher = publisher.BlockPublisher(
+                transaction_executor=transaction_executor,
+                block_cache=block_cache,
+                state_view_factory=state_view_factory,
+                settings_cache=settings_cache,
+                block_sender=block_sender,
+                batch_sender=batch_sender,
+                squash_handler=context_manager.get_squash_handler(),
+                chain_head=block_store.chain_head,
+                identity_signer=identity_signer,
+                data_dir=data_dir,
+                config_dir=config_dir,
+                permission_verifier=permission_verifier,
+                check_publish_block_frequency=0.1,
+                batch_observers=[batch_tracker],
+                batch_injector_factory=batch_injector_factory)
 
         block_validator = BlockValidator(
             block_cache=block_cache,
@@ -379,7 +397,7 @@ class Validator(object):
 
         if consensus_engine_enabled:
             consensus_proxy = ConsensusProxy(
-                network_service=network_service,
+                block_cache=block_cache,
                 chain_controller=chain_controller,
                 block_publisher=block_publisher)
 

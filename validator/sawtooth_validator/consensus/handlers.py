@@ -25,6 +25,10 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
+from sawtooth_validator.journal.publisher_ce import BlockEmpty
+from sawtooth_validator.journal.publisher_ce import BlockInProgress
+from sawtooth_validator.journal.publisher_ce import BlockNotInitialized
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -132,7 +136,14 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response):
-        self._proxy.initialize_block(request.previous_id)
+        try:
+            self._proxy.initialize_block(request.previous_id)
+        except BlockInProgress:
+            response.status =\
+                consensus_pb2.ConsensusInitializeBlockResponse.INVALID_STATE
+        except Exception:  # pylint: disable=broad-except
+            response.status =\
+                consensus_pb2.ConsensusInitializeBlockResponse.SERVICE_ERROR
 
 
 class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
@@ -148,9 +159,18 @@ class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
     def handle_request(self, request, response):
         try:
             self._proxy.finalize_block(request.data)
-        except EmptyBlock:
+        except KeyError:
             response.status =\
-                consensus_pb2.ConsensusFinalizeBlockResponse.EMPTY_BLOCK
+                consensus_pb2.ConsensusFinalizeBlockResponse.UNKNOWN_BLOCK
+        except BlockNotInitialized:
+            response.status =\
+                consensus_pb2.ConsensusFinalizeBlockResponse.INVALID_STATE
+        except BlockEmpty:
+            response.status =\
+                consensus_pb2.ConsensusFinalizeBlockResponse.BLOCK_NOT_READY
+        except Exception:  # pylint: disable=broad-except
+            response.status =\
+                consensus_pb2.ConsensusFinalizeBlockResponse.SERVICE_ERROR
 
 
 class ConsensusCancelBlockHandler(ConsensusServiceHandler):
@@ -164,7 +184,14 @@ class ConsensusCancelBlockHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response):
-        self._proxy.cancel_block()
+        try:
+            self._proxy.cancel_block()
+        except BlockNotInitialized:
+            response.status =\
+                consensus_pb2.ConsensusCancelBlockResponse.INVALID_STATE
+        except Exception:  # pylint: disable=broad-except
+            response.status =\
+                consensus_pb2.ConsensusCancelBlockResponse.SERVICE_ERROR
 
 
 class ConsensusCheckBlockHandler(ConsensusServiceHandler):
