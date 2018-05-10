@@ -13,8 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=inconsistent-return-statements
-
 import time
 import random
 import hashlib
@@ -67,7 +65,7 @@ class BlockPublisher(BlockPublisherInterface):
         # a block, we will go ahead and check real configuration
         self._min_wait_time = 0
         self._max_wait_time = 0
-        self._valid_block_publishers = None
+        self._valid_block_publishers = ()
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
@@ -110,21 +108,29 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the candidate block_header should be claimed.
         """
-        if self._valid_block_publishers \
-                and block_header.signer_public_key \
-                not in self._valid_block_publishers:
+        if any(publisher_key != block_header.signer_public_key
+               for publisher_key in self._valid_block_publishers):
             return False
-        elif self._min_wait_time == 0:
+
+        if self._min_wait_time == 0:
             return True
-        elif self._min_wait_time > 0 and self._max_wait_time <= 0:
-            if self._start_time + self._min_wait_time <= time.time():
-                return True
-        elif self._min_wait_time > 0 \
-                and self._max_wait_time > self._min_wait_time:
-            if self._start_time + self._wait_time <= time.time():
-                return True
-        else:
+
+        if self._min_wait_time < 0:
             return False
+
+        assert self._min_wait_time > 0
+
+        if self._max_wait_time <= 0:
+            return self._start_time + self._min_wait_time <= time.time()
+
+        assert self._max_wait_time > 0
+
+        if self._max_wait_time <= self._min_wait_time:
+            return False
+
+        assert 0 < self._min_wait_time < self._max_wait_time
+
+        return self._start_time + self._wait_time <= time.time()
 
     def finalize_block(self, block_header):
         """Finalize a block to be claimed. Provide any signatures and
