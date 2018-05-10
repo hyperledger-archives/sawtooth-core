@@ -13,7 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from abc import ABCMeta
 import ctypes
+from enum import IntEnum
 import logging
 import os
 import sys
@@ -75,3 +77,56 @@ def from_c_bytes(c_data, c_data_len):
     """
     # pylint: disable=invalid-slice-index
     return bytes(c_data[:c_data_len.value])
+
+
+class OwnedPointer(object, metaclass=ABCMeta):
+    """An owned pointer will call drop when this pointer is garbage collected.
+    """
+    def __init__(self, drop_ffi_call_fn):
+        """Constructs an owned pointer.
+        Initializing the pointer is left to the extending classes
+
+        Args:
+            drop_ffi_call_fn (str): the name of the FFI function to call on
+                drop or garbage collection.
+        """
+        self._ptr = ctypes.c_void_p()
+        self._drop_ffi_fn = drop_ffi_call_fn
+
+    def drop(self):
+        """Explicitly drop this pointer.  The memory will be deallocated via
+        the drop_ffi_call_fn passed to the constructor.
+        """
+        if self._ptr:
+            LIBRARY.call(self._drop_ffi_fn, self._ptr)
+            self._ptr = None
+
+    def __del__(self):
+        self.drop()
+
+    @property
+    def pointer(self):
+        """Return a reference to the pointer, for use in other ffi wrappers.
+        """
+        return self._ptr
+
+    def as_ref(self):
+        return RefPointer(self.pointer)
+
+
+class RefPointer(object):
+    """A reference to a pointer.
+
+    This pointer does not manage any deallocation of the underlying memory.
+    """
+    def __init__(self, ptr):
+        self._ptr = ptr
+
+    @property
+    def pointer(self):
+        return self._ptr
+
+
+class CommonErrorCode(IntEnum):
+    Success = 0
+    NullPointerProvided = 0x01
