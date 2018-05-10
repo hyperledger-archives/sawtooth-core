@@ -379,8 +379,12 @@ impl BlockManager {
         Box::new(BranchIterator::new(self, tip.into()))
     }
 
-    pub fn branch_diff(&self, tip: &str, exclude: &str) -> Box<Iterator<Item = Block>> {
-        unimplemented!()
+    pub fn branch_diff<'a>(
+        &'a self,
+        tip: &str,
+        exclude: &str,
+    ) -> Box<Iterator<Item = &Block> + 'a> {
+        Box::new(BranchDiffIterator::new(self, tip, exclude))
     }
 
     pub fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
@@ -606,6 +610,142 @@ impl<'a> Iterator for BranchIterator<'a> {
     }
 }
 
+struct BranchDiffIterator<'a> {
+    block_manager: &'a BlockManager,
+
+    left_block: Option<&'a Block>,
+    right_block: Option<&'a Block>,
+
+    blockstore: Option<String>,
+
+    has_reached_common_ancestor: bool,
+}
+
+impl<'a> BranchDiffIterator<'a> {
+    fn new(block_manager: &'a BlockManager, tip: &str, exclude: &str) -> Self {
+        let mut iterator = BranchDiffIterator {
+            block_manager,
+            left_block: None,
+            right_block: None,
+
+            blockstore: None,
+            has_reached_common_ancestor: false,
+        };
+
+        iterator.left_block = iterator.get_block_by_block_id(tip.into());
+        iterator.right_block = iterator.get_block_by_block_id(exclude.into());
+
+        if let Some(left) = iterator.left_block {
+            if let Some(right) = iterator.right_block {
+                let difference = iterator.block_num_difference(left, right);
+                if difference < 0 {
+                    iterator.right_block = iterator.get_nth_previous_block(
+                        right.header_signature.clone(),
+                        difference.abs() as u64,
+                    );
+                }
+            }
+        }
+
+        iterator
+    }
+
+    fn block_num_difference(&self, left: &Block, right: &Block) -> i64 {
+        left.block_num as i64 - right.block_num as i64
+    }
+
+    fn get_previous_block(&mut self, block_id: String) -> Option<&'a Block> {
+        let block = self.get_block_by_block_id(block_id);
+        block
+            .map(|b| self.get_block_by_block_id(b.previous_block_id.clone()))
+            .unwrap_or(None)
+    }
+
+    fn get_nth_previous_block(&mut self, block_id: String, n: u64) -> Option<&'a Block> {
+        if n == 0 {
+            return None;
+        }
+
+        let mut current_block_id = block_id;
+
+        let mut block = self.get_previous_block(current_block_id.clone());
+        if let Some(b) = block {
+            current_block_id = b.header_signature.clone();
+        }
+
+        for _ in 1..n {
+            block = self.get_previous_block(current_block_id.clone());
+            if let Some(b) = block {
+                current_block_id = b.header_signature.clone();
+            }
+        }
+        block
+    }
+
+    fn get_block_by_block_id(&mut self, block_id: String) -> Option<&'a Block> {
+        if block_id == NULL_BLOCK_IDENTIFIER {
+            None
+        } else if self.blockstore.is_none() {
+            let (block_option, blockstore_name_option) = self.block_manager
+                .get_block_from_main_cache_or_blockstore_name(block_id.as_str());
+            block_option.or_else(|| {
+                blockstore_name_option
+                    .map(|blockstore_name| {
+                        self.blockstore = Some(blockstore_name.into());
+                        self.block_manager
+                            .get_block_from_blockstore(block_id, blockstore_name)
+                            .expect("Blockstore referenced by anchor does not exist")
+                    })
+                    .unwrap_or(None)
+            })
+        } else {
+            let blockstore_id = self.blockstore.as_ref().unwrap();
+            let block = self.block_manager
+                .get_block_from_blockstore(block_id.clone(), blockstore_id)
+                .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
+                .expect(
+                    "The block was not in the blockstore referenced by a successor block's anchor",
+                );
+            Some(block)
+        }
+    }
+}
+
+impl<'a> Iterator for BranchDiffIterator<'a> {
+    type Item = &'a Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.has_reached_common_ancestor {
+            None
+        } else if let Some(left) = self.left_block {
+            if let Some(right) = self.right_block {
+                if left.header_signature == NULL_BLOCK_IDENTIFIER {
+                    return None;
+                }
+                if left.header_signature == right.header_signature
+                    && left.block_num == right.block_num
+                {
+                    self.has_reached_common_ancestor = true;
+                    return None;
+                }
+                let difference = self.block_num_difference(left, right);
+                if difference > 0 {
+                    self.left_block = self.get_previous_block(left.header_signature.clone());
+                } else {
+                    self.left_block = self.get_previous_block(left.header_signature.clone());
+                    self.right_block = self.get_previous_block(right.header_signature.clone());
+                }
+                Some(left)
+            } else {
+                self.left_block = self.get_previous_block(left.header_signature.clone());
+                Some(left)
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -756,5 +896,40 @@ mod tests {
         let mut empty_iter = block_manager.branch("P");
 
         assert_eq!(empty_iter.next(), None);
+    }
+
+    #[test]
+    fn test_branch_diff() {
+        let mut block_manager = BlockManager::new();
+
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "A", 1);
+        let d = create_block("D", "C", 2);
+        let e = create_block("E", "D", 3);
+
+        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
+        block_manager.put(vec![c.clone()]).unwrap();
+        block_manager.put(vec![d.clone(), e.clone()]).unwrap();
+
+        let mut branch_diff_iter = block_manager.branch_diff("C", "B");
+
+        assert_eq!(branch_diff_iter.next(), Some(&c));
+        assert_eq!(branch_diff_iter.next(), None);
+
+        let mut branch_diff_iter2 = block_manager.branch_diff("B", "E");
+
+        assert_eq!(branch_diff_iter2.next(), Some(&b));
+        assert_eq!(branch_diff_iter2.next(), None);
+
+        let mut branch_diff_iter3 = block_manager.branch_diff("C", "E");
+
+        assert_eq!(branch_diff_iter3.next(), None);
+
+        let mut branch_diff_iter4 = block_manager.branch_diff("E", "C");
+
+        assert_eq!(branch_diff_iter4.next(), Some(&e));
+        assert_eq!(branch_diff_iter4.next(), Some(&d));
+        assert_eq!(branch_diff_iter4.next(), None);
     }
 }
