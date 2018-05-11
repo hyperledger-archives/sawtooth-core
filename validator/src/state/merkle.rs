@@ -434,10 +434,7 @@ pub struct MerkleLeafIterator {
 }
 
 impl MerkleLeafIterator {
-    fn new(
-        merkle_db: MerkleDatabase,
-        prefix: Option<&str>,
-    ) -> Result<Self, StateDatabaseError> {
+    fn new(merkle_db: MerkleDatabase, prefix: Option<&str>) -> Result<Self, StateDatabaseError> {
         let path = prefix.unwrap_or("");
 
         let mut visited = VecDeque::new();

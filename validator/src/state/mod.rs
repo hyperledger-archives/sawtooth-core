@@ -18,6 +18,7 @@
 pub mod error;
 pub mod merkle;
 pub mod merkle_ffi;
+pub mod settings_view;
 
 use state::error::StateDatabaseError;
 
