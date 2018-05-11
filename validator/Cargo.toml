@@ -18,7 +18,7 @@ rust-crypto = "0.2"
 rand = "0.4"
 
 [build-dependencies]
-protoc-rust = "1.4"
+protoc-rust = "^1.6"
 glob = "0.2"
 
 [lib]

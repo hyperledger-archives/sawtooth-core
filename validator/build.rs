@@ -24,6 +24,8 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
+use protoc_rust::Customize;
+
 const PROTO_FILES_DIR: &str = "../protos";
 const PROTOBUF_TARGET_DIR: &str = "src/proto";
 const GENERATED_SOURCE_HEADER: &str = r#"
@@ -70,6 +72,9 @@ fn main() {
                 .map(|proto_file| proto_file.file_path.as_ref())
                 .collect::<Vec<&str>>(),
             includes: &["src", PROTO_FILES_DIR],
+            customize: Customize {
+                ..Default::default()
+            }
         }).expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", PROTOBUF_TARGET_DIR);

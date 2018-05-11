@@ -323,7 +323,7 @@ impl MerkleDatabase {
         let mut next_change_log = ChangeLogEntry::new();
         next_change_log.set_parent(root_hash_bytes.clone());
         next_change_log.set_additions(protobuf::RepeatedField::from(
-            batch.iter().map(|&(ref hash, _)| hash.clone()).collect(),
+            batch.iter().map(|&(ref hash, _)| hash.clone()).collect::<Vec<Vec<u8>>>(),
         ));
 
         if current_change_log.is_some() {
