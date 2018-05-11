@@ -575,6 +575,73 @@ mod tests {
     }
 
     #[test]
+    fn test_put_ref_then_unref() {
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let b_block_id = b.header_signature.clone();
+        let c = create_block("C", "B", 2);
+        let c_block_id = c.header_signature.clone();
+
+        let mut block_manager = BlockManager::new();
+        assert_eq!(block_manager.put(vec![a, b]), Ok(()));
+
+        assert_eq!(block_manager.put(vec![c]), Ok(()));
+
+        block_manager.ref_block(b_block_id.as_str()).unwrap();
+        block_manager.unref_block(c_block_id.as_str()).unwrap();
+
+        let d = create_block("D", "C", 3);
+
+        assert_eq!(
+            block_manager.put(vec![d]),
+            Err(BlockManagerError::MissingPredecessor(format!(
+                "During Put, missing predecessor of block D: C"
+            )))
+        );
+
+        let e = create_block("E", "B", 2);
+
+        block_manager.put(vec![e]).unwrap();
+    }
+
+    #[test]
+    fn test_multiple_branches_put_ref_then_unref() {
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 2);
+        let c_block_id = &c.header_signature.clone();
+        let d = create_block("D", "C", 3);
+        let d_block_id = &d.header_signature.clone();
+        let e = create_block("E", "C", 3);
+
+        let f = create_block("F", "E", 4);
+        let f_block_id = &f.header_signature.clone();
+
+        let mut block_manager = BlockManager::new();
+        block_manager.put(vec![a.clone(), b, c]).unwrap();
+        block_manager.put(vec![d]).unwrap();
+        block_manager.put(vec![e, f]).unwrap();
+
+        block_manager.unref_block(d_block_id).unwrap();
+
+        block_manager.unref_block(f_block_id).unwrap();
+
+        let q = create_block("Q", "C", 3);
+        let q_block_id = &q.header_signature.clone();
+        block_manager.put(vec![q]).unwrap();
+        block_manager.unref_block(c_block_id).unwrap();
+        block_manager.unref_block(q_block_id).unwrap();
+
+        let g = create_block("G", "A", 1);
+        assert_eq!(
+            block_manager.put(vec![g]),
+            Err(BlockManagerError::MissingPredecessor(format!(
+                "During Put, missing predecessor of block G: A"
+            )))
+        );
+    }
+
+    #[test]
     fn test_put_empty_vec() {
         let mut block_manager = BlockManager::new();
         assert_eq!(
