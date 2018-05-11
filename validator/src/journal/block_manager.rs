@@ -384,7 +384,20 @@ impl BlockManager {
     }
 
     pub fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
-        unimplemented!()
+        match self.block_by_block_id.get_mut(block_id) {
+            Some(ref mut ref_block) => {
+                ref_block.increase_external_ref_count();
+                Ok(())
+            }
+            None => {
+                if self.anchors.contains(block_id) {
+                    self.anchors.increase_external_ref_count(block_id);
+                    Ok(())
+                } else {
+                    Err(BlockManagerError::UnknownBlock)
+                }
+            }
+        }
     }
 
     pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
