@@ -400,8 +400,99 @@ impl BlockManager {
         }
     }
 
+    /// Starting at a tip block, if the tip block's ref-count drops to 0,
+    /// remove all blocks until a ref-count of 2 is found.
     pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
-        unimplemented!()
+        let (external_ref_count, internal_ref_count, block_id) =
+            self.lower_tip_blocks_refcount(tip)?;
+
+        let mut blocks_to_remove = vec![];
+
+        let mut optional_new_tip = None;
+
+        if external_ref_count == 0 && internal_ref_count == 0 {
+            if let Some(block_id) = block_id {
+                let (mut predecesors_to_remove, new_tip) =
+                    self.find_block_ids_for_blocks_with_refcount_1_or_less(&block_id);
+                blocks_to_remove.append(&mut predecesors_to_remove);
+                self.block_by_block_id.remove(tip);
+                optional_new_tip = new_tip;
+            }
+        }
+
+        blocks_to_remove.iter().for_each(|block_id| {
+            self.block_by_block_id.remove(block_id.as_str());
+        });
+
+        if let Some(block_id) = optional_new_tip {
+            if let Some(ref mut new_tip) = self.block_by_block_id.get_mut(block_id.as_str()) {
+                new_tip.decrease_internal_ref_count();
+            };
+        };
+
+        Ok(())
+    }
+
+    fn lower_tip_blocks_refcount(
+        &mut self,
+        tip: &str,
+    ) -> Result<(u64, u64, Option<String>), BlockManagerError> {
+        match self.block_by_block_id.get_mut(tip) {
+            Some(ref mut ref_block) => {
+                if ref_block.external_ref_count > 0 {
+                    ref_block.decrease_external_ref_count();
+                }
+                Ok((
+                    ref_block.external_ref_count,
+                    ref_block.internal_ref_count,
+                    Some(ref_block.block.previous_block_id.clone()),
+                ))
+            }
+            None => {
+                if self.anchors.contains(tip) {
+                    self.anchors.decrease_external_ref_count(tip);
+
+                    Ok((
+                        self.anchors.get_external_ref_count(tip).unwrap(),
+                        self.anchors.get_internal_ref_count(tip).unwrap(),
+                        None,
+                    ))
+                } else {
+                    Err(BlockManagerError::UnknownBlock)
+                }
+            }
+        }
+    }
+
+    /// Starting from some `tip` block_id, walk back until finding a block that has a
+    /// internal ref_count >= 2 or an external_ref_count > 0.
+    fn find_block_ids_for_blocks_with_refcount_1_or_less(
+        &mut self,
+        tip: &str,
+    ) -> (Vec<String>, Option<String>) {
+        let mut blocks_to_remove = vec![];
+        let mut block_id = tip;
+        let pointed_to;
+        loop {
+            if let Some(ref ref_block) = self.block_by_block_id.get(block_id) {
+                if ref_block.internal_ref_count >= 2 || ref_block.external_ref_count >= 1 {
+                    pointed_to = Some(block_id.into());
+                    break;
+                } else if ref_block.block.previous_block_id == NULL_BLOCK_IDENTIFIER {
+                    blocks_to_remove.push(block_id.into());
+                    pointed_to = None;
+                    break;
+                } else {
+                    blocks_to_remove.push(block_id.into());
+                }
+                block_id = &ref_block.block.previous_block_id;
+            } else {
+                self.anchors.decrease_internal_ref_count(block_id);
+                pointed_to = None;
+                break;
+            }
+        }
+        (blocks_to_remove, pointed_to)
     }
 
     pub fn add_store(
