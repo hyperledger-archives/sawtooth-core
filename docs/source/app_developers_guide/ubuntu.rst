@@ -75,7 +75,12 @@ Step 1: Install Sawtooth
 The Sawtooth package repositories provide two types of Ubuntu packages:
 stable or nightly.  We recommend using the stable repository.
 
+
 #. Open a terminal window on your host system.
+   From this point on, this procedure refers to this window as the "validator
+   terminal window".
+   In the following examples, the prompt ``user@validator$``
+   shows the commands that must run in this window.
 
 #. Choose either the stable repository or the nightly repository.
 
@@ -83,9 +88,9 @@ stable or nightly.  We recommend using the stable repository.
 
      .. code-block:: console
 
-       $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-       $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
-       $ sudo apt-get update
+       user@validator$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
+       user@validator$ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
+       user@validator$ sudo apt-get update
 
    * To use the nightly repository, run the following commands:
 
@@ -97,9 +102,9 @@ stable or nightly.  We recommend using the stable repository.
 
      .. code-block:: console
 
-        $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-        $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
-        $ sudo apt-get update
+        user@validator$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
+        user@validator$ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
+        user@validator$ sudo apt-get update
 
 #. Install the Sawtooth packages. Sawtooth consists of several Ubuntu packages
    that can be installed together using the ``sawtooth`` meta-package. Run the
@@ -107,14 +112,14 @@ stable or nightly.  We recommend using the stable repository.
 
    .. code-block:: console
 
-      $ sudo apt-get install -y sawtooth
+      user@validator$ sudo apt-get install -y sawtooth
 
 #. Any time after installation, you can view the installed Sawtooth packages
    with the following command:
 
    .. code-block:: console
 
-      $ dpkg -l '*sawtooth*'
+      user@validator$ dpkg -l '*sawtooth*'
 
 
 .. _generate-user-key-ubuntu:
@@ -127,7 +132,7 @@ previous step.
 
    .. code-block:: console
 
-      $ sawtooth keygen
+      user@validator$ sawtooth keygen
       writing file: /home/yourname/.sawtooth/keys/yourname.priv
       writing file: /home/yourname/.sawtooth/keys/yourname.pub
 
@@ -155,7 +160,7 @@ Use the same terminal window as the previous step.
 
    .. code-block:: console
 
-      $ sawset genesis
+      user@validator$ sawset genesis
       Generated config-genesis.batch
 
     This settings proposal will change authorized keys in the setting
@@ -166,7 +171,7 @@ Use the same terminal window as the previous step.
 
    .. code-block:: console
 
-     $ sudo -u sawtooth sawadm genesis config-genesis.batch
+     user@validator$ sudo -u sawtooth sawadm genesis config-genesis.batch
      Processing config-genesis.batch...
      Generating /var/lib/sawtooth/genesis.batch
 
@@ -192,9 +197,6 @@ Step 5: Start the Validator
 ===========================
 
 Use the same terminal window as the previous step.
-From this point on, this procedure refers to this window as the "validator
-terminal window". In the following examples, the prompt ``user@validator$``
-shows the commands that must run in this window.
 
 #. Start a validator that listens locally on the default ports.
 
@@ -310,8 +312,13 @@ processor.
 
          [2018-03-14 16:00:17.223 INFO     processor_handlers] registered transaction processor: connection_id=eca3a9ad0ff1cdbc29e449cc61af4936bfcaf0e064952dd56615bc00bb9df64c4b01209d39ae062c555d3ddc5e3a9903f1a9e2d0fd2cdd47a9559ae3a78936ed, family=sawtooth_settings, version=1.0, namespaces=['000000']
 
+   #. Open a new terminal window (the client terminal window). In this
+      procedure, the prompt ``user@client$`` shows the commands that should be
+      run in this window.
+
    #. At this point, you can see the authorized keys setting that was proposed
-      in :ref:`create-genesis-block-ubuntu-label`. Run the following command:
+      in :ref:`create-genesis-block-ubuntu-label`.
+      Run the following command in the client terminal window:
 
       .. code-block:: console
 
@@ -382,11 +389,7 @@ processor.
 Step 8: Confirm Connectivity to the REST API
 ============================================
 
-#. Open a new terminal window (the client terminal window). In this
-   procedure, the prompt ``user@client$`` shows the commands that should be
-   run in this window.
-
-#. Run the following command:
+#. Run the following command in the client terminal window:
 
    .. code-block:: console
 
