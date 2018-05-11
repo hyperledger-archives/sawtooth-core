@@ -31,7 +31,7 @@ use self::rand::Rng;
 pub mod handler;
 
 use protobuf::Message as M;
-use protobuf::repeated::RepeatedField;
+use protobuf::RepeatedField;
 use messages::validator::Message_MessageType;
 use messages::network::PingResponse;
 use messages::processor::TpRegisterRequest;

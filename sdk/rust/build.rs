@@ -21,6 +21,8 @@ extern crate protoc_rust;
 
 use std::fs;
 
+use protoc_rust::Customize;
+
 fn main() {
     // Compile C PEM loader file
     if cfg!(feature = "pem") {
@@ -45,6 +47,9 @@ fn main() {
             .map(|a| a.as_ref())
             .collect::<Vec<&str>>(),
         includes: &["src", "../../protos"],
+        customize: Customize {
+            ..Default::default()
+        }
     }).expect("unable to run protoc");
 }
 

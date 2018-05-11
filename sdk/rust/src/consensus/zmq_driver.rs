@@ -234,7 +234,7 @@ impl ZmqService {
 
     /// Serialize and send a request, wait for the default timeout, and receive and parse an
     /// expected response.
-    pub fn rpc<I: protobuf::Message, O: protobuf::Message + protobuf::MessageStatic>(
+    pub fn rpc<I: protobuf::Message, O: protobuf::Message>(
         &mut self,
         request: &I,
         request_type: Message_MessageType,
@@ -590,7 +590,7 @@ mod tests {
     use consensus::engine::tests::MockEngine;
     use zmq;
 
-    fn send_req_rep<I: protobuf::Message, O: protobuf::Message + protobuf::MessageStatic>(
+    fn send_req_rep<I: protobuf::Message, O: protobuf::Message>(
         connection_id: &[u8],
         socket: &zmq::Socket,
         request: I,
@@ -611,7 +611,7 @@ mod tests {
         protobuf::parse_from_bytes(&msg.get_content()).unwrap()
     }
 
-    fn recv_rep<I: protobuf::Message, O: protobuf::Message + protobuf::MessageStatic>(
+    fn recv_rep<I: protobuf::Message, O: protobuf::Message>(
         socket: &zmq::Socket,
         request_type: Message_MessageType,
         response: I,
