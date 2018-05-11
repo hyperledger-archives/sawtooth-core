@@ -53,7 +53,7 @@ EXPOSE 4004/tcp
 ENV PATH=$PATH:/project/sawtooth-core/bin:/root/.cargo/bin\
     CARGO_INCREMENTAL=0
 
-RUN cargo install protobuf
+RUN cargo install --version ~1.4 protobuf
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \
