@@ -49,7 +49,7 @@ fn main() {
         includes: &["src", "../../protos"],
         customize: Customize {
             ..Default::default()
-        }
+        },
     }).expect("unable to run protoc");
 }
 

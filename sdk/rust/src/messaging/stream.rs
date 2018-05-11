@@ -14,9 +14,9 @@
  * limitations under the License.
  * -----------------------------------------------------------------------------
  */
-use std;
 use messages::validator::Message;
 use messages::validator::Message_MessageType;
+use std;
 use std::error::Error;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::RecvError;

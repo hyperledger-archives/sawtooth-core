@@ -21,22 +21,22 @@ extern crate crypto;
 extern crate rand;
 extern crate yaml_rust;
 
+use std::borrow::Cow;
 use std::error;
+use std::fmt;
+use std::io::Error as StdIoError;
 use std::io::Read;
 use std::io::Write;
-use std::io::Error as StdIoError;
-use std::fmt;
-use std::borrow::Cow;
 use std::time::Instant;
 
+use self::rand::Rng;
+use self::rand::SeedableRng;
+use self::rand::StdRng;
+use self::yaml_rust::EmitError;
+use self::yaml_rust::Yaml;
 use self::yaml_rust::YamlEmitter;
 use self::yaml_rust::YamlLoader;
-use self::yaml_rust::Yaml;
-use self::yaml_rust::EmitError;
 use self::yaml_rust::yaml::Hash;
-use self::rand::Rng;
-use self::rand::StdRng;
-use self::rand::SeedableRng;
 
 use smallbank;
 use smallbank::SmallbankTransactionPayload;
@@ -45,9 +45,9 @@ use smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
 use protobuf;
 use protobuf::Message;
 
-use sawtooth_sdk::signing;
 use sawtooth_sdk::messages::transaction::Transaction;
 use sawtooth_sdk::messages::transaction::TransactionHeader;
+use sawtooth_sdk::signing;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha512;
@@ -430,9 +430,8 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                 Some("deposit_checking") => {
                     payload.set_payload_type(SBPayloadType::DEPOSIT_CHECKING);
                     let mut data =
-                        smallbank
-                        ::SmallbankTransactionPayload_DepositCheckingTransactionData
-                        ::new();
+                        smallbank::SmallbankTransactionPayload_DepositCheckingTransactionData::new(
+                        );
                     data.set_customer_id(
                         txn_hash[&Yaml::from_str("customer_id")].as_i64().unwrap() as u32,
                     );
@@ -454,9 +453,8 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                 Some("transact_savings") => {
                     payload.set_payload_type(SBPayloadType::TRANSACT_SAVINGS);
                     let mut data =
-                        smallbank
-                        ::SmallbankTransactionPayload_TransactSavingsTransactionData
-                        ::new();
+                        smallbank::SmallbankTransactionPayload_TransactSavingsTransactionData::new(
+                        );
                     data.set_customer_id(
                         txn_hash[&Yaml::from_str("customer_id")].as_i64().unwrap() as u32,
                     );

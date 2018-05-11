@@ -16,8 +16,8 @@
  */
 use database::lmdb::*;
 use std::ffi::CStr;
-use std::path::Path;
 use std::os::raw::{c_char, c_void};
+use std::path::Path;
 use std::slice;
 
 #[repr(u32)]

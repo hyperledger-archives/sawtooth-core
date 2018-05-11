@@ -14,13 +14,13 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use database::lmdb::LmdbDatabase;
 /// This module contains all of the extern C functions for the Merkle trie
 use state::merkle::*;
-use database::lmdb::LmdbDatabase;
 use std::collections::HashMap;
 use std::ffi::CStr;
-use std::os::raw::{c_char, c_void};
 use std::mem;
+use std::os::raw::{c_char, c_void};
 use std::slice;
 
 #[repr(u32)]

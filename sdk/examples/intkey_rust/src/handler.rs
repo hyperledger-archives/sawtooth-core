@@ -22,18 +22,18 @@ use crypto::sha2::Sha512;
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::io::Cursor;
 use std::fmt;
+use std::io::Cursor;
 
 use cbor::encoder::GenericEncoder;
-use cbor::value::Value;
 use cbor::value::Key;
 use cbor::value::Text;
+use cbor::value::Value;
 
+use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
-use sawtooth_sdk::messages::processor::TpProcessRequest;
 
 const MAX_VALUE: u32 = 4_294_967_295;
 const MAX_NAME_LEN: usize = 20;

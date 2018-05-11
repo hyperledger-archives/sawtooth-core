@@ -15,25 +15,25 @@
  * ------------------------------------------------------------------------------
  */
 
-pub mod consensus;
-pub mod validator;
-pub mod transaction;
+pub mod authorization;
 pub mod batch;
 pub mod block;
-pub mod setting;
-pub mod state_context;
-pub mod processor;
-pub mod genesis;
 pub mod client_batch;
-pub mod client_block;
-pub mod client_state;
-pub mod client_transaction;
 pub mod client_batch_submit;
+pub mod client_block;
+pub mod client_event;
 pub mod client_list_control;
 pub mod client_peers;
-pub mod network;
-pub mod events;
-pub mod client_event;
-pub mod authorization;
-pub mod transaction_receipt;
 pub mod client_receipt;
+pub mod client_state;
+pub mod client_transaction;
+pub mod consensus;
+pub mod events;
+pub mod genesis;
+pub mod network;
+pub mod processor;
+pub mod setting;
+pub mod state_context;
+pub mod transaction;
+pub mod transaction_receipt;
+pub mod validator;

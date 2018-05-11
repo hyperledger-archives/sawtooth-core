@@ -33,7 +33,7 @@ fn main() {
         includes: &["../protos"],
         customize: Customize {
             ..Default::default()
-        }
+        },
     }).expect("Error generating rust files from smallbank protos");
 }
 

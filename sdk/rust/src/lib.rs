@@ -28,5 +28,5 @@ extern crate zmq;
 pub mod consensus;
 pub mod messages;
 pub mod messaging;
-pub mod signing;
 pub mod processor;
+pub mod signing;

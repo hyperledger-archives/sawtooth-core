@@ -66,9 +66,9 @@ mod tests {
 
     use protobuf::RepeatedField;
 
-    use sawtooth_sdk::signing;
     use sawtooth_sdk::messages::batch::Batch;
     use sawtooth_sdk::messages::batch::BatchList;
+    use sawtooth_sdk::signing;
 
     #[test]
     fn test_2_cycles_of_retries() {

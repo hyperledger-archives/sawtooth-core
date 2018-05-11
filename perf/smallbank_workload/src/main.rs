@@ -26,17 +26,17 @@ mod playlist;
 mod smallbank;
 mod smallbank_tranformer;
 
-use std::fs::File;
-use std::io::Write;
-use std::io::Read;
 use std::error::Error;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
 use std::str::{FromStr, Split};
 
-use batch_gen::generate_signed_batches;
 use batch_gen::SignedBatchIterator;
+use batch_gen::generate_signed_batches;
 use batch_submit::InfiniteBatchListIterator;
-use batch_submit::submit_signed_batches;
 use batch_submit::run_workload;
+use batch_submit::submit_signed_batches;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;

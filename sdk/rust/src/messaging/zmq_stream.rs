@@ -17,16 +17,16 @@
 use uuid;
 use zmq;
 
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{channel, sync_channel, Receiver, RecvTimeoutError, Sender, SyncSender};
-use std::thread;
-use std::time::Duration;
 use std::collections::HashMap;
 use std::error::Error;
+use std::sync::mpsc::{channel, sync_channel, Receiver, RecvTimeoutError, Sender, SyncSender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
-use protobuf;
 use messages::validator::Message;
 use messages::validator::Message_MessageType;
+use protobuf;
 
 use messaging::stream::*;
 

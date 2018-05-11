@@ -74,7 +74,7 @@ fn main() {
             includes: &["src", PROTO_FILES_DIR],
             customize: Customize {
                 ..Default::default()
-            }
+            },
         }).expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", PROTOBUF_TARGET_DIR);

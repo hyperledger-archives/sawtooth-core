@@ -16,7 +16,6 @@
  */
 
 /// Tools for interacting with the Sawtooth Rest API
-
 use std::cell::RefCell;
 use std::error;
 use std::fmt;
@@ -30,13 +29,13 @@ use std::vec::IntoIter;
 
 use chrono;
 use futures::Future;
-use hyper::client::{Client, HttpConnector, Request, Response};
-use hyper::header::{Authorization, Basic, ContentLength, ContentType};
-use hyper::Method;
 use hyper::Error as HyperError;
-use hyper::error::UriError;
+use hyper::Method;
 use hyper::StatusCode;
 use hyper::Uri;
+use hyper::client::{Client, HttpConnector, Request, Response};
+use hyper::error::UriError;
+use hyper::header::{Authorization, Basic, ContentLength, ContentType};
 use protobuf;
 use protobuf::Message;
 use tokio_core::reactor::Handle;

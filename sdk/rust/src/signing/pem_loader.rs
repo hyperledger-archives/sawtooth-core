@@ -31,8 +31,8 @@ mod ffi {
     }
 
 }
-use std::ffi::CString;
 use super::Error;
+use std::ffi::CString;
 
 pub fn load_pem_key(pemstr: &str, password: &str) -> Result<(String, String), Error> {
     let c_pemstr = CString::new(pemstr).unwrap();

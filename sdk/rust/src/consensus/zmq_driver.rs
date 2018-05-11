@@ -20,16 +20,16 @@ use protobuf::{Message as ProtobufMessage, ProtobufError};
 use rand;
 use rand::Rng;
 
-use consensus::service::Service;
-use consensus::engine::*;
 use consensus::driver::Driver;
+use consensus::engine::*;
+use consensus::service::Service;
 
 use messaging::stream::MessageConnection;
 use messaging::stream::MessageSender;
-use messaging::zmq_stream::ZmqMessageSender;
-use messaging::stream::SendError;
 use messaging::stream::ReceiveError;
+use messaging::stream::SendError;
 use messaging::zmq_stream::ZmqMessageConnection;
+use messaging::zmq_stream::ZmqMessageSender;
 
 use messages::consensus::*;
 use messages::validator::{Message, Message_MessageType};
@@ -263,9 +263,12 @@ macro_rules! check_ok {
     ($r:expr, $ok:pat) => {
         match $r.get_status() {
             $ok => Ok(()),
-            status => Err(Error::ReceiveError(format!("Failed with status {:?}", status))),
+            status => Err(Error::ReceiveError(format!(
+                "Failed with status {:?}",
+                status
+            ))),
         }
-    }
+    };
 }
 
 impl Service for ZmqService {
@@ -585,9 +588,9 @@ impl From<ReceiveError> for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use consensus::engine::tests::MockEngine;
     use std::default::Default;
     use std::sync::Mutex;
-    use consensus::engine::tests::MockEngine;
     use zmq;
 
     fn send_req_rep<I: protobuf::Message, O: protobuf::Message>(
@@ -762,12 +765,9 @@ mod tests {
         ) => {
             let mut response = $rep;
             response.set_status($status);
-            let (_, _): (_, $req_type) = recv_rep(
-                $socket,
-                $req_msg_type,
-                response,
-                $rep_msg_type);
-        }
+            let (_, _): (_, $req_type) =
+                recv_rep($socket, $req_msg_type, response, $rep_msg_type);
+        };
     }
 
     #[test]

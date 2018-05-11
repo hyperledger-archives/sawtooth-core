@@ -26,16 +26,16 @@ use crypto::sha2::Sha512;
 use protobuf::Message;
 use protobuf::RepeatedField;
 
+use rand::Rng;
 use rand::SeedableRng;
 use rand::StdRng;
-use rand::Rng;
 
 use sawtooth_sdk::messages::transaction::Transaction;
 use sawtooth_sdk::messages::transaction::TransactionHeader;
 use sawtooth_sdk::signing;
 
-use intkey_iterator::IntKeyPayload;
 use intkey_addresser::IntKeyAddresser;
+use intkey_iterator::IntKeyPayload;
 
 const UNNECESSARY_TXNS_NUM: usize = 1_000;
 

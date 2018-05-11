@@ -16,8 +16,8 @@
  */
 
 use std::collections::HashMap;
-use std::io::{self, Read, Write};
 use std::fs::File;
+use std::io::{self, Read, Write};
 
 use clap::ArgMatches;
 use protobuf;
@@ -28,10 +28,10 @@ use sawtooth_sdk::messages::block::{Block, BlockHeader};
 use sawtooth_sdk::messages::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
-use database::lmdb;
-use database::error::DatabaseError;
-use err::CliError;
 use config;
+use database::error::DatabaseError;
+use database::lmdb;
+use err::CliError;
 use wrappers::Block as BlockWrapper;
 
 const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";

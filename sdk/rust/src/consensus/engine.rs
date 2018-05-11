@@ -214,8 +214,8 @@ pub mod tests {
     use super::*;
 
     use std::default::Default;
-    use std::sync::{Arc, Mutex};
     use std::sync::mpsc::{channel, RecvTimeoutError};
+    use std::sync::{Arc, Mutex};
 
     use consensus::service::tests::MockService;
 

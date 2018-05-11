@@ -30,7 +30,7 @@ extern crate tokio_core;
 extern crate tokio_timer;
 
 pub mod batch_gen;
+mod batch_map;
 pub mod batch_submit;
 pub mod source;
-mod batch_map;
 mod workload;

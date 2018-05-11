@@ -340,8 +340,8 @@ mod tests {
     use super::*;
     use std::env;
     use std::fs::remove_file;
-    use std::path::Path;
     use std::panic;
+    use std::path::Path;
     use std::thread;
 
     /// Asserts that there are COUNT many objects in DB.

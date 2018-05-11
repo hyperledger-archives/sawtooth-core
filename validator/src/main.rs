@@ -6,8 +6,8 @@ extern crate log;
 mod pylogger;
 mod server;
 
-use server::cli;
 use cpython::Python;
+use server::cli;
 
 fn main() {
     let gil = Python::acquire_gil();
