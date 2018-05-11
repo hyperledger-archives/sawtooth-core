@@ -402,7 +402,7 @@ fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block
         return Ok(None);
     }
 
-    let block = protobuf::core::parse_length_delimited_from(source)
+    let block = protobuf::parse_length_delimited_from(source)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
 
     Ok(Some(block))
