@@ -18,6 +18,8 @@
 extern crate glob;
 extern crate protoc_rust;
 
+use protoc_rust::Customize;
+
 fn main() {
     let proto_src_files = glob_simple("../protos/*.proto");
     println!("{:?}", proto_src_files);
@@ -29,6 +31,9 @@ fn main() {
             .map(|a| a.as_ref())
             .collect::<Vec<&str>>(),
         includes: &["../protos"],
+        customize: Customize {
+            ..Default::default()
+        }
     }).expect("Error generating rust files from smallbank protos");
 }
 

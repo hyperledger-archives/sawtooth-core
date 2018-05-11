@@ -31,5 +31,5 @@ log = "0.3"
 log4rs = "0.7"
 
 [build-dependencies]
-protoc-rust = "1.4"
+protoc-rust = "^1.6"
 glob = "0.2"
