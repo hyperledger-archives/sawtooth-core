@@ -335,7 +335,44 @@ impl BlockManager {
     }
 
     pub fn get<'a>(&'a self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = &'a Block> + 'a> {
-        unimplemented!()
+        Box::new(GetBlockIterator::new(self, block_ids))
+    }
+
+    fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
+        self.block_by_block_id
+            .get(block_id)
+            .map(|ref ref_block| &ref_block.block)
+    }
+
+    fn get_block_from_main_cache_or_blockstore_name(
+        &self,
+        block_id: &str,
+    ) -> (Option<&Block>, Option<&str>) {
+        let block = self.get_block_by_block_id(block_id);
+        if block.is_some() {
+            (block, None)
+        } else {
+            (None, self.anchors.get_blockstore_name(block_id))
+        }
+    }
+
+    fn get_block_from_blockstore<'a>(
+        &'a self,
+        block_id: String,
+        store_name: &str,
+    ) -> Result<Option<&'a Block>, BlockManagerError> {
+        Ok(self.blockstore_by_name
+            .get(store_name)
+            .ok_or(BlockManagerError::UnknownBlockStore)?
+            .get(vec![block_id])
+            .nth(0))
+    }
+
+    fn get_block_from_any_blockstore(&self, block_id: String) -> Option<&Block> {
+        self.blockstore_by_name
+            .values()
+            .find(|blockstore| blockstore.get(vec![block_id.clone()]).count() > 0)
+            .map(|blockstore| blockstore.get(vec![block_id]).nth(0).unwrap())
     }
 
     pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
@@ -364,6 +401,51 @@ impl BlockManager {
 
     pub fn persist(&mut self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
         unimplemented!()
+    }
+}
+
+struct GetBlockIterator<'a> {
+    block_manager: &'a BlockManager,
+    block_ids: &'a [&'a str],
+    index: usize,
+}
+
+impl<'a> GetBlockIterator<'a> {
+    pub fn new(block_manager: &'a BlockManager, block_ids: &'a [&'a str]) -> Self {
+        GetBlockIterator {
+            block_manager,
+            block_ids,
+            index: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for GetBlockIterator<'a> {
+    type Item = &'a Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let block = match self.block_ids.get(self.index) {
+            Some(block_id) => {
+                let (optional_block, optional_blockstore_name) = self.block_manager
+                    .get_block_from_main_cache_or_blockstore_name(block_id);
+                match optional_block {
+                    Some(block) => Some(block),
+                    None => {
+                        if let Some(blockstore_name) = optional_blockstore_name {
+                            self.block_manager
+                                .get_block_from_blockstore((*block_id).into(), blockstore_name)
+                                .expect("An anchor pointed to a blockstore that does not exist")
+                        } else {
+                            self.block_manager
+                                .get_block_from_any_blockstore((*block_id).into())
+                        }
+                    }
+                }
+            }
+            None => None,
+        };
+        self.index += 1;
+        block
     }
 }
 
@@ -408,5 +490,24 @@ mod tests {
                 "During Put, missing predecessor of block A: o"
             )))
         );
+    }
+
+    #[test]
+    fn test_get_blocks() {
+        let mut block_manager = BlockManager::new();
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 2);
+
+        block_manager
+            .put(vec![a.clone(), b.clone(), c.clone()])
+            .unwrap();
+
+        let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
+
+        assert_eq!(get_block_iter.next(), Some(&a));
+        assert_eq!(get_block_iter.next(), Some(&c));
+        assert_eq!(get_block_iter.next(), None);
+        assert_eq!(get_block_iter.next(), None);
     }
 }
