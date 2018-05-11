@@ -23,7 +23,6 @@ use std::io::Read;
 use std::marker::PhantomData;
 
 use self::protobuf::Message;
-use self::protobuf::MessageStatic;
 
 /// Decodes Protocol Buffer messages from a length-delimited input reader.
 pub struct LengthDelimitedMessageSource<'a, T: 'a> {
@@ -33,7 +32,7 @@ pub struct LengthDelimitedMessageSource<'a, T: 'a> {
 
 impl<'a, T> LengthDelimitedMessageSource<'a, T>
 where
-    T: Message + MessageStatic,
+    T: Message,
 {
     /// Creates a new `LengthDelimitedMessageSource` from a given reader.
     pub fn new(source: &'a mut Read) -> Self {

@@ -32,5 +32,5 @@ name = "smallbank-workload"
 path = "./src/main.rs"
 
 [build-dependencies]
-protoc-rust = "1.4"
+protoc-rust = "^1.6"
 glob = "0.2"
