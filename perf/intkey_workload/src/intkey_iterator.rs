@@ -18,13 +18,13 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
-use cbor::value::Value;
 use cbor::value::Key;
 use cbor::value::Text;
+use cbor::value::Value;
 
+use rand::Rng;
 use rand::SeedableRng;
 use rand::StdRng;
-use rand::Rng;
 
 const HALF_MAX_VALUE: u32 = 2_147_483_647;
 const INCS_AND_DECS_PER_SET: usize = 200_000;
@@ -166,9 +166,9 @@ fn wrap_in_cbor_value_u32(value: u32) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::IntKeyIterator;
     use super::HALF_MAX_VALUE;
     use super::INCS_AND_DECS_PER_SET;
+    use super::IntKeyIterator;
 
     const MAX_VALUE: u32 = 4_294_967_295;
 

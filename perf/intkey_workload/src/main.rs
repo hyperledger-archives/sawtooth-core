@@ -30,9 +30,9 @@ mod intkey_transformer;
 
 use std::convert::From;
 use std::error::Error;
-use std::io::Read;
 use std::fmt;
 use std::fs::File;
+use std::io::Read;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::str::Split;

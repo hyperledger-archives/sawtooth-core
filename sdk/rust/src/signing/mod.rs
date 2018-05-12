@@ -19,9 +19,9 @@
 mod pem_loader;
 pub mod secp256k1;
 
-use std::error::Error as StdError;
 use std;
 use std::borrow::Borrow;
+use std::error::Error as StdError;
 
 #[derive(Debug)]
 pub enum Error {

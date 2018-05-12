@@ -19,10 +19,10 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 use protobuf;
 
+use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
-use sawtooth_sdk::messages::processor::TpProcessRequest;
 
 use smallbank::{Account, SmallbankTransactionPayload,
                 SmallbankTransactionPayload_AmalgamateTransactionData,

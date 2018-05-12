@@ -21,10 +21,10 @@ use rand::Rng;
 use rand::os::OsRng;
 use secp256k1;
 
-use signing::PrivateKey;
-use signing::PublicKey;
 use signing::Context;
 use signing::Error;
+use signing::PrivateKey;
+use signing::PublicKey;
 #[cfg(feature = "pem")]
 use signing::pem_loader::load_pem_key;
 
@@ -201,12 +201,12 @@ fn bytes_to_hex_str(b: &[u8]) -> String {
 
 #[cfg(test)]
 mod secp256k1_test {
-    use super::Secp256k1PrivateKey;
-    use super::Secp256k1PublicKey;
     use super::super::CryptoFactory;
     use super::super::PrivateKey;
     use super::super::PublicKey;
     use super::super::create_context;
+    use super::Secp256k1PrivateKey;
+    use super::Secp256k1PublicKey;
 
     static KEY1_PRIV_HEX: &'static str =
         "2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088";

@@ -20,35 +20,35 @@ extern crate protobuf;
 extern crate rand;
 extern crate zmq;
 
-use std::sync::mpsc::RecvTimeoutError;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
 use std::error::Error;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::RecvTimeoutError;
+use std::time::Duration;
 
 use self::rand::Rng;
 
 pub mod handler;
 
-use protobuf::Message as M;
-use protobuf::repeated::RepeatedField;
-use messages::validator::Message_MessageType;
 use messages::network::PingResponse;
-use messages::processor::TpRegisterRequest;
-use messages::processor::TpUnregisterRequest;
 use messages::processor::TpProcessRequest;
 use messages::processor::TpProcessResponse;
 use messages::processor::TpProcessResponse_Status;
+use messages::processor::TpRegisterRequest;
+use messages::processor::TpUnregisterRequest;
+use messages::validator::Message_MessageType;
 use messaging::stream::MessageConnection;
 use messaging::stream::MessageSender;
-use messaging::zmq_stream::ZmqMessageSender;
-use messaging::stream::SendError;
 use messaging::stream::ReceiveError;
+use messaging::stream::SendError;
 use messaging::zmq_stream::ZmqMessageConnection;
+use messaging::zmq_stream::ZmqMessageSender;
+use protobuf::Message as M;
+use protobuf::RepeatedField;
 
+use self::handler::ApplyError;
 use self::handler::TransactionContext;
 use self::handler::TransactionHandler;
-use self::handler::ApplyError;
 
 /// Generates a random correlation id for use in Message
 fn generate_correlation_id() -> String {

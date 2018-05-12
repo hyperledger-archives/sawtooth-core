@@ -21,8 +21,8 @@ use std::error::Error;
 use std::hash::Hash;
 use std::time::Instant;
 
-use crypto::sha2::Sha512;
 use crypto::digest::Digest;
+use crypto::sha2::Sha512;
 use protobuf;
 use protobuf::Message;
 

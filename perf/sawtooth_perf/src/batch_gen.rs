@@ -24,10 +24,10 @@ use std::fmt;
 use std::io::Read;
 use std::io::Write;
 
-use sawtooth_sdk::messages::transaction::Transaction;
+use self::protobuf::Message;
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchHeader;
-use self::protobuf::Message;
+use sawtooth_sdk::messages::transaction::Transaction;
 
 use sawtooth_sdk::signing;
 
@@ -220,14 +220,14 @@ impl<'a> Iterator for SignedBatchIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::LengthDelimitedMessageSource;
-    use super::TransactionSource;
     use super::SignedBatchProducer;
-    use std::io::{Cursor, Write};
-    use sawtooth_sdk::signing;
-    use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
-    use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+    use super::TransactionSource;
     use super::protobuf;
     use super::protobuf::Message;
+    use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+    use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
+    use sawtooth_sdk::signing;
+    use std::io::{Cursor, Write};
 
     type BatchSource<'a> = LengthDelimitedMessageSource<'a, Batch>;
 

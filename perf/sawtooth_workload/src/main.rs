@@ -19,9 +19,9 @@ extern crate protobuf;
 extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 
+use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::error::Error;
 
 use batch_gen::generate_signed_batches;
 use batch_submit::submit_signed_batches;

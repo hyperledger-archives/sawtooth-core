@@ -23,17 +23,17 @@ use std::fmt;
 use std::io::Read;
 use std::iter::Cycle;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::mpsc;
 use std::thread;
 use std::time;
-use std::sync::Arc;
-use std::sync::mpsc;
-use std::sync::Mutex;
 use std::vec::IntoIter;
 
+use futures::{Future, Stream};
+use hyper::Method;
 use hyper::client::{Client, HttpConnector, Request};
 use hyper::header::{ContentLength, ContentType};
-use hyper::Method;
-use futures::{Future, Stream};
 use protobuf;
 use protobuf::Message;
 use tokio_core::reactor::{Core, Interval};
@@ -43,8 +43,8 @@ use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchList;
 
 use batch_gen::{BatchResult, BatchingError};
-use source::LengthDelimitedMessageSource;
 use batch_map::BatchMap;
+use source::LengthDelimitedMessageSource;
 use workload;
 
 /// Populates a channel from a stream of length-delimited batches.

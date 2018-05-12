@@ -22,12 +22,12 @@ use std::collections::VecDeque;
 use std::io::Cursor;
 
 use cbor;
-use cbor::encoder::{EncodeError, GenericEncoder};
 use cbor::decoder::{DecodeError, GenericDecoder};
-use cbor::value::Value;
-use cbor::value::Key;
+use cbor::encoder::{EncodeError, GenericEncoder};
 use cbor::value::Bytes;
+use cbor::value::Key;
 use cbor::value::Text;
+use cbor::value::Value;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
@@ -37,8 +37,8 @@ use protobuf::Message;
 use protobuf::ProtobufError;
 
 use database::database::DatabaseError;
-use database::lmdb::LmdbDatabase;
 use database::lmdb::DatabaseReader;
+use database::lmdb::LmdbDatabase;
 
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
@@ -323,7 +323,10 @@ impl MerkleDatabase {
         let mut next_change_log = ChangeLogEntry::new();
         next_change_log.set_parent(root_hash_bytes.clone());
         next_change_log.set_additions(protobuf::RepeatedField::from(
-            batch.iter().map(|&(ref hash, _)| hash.clone()).collect(),
+            batch
+                .iter()
+                .map(|&(ref hash, _)| hash.clone())
+                .collect::<Vec<Vec<u8>>>(),
         ));
 
         if current_change_log.is_some() {
@@ -639,19 +642,19 @@ fn hash(input: &[u8]) -> Vec<u8> {
 mod tests {
     use super::*;
     use database::database::DatabaseError;
+    use database::lmdb::DatabaseReader;
     use database::lmdb::LmdbContext;
     use database::lmdb::LmdbDatabase;
-    use database::lmdb::DatabaseReader;
     use proto::merkle::ChangeLogEntry;
 
+    use protobuf;
+    use rand::{seq, thread_rng};
     use std::env;
     use std::fs::remove_file;
-    use std::path::Path;
     use std::panic;
+    use std::path::Path;
     use std::str::from_utf8;
     use std::thread;
-    use rand::{seq, thread_rng};
-    use protobuf;
 
     #[test]
     fn node_serialize() {

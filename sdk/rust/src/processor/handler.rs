@@ -22,19 +22,19 @@ extern crate zmq;
 use protobuf::Message as M;
 use protobuf::RepeatedField;
 
-use std::error::Error as StdError;
 use std;
 use std::borrow::Borrow;
+use std::error::Error as StdError;
 
+use messages::events::Event;
+use messages::events::Event_Attribute;
 use messages::processor::TpProcessRequest;
 use messages::state_context::*;
 use messages::validator::Message_MessageType;
-use messages::events::Event;
-use messages::events::Event_Attribute;
 
 use messaging::stream::MessageSender;
-use messaging::stream::SendError;
 use messaging::stream::ReceiveError;
+use messaging::stream::SendError;
 use messaging::zmq_stream::ZmqMessageSender;
 
 use super::generate_correlation_id;
