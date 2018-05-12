@@ -36,7 +36,7 @@ class TestPoetSmoke(unittest.TestCase):
         endpoints = ['rest-api-{}:8008'.format(i)
                      for i in range(VALIDATOR_COUNT)]
 
-        wait_for_rest_apis(endpoints, tries=10)
+        wait_for_rest_apis(endpoints)
 
         self.clients = [IntkeyClient('http://' + endpoint, WAIT)
                         for endpoint in endpoints]

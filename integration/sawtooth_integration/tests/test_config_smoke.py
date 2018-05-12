@@ -45,6 +45,8 @@ class TestConfigSmoke(unittest.TestCase):
         self._data_dir = os.path.join(self._temp_dir, 'data')
         os.makedirs(self._data_dir)
 
+        self._batch_file = os.path.join(self._temp_dir, 'batch')
+
         # create a private key for signing
         self._priv_file = os.path.join(self._temp_dir, 'test.priv')
         with open(self._priv_file, 'wb') as priv:
@@ -87,7 +89,9 @@ class TestConfigSmoke(unittest.TestCase):
         # Submit transaction, then list it using subprocess
         cmds = [
             ['sawset', 'proposal', 'create', '-k', self._priv_file,
-             '--url', 'http://rest-api:8008', 'x=1', 'y=1'],
+             '--output', self._batch_file, 'x=1', 'y=1'],
+            ['sawtooth', 'batch', 'submit', '--url', 'http://rest-api:8008',
+             '--wait', '--filename', self._batch_file],
             ['sawtooth', 'settings', 'list', '--url',
              'http://rest-api:8008']
         ]
