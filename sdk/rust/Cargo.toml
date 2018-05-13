@@ -16,19 +16,19 @@
 [package]
 name = "sawtooth_sdk"
 version = "0.1.0"
-authors = ["sawtooth"]
+authors = [ "Hyperledger Sawtooth Maintainers" ]
 
 [dependencies]
-protobuf="1.4.1"
-secp256k1 = "0.7.1"
-rust-crypto = "0.2.36"
-zmq = "0.8"
-uuid = { version = "0.5", features = ["v4"] }
-log = "0.3"
-libc = "0.2"
+protobuf = "~1.4.4"
+secp256k1 = "~0.7.1"
+rust-crypto = "~0.2.36"
+zmq = "~0.8"
+uuid = { version = "~0.5", features = ["v4"] }
+log = "~0.3"
+libc = "~0.2"
 
 [dev-dependencies]
-env_logger = "0.3"
+env_logger = "~0.3"
 
 [build-dependencies]
-cc = "1.0"
+cc = "~1.0"
