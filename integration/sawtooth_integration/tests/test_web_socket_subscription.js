@@ -57,7 +57,7 @@ ws.onmessage = function(event) {
   if (block_num == -1) {
     phantom.exit(1);
   }
-  if (block_num == 5) {
+  if (block_num >= 5) {
     phantom.exit(0);
   }
 };
