@@ -868,6 +868,7 @@ mod tests {
     use super::{BlockManager, BlockManagerError};
     use block::Block;
     use journal::NULL_BLOCK_IDENTIFIER;
+    use journal::block_store::InMemoryBlockStore;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
         Block {
@@ -1047,5 +1048,61 @@ mod tests {
         assert_eq!(branch_diff_iter4.next(), Some(&e));
         assert_eq!(branch_diff_iter4.next(), Some(&d));
         assert_eq!(branch_diff_iter4.next(), None);
+    }
+
+    #[test]
+    fn test_persist_ref_unref() {
+        let mut block_manager = BlockManager::new();
+
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "A", 1);
+        let d = create_block("D", "C", 2);
+        let e = create_block("E", "D", 3);
+        let f = create_block("F", "C", 2);
+
+        let q = create_block("Q", "F", 3);
+        let p = create_block("P", "E", 4);
+
+        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
+        block_manager
+            .put(vec![c.clone(), d.clone(), e.clone()])
+            .unwrap();
+        block_manager.put(vec![f.clone()]).unwrap();
+
+        let blockstore = Box::new(InMemoryBlockStore::new());
+        block_manager.add_store("commit", blockstore).unwrap();
+
+        block_manager.persist("C", "commit").unwrap();
+        block_manager.persist("B", "commit").unwrap();
+
+        block_manager.ref_block("D").unwrap();
+
+        block_manager.persist("C", "commit").unwrap();
+        block_manager.unref_block("B").unwrap();
+
+        block_manager.persist("F", "commit").unwrap();
+        block_manager.persist("E", "commit").unwrap();
+
+        block_manager.unref_block("F").unwrap();
+        block_manager.unref_block("D").unwrap();
+
+        block_manager.persist("A", "commit").unwrap();
+
+        block_manager.unref_block("E").unwrap();
+
+        assert_eq!(
+            block_manager.put(vec![q]),
+            Err(BlockManagerError::MissingPredecessor(format!(
+                "During Put, missing predecessor of block Q: F"
+            )))
+        );
+
+        assert_eq!(
+            block_manager.put(vec![p]),
+            Err(BlockManagerError::MissingPredecessor(format!(
+                "During Put, missing predecessor of block P: E"
+            )))
+        );
     }
 }
