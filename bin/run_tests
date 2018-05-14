@@ -275,6 +275,7 @@ test_validator() {
     run_docker_test test_namespace_restriction
     copy_coverage .coverage.namespace_restriction
     run_docker_test test_state_verifier --timeout 30
+    run_docker_test test_consensus_engine_api
     run_docker_test ./validator/tests/unit_rust_validator.yaml
 }
 
