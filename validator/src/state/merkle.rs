@@ -39,6 +39,7 @@ use protobuf::ProtobufError;
 use database::database::DatabaseError;
 use database::lmdb::DatabaseReader;
 use database::lmdb::LmdbDatabase;
+use database::lmdb::LmdbDatabaseWriter;
 
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
@@ -61,6 +62,8 @@ pub enum MerkleDatabaseError {
     SerializationError(EncodeError),
     ChangeLogEncodingError(String),
     InvalidRecord,
+    InvalidHash(String),
+    InvalidChangeLogIndex(String),
     DatabaseError(DatabaseError),
     UnknownError,
 }
@@ -110,6 +113,65 @@ impl MerkleDatabase {
             root_node,
             db,
         })
+    }
+
+    /// Prunes nodes that are no longer needed under a given state root
+    /// Returns a list of addresses that were deleted
+    pub fn prune(db: &LmdbDatabase, merkle_root: &str) -> Result<Vec<String>, MerkleDatabaseError> {
+        let root_bytes = ::hex::decode(merkle_root).map_err(|_| {
+            MerkleDatabaseError::InvalidHash(format!("{} is not a valid hash", merkle_root))
+        })?;
+        let mut db_writer = db.writer()?;
+        let change_log = get_change_log(&db_writer, &root_bytes)?;
+
+        if change_log.is_none() {
+            // There's no change log for this entry
+            return Ok(vec![]);
+        }
+
+        let change_log = change_log.unwrap();
+        let removed_addresses = if change_log.get_successors().len() > 1 {
+            // Currently, we don't clean up a parent with multiple successors
+            vec![]
+        } else if change_log.get_successors().len() == 0 {
+            // deleting the tip of a trie lineage
+            for hash in change_log.get_additions() {
+                let hash_hex = ::hex::encode(hash);
+                delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
+            }
+
+            db_writer.index_delete(CHANGE_LOG_INDEX, &root_bytes)?;
+            let parent_root_bytes = &change_log.get_parent();
+
+            if let Some(ref mut parent_change_log) =
+                get_change_log(&db_writer, parent_root_bytes)?.as_mut()
+            {
+                let successors = parent_change_log.take_successors();
+                let new_successors = successors
+                    .into_iter()
+                    .filter(|successor| root_bytes != successor.get_successor())
+                    .collect::<Vec<_>>();
+                parent_change_log.set_successors(protobuf::RepeatedField::from_vec(new_successors));
+
+                write_change_log(&mut db_writer, parent_root_bytes, &parent_change_log)?;
+            }
+
+            change_log.get_additions().to_vec()
+        } else {
+            // deleting a parent
+            let mut successor = change_log.get_successors().first().unwrap();
+            for hash in successor.get_deletions() {
+                let hash_hex = ::hex::encode(hash);
+                delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
+            }
+
+            db_writer.index_delete(CHANGE_LOG_INDEX, &root_bytes)?;
+
+            successor.get_deletions().to_vec()
+        };
+
+        db_writer.commit()?;
+        Ok(removed_addresses.iter().map(::hex::encode).collect())
     }
 
     /// Returns the current merkle root for this MerkleDatabase
@@ -311,7 +373,7 @@ impl MerkleDatabase {
             db_writer.put(::hex::encode(key).as_bytes(), &value)?;
         }
 
-        let mut current_change_log = self.get_change_log(&db_writer, &root_hash_bytes)?;
+        let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
         if let Some(change_log) = current_change_log.as_mut() {
             let mut successors = change_log.mut_successors();
             let mut successor = ChangeLogEntry_Successor::new();
@@ -330,36 +392,16 @@ impl MerkleDatabase {
         ));
 
         if current_change_log.is_some() {
-            db_writer.index_put(
-                CHANGE_LOG_INDEX,
+            write_change_log(
+                &mut db_writer,
                 &root_hash_bytes,
-                &current_change_log.unwrap().write_to_bytes()?,
+                &current_change_log.unwrap(),
             )?;
         }
-        db_writer.index_put(
-            CHANGE_LOG_INDEX,
-            successor_root_hash,
-            &next_change_log.write_to_bytes()?,
-        )?;
+        write_change_log(&mut db_writer, successor_root_hash, &next_change_log)?;
 
         db_writer.commit()?;
         Ok(())
-    }
-
-    fn get_change_log<R>(
-        &self,
-        db_reader: &R,
-        root_hash: &[u8],
-    ) -> Result<Option<ChangeLogEntry>, MerkleDatabaseError>
-    where
-        R: DatabaseReader,
-    {
-        let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
-
-        Ok(match log_bytes {
-            Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
-            None => None,
-        })
     }
 
     fn get_by_address(&self, address: &str) -> Result<Node, MerkleDatabaseError> {
@@ -485,6 +527,51 @@ fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
     Ok(hex_hash)
 }
 
+/// Returns the change log entry for a given root hash.
+fn get_change_log<R>(
+    db_reader: &R,
+    root_hash: &[u8],
+) -> Result<Option<ChangeLogEntry>, MerkleDatabaseError>
+where
+    R: DatabaseReader,
+{
+    let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
+
+    Ok(match log_bytes {
+        Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+        None => None,
+    })
+}
+
+/// Writes the given change log entry to the database
+fn write_change_log(
+    db_writer: &mut LmdbDatabaseWriter,
+    root_hash: &[u8],
+    change_log: &ChangeLogEntry,
+) -> Result<(), MerkleDatabaseError> {
+    Ok(db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?)
+}
+
+/// This delete ignores any MDB_NOTFOUND errors
+fn delete_ignore_missing(
+    db_writer: &mut LmdbDatabaseWriter,
+    key: &[u8],
+) -> Result<(), MerkleDatabaseError> {
+    match db_writer.delete(key) {
+        Err(DatabaseError::WriterError(ref s))
+            if s == "MDB_NOTFOUND: No matching key/data pair found" =>
+        {
+            // This can be ignored, as the record doesn't exist
+            debug!(
+                "Attempting to delete a missing entry: {}",
+                ::hex::encode(key)
+            );
+            Ok(())
+        }
+        Err(err) => Err(MerkleDatabaseError::DatabaseError(err)),
+        Ok(_) => Ok(()),
+    }
+}
 /// Encodes the given node, and returns the hash of the bytes.
 fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), MerkleDatabaseError> {
     let packed = node.into_bytes()?;
@@ -944,6 +1031,175 @@ mod tests {
                 assert!(merkle_db.get(&address).is_err());
             }
         })
+    }
+
+    #[test]
+    /// This test creates a merkle trie with multiple entries, and produces a
+    /// second trie based on the first where an entry is change.
+    ///
+    /// - It verifies that both tries have a ChangeLogEntry
+    /// - Prunes the parent trie
+    /// - Verifies that the nodes written are gone
+    /// - verifies that the parent trie's ChangeLogEntry is deleted
+    fn merkle_trie_pruning_parent() {
+        run_test(|merkle_path| {
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
+            let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
+            updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
+            updates.insert("ab0a01".to_string(), "0002".as_bytes().to_vec());
+            updates.insert("abff00".to_string(), "0003".as_bytes().to_vec());
+
+            let parent_root = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+
+            let parent_root_bytes = ::hex::decode(parent_root.clone()).expect("Proper hex");
+            // check that we have a change log entry for the new root
+            let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            assert!(parent_change_log.get_successors().is_empty());
+
+            assert_value_at_address(&merkle_db, "ab0000", "0001");
+            assert_value_at_address(&merkle_db, "ab0a01", "0002");
+            assert_value_at_address(&merkle_db, "abff00", "0003");
+
+            let successor_root = merkle_db
+                .set("ab0000", "test".as_bytes())
+                .expect("Set failed to work");
+            let successor_root_bytes = ::hex::decode(successor_root.clone()).expect("proper hex");
+
+            // Load the parent change log after the change.
+            parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            let successor_change_log = expect_change_log(&db, &successor_root_bytes);
+
+            assert_has_successors(&parent_change_log, &[&successor_root_bytes]);
+            assert_eq!(parent_root_bytes, successor_change_log.get_parent());
+
+            merkle_db
+                .set_merkle_root(successor_root)
+                .expect("Unable to apply the new merkle root");
+            assert_eq!(
+                parent_change_log
+                    .get_successors()
+                    .first()
+                    .unwrap()
+                    .get_deletions()
+                    .len(),
+                MerkleDatabase::prune(&db, &parent_root)
+                    .expect("Prune should have no errors")
+                    .len()
+            );
+
+            let reader = db.reader().unwrap();
+            for addition in parent_change_log.get_additions() {
+                assert!(reader.get(addition).is_none());
+            }
+
+            assert!(
+                reader
+                    .index_get(CHANGE_LOG_INDEX, &parent_root_bytes)
+                    .expect("DB query should succeed")
+                    .is_none()
+            );
+
+            assert!(merkle_db.set_merkle_root(parent_root).is_err());
+        })
+    }
+
+    #[test]
+    /// This test creates a merkle trie with multiple entries and produces two
+    /// distinct successor tries from that first.
+    ///
+    /// - it verifies that all the tries have a ChangeLogEntry
+    /// - it prunes one of the successors
+    /// - it verifies the nodes from that successor are removed
+    /// - it verifies that the pruned successor's ChangeLogEntry is removed
+    /// - it verifies the original and the remaining successor still are
+    ///   persisted
+    fn merkle_trie_pruinng_successors() {
+        run_test(|merkle_path| {
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
+            let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
+            updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
+            updates.insert("ab0a01".to_string(), "0002".as_bytes().to_vec());
+            updates.insert("abff00".to_string(), "0003".as_bytes().to_vec());
+
+            let parent_root = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+            let parent_root_bytes = ::hex::decode(parent_root.clone()).expect("Proper hex");
+
+            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+            assert_value_at_address(&merkle_db, "ab0000", "0001");
+            assert_value_at_address(&merkle_db, "ab0a01", "0002");
+            assert_value_at_address(&merkle_db, "abff00", "0003");
+
+            let successor_root_left = merkle_db
+                .set("ab0000", "left".as_bytes())
+                .expect("Set failed to work");
+            let successor_root_left_bytes =
+                ::hex::decode(successor_root_left.clone()).expect("proper hex");
+
+            let successor_root_right = merkle_db
+                .set("ab0a01", "right".as_bytes())
+                .expect("Set failed to work");
+            let successor_root_right_bytes =
+                ::hex::decode(successor_root_right.clone()).expect("proper hex");
+
+            let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            let successor_left_change_log = expect_change_log(&db, &successor_root_left_bytes);
+            expect_change_log(&db, &successor_root_right_bytes);
+
+            assert_has_successors(
+                &parent_change_log,
+                &[&successor_root_left_bytes, &successor_root_right_bytes],
+            );
+
+            // Let's prune the left successor:
+
+            assert_eq!(
+                successor_left_change_log.get_additions().len(),
+                MerkleDatabase::prune(&db, &successor_root_left)
+                    .expect("Prune should have no errors")
+                    .len()
+            );
+
+            parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            assert_has_successors(&parent_change_log, &[&successor_root_right_bytes]);
+
+            assert!(merkle_db.set_merkle_root(successor_root_left).is_err());
+        })
+    }
+
+    fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
+        let reader = db.reader().unwrap();
+        protobuf::parse_from_bytes(&reader
+            .index_get(CHANGE_LOG_INDEX, root_hash)
+            .expect("No db errors")
+            .expect("A change log entry"))
+            .expect("The change log entry to have bytes")
+    }
+
+    fn assert_has_successors(change_log: &ChangeLogEntry, successor_roots: &[&[u8]]) {
+        assert_eq!(successor_roots.len(), change_log.get_successors().len());
+        for successor_root in successor_roots {
+            let mut has_root = false;
+            for successor in change_log.get_successors() {
+                if &successor.get_successor() == successor_root {
+                    has_root = true;
+                    break;
+                }
+            }
+            if !has_root {
+                panic!(format!(
+                    "Root {} not found in change log {:?}",
+                    ::hex::encode(successor_root),
+                    change_log
+                ));
+            }
+        }
     }
 
     #[test]

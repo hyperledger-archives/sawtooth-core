@@ -35,7 +35,9 @@ pub enum ErrorCode {
     // output errors
     DatabaseError = 0x11,
     NotFound = 0x12,
-    StopIteration = 0x13,
+    InvalidChangeLogIndex = 0x13,
+
+    StopIteration = 0xF0,
 
     Unknown = 0xFF,
 }
@@ -435,6 +437,54 @@ pub extern "C" fn merkle_db_update(
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
             }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn merkle_db_prune(
+    state_database: *mut c_void,
+    root: *const c_char,
+    result: *mut bool,
+) -> ErrorCode {
+    if state_database.is_null() {
+        return ErrorCode::NullPointerProvided;
+    }
+    if root.is_null() {
+        return ErrorCode::NullPointerProvided;
+    }
+
+    let state_root = unsafe {
+        match CStr::from_ptr(root).to_str() {
+            Ok(s) => s,
+            Err(_) => return ErrorCode::InvalidHashString,
+        }
+    };
+
+    let db_ref = unsafe { (state_database as *const LmdbDatabase).as_ref().unwrap() };
+
+    match MerkleDatabase::prune(db_ref, &state_root) {
+        Ok(results) => {
+            unsafe {
+                *result = !results.is_empty();
+            }
+            ErrorCode::Success
+        }
+        Err(MerkleDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
+        Err(MerkleDatabaseError::InvalidChangeLogIndex(msg)) => {
+            error!(
+                "Invalid Change Log Index while pruning {}: {}",
+                state_root, msg
+            );
+            ErrorCode::InvalidChangeLogIndex
+        }
+        Err(MerkleDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }

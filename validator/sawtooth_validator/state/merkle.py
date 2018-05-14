@@ -76,6 +76,15 @@ class MerkleDatabase(object):
         except KeyError:
             return False
 
+    @staticmethod
+    def prune(database, merkle_root):
+        c_root_hash = ctypes.c_char_p(merkle_root.encode())
+        c_result = ctypes.c_bool()
+        _libexec('merkle_db_prune', database.pointer, c_root_hash,
+                 ctypes.byref(c_result))
+
+        return c_result.value
+
     def get_merkle_root(self):
         (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
         _libexec('merkle_db_get_merkle_root', self._merkle_db_ptr,
@@ -196,6 +205,8 @@ def _libexec(name, *args):
     elif res == ErrorCode.InvalidAddress:
         raise KeyError(
             "Address was not valid ")
+    elif res == ErrorCode.InvalidChangeLogIndex:
+        raise ValueError("The Change Log index is in an invalid state")
     elif res == ErrorCode.StopIteration:
         raise StopIteration()
     elif res == ErrorCode.Unknown:
@@ -267,5 +278,7 @@ class ErrorCode(IntEnum):
     # output errors
     DatabaseError = 0x11
     NotFound = 0x12
-    StopIteration = 0x13
+    InvalidChangeLogIndex = 0x13
+
+    StopIteration = 0xF0
     Unknown = 0xFF
