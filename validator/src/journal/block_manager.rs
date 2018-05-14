@@ -20,7 +20,7 @@ use std::collections::HashSet;
 
 use block::Block;
 use journal::NULL_BLOCK_IDENTIFIER;
-use journal::block_store::BlockStore;
+use journal::block_store::{BlockStore, BlockStoreError};
 
 #[derive(Debug, PartialEq)]
 pub enum BlockManagerError {
@@ -29,6 +29,13 @@ pub enum BlockManagerError {
     MissingInput,
     UnknownBlock,
     UnknownBlockStore,
+    BlockStoreError,
+}
+
+impl From<BlockStoreError> for BlockManagerError {
+    fn from(_other: BlockStoreError) -> Self {
+        BlockManagerError::BlockStoreError
+    }
 }
 
 /// Anchors hold reference count information for blocks that are just on the inside edge
@@ -45,6 +52,7 @@ impl Anchors {
         &mut self,
         block_id: &str,
         blockstore_name: &str,
+        block_num: u64,
         external_ref_count: u64,
         internal_ref_count: u64,
     ) {
@@ -53,6 +61,7 @@ impl Anchors {
             external_ref_count,
             internal_ref_count,
             block_id: block_id.into(),
+            block_num,
         };
         self.anchors_by_block_id.insert(block_id.into(), anchor);
 
@@ -85,7 +94,6 @@ impl Anchors {
                 let anchors = self.anchors_by_blockstore_name
                     .get_mut(anchor.blockstore_name.as_str())
                     .expect("Anchors in anchor_by_block_id and anchors_by_blockstore_name lost integrity");
-
                 anchors.remove(block.header_signature.as_str());
                 RefBlock::new(block, anchor.external_ref_count, anchor.internal_ref_count)
             })
@@ -160,6 +168,7 @@ struct Anchor {
     pub blockstore_name: String,
     pub external_ref_count: u64,
     pub internal_ref_count: u64,
+    pub block_num: u64,
     pub block_id: String,
 }
 
@@ -344,6 +353,11 @@ impl BlockManager {
             .map(|ref ref_block| &ref_block.block)
     }
 
+    fn insert_block_by_block_id(&mut self, block: RefBlock) {
+        self.block_by_block_id
+            .insert(block.block.header_signature.clone(), block);
+    }
+
     fn get_block_from_main_cache_or_blockstore_name(
         &self,
         block_id: &str,
@@ -508,8 +522,110 @@ impl BlockManager {
         Ok(())
     }
 
+    fn remove_blocks_from_blockstore(
+        &mut self,
+        head: &str,
+        other: &str,
+        store_name: &str,
+    ) -> Result<(), BlockManagerError> {
+        let to_be_removed: Vec<Block> = self.branch_diff(other, head).cloned().collect();
+
+        {
+            let blockstore = self.blockstore_by_name
+                .get_mut(store_name)
+                .ok_or(BlockManagerError::UnknownBlockStore)?;
+
+            blockstore.delete(
+                to_be_removed
+                    .iter()
+                    .map(|b| b.header_signature.clone())
+                    .collect(),
+            )?;
+        }
+
+        let (have_anchors, no_anchors) = to_be_removed
+            .into_iter()
+            .partition(|b| self.anchors.contains(b.header_signature.as_str()));
+
+        for ref_block in self.anchors.convert(have_anchors) {
+            self.insert_block_by_block_id(ref_block);
+        }
+
+        for block in no_anchors {
+            self.insert_block_by_block_id(RefBlock::new_reffed_block(block));
+        }
+
+        Ok(())
+    }
+
+    fn insert_blocks_in_blockstore(
+        &mut self,
+        head: &str,
+        other: &str,
+        store_name: &str,
+    ) -> Result<(), BlockManagerError> {
+        let to_be_inserted: Vec<Block> = self.branch_diff(head, other).cloned().collect();
+
+        let block_by_block_id = &self.block_by_block_id;
+        if let Some((head, tail)) = to_be_inserted.split_first() {
+            let ref_block = block_by_block_id
+                .get(head.header_signature.as_str())
+                .expect("A block that is being inserted in the blockstore will already be in the main cache.");
+
+            self.anchors.add_anchor(
+                head.header_signature.as_str(),
+                store_name,
+                head.block_num,
+                ref_block.external_ref_count,
+                ref_block.internal_ref_count,
+            );
+
+            for block in tail {
+                let ref_block = block_by_block_id
+                    .get(block.header_signature.as_str())
+                    .expect("A block that is being inserted in the blockstore will already be in the main cache.");
+                if ref_block.external_ref_count > 0 || ref_block.internal_ref_count > 0 {
+                    self.anchors.add_anchor(
+                        block.header_signature.as_str(),
+                        store_name,
+                        block.block_num,
+                        ref_block.external_ref_count,
+                        ref_block.internal_ref_count,
+                    );
+                }
+            }
+        }
+
+        let blockstore = self.blockstore_by_name
+            .get_mut(store_name)
+            .ok_or(BlockManagerError::UnknownBlockStore)?;
+        blockstore.put(to_be_inserted)?;
+        Ok(())
+    }
+
     pub fn persist(&mut self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
-        unimplemented!()
+        if !self.blockstore_by_name.contains_key(store_name) {
+            return Err(BlockManagerError::UnknownBlockStore);
+        }
+
+        let head_block_in_blockstore = self.anchors
+            .iter_by_blockstore(store_name)
+            .max_by_key(|anchor| anchor.block_num)
+            .map(|anchor| anchor.block_id.clone());
+
+        if let Some(head_block_in_blockstore) = head_block_in_blockstore {
+            let other = head_block_in_blockstore.as_str();
+
+            self.remove_blocks_from_blockstore(head, other, store_name)?;
+
+            self.insert_blocks_in_blockstore(head, other, store_name)?;
+        } else {
+            // There are no other blocks in the blockstore and so
+            // we would like to insert all of the blocks
+            self.insert_blocks_in_blockstore(head, "NULL", store_name)?;
+        }
+
+        Ok(())
     }
 }
 
