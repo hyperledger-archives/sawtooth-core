@@ -114,7 +114,7 @@ def start_node(num,
                                 validator_cmd_func,
                                 poet_kwargs)
 
-    wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)], tries=20)
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)])
 
     return [rest_api] + processors + [validator]
 

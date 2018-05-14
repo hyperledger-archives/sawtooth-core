@@ -39,7 +39,7 @@ class TestPeerList(unittest.TestCase):
         endpoints = ['rest-api-{}:8008'.format(i)
                      for i in range(len(EXPECTED))]
 
-        wait_for_rest_apis(endpoints, tries=10)
+        wait_for_rest_apis(endpoints)
 
     def test_peer_list(self):
         '''Test various CLI commands for reporting peers.
