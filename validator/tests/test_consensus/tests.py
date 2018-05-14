@@ -2,6 +2,9 @@ import unittest
 from unittest.mock import Mock
 
 from sawtooth_validator.consensus import handlers
+from sawtooth_validator.consensus.proxy import ConsensusProxy
+
+from sawtooth_validator.journal.publisher import FinalizeBlockResult
 
 
 class TestHandlers(unittest.TestCase):
@@ -132,3 +135,82 @@ class TestHandlers(unittest.TestCase):
         handler.handle(None, request.SerializeToString())
         self.mock_proxy.state_get.assert_called_with(
             request.block_id, request.addresses)
+
+
+class TestProxy(unittest.TestCase):
+
+    def setUp(self):
+        self._mock_block_cache = {}
+        self._mock_block_publisher = Mock()
+        self._mock_chain_controller = Mock()
+        self._proxy = ConsensusProxy(
+            block_cache=self._mock_block_cache,
+            chain_controller=self._mock_chain_controller,
+            block_publisher=self._mock_block_publisher)
+
+    def test_send_to(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.send_to(None, None)
+
+    def test_broadcast(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.broadcast(None)
+
+    # Using block publisher
+    def test_initialize_block(self):
+        self._proxy.initialize_block(None)
+        self._mock_block_publisher.initialize_block.assert_called_with(
+            self._mock_chain_controller.chain_head)
+
+        self._mock_block_cache["34"] = "a block"
+        self._proxy.initialize_block(previous_id=bytes([0x34]))
+        self._mock_block_publisher\
+            .initialize_block.assert_called_with("a block")
+
+    def test_finalize_block(self):
+        self._mock_block_publisher.finalize_block.return_value =\
+            FinalizeBlockResult(
+                block=None,
+                remaining_batches=None,
+                last_batch=None,
+                injected_batches=None)
+
+        data = bytes([0x56])
+        self._proxy.finalize_block(data)
+        self._mock_block_publisher.finalize_block.assert_called_with(
+            consensus=data)
+        self._mock_block_publisher.publish_block.assert_called_with(None, None)
+
+    def test_cancel_block(self):
+        self._proxy.cancel_block()
+        self._mock_block_publisher.cancel_block.assert_called_with()
+
+    # Using chain controller
+    def test_check_block(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.check_block(None)
+
+    def test_commit_block(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.commit_block(None)
+
+    def test_ignore_block(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.ignore_block(None)
+
+    def test_fail_block(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.fail_block(None)
+
+    # Using blockstore and state database
+    def test_blocks_get(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.blocks_get(None)
+
+    def test_settings_get(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.settings_get(None, None)
+
+    def test_state_get(self):
+        with self.assertRaises(NotImplementedError):
+            self._proxy.state_get(None, None)
