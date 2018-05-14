@@ -38,7 +38,8 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
 from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
 from sawtooth_validator.journal.chain_commit_state import MissingDependency
-from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal import publisher
+from sawtooth_validator.journal import publisher_ce
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
@@ -136,7 +137,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.state_view_factory = MockStateViewFactory({})
         self.permission_verifier = MockPermissionVerifier()
 
-        self.publisher = BlockPublisher(
+        self.publisher = publisher.BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
@@ -295,7 +296,7 @@ class TestBlockPublisher(unittest.TestCase):
         Test that no block is published with
         batches rejected by the scheduler
         '''
-        self.publisher = BlockPublisher(
+        self.publisher = publisher.BlockPublisher(
             transaction_executor=MockTransactionExecutor(
                 batch_execution_result=False),
             block_cache=self.block_tree_manager.block_cache,
@@ -332,7 +333,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.state_view_factory = MockStateViewFactory(
             {addr: value})
 
-        self.publisher = BlockPublisher(
+        self.publisher = publisher.BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
@@ -389,7 +390,7 @@ class TestBlockPublisher(unittest.TestCase):
 
         injected_batch = self.make_batch()
 
-        self.publisher = BlockPublisher(
+        self.publisher = publisher.BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
@@ -435,7 +436,7 @@ class TestBlockPublisher(unittest.TestCase):
         batch1 = self.make_batch(txn_count=1)
         batch2 = self.make_batch(txn_count=1)
 
-        self.publisher = BlockPublisher(
+        self.publisher = publisher.BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
@@ -520,6 +521,421 @@ class TestBlockPublisher(unittest.TestCase):
 
     def publish_block(self):
         self.publisher.on_check_publish_block()
+        self.result_block = self.block_sender.new_block
+        self.block_sender.new_block = None
+
+    def update_chain_head(self, head, committed=None, uncommitted=None):
+        if head:
+            self.block_tree_manager.block_store.update_chain([head])
+        self.publisher.on_chain_updated(
+            chain_head=head,
+            committed_batches=committed,
+            uncommitted_batches=uncommitted)
+
+    # batches
+    def make_batch(self, missing_deps=False, txn_count=2):
+        return self.block_tree_manager.generate_batch(
+            txn_count=txn_count,
+            missing_deps=missing_deps)
+
+    def make_batches(self, batch_count=None, missing_deps=False):
+        if batch_count is None:
+            batch_count = self.batch_count
+
+        return [self.make_batch(missing_deps=missing_deps)
+                for _ in range(batch_count)]
+
+    def make_batches_with_duplicate_txn(self):
+        txns = [self.batches[0].transactions[0],
+                self.block_tree_manager.generate_transaction("nonce")]
+        return [self.block_tree_manager.generate_batch(txns=txns)]
+
+
+class TestBlockPublisherCE(unittest.TestCase):
+    '''
+    The block publisher has three main functions, and in these tests
+    those functions are given the following wrappers for convenience:
+        * on_batch_received -> receive_batches
+        * on_chain_updated -> update_chain_head
+        * on_check_publish_block -> publish_block
+
+    After publishing a block, publish_block sends its block to the
+    mock block sender, and that block is named result_block. This block
+    is what is checked by the test assertions.
+
+    The basic pattern for the publisher tests (with variations) is:
+        0) make a list of batches (usually in setUp);
+        1) receive the batches;
+        2) publish a block;
+        3) verify the block (checking that it contains the correct batches,
+           or checking that it doesn't exist, or whatever).
+
+    The publisher chain head might be updated several times in a test.
+    '''
+
+    def setUp(self):
+        self.block_tree_manager = BlockTreeManager()
+        self.block_sender = MockBlockSender()
+        self.batch_sender = MockBatchSender()
+        self.state_view_factory = MockStateViewFactory({})
+        self.permission_verifier = MockPermissionVerifier()
+
+        self.publisher = publisher_ce.BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            batch_observers=[],
+            permission_verifier=self.permission_verifier)
+
+        self.init_chain_head = self.block_tree_manager.chain_head
+
+        self.result_block = None
+
+        # A list of batches is created at the beginning of each test.
+        # The test assertions and the publisher function wrappers
+        # take these batches as a default argument.
+        self.batch_count = 8
+        self.batches = self.make_batches()
+
+    def test_publish(self):
+        '''
+        Publish a block with several batches
+        '''
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_reject_duplicate_batches_from_receive(self):
+        '''
+        Test that duplicate batches from on_batch_received are rejected
+        '''
+        for _ in range(5):
+            self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_reject_duplicate_batches_from_store(self):
+        '''
+        Test that duplicate batches from block store are rejected
+        '''
+        self.update_chain_head(
+            head=self.init_chain_head,
+            uncommitted=self.batches)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_committed_batches(self):
+        '''
+        Test that batches committed upon updating the chain head
+        are not included in the next block.
+        '''
+        self.update_chain_head(
+            head=self.init_chain_head,
+            committed=self.batches)
+
+        new_batches = self.make_batches(batch_count=12)
+
+        self.receive_batches(new_batches)
+
+        self.publish_block()
+
+        self.verify_block(new_batches)
+
+    def test_uncommitted_batches(self):
+        '''
+        Test that batches uncommitted upon updating the chain head
+        are included in the next block.
+        '''
+        self.update_chain_head(
+            head=self.init_chain_head,
+            uncommitted=self.batches)
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_empty_pending_queue(self):
+        '''
+        Test that no block is published if the pending queue is empty
+        '''
+        # try to publish with no pending queue (failing)
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+        self.publisher.cancel_block()
+
+        # receive batches, then try again (succeeding)
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.verify_block()
+
+    def test_missing_dependencies(self):
+        '''
+        Test that no block is published with missing dependencies
+        '''
+        self.batches = self.make_batches(
+            missing_deps=True)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+    def test_batches_rejected_by_scheduler(self):
+        '''
+        Test that no block is published with
+        batches rejected by the scheduler
+        '''
+        self.publisher = publisher_ce.BlockPublisher(
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=False),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            batch_observers=[],
+            permission_verifier=self.permission_verifier)
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_no_block_published()
+
+    def test_max_block_size(self):
+        '''
+        Test block publisher obeys the block size limits
+        '''
+        # Create a publisher that has a state view
+        # with a batch limit
+        addr, value = CreateSetting(
+            'sawtooth.publisher.max_batches_per_block', 1)
+        self.state_view_factory = MockStateViewFactory(
+            {addr: value})
+
+        self.publisher = publisher_ce.BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            batch_observers=[],
+            permission_verifier=self.permission_verifier)
+
+        self.assert_no_block_published()
+
+        # receive batches, then try again (succeeding)
+        self.receive_batches()
+
+        # try to publish with no pending queue (failing)
+        for i in range(self.batch_count):
+            self.publish_block()
+            self.assert_block_published()
+            self.update_chain_head(BlockWrapper(self.result_block))
+            self.verify_block([self.batches[i]])
+
+    def test_duplicate_transactions(self):
+        '''
+        Test discards batches that have duplicate transactions in them.
+        '''
+        # receive batches, then try again (succeeding)
+        self.batches = self.batches[1:2]
+        self.receive_batches()
+        self.publish_block()
+        self.assert_block_published()
+        self.update_chain_head(BlockWrapper(self.result_block))
+        self.verify_block()
+
+        # build a new set of batches with the same transactions in them
+        self.batches = self.make_batches_with_duplicate_txn()
+        self.receive_batches()
+        self.publish_block()
+        self.assert_no_block_published()  # block should be empty after batch
+        # with duplicate transaction is dropped.
+
+    def test_batch_injection_start_block(self):
+        '''
+        Test that the batch is injected at the beginning of the block.
+        '''
+
+        injected_batch = self.make_batch()
+
+        self.publisher = publisher_ce.BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier,
+            batch_observers=[],
+            batch_injector_factory=MockBatchInjectorFactory(injected_batch))
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_batch_in_block(injected_batch)
+
+    def test_validation_rules_reject_batches(self):
+        """Test that a batch is not added to the block if it will violate the
+        block validation rules.
+
+        It does the following:
+
+        - Sets the block_validation_rules to limit the number of 'test'
+          transactions to 1
+        - creates two batches, limited to 1 transaction each, and receives
+          them
+        - verifies that only the first batch was committed to the block
+        """
+        addr, value = CreateSetting(
+            'sawtooth.validator.block_validation_rules', 'NofX:1,test')
+        self.state_view_factory = MockStateViewFactory(
+            {addr: value})
+
+        batch1 = self.make_batch(txn_count=1)
+        batch2 = self.make_batch(txn_count=1)
+
+        self.publisher = publisher_ce.BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            batch_observers=[],
+            permission_verifier=self.permission_verifier)
+
+        self.receive_batches(batches=[batch1, batch2])
+
+        self.publish_block()
+
+        self.assert_block_batch_count(1)
+        self.assert_batch_in_block(batch1)
+
+    # assertions
+    def assert_block_published(self):
+        self.assertIsNotNone(
+            self.result_block,
+            'Block should have been published')
+
+    def assert_no_block_published(self):
+        self.assertIsNone(
+            self.result_block,
+            'Block should not have been published')
+
+    def assert_batch_in_block(self, batch):
+        self.assertIn(
+            batch,
+            tuple(self.result_block.batches),
+            'Batch not in block')
+
+    def assert_batches_in_block(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        for batch in batches:
+            self.assert_batch_in_block(batch)
+
+    def assert_block_batch_count(self, batch_count=None):
+        if batch_count is None:
+            batch_count = self.batch_count
+
+        self.assertEqual(
+            len(self.result_block.batches),
+            batch_count,
+            'Wrong batch count in block')
+
+    def verify_block(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        batch_count = None if batches is None else len(batches)
+
+        self.assert_block_published()
+        self.assert_batches_in_block(batches)
+        self.assert_block_batch_count(batch_count)
+
+        self.result_block = None
+
+    # publisher functions
+
+    def receive_batch(self, batch):
+        self.publisher.on_batch_received(batch)
+
+    def receive_batches(self, batches=None):
+        if batches is None:
+            batches = self.batches
+
+        for batch in batches:
+            self.receive_batch(batch)
+
+    def publish_block(self):
+        self.publisher.initialize_block(self.block_tree_manager.chain_head)
+        try:
+            result = self.publisher.finalize_block(consensus=b"mock")
+        except publisher_ce.BlockEmpty:
+            pass
+        else:
+            self.publisher.publish_block(result.block, result.injected_batches)
         self.result_block = self.block_sender.new_block
         self.block_sender.new_block = None
 
@@ -1331,7 +1747,7 @@ class TestJournal(unittest.TestCase):
         block_publisher = None
         chain_controller = None
         try:
-            block_publisher = BlockPublisher(
+            block_publisher = publisher.BlockPublisher(
                 transaction_executor=self.txn_executor,
                 block_cache=btm.block_cache,
                 state_view_factory=MockStateViewFactory(btm.state_db),
