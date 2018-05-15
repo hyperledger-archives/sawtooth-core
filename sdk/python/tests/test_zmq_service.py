@@ -213,6 +213,29 @@ class TestService(unittest.TestCase):
             b'block2': (b'block1', b'signer2', 2, b'test2'),
         })
 
+    def test_get_chain_head(self):
+        block = consensus_pb2.ConsensusBlock(
+            block_id=b'block',
+            previous_id=b'block0',
+            signer_id=b'signer',
+            block_num=1,
+            payload=b'test')
+
+        self.mock_stream.send.return_value = self._make_future(
+            message_type=Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
+            content=consensus_pb2.ConsensusChainHeadGetResponse(
+                status=consensus_pb2.ConsensusChainHeadGetResponse.OK,
+                block=block))
+
+        chain_head = self.service.get_chain_head()
+
+        self.mock_stream.send.assert_called_with(
+            message_type=Message.CONSENSUS_CHAIN_HEAD_GET_REQUEST,
+            content=consensus_pb2.ConsensusChainHeadGetRequest()
+            .SerializeToString())
+
+        self.assertEqual(chain_head, block)
+
     def test_get_settings(self):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_SETTINGS_GET_RESPONSE,

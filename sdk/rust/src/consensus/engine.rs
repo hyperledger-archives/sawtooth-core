@@ -167,6 +167,7 @@ pub enum Error {
     InvalidState(String),
     UnknownBlock(String),
     UnknownPeer(String),
+    NoChainHead,
 }
 
 impl ::std::error::Error for Error {
@@ -179,6 +180,7 @@ impl ::std::error::Error for Error {
             InvalidState(ref s) => s,
             UnknownBlock(ref s) => s,
             UnknownPeer(ref s) => s,
+            NoChainHead => "No chain head",
         }
     }
 
@@ -191,6 +193,7 @@ impl ::std::error::Error for Error {
             InvalidState(_) => None,
             UnknownBlock(_) => None,
             UnknownPeer(_) => None,
+            NoChainHead => None,
         }
     }
 }
@@ -205,6 +208,7 @@ impl ::std::fmt::Display for Error {
             InvalidState(ref s) => write!(f, "InvalidState: {}", s),
             UnknownBlock(ref s) => write!(f, "UnknownBlock: {}", s),
             UnknownPeer(ref s) => write!(f, "UnknownPeer: {}", s),
+            NoChainHead => write!(f, "NoChainHead"),
         }
     }
 }
