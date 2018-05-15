@@ -32,3 +32,7 @@ class UnknownBlock(Exception):
 
 class UnknownPeer(Exception):
     pass
+
+
+class BlockNotReady(Exception):
+    pass

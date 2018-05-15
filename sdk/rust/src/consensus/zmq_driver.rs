@@ -349,12 +349,12 @@ impl Service for ZmqService {
             Message_MessageType::CONSENSUS_FINALIZE_BLOCK_RESPONSE,
         )?;
 
-        if response.get_status() == ConsensusFinalizeBlockResponse_Status::INVALID_STATE {
-            Err(Error::InvalidState(
+        match response.get_status() {
+            ConsensusFinalizeBlockResponse_Status::INVALID_STATE => Err(Error::InvalidState(
                 "Cannot finalize block in current state".into(),
-            ))
-        } else {
-            check_ok!(response, ConsensusFinalizeBlockResponse_Status::OK)
+            )),
+            ConsensusFinalizeBlockResponse_Status::BLOCK_NOT_READY => Err(Error::BlockNotReady),
+            _ => check_ok!(response, ConsensusFinalizeBlockResponse_Status::OK),
         }?;
 
         Ok(response.take_block_id().into())
