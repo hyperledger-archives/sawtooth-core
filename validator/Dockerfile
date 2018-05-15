@@ -65,3 +65,18 @@ RUN mkdir -p /var/log/sawtooth
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
 WORKDIR /project/sawtooth-core
+
+CMD echo "\033[0;32m--- Building validator ---\n\033[0m" \
+ && ./bin/protogen \
+ && cd validator \
+ && if [ -d "debian" ]; then rm -rf debian; fi \
+ && python3 setup.py clean --all \
+ && python3 setup.py --command-packages=stdeb.command debianize \
+ && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
+ && if [ -d "bin" ]; then rm -rf bin; fi \
+ && mkdir bin \
+ && if [ -d "lib" ]; then rm -rf lib; fi \
+ && mkdir lib \
+ && cargo build --release \
+ && cp ./target/release/sawtooth-validator bin/sawtooth-validator \
+ && cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so
