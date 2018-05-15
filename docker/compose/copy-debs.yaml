@@ -126,9 +126,9 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  poet-families:
-    image: sawtooth-poet-families:${ISOLATION_ID}
-    container_name: sawtooth-poet-families-default
+  poet-validator-registry:
+    image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
+    container_name: sawtooth-poet-validator-registry-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
