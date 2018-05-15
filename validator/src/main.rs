@@ -9,6 +9,8 @@ mod server;
 use cpython::Python;
 use server::cli;
 
+use std::process;
+
 fn main() {
     let gil = Python::acquire_gil();
     let py = &mut gil.python();
@@ -27,11 +29,12 @@ fn main() {
         Ok(module) => module,
         Err(err) => {
             err.print(*py);
-            return;
+            process::exit(1);
         }
     };
 
     if let Err(err) = cli.call(*py, "main", (pydict,), None) {
         err.print(*py);
+        process::exit(1);
     }
 }
