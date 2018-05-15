@@ -18,6 +18,10 @@ class InvalidState(Exception):
     pass
 
 
+class NoChainHead(Exception):
+    pass
+
+
 class ReceiveError(Exception):
     pass
 

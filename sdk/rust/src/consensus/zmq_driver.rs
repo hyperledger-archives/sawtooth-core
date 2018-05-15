@@ -473,6 +473,25 @@ impl Service for ZmqService {
             .collect())
     }
 
+    fn get_chain_head(&mut self) -> Result<Block, Error> {
+        let request = ConsensusChainHeadGetRequest::new();
+
+        let mut response: ConsensusChainHeadGetResponse = self.rpc(
+            &request,
+            Message_MessageType::CONSENSUS_CHAIN_HEAD_GET_REQUEST,
+            Message_MessageType::CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
+        )?;
+
+        if response.get_status() == ConsensusChainHeadGetResponse_Status::NO_CHAIN_HEAD {
+            Err(Error::NoChainHead("No chain head".into()))
+        } else {
+            check_ok!(response, ConsensusChainHeadGetResponse_Status::OK)
+        }?;
+
+        Ok(Block::from(response.take_block()))
+
+    }
+
     fn get_settings(&mut self, block_id: BlockId, keys: Vec<String>) -> Result<Vec<String>, Error> {
         let mut request = ConsensusSettingsGetRequest::new();
         request.set_block_id(block_id.into());
@@ -808,6 +827,7 @@ mod tests {
                 .unwrap();
             svc.get_state(Default::default(), Default::default())
                 .unwrap();
+            svc.get_chain_head().unwrap();
         });
 
         service_test!(
@@ -916,6 +936,15 @@ mod tests {
             Message_MessageType::CONSENSUS_STATE_GET_RESPONSE,
             ConsensusStateGetRequest,
             Message_MessageType::CONSENSUS_STATE_GET_REQUEST
+        );
+
+        service_test!(
+            &socket,
+            ConsensusChainHeadGetResponse::new(),
+            ConsensusChainHeadGetResponse_Status::OK,
+            Message_MessageType::CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
+            ConsensusChainHeadGetRequest,
+            Message_MessageType::CONSENSUS_CHAIN_HEAD_GET_REQUEST
         );
 
         svc_thread.join().unwrap();
