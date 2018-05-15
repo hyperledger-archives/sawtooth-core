@@ -26,9 +26,6 @@ MODULE_LIST="
     identity
     block_info
     validator
-    go_sdk
-    java_sdk
-    javascript_sdk
     python_sdk
     rust_sdk
     integration
@@ -341,9 +338,6 @@ test_rust_sdk() {
 }
 
 test_integration() {
-    run_docker_test test_xo_smoke_all
-    copy_coverage .coverage.test_xo_smoke_all
-    run_docker_test test_web_socket_subscription
     run_docker_test test_poet_smoke
     copy_coverage .coverage.test_poet_smoke
     run_docker_test test_dynamic_network --timeout 600
