@@ -42,10 +42,13 @@ services:
       SAWTOOTH_LIB_HOME: "/project/sawtooth-core/validator/lib"
 
   intkey-tp:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_python/Dockerfile
+    image: sawtooth-intkey-tp-python$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://test-state-verifier:4004
+    command: intkey-tp-python -C tcp://test-state-verifier:4004
     stop_signal: SIGKILL

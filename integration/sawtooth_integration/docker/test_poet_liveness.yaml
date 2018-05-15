@@ -272,48 +272,63 @@ services:
     stop_signal: SIGKILL
 
   intkey-tp-0:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: intkey-tp-rust -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   intkey-tp-1:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: intkey-tp-rust -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   intkey-tp-2:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: intkey-tp-rust -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
   intkey-tp-3:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: intkey-tp-rust -C tcp://validator-3:4004
     stop_signal: SIGKILL
 
   intkey-tp-4:
-    image: sawtooth-intkey-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: intkey-tp-rust -C tcp://validator-4:4004
     stop_signal: SIGKILL
 
   smallbank-tp-0:
@@ -341,30 +356,39 @@ services:
     stop_signal: SIGKILL
 
   smallbank-tp-2:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-rust -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
   smallbank-tp-3:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-rust -C tcp://validator-3:4004
     stop_signal: SIGKILL
 
   smallbank-tp-4:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-rust -C tcp://validator-4:4004
     stop_signal: SIGKILL
 
   settings-tp-0:
