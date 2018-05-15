@@ -127,6 +127,14 @@ class Service(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
+    def get_chain_head(self):
+        '''Retrieve consensus-related information about the chain head.
+
+        Return:
+            block
+        '''
+
+    @abc.abstractmethod
     def get_settings(self, block_id, settings):
         '''Read the value of settings as of the given block.
 

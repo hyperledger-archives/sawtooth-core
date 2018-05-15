@@ -373,6 +373,24 @@ message ConsensusBlocksGetResponse {
   repeated ConsensusBlock blocks = 2;
 }
 
+// Retrieve consensus-related information about the chain head.
+message ConsensusChainHeadGetRequest {}
+
+message ConsensusChainHeadGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    NO_CHAIN_HEAD = 5;
+  }
+
+  Status status = 1;
+  ConsensusBlock block = 2;
+}
+
 // Read the values of these settings from state as of the given block. If some
 // values settings keys cannot be found, the keys that were found will be
 // returned.
