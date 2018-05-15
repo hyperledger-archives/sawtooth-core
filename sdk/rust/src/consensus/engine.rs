@@ -168,6 +168,7 @@ pub enum Error {
     UnknownBlock(String),
     UnknownPeer(String),
     NoChainHead,
+    BlockNotReady,
 }
 
 impl ::std::error::Error for Error {
@@ -181,6 +182,7 @@ impl ::std::error::Error for Error {
             UnknownBlock(ref s) => s,
             UnknownPeer(ref s) => s,
             NoChainHead => "No chain head",
+            BlockNotReady => "Block not ready to finalize",
         }
     }
 
@@ -194,6 +196,7 @@ impl ::std::error::Error for Error {
             UnknownBlock(_) => None,
             UnknownPeer(_) => None,
             NoChainHead => None,
+            BlockNotReady => None,
         }
     }
 }
@@ -209,6 +212,7 @@ impl ::std::fmt::Display for Error {
             UnknownBlock(ref s) => write!(f, "UnknownBlock: {}", s),
             UnknownPeer(ref s) => write!(f, "UnknownPeer: {}", s),
             NoChainHead => write!(f, "NoChainHead"),
+            BlockNotReady => write!(f, "BlockNotReady"),
         }
     }
 }
