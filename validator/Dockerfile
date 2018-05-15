@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f /Dockerfile -t sawtooth-validator-local .
+# docker build -f validator/Dockerfile -t sawtooth-validator-local .
 
 # -------------===  build ===-------------
 
@@ -35,6 +35,7 @@ RUN apt-get install -y -q --allow-downgrades \
 RUN apt-get install -y -q --allow-downgrades \
     python3-cbor \
     python3-colorlog \
+    python3-cryptography>=1.7.1 \
     python3-dev \
     python3-lmdb \
     python3-netifaces=0.10.4-0.1build2 \
