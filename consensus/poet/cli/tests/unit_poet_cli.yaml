@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-poet-cli:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: consensus/poet/cli/tests/poet-cli-tests.dockerfile
+    image: poet-cli-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

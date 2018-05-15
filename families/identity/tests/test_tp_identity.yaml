@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   identity-tp:
-    image: sawtooth-identity-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/identity/Dockerfile
+    image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -27,7 +30,10 @@ services:
     stop_signal: SIGKILL
 
   test-tp-identity:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: families/identity/tests/identity-tests.dockerfile
+    image: identity-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

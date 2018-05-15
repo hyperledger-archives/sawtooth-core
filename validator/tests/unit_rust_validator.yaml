@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-rust-validator:
-    image: sawtooth-dev-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/tests/validator-tests.dockerfile
+    image: validator-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/validator

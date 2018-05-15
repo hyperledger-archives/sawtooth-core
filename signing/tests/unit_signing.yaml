@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-signing:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../..
+      dockerfile: signing/tests/signing-tests.dockerfile
+    image: signing-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

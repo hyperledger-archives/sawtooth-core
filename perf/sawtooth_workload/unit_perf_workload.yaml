@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-perf-workload:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    build:
+      context: ../..
+      dockerfile: ./perf/perf-tests.dockerfile
+    image: perf-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/perf/sawtooth_workload

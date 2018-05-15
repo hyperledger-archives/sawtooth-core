@@ -17,7 +17,10 @@ version: "2.1"
 
 services:
   test-shutdown-smoke:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
       - /var/run/docker.sock:/var/run/docker.sock

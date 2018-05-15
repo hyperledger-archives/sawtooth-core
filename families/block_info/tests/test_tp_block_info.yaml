@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   block-info-tp:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -27,7 +30,10 @@ services:
     stop_signal: SIGKILL
 
   test-tp-block-info:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: families/block_info/tests/block-info-tests.dockerfile
+    image: block-info-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   test-poet-liveness:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3
@@ -36,7 +39,10 @@ services:
         /project/sawtooth-core/cli"
 
   intkey-workload:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -54,7 +60,10 @@ services:
         /project/sawtooth-core/cli"
 
   smallbank-workload:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -67,7 +76,10 @@ services:
     stop_signal: SIGKILL
 
   validator-0:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -107,7 +119,10 @@ services:
     stop_signal: SIGKILL
 
   validator-1:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -126,7 +141,10 @@ services:
     stop_signal: SIGKILL
 
   validator-2:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -145,7 +163,10 @@ services:
     stop_signal: SIGKILL
 
   validator-3:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -164,7 +185,10 @@ services:
     stop_signal: SIGKILL
 
   validator-4:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -183,7 +207,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api-0:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -193,7 +220,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api-1:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -203,7 +233,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api-2:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -213,7 +246,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api-3:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -223,7 +259,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api-4:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -278,7 +317,10 @@ services:
     stop_signal: SIGKILL
 
   smallbank-tp-0:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -287,7 +329,10 @@ services:
     stop_signal: SIGKILL
 
   smallbank-tp-1:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -323,7 +368,10 @@ services:
     stop_signal: SIGKILL
 
   settings-tp-0:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -332,7 +380,10 @@ services:
     stop_signal: SIGKILL
 
   settings-tp-1:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -341,7 +392,10 @@ services:
     stop_signal: SIGKILL
 
   settings-tp-2:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -350,7 +404,10 @@ services:
     stop_signal: SIGKILL
 
   settings-tp-3:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -359,7 +416,10 @@ services:
     stop_signal: SIGKILL
 
   settings-tp-4:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -368,7 +428,10 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-0:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -379,7 +442,10 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-1:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -390,7 +456,10 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-2:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -401,7 +470,10 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-3:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -412,7 +484,10 @@ services:
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-4:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -423,7 +498,10 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp-0:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -434,7 +512,10 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp-1:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -445,7 +526,10 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp-2:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -456,7 +540,10 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp-3:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -467,7 +554,10 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp-4:
-    image: sawtooth-block-info-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/block_info/Dockerfile
+    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   settings-tp:
-    image: sawtooth-settings-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -29,7 +32,10 @@ services:
     stop_signal: SIGKILL
 
   intkey-tp-python:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_python/Dockerfile
+    image: sawtooth-intkey-tp-python$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -40,7 +46,10 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -57,7 +66,10 @@ services:
     stop_signal: SIGKILL
 
   rest-api:
-    image: sawtooth-rest-api:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -69,7 +81,10 @@ services:
     stop_signal: SIGKILL
 
   test-events-and-receipts:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
