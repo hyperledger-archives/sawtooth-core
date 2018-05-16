@@ -33,28 +33,22 @@ def _encode(value):
     return cbor.dumps(value, sort_keys=True)
 
 
-class MerkleDatabase(object):
+class MerkleDatabase(ffi.OwnedPointer):
 
     def __init__(self, database, merkle_root=None):
-        self._merkle_db_ptr = ctypes.c_void_p()
+        super(MerkleDatabase, self).__init__('merkle_db_drop')
 
         if merkle_root:
             init_root = ctypes.c_char_p(merkle_root.encode())
             _libexec('merkle_db_new_with_root', database.pointer,
-                     init_root, ctypes.byref(self._merkle_db_ptr))
+                     init_root, ctypes.byref(self.pointer))
         else:
             _libexec('merkle_db_new', database.pointer,
-                     ctypes.byref(self._merkle_db_ptr))
+                     ctypes.byref(self.pointer))
 
     @staticmethod
     def create_index_configuration():
         return ['change_log']
-
-    def __del__(self):
-        # check that it has not been deleted, nor is it null
-        if self._merkle_db_ptr:
-            _libexec('merkle_db_drop', self._merkle_db_ptr)
-            self._merkle_db_ptr = None
 
     def __iter__(self):
         return self.leaves()
@@ -69,7 +63,7 @@ class MerkleDatabase(object):
             (bool): True if it does contain, False otherwise.
         """
         try:
-            _libexec('merkle_db_contains', self._merkle_db_ptr,
+            _libexec('merkle_db_contains', self.pointer,
                      item.encode())
             # No error implies found
             return True
@@ -87,7 +81,7 @@ class MerkleDatabase(object):
 
     def get_merkle_root(self):
         (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_get_merkle_root', self._merkle_db_ptr,
+        _libexec('merkle_db_get_merkle_root', self.pointer,
                  ctypes.byref(c_merkle_root), ctypes.byref(c_merkle_root_len))
 
         return ffi.from_c_bytes(
@@ -95,7 +89,7 @@ class MerkleDatabase(object):
 
     def set_merkle_root(self, merkle_root):
         c_root = ctypes.c_char_p(merkle_root.encode())
-        _libexec('merkle_db_set_merkle_root', self._merkle_db_ptr, c_root)
+        _libexec('merkle_db_set_merkle_root', self.pointer, c_root)
 
     def __getitem__(self, address):
         return self.get(address)
@@ -104,7 +98,7 @@ class MerkleDatabase(object):
         c_address = ctypes.c_char_p(address.encode())
         (c_data, c_data_len) = ffi.prepare_byte_result()
 
-        _libexec('merkle_db_get', self._merkle_db_ptr, c_address,
+        _libexec('merkle_db_get', self.pointer, c_address,
                  ctypes.byref(c_data), ctypes.byref(c_data_len))
 
         return _decode(ffi.from_c_bytes(c_data, c_data_len))
@@ -118,7 +112,7 @@ class MerkleDatabase(object):
         (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
 
         data = _encode(value)
-        _libexec('merkle_db_set', self._merkle_db_ptr, c_address,
+        _libexec('merkle_db_set', self.pointer, c_address,
                  data, len(data),
                  ctypes.byref(c_merkle_root),
                  ctypes.byref(c_merkle_root_len))
@@ -129,7 +123,7 @@ class MerkleDatabase(object):
     def delete(self, address):
         c_address = ctypes.c_char_p(address.encode())
         (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_delete', self._merkle_db_ptr, c_address,
+        _libexec('merkle_db_delete', self.pointer, c_address,
                  ctypes.byref(c_merkle_root),
                  ctypes.byref(c_merkle_root_len))
 
@@ -159,7 +153,7 @@ class MerkleDatabase(object):
             c_delete_items[i] = ctypes.c_char_p(address.encode())
 
         (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_update', self._merkle_db_ptr,
+        _libexec('merkle_db_update', self.pointer,
                  c_set_items, ctypes.c_size_t(len(set_items)),
                  c_delete_items, ctypes.c_size_t(len(delete_items)),
                  virtual,
@@ -180,7 +174,7 @@ class MerkleDatabase(object):
         """Returns an iterator which returns tuples of (address, data) values
         """
         try:
-            return _LeafIterator(self._merkle_db_ptr, prefix)
+            return _LeafIterator(self.pointer, prefix)
         except KeyError:
             # The prefix doesn't exist
             return iter([])
@@ -269,9 +263,9 @@ class _Entry(ctypes.Structure):
 
 
 class ErrorCode(IntEnum):
-    Success = 0
+    Success = ffi.CommonErrorCode.Success
     # Input errors
-    NullPointerProvided = 1
+    NullPointerProvided = ffi.CommonErrorCode.NullPointerProvided
     InvalidHashString = 2
     InvalidAddress = 3
 

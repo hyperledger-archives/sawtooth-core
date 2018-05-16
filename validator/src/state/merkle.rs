@@ -22,8 +22,8 @@ use std::collections::VecDeque;
 use std::io::Cursor;
 
 use cbor;
-use cbor::decoder::{DecodeError, GenericDecoder};
-use cbor::encoder::{EncodeError, GenericEncoder};
+use cbor::decoder::GenericDecoder;
+use cbor::encoder::GenericEncoder;
 use cbor::value::Bytes;
 use cbor::value::Key;
 use cbor::value::Text;
@@ -34,7 +34,6 @@ use crypto::sha2::Sha512;
 
 use protobuf;
 use protobuf::Message;
-use protobuf::ProtobufError;
 
 use database::database::DatabaseError;
 use database::lmdb::DatabaseReader;
@@ -44,67 +43,26 @@ use database::lmdb::LmdbDatabaseWriter;
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
 
+use state::StateReader;
+use state::error::StateDatabaseError;
+
 const TOKEN_SIZE: usize = 2;
 
 pub const CHANGE_LOG_INDEX: &str = "change_log";
 
 /// Merkle Database
+#[derive(Clone)]
 pub struct MerkleDatabase {
     root_hash: String,
     db: LmdbDatabase,
     root_node: Node,
 }
 
-#[derive(Debug)]
-pub enum MerkleDatabaseError {
-    NotFound(String),
-    DeserializationError(DecodeError),
-    SerializationError(EncodeError),
-    ChangeLogEncodingError(String),
-    InvalidRecord,
-    InvalidHash(String),
-    InvalidChangeLogIndex(String),
-    DatabaseError(DatabaseError),
-    UnknownError,
-}
-
-impl From<DatabaseError> for MerkleDatabaseError {
-    fn from(err: DatabaseError) -> Self {
-        MerkleDatabaseError::DatabaseError(err)
-    }
-}
-
-impl From<EncodeError> for MerkleDatabaseError {
-    fn from(err: EncodeError) -> Self {
-        MerkleDatabaseError::SerializationError(err)
-    }
-}
-
-impl From<DecodeError> for MerkleDatabaseError {
-    fn from(err: DecodeError) -> Self {
-        MerkleDatabaseError::DeserializationError(err)
-    }
-}
-
-impl From<ProtobufError> for MerkleDatabaseError {
-    fn from(error: ProtobufError) -> Self {
-        use self::ProtobufError::*;
-        match error {
-            IoError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
-            WireError(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{:?}", err)),
-            Utf8(err) => MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err)),
-            MessageNotInitialized { message: err } => {
-                MerkleDatabaseError::ChangeLogEncodingError(format!("{}", err))
-            }
-        }
-    }
-}
-
 impl MerkleDatabase {
     /// Constructs a new MerkleDatabase, backed by a given Database
     ///
     /// An optional starting merkle root may be provided.
-    pub fn new(db: LmdbDatabase, merkle_root: Option<&str>) -> Result<Self, MerkleDatabaseError> {
+    pub fn new(db: LmdbDatabase, merkle_root: Option<&str>) -> Result<Self, StateDatabaseError> {
         let root_hash = merkle_root.map_or_else(|| initialize_db(&db), |s| Ok(s.into()))?;
         let root_node = get_node_by_hash(&db, &root_hash)?;
 
@@ -117,9 +75,9 @@ impl MerkleDatabase {
 
     /// Prunes nodes that are no longer needed under a given state root
     /// Returns a list of addresses that were deleted
-    pub fn prune(db: &LmdbDatabase, merkle_root: &str) -> Result<Vec<String>, MerkleDatabaseError> {
+    pub fn prune(db: &LmdbDatabase, merkle_root: &str) -> Result<Vec<String>, StateDatabaseError> {
         let root_bytes = ::hex::decode(merkle_root).map_err(|_| {
-            MerkleDatabaseError::InvalidHash(format!("{} is not a valid hash", merkle_root))
+            StateDatabaseError::InvalidHash(format!("{} is not a valid hash", merkle_root))
         })?;
         let mut db_writer = db.writer()?;
         let change_log = get_change_log(&db_writer, &root_bytes)?;
@@ -183,28 +141,11 @@ impl MerkleDatabase {
     pub fn set_merkle_root<S: Into<String>>(
         &mut self,
         merkle_root: S,
-    ) -> Result<(), MerkleDatabaseError> {
+    ) -> Result<(), StateDatabaseError> {
         let new_root = merkle_root.into();
         self.root_node = get_node_by_hash(&self.db, &new_root)?;
         self.root_hash = new_root;
         Ok(())
-    }
-
-    /// Returns true if the given address exists in the MerkleDatabase;
-    /// false, otherwise.
-    pub fn contains(&self, address: &str) -> Result<bool, MerkleDatabaseError> {
-        match self.get_by_address(address) {
-            Ok(_) => Ok(true),
-            Err(MerkleDatabaseError::NotFound(_)) => Ok(false),
-            Err(err) => Err(err),
-        }
-    }
-
-    /// Returns the data for a given address, if they exist at that node.  If
-    /// not, returns None.  Will return an MerkleDatabaseError::NotFound, if the
-    /// given address is not in the tree
-    pub fn get(&self, address: &str) -> Result<Option<Vec<u8>>, MerkleDatabaseError> {
-        Ok(self.get_by_address(address)?.value)
     }
 
     /// Sets the given data at the given address.
@@ -214,7 +155,7 @@ impl MerkleDatabase {
     ///
     /// Note, continued calls to get, without changing the merkle root to the
     /// result of this function, will not retrieve the results provided here.
-    pub fn set(&self, address: &str, data: &[u8]) -> Result<String, MerkleDatabaseError> {
+    pub fn set(&self, address: &str, data: &[u8]) -> Result<String, StateDatabaseError> {
         let mut updates = HashMap::with_capacity(1);
         updates.insert(address.to_string(), data.to_vec());
         self.update(&updates, &[], false)
@@ -228,7 +169,7 @@ impl MerkleDatabase {
     /// Note, continued calls to get, without changing the merkle root to the
     /// result of this function, will still retrieve the data at the address
     /// provided
-    pub fn delete(&self, address: &str) -> Result<String, MerkleDatabaseError> {
+    pub fn delete(&self, address: &str) -> Result<String, StateDatabaseError> {
         self.update(&HashMap::with_capacity(0), &[address.to_string()], false)
     }
 
@@ -244,7 +185,7 @@ impl MerkleDatabase {
         set_items: &HashMap<String, Vec<u8>>,
         delete_items: &[String],
         is_virtual: bool,
-    ) -> Result<String, MerkleDatabaseError> {
+    ) -> Result<String, StateDatabaseError> {
         let mut path_map = HashMap::new();
 
         let mut deletions = HashSet::new();
@@ -350,20 +291,13 @@ impl MerkleDatabase {
         Ok(::hex::encode(key_hash))
     }
 
-    pub fn leaves<'a>(
-        &'a self,
-        prefix: Option<&'a str>,
-    ) -> Result<MerkleLeafIterator, MerkleDatabaseError> {
-        MerkleLeafIterator::new(self, prefix)
-    }
-
     /// Puts all the items into the database.
     fn store_changes(
         &self,
         successor_root_hash: &[u8],
         batch: &[(Vec<u8>, Vec<u8>)],
         deletions: &[Vec<u8>],
-    ) -> Result<(), MerkleDatabaseError> {
+    ) -> Result<(), StateDatabaseError> {
         let mut db_writer = self.db.writer()?;
 
         // We expect this to be hex, since we generated it
@@ -404,7 +338,7 @@ impl MerkleDatabase {
         Ok(())
     }
 
-    fn get_by_address(&self, address: &str) -> Result<Node, MerkleDatabaseError> {
+    fn get_by_address(&self, address: &str) -> Result<Node, StateDatabaseError> {
         let tokens = tokenize_address(address);
 
         // There's probably a better way to do this than a clone
@@ -413,7 +347,7 @@ impl MerkleDatabase {
         for token in tokens.iter() {
             node = match node.children.get(&token.to_string()) {
                 None => {
-                    return Err(MerkleDatabaseError::NotFound(format!(
+                    return Err(StateDatabaseError::NotFound(format!(
                         "invalid address {} from root {}",
                         address, self.root_hash
                     )))
@@ -428,7 +362,7 @@ impl MerkleDatabase {
         &self,
         tokens: &[&str],
         strict: bool,
-    ) -> Result<HashMap<String, Node>, MerkleDatabaseError> {
+    ) -> Result<HashMap<String, Node>, StateDatabaseError> {
         let mut nodes = HashMap::new();
 
         let mut path = String::new();
@@ -444,7 +378,7 @@ impl MerkleDatabase {
                     get_node_by_hash(&self.db, child_address.unwrap())?
                 } else {
                     if strict {
-                        return Err(MerkleDatabaseError::NotFound(format!(
+                        return Err(StateDatabaseError::NotFound(format!(
                             "invalid address {} from root {}",
                             tokens.join(""),
                             self.root_hash
@@ -463,16 +397,44 @@ impl MerkleDatabase {
     }
 }
 
-pub struct MerkleLeafIterator<'a> {
-    merkle_db: &'a MerkleDatabase,
+impl StateReader for MerkleDatabase {
+    /// Returns true if the given address exists in the MerkleDatabase;
+    /// false, otherwise.
+    fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
+        match self.get_by_address(address) {
+            Ok(_) => Ok(true),
+            Err(StateDatabaseError::NotFound(_)) => Ok(false),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Returns the data for a given address, if they exist at that node.  If
+    /// not, returns None.  Will return an StateDatabaseError::NotFound, if the
+    /// given address is not in the tree
+    fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
+        Ok(self.get_by_address(address)?.value)
+    }
+
+    fn leaves(
+        &self,
+        prefix: Option<&str>,
+    ) -> Result<
+        Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+        StateDatabaseError,
+    > {
+        Ok(Box::new(MerkleLeafIterator::new(self.clone(), prefix)?))
+    }
+}
+
+/// A MerkleLeafIterator is fixed to iterate over the state address/value pairs
+/// the merkle root hash at the time of its creation.
+pub struct MerkleLeafIterator {
+    merkle_db: MerkleDatabase,
     visited: VecDeque<(String, Node)>,
 }
 
-impl<'a> MerkleLeafIterator<'a> {
-    fn new(
-        merkle_db: &'a MerkleDatabase,
-        prefix: Option<&'a str>,
-    ) -> Result<Self, MerkleDatabaseError> {
+impl MerkleLeafIterator {
+    fn new(merkle_db: MerkleDatabase, prefix: Option<&str>) -> Result<Self, StateDatabaseError> {
         let path = prefix.unwrap_or("");
 
         let mut visited = VecDeque::new();
@@ -483,8 +445,8 @@ impl<'a> MerkleLeafIterator<'a> {
     }
 }
 
-impl<'a> Iterator for MerkleLeafIterator<'a> {
-    type Item = Result<(String, Vec<u8>), MerkleDatabaseError>;
+impl Iterator for MerkleLeafIterator {
+    type Item = Result<(String, Vec<u8>), StateDatabaseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.visited.is_empty() {
@@ -516,7 +478,7 @@ impl<'a> Iterator for MerkleLeafIterator<'a> {
 }
 
 /// Initializes a database with an empty Trie
-fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
+fn initialize_db(db: &LmdbDatabase) -> Result<String, StateDatabaseError> {
     let (hash, packed) = encode_and_hash(Node::default())?;
 
     let mut db_writer = db.writer()?;
@@ -531,7 +493,7 @@ fn initialize_db(db: &LmdbDatabase) -> Result<String, MerkleDatabaseError> {
 fn get_change_log<R>(
     db_reader: &R,
     root_hash: &[u8],
-) -> Result<Option<ChangeLogEntry>, MerkleDatabaseError>
+) -> Result<Option<ChangeLogEntry>, StateDatabaseError>
 where
     R: DatabaseReader,
 {
@@ -548,7 +510,7 @@ fn write_change_log(
     db_writer: &mut LmdbDatabaseWriter,
     root_hash: &[u8],
     change_log: &ChangeLogEntry,
-) -> Result<(), MerkleDatabaseError> {
+) -> Result<(), StateDatabaseError> {
     Ok(db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?)
 }
 
@@ -556,7 +518,7 @@ fn write_change_log(
 fn delete_ignore_missing(
     db_writer: &mut LmdbDatabaseWriter,
     key: &[u8],
-) -> Result<(), MerkleDatabaseError> {
+) -> Result<(), StateDatabaseError> {
     match db_writer.delete(key) {
         Err(DatabaseError::WriterError(ref s))
             if s == "MDB_NOTFOUND: No matching key/data pair found" =>
@@ -568,12 +530,12 @@ fn delete_ignore_missing(
             );
             Ok(())
         }
-        Err(err) => Err(MerkleDatabaseError::DatabaseError(err)),
+        Err(err) => Err(StateDatabaseError::DatabaseError(err)),
         Ok(_) => Ok(()),
     }
 }
 /// Encodes the given node, and returns the hash of the bytes.
-fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), MerkleDatabaseError> {
+fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), StateDatabaseError> {
     let packed = node.into_bytes()?;
     let hash = hash(&packed);
     Ok((hash, packed))
@@ -617,10 +579,10 @@ fn tokenize_address(address: &str) -> Box<[&str]> {
 }
 
 /// Fetch a node by its hash
-fn get_node_by_hash(db: &LmdbDatabase, hash: &str) -> Result<Node, MerkleDatabaseError> {
+fn get_node_by_hash(db: &LmdbDatabase, hash: &str) -> Result<Node, StateDatabaseError> {
     match db.reader()?.get(hash.as_bytes()) {
         Some(bytes) => Node::from_bytes(&bytes),
-        None => Err(MerkleDatabaseError::NotFound(hash.to_string())),
+        None => Err(StateDatabaseError::NotFound(hash.to_string())),
     }
 }
 
@@ -633,7 +595,7 @@ struct Node {
 
 impl Node {
     /// Consumes this node and serializes it to bytes
-    fn into_bytes(self) -> Result<Vec<u8>, MerkleDatabaseError> {
+    fn into_bytes(self) -> Result<Vec<u8>, StateDatabaseError> {
         let mut e = GenericEncoder::new(Cursor::new(Vec::new()));
 
         let mut map = BTreeMap::new();
@@ -663,7 +625,7 @@ impl Node {
     }
 
     /// Deserializes the given bytes to a Node
-    fn from_bytes(bytes: &[u8]) -> Result<Node, MerkleDatabaseError> {
+    fn from_bytes(bytes: &[u8]) -> Result<Node, StateDatabaseError> {
         let input = Cursor::new(bytes);
         let mut decoder = GenericDecoder::new(cbor::Config::default(), input);
         let decoder_value = decoder.value()?;
@@ -672,13 +634,13 @@ impl Node {
                 root_map.remove(&Key::Text(Text::Text("v".to_string()))),
                 root_map.remove(&Key::Text(Text::Text("c".to_string()))),
             ),
-            _ => return Err(MerkleDatabaseError::InvalidRecord),
+            _ => return Err(StateDatabaseError::InvalidRecord),
         };
 
         let value = match val {
             Some(Value::Bytes(Bytes::Bytes(bytes))) => Some(bytes),
             Some(Value::Null) => None,
-            _ => return Err(MerkleDatabaseError::InvalidRecord),
+            _ => return Err(StateDatabaseError::InvalidRecord),
         };
 
         let children = match children_raw {
@@ -690,7 +652,7 @@ impl Node {
                 result
             }
             None => BTreeMap::new(),
-            _ => return Err(MerkleDatabaseError::InvalidRecord),
+            _ => return Err(StateDatabaseError::InvalidRecord),
         };
 
         Ok(Node { value, children })
@@ -698,18 +660,18 @@ impl Node {
 }
 
 /// Converts a CBOR Key to its String content
-fn key_to_string(key_val: Key) -> Result<String, MerkleDatabaseError> {
+fn key_to_string(key_val: Key) -> Result<String, StateDatabaseError> {
     match key_val {
         Key::Text(Text::Text(s)) => Ok(s),
-        _ => Err(MerkleDatabaseError::InvalidRecord),
+        _ => Err(StateDatabaseError::InvalidRecord),
     }
 }
 
 /// Converts a CBOR Text Value to its String content
-fn text_to_string(text_val: Value) -> Result<String, MerkleDatabaseError> {
+fn text_to_string(text_val: Value) -> Result<String, StateDatabaseError> {
     match text_val {
         Value::Text(Text::Text(s)) => Ok(s),
-        _ => Err(MerkleDatabaseError::InvalidRecord),
+        _ => Err(StateDatabaseError::InvalidRecord),
     }
 }
 

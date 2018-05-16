@@ -16,6 +16,8 @@
  */
 use database::lmdb::LmdbDatabase;
 /// This module contains all of the extern C functions for the Merkle trie
+use state::StateReader;
+use state::error::StateDatabaseError;
 use state::merkle::*;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -95,11 +97,11 @@ fn make_merkle_db(
             }
             ErrorCode::Success
         }
-        Err(MerkleDatabaseError::DatabaseError(err)) => {
+        Err(StateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -159,11 +161,11 @@ pub extern "C" fn merkle_db_set_merkle_root(
 
     match unsafe { (*(merkle_db as *mut MerkleDatabase)).set_merkle_root(state_root) } {
         Ok(()) => ErrorCode::Success,
-        Err(MerkleDatabaseError::DatabaseError(err)) => {
+        Err(StateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -193,11 +195,11 @@ pub extern "C" fn merkle_db_contains(merkle_db: *mut c_void, address: *const c_c
         match (*(merkle_db as *mut MerkleDatabase)).contains(address_str) {
             Ok(true) => ErrorCode::Success,
             Ok(false) => ErrorCode::NotFound,
-            Err(MerkleDatabaseError::DatabaseError(err)) => {
+            Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError
             }
-            Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
@@ -240,11 +242,11 @@ pub extern "C" fn merkle_db_get(
                 ErrorCode::Success
             }
             Ok(None) => ErrorCode::NotFound,
-            Err(MerkleDatabaseError::DatabaseError(err)) => {
+            Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError
             }
-            Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
@@ -292,7 +294,7 @@ pub extern "C" fn merkle_db_set(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(err)) => {
+            Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError
             }
@@ -335,11 +337,11 @@ pub extern "C" fn merkle_db_delete(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(err)) => {
+            Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError
             }
-            Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
                 error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
@@ -429,7 +431,7 @@ pub extern "C" fn merkle_db_update(
 
                 ErrorCode::Success
             }
-            Err(MerkleDatabaseError::DatabaseError(err)) => {
+            Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError
             }
@@ -470,15 +472,15 @@ pub extern "C" fn merkle_db_prune(
             }
             ErrorCode::Success
         }
-        Err(MerkleDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
-        Err(MerkleDatabaseError::InvalidChangeLogIndex(msg)) => {
+        Err(StateDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
+        Err(StateDatabaseError::InvalidChangeLogIndex(msg)) => {
             error!(
                 "Invalid Change Log Index while pruning {}: {}",
                 state_root, msg
             );
             ErrorCode::InvalidChangeLogIndex
         }
-        Err(MerkleDatabaseError::DatabaseError(err)) => {
+        Err(StateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
@@ -513,16 +515,16 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
     match unsafe { (*(merkle_db as *mut MerkleDatabase)).leaves(Some(prefix)) } {
         Ok(leaf_iterator) => {
             unsafe {
-                *iterator = Box::into_raw(Box::new(leaf_iterator)) as *const c_void;
+                *iterator = Box::into_raw(leaf_iterator) as *const c_void;
             }
 
             ErrorCode::Success
         }
-        Err(MerkleDatabaseError::DatabaseError(err)) => {
+        Err(StateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -568,7 +570,7 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
             ErrorCode::Success
         },
         None => ErrorCode::StopIteration,
-        Some(Err(MerkleDatabaseError::DatabaseError(err))) => {
+        Some(Err(StateDatabaseError::DatabaseError(err))) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
