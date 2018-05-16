@@ -23,11 +23,13 @@ import threading
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
-from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal import publisher
+from sawtooth_validator.journal import publisher_ce
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
@@ -60,6 +62,7 @@ from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
 
 from sawtooth_validator.server import network_handlers
 from sawtooth_validator.server import component_handlers
+from sawtooth_validator.server import consensus_handlers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +71,7 @@ class Validator(object):
     def __init__(self,
                  bind_network,
                  bind_component,
+                 bind_consensus,
                  endpoint,
                  peering,
                  seeds_list,
@@ -107,6 +111,11 @@ class Validator(object):
             identity_signer (str): cryptographic signer the validator uses for
                 signing
         """
+        if bind_consensus != "":
+            LOGGER.warning("Enabling experimental consensus engine feature!")
+            consensus_engine_enabled = True
+        else:
+            consensus_engine_enabled = False
 
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
@@ -262,28 +271,60 @@ class Validator(object):
             to_update=settings_cache.invalidate,
             forked=settings_cache.forked)
 
+        # -- Consensus Engine -- #
+        if consensus_engine_enabled:
+            consensus_thread_pool = InstrumentedThreadPoolExecutor(
+                max_workers=3,
+                name='Consensus')
+            consensus_dispatcher = Dispatcher()
+            consensus_service = Interconnect(
+                bind_consensus,
+                consensus_dispatcher,
+                secured=False,
+                heartbeat=False,
+                max_incoming_connections=20,
+                monitor=True,
+                max_future_callback_workers=10)
+
         # -- Setup Journal -- #
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=block_store,
             state_view_factory=state_view_factory,
             signer=identity_signer)
 
-        block_publisher = BlockPublisher(
-            transaction_executor=transaction_executor,
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            settings_cache=settings_cache,
-            block_sender=block_sender,
-            batch_sender=batch_sender,
-            squash_handler=context_manager.get_squash_handler(),
-            chain_head=block_store.chain_head,
-            identity_signer=identity_signer,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            permission_verifier=permission_verifier,
-            check_publish_block_frequency=0.1,
-            batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory)
+        if consensus_engine_enabled:
+            block_publisher = publisher_ce.BlockPublisher(
+                transaction_executor=transaction_executor,
+                block_cache=block_cache,
+                state_view_factory=state_view_factory,
+                settings_cache=settings_cache,
+                block_sender=block_sender,
+                batch_sender=batch_sender,
+                squash_handler=context_manager.get_squash_handler(),
+                chain_head=block_store.chain_head,
+                identity_signer=identity_signer,
+                data_dir=data_dir,
+                config_dir=config_dir,
+                permission_verifier=permission_verifier,
+                batch_observers=[batch_tracker],
+                batch_injector_factory=batch_injector_factory)
+        else:
+            block_publisher = publisher.BlockPublisher(
+                transaction_executor=transaction_executor,
+                block_cache=block_cache,
+                state_view_factory=state_view_factory,
+                settings_cache=settings_cache,
+                block_sender=block_sender,
+                batch_sender=batch_sender,
+                squash_handler=context_manager.get_squash_handler(),
+                chain_head=block_store.chain_head,
+                identity_signer=identity_signer,
+                data_dir=data_dir,
+                config_dir=config_dir,
+                permission_verifier=permission_verifier,
+                check_publish_block_frequency=0.1,
+                batch_observers=[batch_tracker],
+                batch_injector_factory=batch_injector_factory)
 
         block_validator = BlockValidator(
             block_cache=block_cache,
@@ -354,6 +395,20 @@ class Validator(object):
         self._network_service = network_service
         self._network_thread_pool = network_thread_pool
 
+        if consensus_engine_enabled:
+            consensus_proxy = ConsensusProxy(
+                block_cache=block_cache,
+                chain_controller=chain_controller,
+                block_publisher=block_publisher)
+
+            consensus_handlers.add(
+                consensus_dispatcher, consensus_thread_pool, consensus_proxy)
+
+            self._consensus_dispatcher = consensus_dispatcher
+            self._consensus_service = consensus_service
+            self._consensus_thread_pool = consensus_thread_pool
+        self._consensus_engine_enabled = consensus_engine_enabled
+
         self._client_thread_pool = client_thread_pool
         self._sig_pool = sig_pool
 
@@ -369,6 +424,9 @@ class Validator(object):
     def start(self):
         self._component_dispatcher.start()
         self._component_service.start()
+        if self._consensus_engine_enabled:
+            self._consensus_dispatcher.start()
+            self._consensus_service.start()
         if self._genesis_controller.requires_genesis():
             self._genesis_controller.start(self._start)
         else:
@@ -398,6 +456,10 @@ class Validator(object):
         self._network_service.stop()
 
         self._component_service.stop()
+
+        if self._consensus_engine_enabled:
+            self._consensus_service.stop()
+            self._consensus_dispatcher.stop()
 
         self._network_thread_pool.shutdown(wait=True)
         self._component_thread_pool.shutdown(wait=True)

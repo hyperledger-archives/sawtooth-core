@@ -233,6 +233,7 @@ message ConsensusFinalizeBlockResponse {
     NOT_READY = 4;
 
     INVALID_STATE = 5;
+    BLOCK_NOT_READY = 6;
   }
   Status status = 1;
 

@@ -121,6 +121,10 @@ class ZmqService(Service):
             raise exceptions.InvalidState(
                 'Cannot finalize block in current state')
 
+        if status == response_type.BLOCK_NOT_READY:
+            raise exceptions.BLOCK_NOT_READY(
+                'Block not ready to be finalized')
+
         if status != response_type.OK:
             raise exceptions.ReceiveError(
                 'Failed with status {}'.format(status))

@@ -167,6 +167,7 @@ pub enum Error {
     InvalidState(String),
     UnknownBlock(String),
     UnknownPeer(String),
+    BlockNotReady,
 }
 
 impl ::std::error::Error for Error {
@@ -179,6 +180,7 @@ impl ::std::error::Error for Error {
             InvalidState(ref s) => s,
             UnknownBlock(ref s) => s,
             UnknownPeer(ref s) => s,
+            BlockNotReady => "Block not ready to finalize",
         }
     }
 
@@ -191,6 +193,7 @@ impl ::std::error::Error for Error {
             InvalidState(_) => None,
             UnknownBlock(_) => None,
             UnknownPeer(_) => None,
+            BlockNotReady => None,
         }
     }
 }
@@ -205,6 +208,7 @@ impl ::std::fmt::Display for Error {
             InvalidState(ref s) => write!(f, "InvalidState: {}", s),
             UnknownBlock(ref s) => write!(f, "UnknownBlock: {}", s),
             UnknownPeer(ref s) => write!(f, "UnknownPeer: {}", s),
+            BlockNotReady => write!(f, "BlockNotReady"),
         }
     }
 }
