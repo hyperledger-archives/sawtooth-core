@@ -126,7 +126,13 @@ class ForkResolver(ForkResolverInterface):
         new_num = new_fork_head.block_num
         new_weight = 0
         if new_fork_head.consensus:
-            new_weight = int(new_fork_head.consensus.decode().split(':')[1])
+            try:
+                new_weight_s = new_fork_head.consensus.decode().split(':')[1]
+            except IndexError:
+                # If the new chain's payload cannot be interpreted, it is
+                # invalid and should not be committed
+                return False
+            new_weight = int(new_weight_s)
         cur_num = cur_fork_head.block_num
         cur_weight = 0
         if cur_fork_head.consensus:

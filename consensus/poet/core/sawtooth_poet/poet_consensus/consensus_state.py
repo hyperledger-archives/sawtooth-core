@@ -628,11 +628,12 @@ class ConsensusState(object):
         """
         # Figure out the block in which the current validator information
         # was committed.
-        block = \
-            block_cache.block_store.get_block_by_transaction_id(
-                validator_info.transaction_id)
+        try:
+            block = \
+                block_cache.block_store.get_block_by_transaction_id(
+                    validator_info.transaction_id)
 
-        if not block:
+        except ValueError:
             LOGGER.warning(
                 'Validator %s (ID=%s...%s): Signup txn %s not found in block.',
                 validator_info.name,

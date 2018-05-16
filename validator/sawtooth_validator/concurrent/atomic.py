@@ -66,6 +66,10 @@ class ConcurrentSet:
         with self._lock:
             return element in self._set
 
+    def __len__(self):
+        with self._lock:
+            return len(self._set)
+
 
 class ConcurrentMultiMap:
     """A dictionary that maps keys to lists of items. All methods are
@@ -85,6 +89,17 @@ class ConcurrentMultiMap:
         with self._lock:
             if key in self._dict:
                 self._dict[key].append(item)
+            else:
+                self._dict[key] = [item]
+
+    def append_if_unique(self, key, item):
+        """Append item to the list at key if item is not already in the list.
+        Creates the list at key if it doesn't exist.
+        """
+        with self._lock:
+            if key in self._dict:
+                if item not in self._dict[key]:
+                    self._dict[key].append(item)
             else:
                 self._dict[key] = [item]
 
