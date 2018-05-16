@@ -719,13 +719,15 @@ class BlockPublisher(object):
         """
         return self._chain_head is not None and self._pending_batches
 
-    def _log_consensus_state(self):
-        if self._logging_states.consensus_ready:
-            LOGGER.debug("Consensus is ready to build candidate block.")
-            self._logging_states.consensus_ready = True
+    def _log_consensus_state(self, ready):
+        if ready:
+            if not self._logging_states.consensus_ready:
+                self._logging_states.consensus_ready = True
+                LOGGER.debug("Consensus is ready to build candidate block.")
         else:
-            self._logging_states.consensus_ready = False
-            LOGGER.debug("Consensus not ready to build candidate block.")
+            if self._logging_states.consensus_ready:
+                self._logging_states.consensus_ready = False
+                LOGGER.debug("Consensus not ready to build candidate block.")
 
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
@@ -739,7 +741,9 @@ class BlockPublisher(object):
                     try:
                         self.initialize_block(self._chain_head)
                     except ConsensusNotReady:
-                        self._log_consensus_state()
+                        self._log_consensus_state(False)
+                    else:
+                        self._log_consensus_state(True)
 
                 if self._building():
                     try:
