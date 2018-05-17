@@ -106,9 +106,9 @@ class _PublisherThread(InstrumentedThread):
                 self._check_publish_block_frequency
             while True:
                 try:
-                    batch = self._batch_queue.get(
-                        timeout=self._check_publish_block_frequency)
-                    self._block_publisher.on_batch_received(batch)
+                    self._batch_queue.get(
+                        timeout=self._check_publish_block_frequency,
+                        and_then=self._block_publisher.on_batch_received)
                 except queue.Empty:
                     # If getting a batch times out, just try again.
                     pass
@@ -810,8 +810,16 @@ class IncomingBatchQueue:
             self._ids.add(batch.header_signature)
             self._queue.put(batch)
 
-    def get(self, timeout=None):
+    def get(self, timeout=None, and_then=None):
+        """Get a batch from the queue, blocking until a batch is available or
+        timeout has occurred. If 'and_then' is passed, it is called with the
+        batch before the batch is fully removed from the queue. This avoids
+        concurrent client from observing that a batch is not present while it
+        is transferred from one component to another.
+        """
         batch = self._queue.get(timeout=timeout)
+        if and_then is not None:
+            and_then(batch)
         try:
             self._ids.remove(batch.header_signature)
         except KeyError:
