@@ -26,10 +26,10 @@ rust-crypto = "0.2"
 rustc-serialize = "0.3"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 clap = "2"
-protobuf = "1.4"
+protobuf = "2.0"
 log = "0.3"
 log4rs = "0.7"
 
 [build-dependencies]
-protoc-rust = "^1.6"
+protoc-rust = "2.0"
 glob = "0.2"

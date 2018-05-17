@@ -26,7 +26,7 @@ rust-crypto = "0.2.36"
 rustc-serialize = "0.3.22"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 clap = "2"
-protobuf = "1.4"
+protobuf = "2.0"
 log = "0.3.0"
 log4rs = "0.7.0"
 cbor-codec = "0.7.1"
