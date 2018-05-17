@@ -20,7 +20,7 @@ build = "build.rs"
 [dependencies]
 sawtooth_sdk = { path = "../../sdk/rust" }
 sawtooth_perf = { path = "../sawtooth_perf" }
-protobuf = "1.4.1"
+protobuf = "2.0"
 clap = "2.26.0"
 yaml-rust = "0.3.5"
 rand = "0.3.16"
@@ -32,5 +32,5 @@ name = "smallbank-workload"
 path = "./src/main.rs"
 
 [build-dependencies]
-protoc-rust = "^1.6"
+protoc-rust = "2.0"
 glob = "0.2"

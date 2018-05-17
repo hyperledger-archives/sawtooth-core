@@ -25,7 +25,7 @@ default = ["pem"]
 pem = []
 
 [dependencies]
-protobuf="1.4.1"
+protobuf="2.0"
 secp256k1 = "0.7.1"
 rand = "0.4.2"
 rust-crypto = "0.2.36"
@@ -40,5 +40,5 @@ env_logger = "0.3"
 
 [build-dependencies]
 cc = "1.0"
-protoc-rust = "^1.6"
+protoc-rust = "2.0"
 glob = "0.2"
