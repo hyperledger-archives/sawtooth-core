@@ -807,6 +807,7 @@ class IncomingBatchQueue:
 
     def put(self, batch):
         if batch.header_signature not in self._ids:
+            self._ids.add(batch.header_signature)
             self._queue.put(batch)
 
     def get(self, timeout=None):
