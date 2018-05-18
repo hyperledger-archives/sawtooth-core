@@ -16,6 +16,7 @@
  */
 
 use consensus::engine::{Block, BlockId, Error, PeerId};
+use std::collections::HashMap;
 
 /// Provides methods that allow the consensus engine to issue commands and requests.
 pub trait Service {
@@ -60,20 +61,24 @@ pub trait Service {
     // -- Queries --
 
     /// Retrieve consensus-related information about blocks
-    fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<Vec<Block>, Error>;
+    fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<HashMap<BlockId, Block>, Error>;
 
     /// Get the chain head block.
     fn get_chain_head(&mut self) -> Result<Block, Error>;
 
     /// Read the value of settings as of the given block
-    fn get_settings(&mut self, block_id: BlockId, keys: Vec<String>) -> Result<Vec<String>, Error>;
+    fn get_settings(
+        &mut self,
+        block_id: BlockId,
+        keys: Vec<String>,
+    ) -> Result<HashMap<String, String>, Error>;
 
     /// Read values in state as of the given block
     fn get_state(
         &mut self,
         block_id: BlockId,
         addresses: Vec<String>,
-    ) -> Result<Vec<Vec<u8>>, Error>;
+    ) -> Result<HashMap<String, Vec<u8>>, Error>;
 }
 
 #[cfg(test)]
@@ -116,7 +121,10 @@ pub mod tests {
         fn fail_block(&mut self, _block_id: BlockId) -> Result<(), Error> {
             Ok(())
         }
-        fn get_blocks(&mut self, _block_ids: Vec<BlockId>) -> Result<Vec<Block>, Error> {
+        fn get_blocks(
+            &mut self,
+            _block_ids: Vec<BlockId>,
+        ) -> Result<HashMap<BlockId, Block>, Error> {
             Ok(Default::default())
         }
         fn get_chain_head(&mut self) -> Result<Block, Error> {
@@ -126,14 +134,14 @@ pub mod tests {
             &mut self,
             _block_id: BlockId,
             _settings: Vec<String>,
-        ) -> Result<Vec<String>, Error> {
+        ) -> Result<HashMap<String, String>, Error> {
             Ok(Default::default())
         }
         fn get_state(
             &mut self,
             _block_id: BlockId,
             _addresses: Vec<String>,
-        ) -> Result<Vec<Vec<u8>>, Error> {
+        ) -> Result<HashMap<String, Vec<u8>>, Error> {
             Ok(Default::default())
         }
     }

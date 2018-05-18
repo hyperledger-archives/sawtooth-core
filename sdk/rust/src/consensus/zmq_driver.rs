@@ -34,6 +34,7 @@ use messaging::zmq_stream::ZmqMessageSender;
 use messages::consensus::*;
 use messages::validator::{Message, Message_MessageType};
 
+use std::collections::HashMap;
 use std::sync::{Arc, mpsc::{channel, RecvTimeoutError, Sender}};
 
 /// Generates a random correlation id for use in Message
@@ -448,7 +449,7 @@ impl Service for ZmqService {
         }
     }
 
-    fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<Vec<Block>, Error> {
+    fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<HashMap<BlockId, Block>, Error> {
         let mut request = ConsensusBlocksGetRequest::new();
         request.set_block_ids(protobuf::RepeatedField::from_vec(
             block_ids.into_iter().map(Vec::from).collect(),
@@ -469,7 +470,7 @@ impl Service for ZmqService {
         Ok(response
             .take_blocks()
             .into_iter()
-            .map(Block::from)
+            .map(|block| (BlockId::from(block.block_id.clone()), Block::from(block)))
             .collect())
     }
 
@@ -491,7 +492,11 @@ impl Service for ZmqService {
         Ok(Block::from(response.take_block()))
     }
 
-    fn get_settings(&mut self, block_id: BlockId, keys: Vec<String>) -> Result<Vec<String>, Error> {
+    fn get_settings(
+        &mut self,
+        block_id: BlockId,
+        keys: Vec<String>,
+    ) -> Result<HashMap<String, String>, Error> {
         let mut request = ConsensusSettingsGetRequest::new();
         request.set_block_id(block_id.into());
         request.set_keys(protobuf::RepeatedField::from_vec(keys));
@@ -511,7 +516,7 @@ impl Service for ZmqService {
         Ok(response
             .take_entries()
             .into_iter()
-            .map(|mut entry| entry.take_value())
+            .map(|mut entry| (entry.take_key(), entry.take_value()))
             .collect())
     }
 
@@ -519,7 +524,7 @@ impl Service for ZmqService {
         &mut self,
         block_id: BlockId,
         addresses: Vec<String>,
-    ) -> Result<Vec<Vec<u8>>, Error> {
+    ) -> Result<HashMap<String, Vec<u8>>, Error> {
         let mut request = ConsensusStateGetRequest::new();
         request.set_block_id(block_id.into());
         request.set_addresses(protobuf::RepeatedField::from_vec(addresses));
@@ -539,7 +544,7 @@ impl Service for ZmqService {
         Ok(response
             .take_entries()
             .into_iter()
-            .map(|mut entry| entry.take_data())
+            .map(|mut entry| (entry.take_address(), entry.take_data()))
             .collect())
     }
 }
