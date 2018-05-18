@@ -60,8 +60,8 @@ impl QueueLimit {
     }
 
     pub fn get(&self) -> i32 {
-        // Limit the number of items to 2 times the publishing average.  This
-        // allows the queue to grow geometrically, if the queue is drained.
-        2 * self.avg.value()
+       // Limit the number of items to 2 times the publishing average.  This
+       // allows the queue to grow geometrically, if the queue is drained.
+       2 * self.avg.value()
     }
 }
