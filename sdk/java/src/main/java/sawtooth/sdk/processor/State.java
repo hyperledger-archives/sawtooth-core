@@ -23,18 +23,20 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.Message.MessageType;
+import sawtooth.sdk.protobuf.TpStateDeleteRequest;
+import sawtooth.sdk.protobuf.TpStateDeleteResponse;
 import sawtooth.sdk.protobuf.TpStateEntry;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
 import sawtooth.sdk.protobuf.TpStateGetResponse;
 import sawtooth.sdk.protobuf.TpStateSetRequest;
 import sawtooth.sdk.protobuf.TpStateSetResponse;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
 
 /**
  * Client state that interacts with the context manager through Stream networking.
@@ -145,4 +147,37 @@ public class State {
     return addressesThatWereSet;
   }
 
+  /**Make a delete request on a specific context specified by contextId.
+   * This method will delete the batch of valid addresses pass by client or 
+   * reject the entire collection of address if any one address is not valid 
+   * @param addresses A collection of Map.Entry's
+   * @return addressesThatWereDeleted, A collection of address Strings that were delete
+   * @throws InternalError something went wrong processing transaction
+   */
+
+  public Collection<String> deleteState(Collection<String> addresses)
+                        throws InternalError, InvalidTransactionException {
+    TpStateDeleteRequest deleteRequest = TpStateDeleteRequest.newBuilder()
+                                         .addAllAddresses(addresses)
+                                         .setContextId(this.contextId)
+                                         .build();
+    Future future = stream.send(Message.MessageType.TP_STATE_DELETE_REQUEST,
+                             deleteRequest.toByteString());
+    TpStateDeleteResponse deleteResponse = null;
+    try {
+      deleteResponse = TpStateDeleteResponse
+                         .parseFrom(future.getResult(TIME_OUT));
+    } catch (InvalidProtocolBufferException ipbe) {
+      throw new InvalidTransactionException(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
+    }
+    if (deleteResponse.getStatus() == TpStateDeleteResponse.Status.AUTHORIZATION_ERROR) {
+      throw new InvalidTransactionException(
+          "Tried to delete unauthorized state address " + addresses.toString());
+    }
+    return deleteResponse.getAddressesList();
+  }
 }
