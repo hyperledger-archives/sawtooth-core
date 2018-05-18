@@ -150,13 +150,13 @@ class ZmqService(Service):
     # -- Block Directives --
 
     def check_blocks(self, priority):
-        request = consensus_pb2.ConsensusCheckBlockRequest(block_ids=priority)
+        request = consensus_pb2.ConsensusCheckBlocksRequest(block_ids=priority)
 
-        response_type = consensus_pb2.ConsensusCheckBlockResponse
+        response_type = consensus_pb2.ConsensusCheckBlocksResponse
 
         response = self._send(
             request=request,
-            message_type=Message.CONSENSUS_CHECK_BLOCK_REQUEST,
+            message_type=Message.CONSENSUS_CHECK_BLOCKS_REQUEST,
             response_type=response_type)
 
         status = response.status

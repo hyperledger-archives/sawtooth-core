@@ -379,21 +379,21 @@ impl Service for ZmqService {
     }
 
     fn check_blocks(&mut self, priority: Vec<BlockId>) -> Result<(), Error> {
-        let mut request = ConsensusCheckBlockRequest::new();
+        let mut request = ConsensusCheckBlocksRequest::new();
         request.set_block_ids(protobuf::RepeatedField::from_vec(
             priority.into_iter().map(Vec::from).collect(),
         ));
 
-        let response: ConsensusCheckBlockResponse = self.rpc(
+        let response: ConsensusCheckBlocksResponse = self.rpc(
             &request,
-            Message_MessageType::CONSENSUS_CHECK_BLOCK_REQUEST,
-            Message_MessageType::CONSENSUS_CHECK_BLOCK_RESPONSE,
+            Message_MessageType::CONSENSUS_CHECK_BLOCKS_REQUEST,
+            Message_MessageType::CONSENSUS_CHECK_BLOCKS_RESPONSE,
         )?;
 
-        if response.get_status() == ConsensusCheckBlockResponse_Status::UNKNOWN_BLOCK {
+        if response.get_status() == ConsensusCheckBlocksResponse_Status::UNKNOWN_BLOCK {
             Err(Error::UnknownBlock("Block not found".into()))
         } else {
-            check_ok!(response, ConsensusCheckBlockResponse_Status::OK)
+            check_ok!(response, ConsensusCheckBlocksResponse_Status::OK)
         }
     }
 
@@ -876,11 +876,11 @@ mod tests {
 
         service_test!(
             &socket,
-            ConsensusCheckBlockResponse::new(),
-            ConsensusCheckBlockResponse_Status::OK,
-            Message_MessageType::CONSENSUS_CHECK_BLOCK_RESPONSE,
-            ConsensusCheckBlockRequest,
-            Message_MessageType::CONSENSUS_CHECK_BLOCK_REQUEST
+            ConsensusCheckBlocksResponse::new(),
+            ConsensusCheckBlocksResponse_Status::OK,
+            Message_MessageType::CONSENSUS_CHECK_BLOCKS_RESPONSE,
+            ConsensusCheckBlocksRequest,
+            Message_MessageType::CONSENSUS_CHECK_BLOCKS_REQUEST
         );
 
         service_test!(

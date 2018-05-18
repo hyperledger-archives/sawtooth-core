@@ -269,11 +269,11 @@ message ConsensusCancelBlockResponse {
 // the directive was received successfully. The engine must listen for
 // notifications from the consuming component to learn if the blocks would
 // commit or not.
-message ConsensusCheckBlockRequest {
+message ConsensusCheckBlocksRequest {
   repeated bytes block_ids = 1;
 }
 
-message ConsensusCheckBlockResponse {
+message ConsensusCheckBlocksResponse {
   enum Status {
     STATUS_UNSET = 0;
     OK = 1;
