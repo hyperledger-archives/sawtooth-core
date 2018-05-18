@@ -19,3 +19,4 @@ pub const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
 pub mod block_manager;
 pub mod block_store;
+pub mod publisher;
