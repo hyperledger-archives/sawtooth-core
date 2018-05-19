@@ -2,8 +2,90 @@ use proto::batch::Batch;
 use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, SendError, Sender};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
-/// Ordered batches wating to be processed
+/// This queue keeps track of the batch ids so that components on the edge
+/// can filter out duplicates early. However, there is still an opportunity for
+/// duplicates to make it into this queue, which is intentional to avoid
+/// blocking threads trying to put/get from the queue. Any duplicates
+/// introduced by this must be filtered out later.
+pub fn make_batch_queue() -> (IncomingBatchSender, IncomingBatchReceiver) {
+    let (sender, reciever) = channel();
+    let ids = Arc::new(Mutex::new(HashSet::new()));
+    (
+        IncomingBatchSender::new(ids.clone(), sender),
+        IncomingBatchReceiver::new(ids, reciever),
+    )
+}
+
+pub struct IncomingBatchReceiver {
+    ids: Arc<Mutex<HashSet<String>>>,
+    receiver: Receiver<Batch>,
+}
+
+impl IncomingBatchReceiver {
+    pub fn new(
+        ids: Arc<Mutex<HashSet<String>>>,
+        receiver: Receiver<Batch>,
+    ) -> IncomingBatchReceiver {
+        IncomingBatchReceiver { ids, receiver }
+    }
+
+    pub fn get(&mut self, timeout: Duration) -> Result<Batch, BatchQueueError> {
+        let batch = self.receiver.recv_timeout(timeout)?;
+        self.ids.lock()?.remove(batch.get_header_signature());
+        Ok(batch)
+    }
+}
+
+pub struct IncomingBatchSender {
+    ids: Arc<Mutex<HashSet<String>>>,
+    sender: Sender<Batch>,
+}
+
+impl IncomingBatchSender {
+    pub fn new(ids: Arc<Mutex<HashSet<String>>>, sender: Sender<Batch>) -> IncomingBatchSender {
+        IncomingBatchSender { ids, sender }
+    }
+    pub fn put(&mut self, batch: Batch) -> Result<(), BatchQueueError> {
+        if !self.ids.lock()?.contains(batch.get_header_signature()) {
+            self.ids
+                .lock()?
+                .insert(batch.get_header_signature().to_string());
+            self.sender.send(batch).map_err(BatchQueueError::from)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub enum BatchQueueError {
+    SenderError(SendError<Batch>),
+    TimeoutError(RecvTimeoutError),
+    MutexPoisonError(String),
+}
+
+impl From<SendError<Batch>> for BatchQueueError {
+    fn from(e: SendError<Batch>) -> Self {
+        BatchQueueError::SenderError(e)
+    }
+}
+
+impl From<RecvTimeoutError> for BatchQueueError {
+    fn from(e: RecvTimeoutError) -> Self {
+        BatchQueueError::TimeoutError(e)
+    }
+}
+
+impl<'a> From<PoisonError<MutexGuard<'a, HashSet<String>>>> for BatchQueueError {
+    fn from(_e: PoisonError<MutexGuard<HashSet<String>>>) -> Self {
+        BatchQueueError::MutexPoisonError("Muxtex Poisoned".into())
+    }
+}
+
+/// Ordered batches waiting to be processed
 pub struct PendingBatchesPool {
     batches: Vec<Batch>,
     ids: HashSet<String>,
