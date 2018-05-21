@@ -15,7 +15,7 @@
 import ctypes
 from enum import IntEnum
 
-from sawtooth_validator.ffi import LIBRARY
+from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
 from sawtooth_validator.ffi import OwnedPointer
 
@@ -29,14 +29,10 @@ class NativeLmdbDatabase(OwnedPointer):
 
         c_path = ctypes.c_char_p(path.encode())
 
-        c_indexes = (ctypes.c_char_p * len(indexes))()
-        for (i, index) in enumerate(indexes):
-            c_indexes[i] = ctypes.c_char_p(index.encode())
-
         c_size = ctypes.c_size_t(_size)
-        res = LIBRARY.call(
+        res = PY_LIBRARY.call(
             'lmdb_database_new', c_path, c_size,
-            c_indexes, ctypes.c_size_t(len(indexes)),
+            ctypes.py_object(indexes),
             ctypes.byref(self.pointer))
         if res == ErrorCode.Success:
             return

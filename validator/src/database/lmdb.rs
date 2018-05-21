@@ -70,7 +70,7 @@ pub struct LmdbDatabase {
 }
 
 impl LmdbDatabase {
-    pub fn new(ctx: LmdbContext, indexes: &[&str]) -> Result<Self, DatabaseError> {
+    pub fn new<S: AsRef<str>>(ctx: LmdbContext, indexes: &[S]) -> Result<Self, DatabaseError> {
         let main = lmdb::Database::open(
             ctx.env.clone(),
             Some("main"),
@@ -83,12 +83,12 @@ impl LmdbDatabase {
         for name in indexes {
             let db = lmdb::Database::open(
                 ctx.env.clone(),
-                Some(name),
+                Some(name.as_ref()),
                 &lmdb::DatabaseOptions::new(lmdb::db::CREATE),
             ).map_err(|err| {
                 DatabaseError::InitError(format!("Failed to open database: {:?}", err))
             })?;
-            index_dbs.insert(String::from(*name), db);
+            index_dbs.insert(String::from(name.as_ref()), db);
         }
         Ok(LmdbDatabase {
             ctx,

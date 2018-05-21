@@ -12,6 +12,7 @@ libc = ">=0.2.35"
 lmdb-zero = ">=0.4.1"
 cbor-codec = "0.7"
 protobuf = "2.0"
+python3-sys = "0.2"
 rust-crypto = "0.2"
 
 [dev-dependencies]
