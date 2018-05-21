@@ -35,8 +35,8 @@ from sawtooth_block_info.common import BLOCK_INFO_NAMESPACE
 class BlockInfoInjector(BatchInjector):
     """Inject BlockInfo transactions at the beginning of blocks."""
 
-    def __init__(self, block_store, state_view_factory, signer):
-        self._block_store = block_store
+    def __init__(self, block_cache, state_view_factory, signer):
+        self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._signer = signer
 
@@ -85,7 +85,7 @@ class BlockInfoInjector(BatchInjector):
         Returns:
             A list of batches to inject.
         """
-        previous_block = self._block_store[previous_block_id].get_block()
+        previous_block = self._block_cache[previous_block_id].get_block()
         previous_header = BlockHeader()
         previous_header.ParseFromString(previous_block.header)
 

@@ -57,22 +57,22 @@ class UnknownBatchInjectorError(Exception):
 
 
 class DefaultBatchInjectorFactory:
-    def __init__(self, block_store, state_view_factory, signer):
+    def __init__(self, block_cache, state_view_factory, signer):
         """
         Args:
-            block_store (:obj:`BlockStore`): The block store, for passing to
+            block_cache (:obj:`BlockCache`): The block cache, for passing to
                 batch injectors that require it.
             state_view_factory (:obj:`StateViewFactory`): The state view
                 factory, for passing to injectors that require it.
             signer (:obj:`Signer`): The cryptographic signer of the validator.
         """
-        self._block_store = block_store
+        self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._signer = signer
 
     def _read_injector_setting(self, block_id):
         state_view = self._state_view_factory.create_view(
-            self._block_store[block_id].state_root_hash)
+            self._block_cache[block_id].state_root_hash)
         settings_view = SettingsView(state_view)
         batch_injector_setting = settings_view.get_setting(
             "sawtooth.validator.batch_injectors")
@@ -90,6 +90,6 @@ class DefaultBatchInjectorFactory:
                 "sawtooth_block_info.injector")
 
             return block_info_injector.BlockInfoInjector(
-                self._block_store, self._state_view_factory, self._signer)
+                self._block_cache, self._state_view_factory, self._signer)
 
         raise UnknownBatchInjectorError(injector)
