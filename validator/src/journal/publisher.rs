@@ -11,7 +11,7 @@ pub struct PendingBatchesPool {
 }
 
 impl PendingBatchesPool {
-    pub fn new(sample_size: usize, initial_value: i32) -> PendingBatchesPool {
+    pub fn new(sample_size: usize, initial_value: usize) -> PendingBatchesPool {
         PendingBatchesPool {
             batches: Vec::new(),
             ids: HashSet::new(),
@@ -105,22 +105,22 @@ impl PendingBatchesPool {
         }
     }
 
-    pub fn update_limit(&mut self, consumed: i32) {
-        self.limit.update(self.batches.len() as i32, consumed);
+    pub fn update_limit(&mut self, consumed: usize) {
+        self.limit.update(self.batches.len(), consumed);
     }
 
-    pub fn limit(&self) -> i32 {
+    pub fn limit(&self) -> usize {
         self.limit.get()
     }
 }
 
 struct RollingAverage {
-    samples: VecDeque<i32>,
-    current_average: i32,
+    samples: VecDeque<usize>,
+    current_average: usize,
 }
 
 impl RollingAverage {
-    pub fn new(sample_size: usize, initial_value: i32) -> RollingAverage {
+    pub fn new(sample_size: usize, initial_value: usize) -> RollingAverage {
         let mut samples = VecDeque::with_capacity(sample_size);
         samples.push_back(initial_value);
 
@@ -130,14 +130,14 @@ impl RollingAverage {
         }
     }
 
-    pub fn value(&self) -> i32 {
+    pub fn value(&self) -> usize {
         self.current_average
     }
 
     /// Add the sample and return the updated average.
-    pub fn update(&mut self, sample: i32) -> i32 {
+    pub fn update(&mut self, sample: usize) -> usize {
         self.samples.push_back(sample);
-        self.current_average = self.samples.iter().sum::<i32>() / self.samples.len() as i32;
+        self.current_average = self.samples.iter().sum::<usize>() / self.samples.len();
         self.current_average
     }
 }
@@ -147,7 +147,7 @@ struct QueueLimit {
 }
 
 impl QueueLimit {
-    pub fn new(sample_size: usize, initial_value: i32) -> QueueLimit {
+    pub fn new(sample_size: usize, initial_value: usize) -> QueueLimit {
         QueueLimit {
             avg: RollingAverage::new(sample_size, initial_value),
         }
@@ -158,7 +158,7 @@ impl QueueLimit {
     /// Args:
     ///     queue_length (int): the current size of the queue
     ///     consumed (int): the number items consumed
-    pub fn update(&mut self, queue_length: i32, consumed: i32) {
+    pub fn update(&mut self, queue_length: usize, consumed: usize) {
         if consumed > 0 {
             // Only update the average if either:
             // a. Not drained below the current average
@@ -173,7 +173,7 @@ impl QueueLimit {
         }
     }
 
-    pub fn get(&self) -> i32 {
+    pub fn get(&self) -> usize {
         // Limit the number of items to 2 times the publishing average.  This
         // allows the queue to grow geometrically, if the queue is drained.
         2 * self.avg.value()
