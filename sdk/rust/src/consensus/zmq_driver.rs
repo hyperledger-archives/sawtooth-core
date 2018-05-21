@@ -37,6 +37,8 @@ use messages::validator::{Message, Message_MessageType};
 use std::collections::HashMap;
 use std::sync::{Arc, mpsc::{channel, RecvTimeoutError, Sender}};
 
+const REGISTER_TIMEOUT: u64 = 300;
+
 /// Generates a random correlation id for use in Message
 fn generate_correlation_id() -> String {
     const LENGTH: usize = 16;
@@ -62,6 +64,7 @@ impl Driver for ZmqDriver {
 
         register(
             &mut validator_sender,
+            ::std::time::Duration::from_secs(REGISTER_TIMEOUT),
             self.engine.name(),
             self.engine.version(),
         )?;
@@ -120,7 +123,12 @@ impl Driver for ZmqDriver {
     }
 }
 
-pub fn register(sender: &mut MessageSender, name: String, version: String) -> Result<(), Error> {
+pub fn register(
+    sender: &mut MessageSender,
+    timeout: ::std::time::Duration,
+    name: String,
+    version: String,
+) -> Result<(), Error> {
     let mut request = ConsensusRegisterRequest::new();
     request.set_name(name);
     request.set_version(version);
@@ -131,7 +139,7 @@ pub fn register(sender: &mut MessageSender, name: String, version: String) -> Re
         &request.write_to_bytes()?,
     )?;
 
-    let msg = future.get_timeout(::std::time::Duration::from_secs(10))?;
+    let msg = future.get_timeout(timeout)?;
     match msg.get_message_type() {
         Message_MessageType::CONSENSUS_REGISTER_RESPONSE => {
             let response: ConsensusRegisterResponse =
