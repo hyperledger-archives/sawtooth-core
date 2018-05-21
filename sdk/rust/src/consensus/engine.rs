@@ -18,6 +18,8 @@
 use std::ops::Deref;
 use std::sync::{Mutex, atomic::{AtomicBool, Ordering}, mpsc::Receiver};
 
+use hex;
+
 use consensus::service::Service;
 
 /// An update from the validator
@@ -32,7 +34,7 @@ pub enum Update {
     BlockCommit(BlockId),
 }
 
-#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd)]
 pub struct BlockId(Vec<u8>);
 impl Deref for BlockId {
     type Target = Vec<u8>;
@@ -51,9 +53,14 @@ impl From<Vec<u8>> for BlockId {
         BlockId(v)
     }
 }
+impl ::std::fmt::Debug for BlockId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}", hex::encode(&self.0))
+    }
+}
 
 /// All information about a block that is relevant to consensus
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Block {
     pub block_id: BlockId,
     pub previous_id: BlockId,
@@ -61,8 +68,21 @@ pub struct Block {
     pub block_num: u64,
     pub payload: Vec<u8>,
 }
+impl ::std::fmt::Debug for Block {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(
+            f,
+            "Block(block_num: {:?}, block_id: {:?}, previous_id: {:?}, signer_id: {:?}, payload: {})",
+            self.block_id,
+            self.previous_id,
+            self.signer_id,
+            self.block_num,
+            hex::encode(&self.payload),
+        )
+    }
+}
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
@@ -79,6 +99,11 @@ impl From<PeerId> for Vec<u8> {
 impl From<Vec<u8>> for PeerId {
     fn from(v: Vec<u8>) -> PeerId {
         PeerId(v)
+    }
+}
+impl ::std::fmt::Debug for PeerId {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}", hex::encode(&self.0))
     }
 }
 
