@@ -14,11 +14,12 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use cpython::{PyList, PyObject, Python};
 use database::lmdb::*;
+use py_ffi;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
-use std::slice;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -36,33 +37,22 @@ pub enum ErrorCode {
 pub extern "C" fn lmdb_database_new(
     path: *const c_char,
     file_size: usize,
-    indexes: *const *const c_char,
-    indexes_len: usize,
+    indexes_ptr: *mut py_ffi::PyObject,
     db_ptr: *mut *const c_void,
 ) -> ErrorCode {
     if path.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    if indexes_len > 0 && indexes.is_null() {
-        return ErrorCode::NullPointerProvided;
-    }
-
-    let indexes: Result<Vec<&str>, ErrorCode> = if indexes_len > 0 {
-        unsafe { slice::from_raw_parts(indexes, indexes_len) }
-            .iter()
-            .map(|c_str| {
-                unsafe { CStr::from_ptr(*c_str).to_str() }
-                    .map_err(|_| ErrorCode::InvalidIndexString)
-            })
+    let indexes: Vec<String> = unsafe {
+        let py = Python::assume_gil_acquired();
+        let py_obj = PyObject::from_borrowed_ptr(py, indexes_ptr);
+        let py_list: PyList = py_obj.extract(py).unwrap();
+        py_list
+            .iter(py)
+            .map(|pyobj| pyobj.extract::<String>(py).unwrap())
             .collect()
-    } else {
-        Ok(Vec::with_capacity(0))
     };
-
-    if indexes.is_err() {
-        return indexes.unwrap_err();
-    }
 
     let db_path = unsafe {
         match CStr::from_ptr(path).to_str() {
@@ -71,7 +61,7 @@ pub extern "C" fn lmdb_database_new(
         }
     };
 
-    let ctx = match LmdbContext::new(Path::new(&db_path), indexes_len, Some(file_size)) {
+    let ctx = match LmdbContext::new(Path::new(&db_path), indexes.len(), Some(file_size)) {
         Ok(ctx) => ctx,
         Err(err) => {
             error!(
@@ -82,7 +72,7 @@ pub extern "C" fn lmdb_database_new(
         }
     };
 
-    match LmdbDatabase::new(ctx, &(indexes.unwrap())) {
+    match LmdbDatabase::new(ctx, &indexes) {
         Ok(db) => {
             unsafe {
                 *db_ptr = Box::into_raw(Box::new(db)) as *const c_void;
