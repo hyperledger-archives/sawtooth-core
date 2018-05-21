@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Library:
 
-    def __init__(self):
+    def __init__(self, library_loader):
         lib_prefix_mapping = {
             "darwin": "lib",
             "linux": "lib",
@@ -55,13 +55,14 @@ class Library:
 
         LOGGER.debug("loading library %s", library_path)
 
-        self._cdll = ctypes.CDLL(library_path)
+        self._cdll = library_loader(library_path)
 
     def call(self, name, *args):
         return getattr(self._cdll, name)(*args)
 
 
-LIBRARY = Library()
+LIBRARY = Library(ctypes.CDLL)
+PY_LIBRARY = Library(ctypes.PyDLL)
 
 
 def prepare_byte_result():
