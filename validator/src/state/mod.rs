@@ -16,6 +16,7 @@
  */
 
 pub mod error;
+pub mod identity_view;
 pub mod merkle;
 pub mod merkle_ffi;
 pub mod settings_view;
