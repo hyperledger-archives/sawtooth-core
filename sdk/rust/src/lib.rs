@@ -16,6 +16,7 @@
  */
 
 extern crate crypto;
+extern crate hex;
 extern crate libc;
 #[macro_use]
 extern crate log;
