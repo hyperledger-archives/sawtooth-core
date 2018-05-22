@@ -18,6 +18,10 @@
 use proto::events::Event;
 use proto::transaction_receipt::StateChange;
 
+mod execution_result_ffi;
+
+pub use self::execution_result_ffi::{BatchResult, TransactionResult};
+
 pub struct ExecutionResults {
     pub beginning_state_hash: Option<String>,
     pub ending_state_hash: Option<String>,
