@@ -15,30 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate python3_sys as py_ffi;
+use cpython;
 
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
+use scheduler::Scheduler;
 
-// exported modules
-pub mod database;
-pub mod execution;
-pub mod journal;
-mod metrics;
-pub mod proto;
-pub mod scheduler;
-pub mod state;
+/// The logical state hash before state has been added to the
+/// merkle database. May not be the actual first state hash due to
+/// implementation details of the merkle database.
+pub const NULL_STATE_HASH: &str = "";
 
-pub mod batch;
-mod batch_ffi;
-pub mod block;
-pub mod transaction;
+pub trait ExecutionPlatform {
+    fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr>;
+}
