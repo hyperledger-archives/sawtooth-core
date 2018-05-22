@@ -106,9 +106,9 @@ class _PublisherThread(InstrumentedThread):
                 self._check_publish_block_frequency
             while True:
                 try:
-                    batch = self._batch_queue.get(
-                        timeout=self._check_publish_block_frequency)
-                    self._block_publisher.on_batch_received(batch)
+                    self._batch_queue.get(
+                        timeout=self._check_publish_block_frequency,
+                        and_then=self._block_publisher.on_batch_received)
                 except queue.Empty:
                     # If getting a batch times out, just try again.
                     pass
@@ -719,13 +719,15 @@ class BlockPublisher(object):
         """
         return self._chain_head is not None and self._pending_batches
 
-    def _log_consensus_state(self):
-        if self._logging_states.consensus_ready:
-            LOGGER.debug("Consensus is ready to build candidate block.")
-            self._logging_states.consensus_ready = True
+    def _log_consensus_state(self, ready):
+        if ready:
+            if not self._logging_states.consensus_ready:
+                self._logging_states.consensus_ready = True
+                LOGGER.debug("Consensus is ready to build candidate block.")
         else:
-            self._logging_states.consensus_ready = False
-            LOGGER.debug("Consensus not ready to build candidate block.")
+            if self._logging_states.consensus_ready:
+                self._logging_states.consensus_ready = False
+                LOGGER.debug("Consensus not ready to build candidate block.")
 
     def on_check_publish_block(self, force=False):
         """Ask the consensus module if it is time to claim the candidate block
@@ -739,7 +741,9 @@ class BlockPublisher(object):
                     try:
                         self.initialize_block(self._chain_head)
                     except ConsensusNotReady:
-                        self._log_consensus_state()
+                        self._log_consensus_state(False)
+                    else:
+                        self._log_consensus_state(True)
 
                 if self._building():
                     try:
@@ -803,10 +807,19 @@ class IncomingBatchQueue:
 
     def put(self, batch):
         if batch.header_signature not in self._ids:
+            self._ids.add(batch.header_signature)
             self._queue.put(batch)
 
-    def get(self, timeout=None):
+    def get(self, timeout=None, and_then=None):
+        """Get a batch from the queue, blocking until a batch is available or
+        timeout has occurred. If 'and_then' is passed, it is called with the
+        batch before the batch is fully removed from the queue. This avoids
+        concurrent client from observing that a batch is not present while it
+        is transferred from one component to another.
+        """
         batch = self._queue.get(timeout=timeout)
+        if and_then is not None:
+            and_then(batch)
         try:
             self._ids.remove(batch.header_signature)
         except KeyError:
