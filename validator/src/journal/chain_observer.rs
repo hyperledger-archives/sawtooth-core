@@ -15,10 +15,14 @@
  * ------------------------------------------------------------------------------
  */
 
-pub const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
+use block::Block;
+use proto::transaction_receipt::TransactionReceipt;
 
-pub mod block_manager;
-pub mod block_store;
-mod chain_commit_state;
-pub mod chain_observer;
-pub mod publisher;
+pub trait ChainObserver {
+    /// This method is called by the ChainController on block boundaries.
+    ///
+    /// Args:
+    ///     block: The block that was just committed.
+    ///     receipts: transaction receipts for all transactions in the block.
+    fn chain_update(&mut self, block: &Block, receipts: &[&TransactionReceipt]);
+}
