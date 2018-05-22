@@ -19,6 +19,30 @@ use proto::events::Event;
 use proto::transaction_receipt::StateChange;
 
 mod execution_result_ffi;
+use batch::Batch;
+
+pub trait Scheduler {
+    /// Add a batch to the scheduler, optionally specifying that the transactions
+    /// in this batch and each of the batches in order up to this one should produce a
+    /// Merkle root specified by expected_state_hash. If the two roots are equal, the results of
+    /// the block are written to the database, otherwise not.
+    fn add_batch(
+        &mut self,
+        batch: Batch,
+        expected_state_hash: Option<&str>,
+        required: bool,
+    ) -> Result<(), SchedulerError>;
+
+    /// Signal to the scheduler that it can finish it's work and no
+    /// more batches will be handed to it.
+    fn finalize(&mut self, unschedule_incomplete: bool) -> Result<(), SchedulerError>;
+
+    /// Cancel the scheduling of the supplied transactions as they are no longer needed.
+    fn cancel(&mut self) -> Result<(), SchedulerError>;
+
+    /// Ask if the ExecutionResults are ready, optionally blocking until they become available.
+    fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError>;
+}
 
 pub use self::execution_result_ffi::{BatchResult, TransactionResult};
 
@@ -36,4 +60,11 @@ pub struct TxnExecutionResult {
     pub data: Vec<(String, Vec<u8>)>,
     pub error_message: String,
     pub error_data: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub enum SchedulerError {
+    /// The scheduler transition is not allowed by the Finite State Machine.
+    FSMError(String),
+    Other(String),
 }
