@@ -21,6 +21,8 @@ use proto::transaction_receipt::StateChange;
 mod execution_result_ffi;
 use batch::Batch;
 
+pub mod py_scheduler;
+
 pub trait Scheduler {
     /// Add a batch to the scheduler, optionally specifying that the transactions
     /// in this batch and each of the batches in order up to this one should produce a
