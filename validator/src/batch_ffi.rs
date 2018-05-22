@@ -110,3 +110,68 @@ impl<'source> FromPyObject<'source> for Batch {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::Batch;
+    use cpython;
+    use cpython::ToPyObject;
+    use proto;
+    use protobuf::Message;
+    use transaction::Transaction;
+
+    fn create_batch() -> Batch {
+        let mut batch_header = proto::batch::BatchHeader::new();
+        batch_header.set_signer_public_key("C".into());
+        batch_header.set_transaction_ids(::protobuf::RepeatedField::from_vec(vec!["B".into()]));
+        Batch {
+            header_signature: "A".into(),
+            transactions: vec![create_txn()],
+            signer_public_key: "C".into(),
+            transaction_ids: vec!["B".into()],
+            trace: true,
+
+            header_bytes: batch_header.write_to_bytes().unwrap(),
+        }
+    }
+
+    fn create_txn() -> Transaction {
+        let mut txn_header = proto::transaction::TransactionHeader::new();
+        txn_header.set_batcher_public_key("C".into());
+        txn_header.set_dependencies(::protobuf::RepeatedField::from_vec(vec!["D".into()]));
+        txn_header.set_family_name("test".into());
+        txn_header.set_family_version("1.0".into());
+        txn_header.set_inputs(::protobuf::RepeatedField::from_vec(vec!["P".into()]));
+        txn_header.set_outputs(::protobuf::RepeatedField::from_vec(vec!["P".into()]));
+        txn_header.set_nonce("N".into());
+        txn_header.set_payload_sha512("E".into());
+        txn_header.set_signer_public_key("T".into());
+
+        Transaction {
+            header_signature: "B".into(),
+            payload: vec![1, 2, 3],
+            batcher_public_key: "C".into(),
+            dependencies: vec!["D".into()],
+            family_name: "test".into(),
+            family_version: "1.0".into(),
+            inputs: vec!["P".into()],
+            outputs: vec!["P".into()],
+            nonce: "N".into(),
+            payload_sha512: "E".into(),
+            signer_public_key: "T".into(),
+
+            header_bytes: txn_header.write_to_bytes().unwrap(),
+        }
+    }
+
+    #[test]
+    fn test_basic() {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        let batch = create_batch();
+        let resulting_batch = batch.to_py_object(py).extract::<Batch>(py).unwrap();
+        assert_eq!(batch, resulting_batch);
+    }
+}
