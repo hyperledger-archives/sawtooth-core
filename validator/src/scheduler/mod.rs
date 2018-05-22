@@ -14,28 +14,22 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate python3_sys as py_ffi;
 
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
+use proto::events::Event;
+use proto::transaction_receipt::StateChange;
 
-// exported modules
-pub mod database;
-pub mod journal;
-pub mod proto;
-pub mod scheduler;
-pub mod state;
+pub struct ExecutionResults {
+    pub beginning_state_hash: Option<String>,
+    pub ending_state_hash: Option<String>,
+    pub batch_results: Vec<(String, Vec<TxnExecutionResult>)>,
+}
 
-pub mod batch;
-mod batch_ffi;
-pub mod block;
-pub mod transaction;
+pub struct TxnExecutionResult {
+    pub signature: String,
+    pub is_valid: bool,
+    pub state_changes: Vec<StateChange>,
+    pub events: Vec<Event>,
+    pub data: Vec<(String, Vec<u8>)>,
+    pub error_message: String,
+    pub error_data: Vec<u8>,
+}
