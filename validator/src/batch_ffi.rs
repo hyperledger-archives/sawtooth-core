@@ -16,6 +16,7 @@
  */
 
 use cpython;
+use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 use cpython::PythonObject;
 use cpython::ToPyObject;
@@ -23,6 +24,7 @@ use protobuf::Message;
 
 use batch::Batch;
 use proto;
+use transaction::Transaction;
 
 impl ToPyObject for Batch {
     type ObjectType = cpython::PyObject;
@@ -64,5 +66,47 @@ impl ToPyObject for Batch {
             )
             .unwrap();
         batch
+    }
+}
+
+impl<'source> FromPyObject<'source> for Batch {
+    fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
+        let batch_bytes = obj.call_method(py, "SerializeToString", cpython::NoArgs, None)
+            .unwrap()
+            .extract::<Vec<u8>>(py)
+            .unwrap();
+        let mut proto_batch: proto::batch::Batch =
+            ::protobuf::parse_from_bytes(batch_bytes.as_slice()).unwrap();
+        let mut proto_batch_header: proto::batch::BatchHeader =
+            ::protobuf::parse_from_bytes(proto_batch.get_header()).unwrap();
+        Ok(Batch {
+            header_signature: proto_batch.take_header_signature(),
+            header_bytes: proto_batch.take_header(),
+            transactions: proto_batch
+                .transactions
+                .iter_mut()
+                .map(|t| {
+                    let mut proto_header: proto::transaction::TransactionHeader =
+                        ::protobuf::parse_from_bytes(t.get_header()).unwrap();
+                    Ok(Transaction {
+                        header_signature: t.take_header_signature(),
+                        header_bytes: t.take_header(),
+                        payload: t.take_payload(),
+                        batcher_public_key: proto_header.take_batcher_public_key(),
+                        dependencies: proto_header.take_dependencies().to_vec(),
+                        family_name: proto_header.take_family_name(),
+                        family_version: proto_header.take_family_version(),
+                        inputs: proto_header.take_inputs().to_vec(),
+                        outputs: proto_header.take_outputs().to_vec(),
+                        nonce: proto_header.take_nonce(),
+                        payload_sha512: proto_header.take_payload_sha512(),
+                        signer_public_key: proto_header.take_signer_public_key(),
+                    })
+                })
+                .collect::<cpython::PyResult<Vec<_>>>()?,
+            signer_public_key: proto_batch_header.take_signer_public_key(),
+            transaction_ids: proto_batch_header.take_transaction_ids().to_vec(),
+            trace: proto_batch.get_trace(),
+        })
     }
 }
