@@ -35,5 +35,6 @@ pub mod proto;
 pub mod state;
 
 pub mod batch;
+mod batch_ffi;
 pub mod block;
 pub mod transaction;
