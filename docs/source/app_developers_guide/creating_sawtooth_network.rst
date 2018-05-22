@@ -320,7 +320,7 @@ in :doc:`ubuntu`.
       $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
       -o config.batch \
       sawtooth.consensus.algorithm=poet \
-      sawtooth.poet.report_public_key_pem=$(cat /etc/sawtooth/simulator_rk_pub.pem) \
+      sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
 
