@@ -23,3 +23,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/validator
     command: cargo test
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/validator"
+      RUST_BACKTRACE: full
