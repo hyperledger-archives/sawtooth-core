@@ -38,6 +38,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, mpsc::{channel, RecvTimeoutError, Sender}};
 
 const REGISTER_TIMEOUT: u64 = 300;
+const SERVICE_TIMEOUT: u64 = 300;
 
 /// Generates a random correlation id for use in Message
 fn generate_correlation_id() -> String {
@@ -77,7 +78,7 @@ impl Driver for ZmqDriver {
                 update_receiver,
                 Box::new(ZmqService::new(
                     validator_sender_clone,
-                    ::std::time::Duration::from_secs(10),
+                    ::std::time::Duration::from_secs(SERVICE_TIMEOUT),
                     engine.name(),
                     engine.version(),
                 )),
