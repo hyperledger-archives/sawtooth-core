@@ -624,7 +624,6 @@ class BlockPublisher(object):
         committed_txn_cache = TransactionCommitCache(
             self._block_cache.block_store)
 
-        self._transaction_executor.execute(scheduler)
         self._candidate_block = _CandidateBlock(
             self._block_cache.block_store,
             consensus, scheduler,
