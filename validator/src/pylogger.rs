@@ -20,18 +20,18 @@ use cpython::{ObjectProtocol, PyModule, PyObject, PyResult, PyTuple, Python, Pyt
 use log;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
-pub fn set_up_logger(verbosity: u64, py: &Python) {
+pub fn set_up_logger(verbosity: u64, py: Python) {
     let verbosity_level: Level = determine_log_level(verbosity);
 
     PyLogger::init(verbosity_level, py).expect("Failed to set logger");
 
     let server_log = py.import("sawtooth_validator.server.log")
-        .map_err(|err| err.print(*py))
+        .map_err(|err| err.print(py))
         .unwrap();
 
     server_log
-        .call(*py, "init_console_logging", (verbosity,), None)
-        .map_err(|err| err.print(*py))
+        .call(py, "init_console_logging", (verbosity,), None)
+        .map_err(|err| err.print(py))
         .unwrap();
 
     warn!("Started logger at level {}", verbosity_level);
@@ -43,13 +43,13 @@ struct PyLogger {
 }
 
 impl PyLogger {
-    fn new(py: &Python) -> PyResult<Self> {
+    fn new(py: Python) -> PyResult<Self> {
         let logging = py.import("logging")?;
-        let logger = logging.call(*py, "getLogger", PyTuple::new(*py, &[]), None)?;
+        let logger = logging.call(py, "getLogger", PyTuple::new(py, &[]), None)?;
         Ok(PyLogger { logger, logging })
     }
 
-    fn init(verbosity: Level, py: &Python) -> Result<(), SetLoggerError> {
+    fn init(verbosity: Level, py: Python) -> Result<(), SetLoggerError> {
         let logger = PyLogger::new(py).unwrap();
 
         log::set_boxed_logger(Box::new(logger))?;
