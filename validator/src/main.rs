@@ -28,13 +28,13 @@ fn main() {
     let cli = match py.import("sawtooth_validator.server.cli") {
         Ok(module) => module,
         Err(err) => {
-            err.print(py);
+            pylogger::exception(py, "failed to load sawtooth_validator.server.cli", err);
             process::exit(1);
         }
     };
 
     if let Err(err) = cli.call(py, "main", (pydict,), None) {
-        err.print(py);
+        pylogger::exception(py, "error executing main", err);
         process::exit(1);
     }
 }
