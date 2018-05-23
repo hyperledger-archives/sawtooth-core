@@ -32,7 +32,7 @@ pub enum Update {
     BlockCommit(BlockId),
 }
 
-#[derive(Default, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct BlockId(Vec<u8>);
 impl Deref for BlockId {
     type Target = Vec<u8>;
@@ -53,7 +53,7 @@ impl From<Vec<u8>> for BlockId {
 }
 
 /// All information about a block that is relevant to consensus
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Block {
     pub block_id: BlockId,
     pub previous_id: BlockId,
@@ -62,7 +62,7 @@ pub struct Block {
     pub payload: Vec<u8>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
