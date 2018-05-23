@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyModule, PyObject, PyResult, PyTuple, Python, PythonObject,
-              ToPyObject};
+use cpython::{ObjectProtocol, PyDict, PyErr, PyModule, PyObject, PyResult, PyTuple, Python,
+              PythonObject, ToPyObject};
 use log;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
@@ -35,6 +35,11 @@ pub fn set_up_logger(verbosity: u64, py: Python) {
         .unwrap();
 
     warn!("Started logger at level {}", verbosity_level);
+}
+
+pub fn exception(py: Python, msg: &str, err: PyErr) {
+    let logger = PyLogger::new(py).expect("Failed to create new PyLogger");
+    logger.exception(py, msg, err);
 }
 
 struct PyLogger {
@@ -57,6 +62,19 @@ impl PyLogger {
         log::set_max_level(verbosity.to_level_filter());
 
         Ok(())
+    }
+
+    pub fn exception(&self, py: Python, msg: &str, mut err: PyErr) {
+        let kwargs = PyDict::new(py);
+        let exc_info = (
+            err.get_type(py),
+            err.instance(py),
+            err.ptraceback.unwrap_or_else(|| py.None()),
+        );
+        kwargs.set_item(py, "exc_info", exc_info).unwrap();
+        self.logger
+            .call_method(py, "error", (msg,), Some(&kwargs))
+            .unwrap();
     }
 }
 
