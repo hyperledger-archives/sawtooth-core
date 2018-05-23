@@ -20,10 +20,11 @@ use cpython::{NoArgs, ObjectProtocol, PyDict, PyModule, PyObject, Python, ToPyOb
 pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
     let gil = Python::acquire_gil();
     let py = gil.python();
-    let py_metrics = py.import("sawtooth_validator.metrics").unwrap();
+    let py_metrics = py.import("sawtooth_validator.metrics")
+        .expect("Failed to import sawtooth_validator.metrics module");
     let py_collector = py_metrics
         .call(py, "get_collector", (name.as_ref(),), None)
-        .unwrap();
+        .expect("Failed to call metrics.get_collector()");
     MetricsCollectorHandle {
         py_collector,
         py_metrics,
@@ -102,7 +103,7 @@ impl MetricsCollectorHandle {
 
         let py_level = self.py_metrics
             .get(py, into_level_str(level.unwrap_or(Default::default())))
-            .unwrap();
+            .expect("Failed to get metric level");
         let py_tags: PyDict = tags.unwrap_or_else(|| HashMap::new()).into_py_object(py);
         let kwargs = PyDict::new(py);
         kwargs.set_item(py, "level", py_level).unwrap();
@@ -110,7 +111,7 @@ impl MetricsCollectorHandle {
 
         self.py_collector
             .call_method(py, metric_type, (metric_name.as_ref(),), Some(&kwargs))
-            .unwrap()
+            .expect("Failed to create new metric")
     }
 }
 
@@ -124,7 +125,7 @@ impl Gauge {
         let py = gil.python();
         self.py_gauge
             .call_method(py, "set_value", (value,), None)
-            .unwrap();
+            .expect("Failed to call Gauge.set_value()");
     }
 }
 
@@ -138,7 +139,7 @@ impl Counter {
         let py = gil.python();
         self.py_counter
             .call_method(py, "inc", NoArgs, None)
-            .unwrap();
+            .expect("Failed to call Counter.inc()");
     }
 
     pub fn dec(&mut self) {
@@ -146,7 +147,7 @@ impl Counter {
         let py = gil.python();
         self.py_counter
             .call_method(py, "dec", NoArgs, None)
-            .unwrap();
+            .expect("Failed to call Counter.dec()");
     }
 }
 
@@ -159,7 +160,9 @@ impl Timer {
         let gil = Python::acquire_gil();
         let py = gil.python();
         TimerHandle {
-            py_timer_ctx: self.py_timer.call_method(py, "time", NoArgs, None).unwrap(),
+            py_timer_ctx: self.py_timer
+                .call_method(py, "time", NoArgs, None)
+                .expect("Failed to call Timer.time()"),
         }
     }
 }
@@ -174,6 +177,6 @@ impl Drop for TimerHandle {
         let py = gil.python();
         self.py_timer_ctx
             .call_method(py, "stop", NoArgs, None)
-            .unwrap();
+            .expect("Failed to call TimerContext.stop()");
     }
 }
