@@ -51,7 +51,7 @@ services:
           --peering dynamic \
           --endpoint tcp://validator-0:8800 \
           --scheduler serial \
-          --network trust \
+          --network-auth trust \
           --opentsdb-url http://influxdb:8086 \
           --opentsdb-db metrics
     \""
@@ -79,7 +79,7 @@ services:
             --endpoint tcp://validator-1:8800 \
             --seeds tcp://validator-0:8800 \
             --scheduler serial \
-            --network trust \
+            --network-auth trust \
             --opentsdb-url http://influxdb:8086 \
             --opentsdb-db metrics
       "
@@ -107,7 +107,7 @@ services:
             --endpoint tcp://validator-2:8800 \
             --seeds tcp://validator-0:8800 \
             --scheduler serial \
-            --network trust \
+            --network-auth trust \
             --opentsdb-url http://influxdb:8086 \
             --opentsdb-db metrics
       "
@@ -135,7 +135,7 @@ services:
             --endpoint tcp://validator-3:8800 \
             --seeds tcp://validator-0:8800 \
             --scheduler serial \
-            --network trust \
+            --network-auth trust \
             --opentsdb-url http://influxdb:8086 \
             --opentsdb-db metrics
       "
@@ -163,7 +163,7 @@ services:
             --endpoint tcp://validator-4:8800 \
             --seeds tcp://validator-0:8800 \
             --scheduler serial \
-            --network trust \
+            --network-auth trust \
             --opentsdb-url http://influxdb:8086 \
             --opentsdb-db metrics
       "

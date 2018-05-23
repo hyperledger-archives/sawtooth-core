@@ -148,7 +148,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 ),
         )
         .arg(
-            Arg::with_name("opentsdb_url")
+            Arg::with_name("opentsdb-url")
                 .long("opentsdb-url")
                 .takes_value(true)
                 .help(
@@ -157,7 +157,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 ),
         )
         .arg(
-            Arg::with_name("opentsdb_db")
+            Arg::with_name("opentsdb-db")
                 .long("opentsdb-db")
                 .takes_value(true)
                 .help("specify name of database used for storing metrics"),
