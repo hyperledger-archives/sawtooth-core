@@ -257,7 +257,6 @@ def execute_batches(
     batches
 ):
     scheduler = transaction_executor.create_scheduler(
-        context_manager.get_squash_handler(),
         previous_state_root,
         always_persist=True)
 

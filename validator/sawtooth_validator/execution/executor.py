@@ -408,17 +408,16 @@ class TransactionExecutor(object):
         self._scheduler_type = scheduler_type
 
     def create_scheduler(self,
-                         squash_handler,
                          first_state_root,
                          always_persist=False):
         if self._scheduler_type == "serial":
             return SerialScheduler(
-                squash_handler=squash_handler,
+                squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist)
         elif self._scheduler_type == "parallel":
             return ParallelScheduler(
-                squash_handler=squash_handler,
+                squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist)
 
