@@ -462,7 +462,6 @@ class BlockPublisher(object):
                  settings_cache,
                  block_sender,
                  batch_sender,
-                 squash_handler,
                  chain_head,
                  identity_signer,
                  data_dir,
@@ -482,8 +481,6 @@ class BlockPublisher(object):
                 read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
             batch_sender (:obj:`BatchSender`): The BatchSender instance.
-            squash_handler (function): Squash handler function for merging
-                contexts.
             chain_head (:obj:`BlockWrapper`): The initial chain head.
             identity_signer (:obj:`Signer`): Cryptographic signer for signing
                 blocks
@@ -507,7 +504,6 @@ class BlockPublisher(object):
             NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT)
 
         self._chain_head = chain_head  # block (BlockWrapper)
-        self._squash_handler = squash_handler
         self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
@@ -622,7 +618,7 @@ class BlockPublisher(object):
 
         # create a new scheduler
         scheduler = self._transaction_executor.create_scheduler(
-            self._squash_handler, previous_block.state_root_hash)
+            previous_block.state_root_hash)
 
         # build the TransactionCommitCache
         committed_txn_cache = TransactionCommitCache(

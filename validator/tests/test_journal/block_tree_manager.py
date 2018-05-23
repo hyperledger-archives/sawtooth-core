@@ -129,7 +129,6 @@ class BlockTreeManager(object):
             ),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
-            squash_handler=None,
             chain_head=chain_head,
             identity_signer=self.identity_signer,
             data_dir=None,

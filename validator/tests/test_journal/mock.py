@@ -151,7 +151,7 @@ class MockTransactionExecutor(object):
         self.messages = []
         self.batch_execution_result = batch_execution_result
 
-    def create_scheduler(self, squash_handler, first_state_root):
+    def create_scheduler(self, first_state_root):
         return MockScheduler(self.batch_execution_result)
 
     def execute(self, scheduler, state_hash=None):
