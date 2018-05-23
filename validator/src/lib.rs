@@ -31,6 +31,7 @@ extern crate rand;
 // exported modules
 pub mod database;
 pub mod journal;
+mod metrics;
 pub mod proto;
 pub mod state;
 
