@@ -51,8 +51,10 @@ pub use self::execution_result_ffi::{BatchResult, TransactionResult};
 pub struct ExecutionResults {
     pub beginning_state_hash: Option<String>,
     pub ending_state_hash: Option<String>,
-    pub batch_results: Vec<(String, Vec<TxnExecutionResult>)>,
+    pub batch_results: Vec<BatchExecutionResult>,
 }
+
+pub type BatchExecutionResult = (String, Option<Vec<TxnExecutionResult>>);
 
 pub struct TxnExecutionResult {
     pub signature: String,

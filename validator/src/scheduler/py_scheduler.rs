@@ -41,6 +41,8 @@ impl From<cpython::PyErr> for SchedulerError {
     }
 }
 
+type CombinedOptionalBatchResult = Vec<(Vec<TransactionResult>, Option<BatchResult>, String)>;
+
 pub struct PyScheduler {
     py_scheduler: cpython::PyObject,
     batch_ids: Vec<String>,
@@ -116,22 +118,29 @@ impl Scheduler for PyScheduler {
             .expect("No method complete on python scheduler")
             .extract::<bool>(py)?
         {
-            let r: PyResult<Vec<(Vec<TransactionResult>, BatchResult, String)>> = self.batch_ids
+            let r: PyResult<CombinedOptionalBatchResult> = self.batch_ids
                 .iter()
                 .map(|id| {
-                    let batch_result: BatchResult = self.py_scheduler
+                    let batch_result: cpython::PyObject = self.py_scheduler
                         .call_method(py, "get_batch_execution_result", (id,), None)
-                        .expect("No method get_batch_execution_result on python scheduler")
-                        .extract::<BatchResult>(py)?;
+                        .expect("No method get_batch_execution_result on python scheduler");
+                    if batch_result.is_true(py).unwrap() {
+                        let result = batch_result.extract::<BatchResult>(py).unwrap();
 
-                    let txn_results: Vec<TransactionResult> = self.py_scheduler
-                        .call_method(py, "get_transaction_execution_results", (id,), None)
-                        .expect("No method get_transaction_execution_results on python scheduler")
-                        .extract::<cpython::PyList>(py)?
-                        .iter(py)
-                        .map(|r| r.extract::<TransactionResult>(py))
-                        .collect::<Result<Vec<TransactionResult>, cpython::PyErr>>()?;
-                    Ok((txn_results, batch_result, id.to_owned()))
+                        let txn_results: Vec<TransactionResult> = self.py_scheduler
+                            .call_method(py, "get_transaction_execution_results", (id,), None)
+                            .expect(
+                                "No method get_transaction_execution_results on python scheduler",
+                            )
+                            .extract::<cpython::PyList>(py)?
+                            .iter(py)
+                            .map(|r| r.extract::<TransactionResult>(py))
+                            .collect::<Result<Vec<TransactionResult>, cpython::PyErr>>()?;
+
+                        Ok((txn_results, Some(result), id.to_owned()))
+                    } else {
+                        Ok((vec![], None, id.to_owned()))
+                    }
                 })
                 .collect();
 
@@ -145,20 +154,25 @@ impl Scheduler for PyScheduler {
             let ending_state_hash = results
                 .iter()
                 .by_ref()
-                .find(|val| val.1.state_hash.is_some())
-                .map(|val| val.1.state_hash.clone())
+                .map(|val| val.1.clone())
+                .filter(|batch_result| batch_result.is_some())
+                .find(|batch_result| batch_result.clone().unwrap().state_hash.is_some())
+                .map(|batch_result| batch_result.unwrap().state_hash)
                 .unwrap_or(None);
 
             let batch_txn_results = results
                 .into_iter()
-                .map(|val| {
-                    (
+                .map(|val| match val.1 {
+                    Some(_) => (
                         val.2.clone(),
-                        val.0
-                            .into_iter()
-                            .map(|v: TransactionResult| v.into())
-                            .collect(),
-                    )
+                        Some(
+                            val.0
+                                .into_iter()
+                                .map(|v: TransactionResult| v.into())
+                                .collect(),
+                        ),
+                    ),
+                    None => (val.2.clone(), None),
                 })
                 .collect();
 
