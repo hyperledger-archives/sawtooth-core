@@ -21,33 +21,33 @@ use cpython::{PyDict, PyResult, Python};
 const DISTRIBUTION_NAME: &str = "sawtooth-validator";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn wrap_in_pydict(py: &Python, matches: &ArgMatches) -> PyResult<PyDict> {
+pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
     let (bind_component, bind_network) = parse_bindings(matches);
 
-    let pydict = PyDict::new(*py);
+    let pydict = PyDict::new(py);
 
-    pydict.set_item(*py, "bind_component", bind_component)?;
-    pydict.set_item(*py, "bind_network", bind_network)?;
-    pydict.set_item(*py, "config_dir", matches.value_of("config_dir"))?;
-    pydict.set_item(*py, "endpoint", matches.value_of("endpoint"))?;
+    pydict.set_item(py, "bind_component", bind_component)?;
+    pydict.set_item(py, "bind_network", bind_network)?;
+    pydict.set_item(py, "config_dir", matches.value_of("config_dir"))?;
+    pydict.set_item(py, "endpoint", matches.value_of("endpoint"))?;
     pydict.set_item(
-        *py,
+        py,
         "maximum_peer_connectivity",
         matches.value_of("maximum_peer_connectivity"),
     )?;
     pydict.set_item(
-        *py,
+        py,
         "minimum_peer_connectivity",
         matches.value_of("minimum-peer-connectivity"),
     )?;
-    pydict.set_item(*py, "opentsdb_db", matches.value_of("opentsdb-db"))?;
-    pydict.set_item(*py, "opentsdb_url", matches.value_of("opentsdb-url"))?;
-    pydict.set_item(*py, "peering", matches.value_of("peering"))?;
-    pydict.set_item(*py, "peers", parse_comma_separated_args("peers", matches))?;
-    pydict.set_item(*py, "roles", parse_roles(matches, py))?;
-    pydict.set_item(*py, "scheduler", matches.value_of("scheduler"))?;
-    pydict.set_item(*py, "seeds", parse_comma_separated_args("seeds", matches))?;
-    pydict.set_item(*py, "verbose", matches.occurrences_of("verbose"))?;
+    pydict.set_item(py, "opentsdb_db", matches.value_of("opentsdb-db"))?;
+    pydict.set_item(py, "opentsdb_url", matches.value_of("opentsdb-url"))?;
+    pydict.set_item(py, "peering", matches.value_of("peering"))?;
+    pydict.set_item(py, "peers", parse_comma_separated_args("peers", matches))?;
+    pydict.set_item(py, "roles", parse_roles(matches, py))?;
+    pydict.set_item(py, "scheduler", matches.value_of("scheduler"))?;
+    pydict.set_item(py, "seeds", parse_comma_separated_args("seeds", matches))?;
+    pydict.set_item(py, "verbose", matches.occurrences_of("verbose"))?;
 
     Ok(pydict)
 }
@@ -181,11 +181,11 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
     app.get_matches()
 }
 
-fn parse_roles<'a>(matches: &'a ArgMatches, py: &Python) -> Option<PyDict> {
+fn parse_roles<'a>(matches: &'a ArgMatches, py: Python) -> Option<PyDict> {
     match matches.value_of("network_auth") {
         Some(network_auth) => {
-            let auth_dict = PyDict::new(*py);
-            auth_dict.set_item(*py, "network", network_auth).unwrap();
+            let auth_dict = PyDict::new(py);
+            auth_dict.set_item(py, "network", network_auth).unwrap();
             Some(auth_dict)
         }
         None => None,

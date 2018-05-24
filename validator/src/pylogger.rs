@@ -15,26 +15,31 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyModule, PyObject, PyResult, PyTuple, Python, PythonObject,
-              ToPyObject};
+use cpython::{ObjectProtocol, PyDict, PyErr, PyModule, PyObject, PyResult, PyTuple, Python,
+              PythonObject, ToPyObject};
 use log;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
-pub fn set_up_logger(verbosity: u64, py: &Python) {
+pub fn set_up_logger(verbosity: u64, py: Python) {
     let verbosity_level: Level = determine_log_level(verbosity);
 
     PyLogger::init(verbosity_level, py).expect("Failed to set logger");
 
     let server_log = py.import("sawtooth_validator.server.log")
-        .map_err(|err| err.print(*py))
+        .map_err(|err| err.print(py))
         .unwrap();
 
     server_log
-        .call(*py, "init_console_logging", (verbosity,), None)
-        .map_err(|err| err.print(*py))
+        .call(py, "init_console_logging", (verbosity,), None)
+        .map_err(|err| err.print(py))
         .unwrap();
 
     warn!("Started logger at level {}", verbosity_level);
+}
+
+pub fn exception(py: Python, msg: &str, err: PyErr) {
+    let logger = PyLogger::new(py).expect("Failed to create new PyLogger");
+    logger.exception(py, msg, err);
 }
 
 struct PyLogger {
@@ -43,13 +48,13 @@ struct PyLogger {
 }
 
 impl PyLogger {
-    fn new(py: &Python) -> PyResult<Self> {
+    fn new(py: Python) -> PyResult<Self> {
         let logging = py.import("logging")?;
-        let logger = logging.call(*py, "getLogger", PyTuple::new(*py, &[]), None)?;
+        let logger = logging.call(py, "getLogger", PyTuple::new(py, &[]), None)?;
         Ok(PyLogger { logger, logging })
     }
 
-    fn init(verbosity: Level, py: &Python) -> Result<(), SetLoggerError> {
+    fn init(verbosity: Level, py: Python) -> Result<(), SetLoggerError> {
         let logger = PyLogger::new(py).unwrap();
 
         log::set_boxed_logger(Box::new(logger))?;
@@ -57,6 +62,19 @@ impl PyLogger {
         log::set_max_level(verbosity.to_level_filter());
 
         Ok(())
+    }
+
+    pub fn exception(&self, py: Python, msg: &str, mut err: PyErr) {
+        let kwargs = PyDict::new(py);
+        let exc_info = (
+            err.get_type(py),
+            err.instance(py),
+            err.ptraceback.unwrap_or_else(|| py.None()),
+        );
+        kwargs.set_item(py, "exc_info", exc_info).unwrap();
+        self.logger
+            .call_method(py, "error", (msg,), Some(&kwargs))
+            .unwrap();
     }
 }
 
