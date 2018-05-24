@@ -280,4 +280,19 @@ impl CandidateBlock {
             );
         }
     }
+
+    pub fn sign_block(&self, block_builder: &cpython::PyObject) {
+        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let header_bytes = block_builder
+            .getattr(py, "block_header")
+            .expect("BlockBuilder has no attribute 'block_header'")
+            .call_method(py, "SerializeToString", cpython::NoArgs, None)
+            .unwrap();
+        let signature = self.identity_signer
+            .call_method(py, "sign", (header_bytes,), None)
+            .expect("Signer has no method 'sign'");
+        block_builder
+            .call_method(py, "set_signature", (signature,), None)
+            .expect("BlockBuilder has no method 'set_signature'");
+    }
 }
