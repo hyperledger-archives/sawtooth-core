@@ -36,6 +36,13 @@ pub enum BlockPublisherError {
     NoPendingBatchesRemaining,
 }
 
+pub struct FinalizeBlockResult {
+    block: Option<cpython::PyObject>,
+    remaining_batches: Vec<Batch>,
+    last_batch: Option<Batch>,
+    injected_batch_ids: Vec<String>,
+}
+
 pub struct CandidateBlock {
     block_store: cpython::PyObject,
     consensus: cpython::PyObject,
@@ -294,5 +301,164 @@ impl CandidateBlock {
         block_builder
             .call_method(py, "set_signature", (signature,), None)
             .expect("BlockBuilder has no method 'set_signature'");
+    }
+
+    fn check_publish_block(&self, py: cpython::Python, block_builder: &cpython::PyObject) -> bool {
+        self.consensus
+            .call_method(
+                py,
+                "check_publish_block",
+                (block_builder
+                    .getattr(py, "block_header")
+                    .expect("BlockBuilder has no attribute 'block_header'"),),
+                None,
+            )
+            .expect("consensus has no method 'check_publish_block'")
+            .extract::<bool>(py)
+            .unwrap()
+    }
+
+    pub fn finalize(&mut self, force: bool) -> Result<FinalizeBlockResult, BlockPublisherError> {
+        if !force || self.pending_batches.is_empty() {
+            return Err(BlockPublisherError::NoPendingBatchesRemaining);
+        }
+        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        if !self.check_publish_block(py, &self.block_builder) {
+            return Err(BlockPublisherError::ConsensusNotReady);
+        }
+
+        self.scheduler.finalize(true).unwrap();
+        let execution_results = self.scheduler.complete(true).unwrap().unwrap();
+
+        let mut committed_txn_cache = TransactionCommitCache::new(self.block_store.clone_ref(py));
+
+        let batches_w_no_results: Vec<String> = execution_results
+            .batch_results
+            .iter()
+            .filter(|(_, txns)| txns.is_none())
+            .map(|(batch_id, _)| batch_id.clone())
+            .collect();
+
+        let valid_batch_ids: Vec<String> = execution_results
+            .batch_results
+            .into_iter()
+            .filter(|(_, txns)| match txns {
+                Some(t) => !t.iter().any(|t| !t.is_valid),
+                None => false,
+            })
+            .map(|(b_id, _)| b_id)
+            .collect();
+
+        let builder = self.block_builder.clone_ref(py);
+
+        let mut bad_batches = vec![];
+        let mut pending_batches = vec![];
+
+        for batch in self.pending_batches.clone() {
+            let header_signature = &batch.header_signature.clone();
+            if batch.trace {
+                debug!("TRACE {} : CandidateBlock finalize", header_signature)
+            }
+
+            if batches_w_no_results.contains(&batch.header_signature) {
+                if !self.injected_batch_ids
+                    .contains(batch.header_signature.as_str())
+                {
+                    pending_batches.push(batch)
+                } else {
+                    warn! {
+                        "Failed to inject batch {}",
+                        header_signature
+                    };
+                }
+            } else if valid_batch_ids.contains(&batch.header_signature) {
+                if !self.check_batch_dependencies(&batch) {
+                    debug!(
+                        "Batch {} is invalid, due to missing txn dependency",
+                        header_signature
+                    );
+                    bad_batches.push(batch.clone());
+                    pending_batches.clear();
+                    pending_batches.append(&mut self.pending_batches
+                        .clone()
+                        .into_iter()
+                        .filter(|b| !bad_batches.contains(b))
+                        .collect());
+                    return Ok(self.build_result(None, pending_batches));
+                } else {
+                    builder
+                        .call_method(py, "add_batch", (batch.clone(),), None)
+                        .expect("BlockBuilder has no method 'add_batch'");
+                    committed_txn_cache.add_batch(&batch.clone());
+                }
+            } else {
+                bad_batches.push(batch.clone());
+                debug!("Batch {} invalid, not added to block", header_signature);
+            }
+        }
+        if execution_results.ending_state_hash.is_none()
+            || builder
+                .getattr(py, "batches")
+                .expect("BlockBuilder has no attribute 'batches'")
+                .extract::<cpython::PyList>(py)
+                .unwrap()
+                .len(py) == 0
+        {
+            debug!("Abandoning block, no batches added");
+            return Ok(self.build_result(None, self.pending_batches.clone()));
+        }
+        let block_header = builder
+            .getattr(py, "block_header")
+            .expect("BlockBuilder has no attribute 'block_header'");
+        if !self.consensus
+            .call_method(py, "finalize_block", (block_header,), None)
+            .expect("Consensus has no method 'finalize_block'")
+            .extract::<bool>(py)
+            .unwrap()
+        {
+            debug!("Abandoning block consensus failed to finalize it");
+            pending_batches.clear();
+            pending_batches.append(&mut self.pending_batches
+                .clone()
+                .into_iter()
+                .filter(|b| !bad_batches.contains(b))
+                .collect());
+            return Ok(self.build_result(None, pending_batches));
+        }
+
+        builder
+            .call_method(
+                py,
+                "set_state_hash",
+                (execution_results.ending_state_hash.unwrap(),),
+                None,
+            )
+            .expect("BlockBuilder has no method 'set_state_hash'");
+        self.sign_block(&builder);
+
+        Ok(self.build_result(
+            Some(
+                builder
+                    .call_method(py, "build_block", cpython::NoArgs, None)
+                    .expect("BlockBuilder has no method 'build_block'"),
+            ),
+            pending_batches,
+        ))
+    }
+
+    fn build_result(
+        &self,
+        block: Option<cpython::PyObject>,
+        remaining: Vec<Batch>,
+    ) -> FinalizeBlockResult {
+        FinalizeBlockResult {
+            block,
+            remaining_batches: remaining,
+            last_batch: self.last_batch().cloned(),
+            injected_batch_ids: self.injected_batch_ids
+                .clone()
+                .into_iter()
+                .collect::<Vec<String>>(),
+        }
     }
 }
