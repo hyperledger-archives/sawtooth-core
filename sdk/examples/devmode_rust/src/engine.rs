@@ -35,18 +35,6 @@ impl DevmodeService {
         DevmodeService { service }
     }
 
-    fn wait_for_chain_head(&mut self) -> Block {
-        let mut query_result = self.service.get_chain_head();
-
-        while let Err(Error::NoChainHead) = query_result {
-            warn!("Waiting for chain head");
-            sleep(time::Duration::from_millis(200));
-            query_result = self.service.get_chain_head();
-        }
-
-        query_result.expect("Failed to get chain head")
-    }
-
     fn get_chain_head(&mut self) -> Block {
         debug!("Getting chain head");
         self.service
@@ -176,10 +164,15 @@ impl DevmodeEngine {
 }
 
 impl Engine for DevmodeEngine {
-    fn start(&self, updates: Receiver<Update>, service: Box<Service>) {
+    fn start(
+        &self,
+        updates: Receiver<Update>,
+        service: Box<Service>,
+        mut chain_head: Block,
+        _peers: Vec<PeerInfo>,
+    ) {
         let mut service = DevmodeService::new(service);
 
-        let mut chain_head = service.wait_for_chain_head();
         let mut wait_time = service.calculate_wait_time(chain_head.block_id.clone());
         let mut published_at_height = false;
         let mut start = time::Instant::now();

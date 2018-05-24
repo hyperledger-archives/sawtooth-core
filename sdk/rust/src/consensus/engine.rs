@@ -151,7 +151,13 @@ pub trait Engine: Sync + Send {
     /// Called after the engine is initialized, when a connection to the validator has been
     /// established. Notifications from the validator are sent along `updates`. `service` is used
     /// to send requests to the validator.
-    fn start(&self, updates: Receiver<Update>, service: Box<Service>);
+    fn start(
+        &self,
+        updates: Receiver<Update>,
+        service: Box<Service>,
+        chain_head: Block,
+        peers: Vec<PeerInfo>,
+    );
 
     /// Called before the engine is dropped, to give the engine a chance to notify peers and
     /// cleanup
@@ -283,7 +289,13 @@ pub mod tests {
     }
 
     impl Engine for MockEngine {
-        fn start(&self, updates: Receiver<Update>, _service: Box<Service>) {
+        fn start(
+            &self,
+            updates: Receiver<Update>,
+            _service: Box<Service>,
+            _chain_head: Block,
+            _peers: Vec<PeerInfo>,
+        ) {
             (*self.calls.lock().unwrap()).push("start".into());
             loop {
                 match updates.recv_timeout(::std::time::Duration::from_millis(100)) {
@@ -364,7 +376,7 @@ pub mod tests {
             .unwrap();
         let handle = ::std::thread::spawn(move || {
             let svc = Box::new(MockService {});
-            eng_clone.start(receiver, svc);
+            eng_clone.start(receiver, svc, Default::default(), Default::default());
         });
         eng.stop();
         handle.join().unwrap();

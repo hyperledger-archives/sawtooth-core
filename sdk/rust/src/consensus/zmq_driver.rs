@@ -64,7 +64,7 @@ impl Driver for ZmqDriver {
         let validator_connection = ZmqMessageConnection::new(endpoint);
         let (mut validator_sender, validator_receiver) = validator_connection.create();
 
-        register(
+        let (chain_head, peers) = register(
             &mut validator_sender,
             ::std::time::Duration::from_secs(REGISTER_TIMEOUT),
             self.engine.name(),
@@ -83,6 +83,8 @@ impl Driver for ZmqDriver {
                     engine.name(),
                     engine.version(),
                 )),
+                chain_head,
+                peers,
             );
         });
 
@@ -130,35 +132,76 @@ pub fn register(
     timeout: ::std::time::Duration,
     name: String,
     version: String,
-) -> Result<(), Error> {
+) -> Result<(Block, Vec<PeerInfo>), Error> {
     let mut request = ConsensusRegisterRequest::new();
     request.set_name(name);
     request.set_version(version);
+    let request = request.write_to_bytes()?;
 
-    let mut future = sender.send(
-        Message_MessageType::CONSENSUS_REGISTER_REQUEST,
-        &generate_correlation_id(),
-        &request.write_to_bytes()?,
-    )?;
+    let mut msg = sender
+        .send(
+            Message_MessageType::CONSENSUS_REGISTER_REQUEST,
+            &generate_correlation_id(),
+            &request,
+        )?
+        .get_timeout(timeout)?;
 
-    let msg = future.get_timeout(timeout)?;
-    match msg.get_message_type() {
-        Message_MessageType::CONSENSUS_REGISTER_RESPONSE => {
-            let response: ConsensusRegisterResponse =
-                protobuf::parse_from_bytes(msg.get_content())?;
-            match response.get_status() {
-                ConsensusRegisterResponse_Status::OK => Ok(()),
-                status => Err(Error::ReceiveError(format!(
-                    "Registration failed with status {:?}",
-                    status
-                ))),
+    let ret: Result<(Block, Vec<PeerInfo>), Error>;
+
+    // Keep trying to register until the response is something other
+    // than NOT_READY.
+    loop {
+        match msg.get_message_type() {
+            Message_MessageType::CONSENSUS_REGISTER_RESPONSE => {
+                let mut response: ConsensusRegisterResponse =
+                    protobuf::parse_from_bytes(msg.get_content())?;
+
+                match response.get_status() {
+                    ConsensusRegisterResponse_Status::OK => {
+                        ret = Ok((
+                            response.take_chain_head().into(),
+                            response
+                                .take_peers()
+                                .into_iter()
+                                .map(|info| info.into())
+                                .collect(),
+                        ));
+
+                        break;
+                    }
+                    ConsensusRegisterResponse_Status::NOT_READY => {
+                        msg = sender
+                            .send(
+                                Message_MessageType::CONSENSUS_REGISTER_REQUEST,
+                                &generate_correlation_id(),
+                                &request,
+                            )?
+                            .get_timeout(timeout)?;
+
+                        continue;
+                    }
+                    status => {
+                        ret = Err(Error::ReceiveError(format!(
+                            "Registration failed with status {:?}",
+                            status
+                        )));
+
+                        break;
+                    }
+                };
+            }
+            unexpected => {
+                ret = Err(Error::ReceiveError(format!(
+                    "Received unexpected message type: {:?}",
+                    unexpected
+                )));
+
+                break;
             }
         }
-        unexpected => Err(Error::ReceiveError(format!(
-            "Received unexpected message type: {:?}",
-            unexpected
-        ))),
     }
+
+    ret
 }
 
 fn handle_update(

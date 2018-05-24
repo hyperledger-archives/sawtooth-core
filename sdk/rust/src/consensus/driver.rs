@@ -44,7 +44,8 @@ pub mod tests {
         fn start(&self, _endpoint: &str) -> Result<(), Error> {
             let service = Box::new(MockService {});
             let (_sender, receiver) = channel();
-            self.engine.start(receiver, service);
+            self.engine
+                .start(receiver, service, Default::default(), Default::default());
             Ok(())
         }
 

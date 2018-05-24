@@ -34,7 +34,7 @@ class MockEngine(Engine):
     def __init__(self):
         self.updates = None
 
-    def start(self, updates, service):
+    def start(self, updates, service, chain_head, peers):
         self.updates = updates
 
     def stop(self):

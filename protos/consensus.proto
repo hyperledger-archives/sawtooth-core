@@ -79,6 +79,8 @@ message ConsensusRegisterResponse {
   }
 
   Status status = 1;
+  ConsensusBlock chain_head = 2;
+  repeated ConsensusPeerInfo peers = 3;
 }
 
 // --== Notifications ==--

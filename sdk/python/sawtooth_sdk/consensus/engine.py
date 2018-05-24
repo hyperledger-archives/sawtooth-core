@@ -18,7 +18,7 @@ import abc
 
 class Engine(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def start(self, updates, service):
+    def start(self, updates, service, chain_head, peers):
         '''Called after the engine is initialized, when a connection to the
         validator has been established. Notifications from the
         validator are sent along UPDATES. SERVICE is used to send
@@ -27,6 +27,8 @@ class Engine(metaclass=abc.ABCMeta):
         Args:
             updates (Queue)
             service (Service)
+            chain_head (Block)
+            peers (List[PeerInfo])
         '''
 
     @abc.abstractmethod
