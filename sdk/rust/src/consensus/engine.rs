@@ -69,17 +69,19 @@ pub struct Block {
     pub signer_id: PeerId,
     pub block_num: u64,
     pub payload: Vec<u8>,
+    pub summary: Vec<u8>,
 }
 impl ::std::fmt::Debug for Block {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(
             f,
-            "Block(block_num: {:?}, block_id: {:?}, previous_id: {:?}, signer_id: {:?}, payload: {})",
+            "Block(block_num: {:?}, block_id: {:?}, previous_id: {:?}, signer_id: {:?}, payload: {}, summary: {})",
+            self.block_num,
             self.block_id,
             self.previous_id,
             self.signer_id,
-            self.block_num,
             hex::encode(&self.payload),
+            hex::encode(&self.summary),
         )
     }
 }
