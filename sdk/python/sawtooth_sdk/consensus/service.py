@@ -23,6 +23,7 @@ class Block:
         self.signer_id = block.signer_id
         self.block_num = block.block_num
         self.payload = block.payload
+        self.summary = block.summary
 
 
 class Service(metaclass=abc.ABCMeta):
@@ -63,10 +64,19 @@ class Service(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
+    def summarize_block(self):
+        '''Stop adding batches to the current block and return a summary of its
+        contents.
+
+        Return:
+            bytes
+        '''
+
+    @abc.abstractmethod
     def finalize_block(self, data):
-        '''Stop adding batches to the current block and finalize it. Include
-        DATA in the block. If this call is successful, the consensus
-        engine will receive it afterwards.
+        '''Insert the given consensus data into the block and sign it. If this
+        call is successful, the consensus engine will receive the block
+        afterwards.
 
         Args:
             data (bytes)
