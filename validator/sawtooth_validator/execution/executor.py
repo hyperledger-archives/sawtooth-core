@@ -410,13 +410,18 @@ class TransactionExecutor(object):
     def create_scheduler(self,
                          first_state_root,
                          always_persist=False):
+
+        # Useful for a logical first state root of ""
+        if not first_state_root:
+            first_state_root = self._context_manager.get_first_root()
+
         if self._scheduler_type == "serial":
-            return SerialScheduler(
+            scheduler = SerialScheduler(
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist)
         elif self._scheduler_type == "parallel":
-            return ParallelScheduler(
+            scheduler = ParallelScheduler(
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
                 always_persist=always_persist)
@@ -425,6 +430,9 @@ class TransactionExecutor(object):
             raise AssertionError(
                 "Scheduler type must be either serial or parallel. Current"
                 " scheduler type is {}.".format(self._scheduler_type))
+
+        self.execute(scheduler=scheduler)
+        return scheduler
 
     def check_connections(self):
         self._executing_threadpool.submit(self._check_connections)

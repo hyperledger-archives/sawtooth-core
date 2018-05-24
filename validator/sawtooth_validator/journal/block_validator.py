@@ -210,7 +210,6 @@ class BlockValidator(object):
 
             scheduler = self._transaction_executor.create_scheduler(
                 prev_state_root)
-            self._transaction_executor.execute(scheduler)
 
             chain_commit_state.check_for_duplicate_batches(
                 blkw.block.batches)
