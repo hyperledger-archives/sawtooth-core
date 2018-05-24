@@ -218,9 +218,29 @@ message ConsensusInitializeBlockResponse {
   Status status = 1;
 }
 
-// Stop adding batches to the current block and finalize it. Include
-// the given consensus data in the block. If this call is successful,
-// the consensus engine will receive it afterwards.
+// Stop adding batches to the current block and return a summary of its
+// contents.
+message ConsensusSummarizeBlockRequest {}
+
+message ConsensusSummarizeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    INVALID_STATE = 5;
+    BLOCK_NOT_READY = 6;
+  }
+  Status status = 1;
+
+  // A summary of the block contents
+  bytes summary = 2;
+}
+
+// Insert the given consensus data into the block and sign it. If this call is
+// successful, the consensus engine will receive the block afterwards.
 message ConsensusFinalizeBlockRequest {
   // The consensus data to include in the finalized block
   bytes data = 1;
