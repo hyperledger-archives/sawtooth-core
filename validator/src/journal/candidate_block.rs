@@ -101,4 +101,62 @@ impl CandidateBlock {
     pub fn can_add_batch(&self) -> bool {
         self.max_batches == 0 || self.pending_batches.len() < self.max_batches
     }
+
+    fn check_batch_dependencies(&mut self, batch: &Batch) -> bool {
+        for txn in &batch.transactions {
+            if self.txn_is_already_committed(txn, &self.committed_txn_cache) {
+                debug!(
+                    "Transaction rejected as it is already in the chain {}",
+                    txn.header_signature
+                );
+                return false;
+            } else if !self.check_transaction_dependencies(txn) {
+                self.committed_txn_cache.remove_batch(batch);
+                return false;
+            }
+            self.committed_txn_cache.add(txn.header_signature.clone());
+        }
+        true
+    }
+
+    fn check_transaction_dependencies(&self, txn: &Transaction) -> bool {
+        for dep in &txn.dependencies {
+            if !self.committed_txn_cache.contains(dep.as_str()) {
+                debug!(
+                    "Transaction rejected due to missing dependency, transaction {} depends on {}",
+                    txn.header_signature.as_str(),
+                    dep.as_str()
+                );
+                return false;
+            }
+        }
+        true
+    }
+
+    fn txn_is_already_committed(
+        &self,
+        txn: &Transaction,
+        committed_txn_cache: &TransactionCommitCache,
+    ) -> bool {
+        committed_txn_cache.contains(txn.header_signature.as_str()) || {
+            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            self.block_store
+                .call_method(py, "has_batch", (txn.header_signature.as_str(),), None)
+                .expect("Blockstore has no method 'has_batch'")
+                .extract::<bool>(py)
+                .unwrap()
+        }
+    }
+
+    fn batch_is_already_committed(&self, batch: &Batch) -> bool {
+        self.pending_batch_ids
+            .contains(batch.header_signature.as_str()) || {
+            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            self.block_store
+                .call_method(py, "has_batch", (batch.header_signature.as_str(),), None)
+                .expect("Blockstore has no method 'has_batch'")
+                .extract::<bool>(py)
+                .unwrap()
+        }
+    }
 }
