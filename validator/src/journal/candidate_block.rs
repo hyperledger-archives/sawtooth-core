@@ -20,11 +20,14 @@ use std::collections::HashSet;
 use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
+use cpython::ToPyObject;
 
 use batch::Batch;
 use transaction::Transaction;
 
 use journal::chain_commit_state::TransactionCommitCache;
+
+use pylogger;
 
 use scheduler::Scheduler;
 
@@ -157,6 +160,124 @@ impl CandidateBlock {
                 .expect("Blockstore has no method 'has_batch'")
                 .extract::<bool>(py)
                 .unwrap()
+        }
+    }
+
+    fn poll_injectors<F: Fn(cpython::PyObject) -> Vec<cpython::PyObject>>(
+        &self,
+        poller: F,
+    ) -> Vec<Batch> {
+        let mut batches = vec![];
+        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        for injector in self.batch_injectors
+            .extract::<cpython::PyList>(py)
+            .unwrap()
+            .iter(py)
+        {
+            let inject_list = poller(injector);
+            if !inject_list.is_empty() {
+                for b in inject_list {
+                    match b.extract(py) {
+                        Ok(b) => batches.push(b),
+                        Err(err) => pylogger::exception(py, "During batch injection", err),
+                    }
+                }
+            }
+        }
+        batches
+    }
+
+    pub fn add_batch(&mut self, batch: Batch) {
+        let batch_header_signature = batch.header_signature.clone();
+
+        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        if batch.trace {
+            debug!(
+                "TRACE {}: {}",
+                batch_header_signature.as_str(),
+                "CandidateBlock, add_batch"
+            );
+        }
+
+        if self.batch_is_already_committed(&batch) {
+            debug!(
+                "Dropping previously committed batch: {}",
+                batch_header_signature.as_str()
+            );
+            return;
+        } else if self.check_batch_dependencies(&batch) {
+            let mut batches_to_add = vec![];
+
+            // Inject blocks at the beginning of a Candidate Block
+            if self.pending_batches.is_empty() {
+                let mut injected_batches = self.poll_injectors(|injector: cpython::PyObject| {
+                    match injector
+                        .call_method(py, "block_start", (self.previous_block_id(),), None)
+                        .expect("BlockInjector has not method 'block_start'")
+                        .extract::<cpython::PyList>(py)
+                    {
+                        Ok(injected) => injected.iter(py).collect(),
+                        Err(err) => {
+                            pylogger::exception(
+                                py,
+                                "During block injection, calling block_start",
+                                err,
+                            );
+                            vec![]
+                        }
+                    }
+                });
+                batches_to_add.append(&mut injected_batches);
+            }
+
+            let validation_enforcer = py.import(
+                "sawtooth_validator.journal.validation_rule_inforcer",
+            ).expect("Unable to import sawtooth_validator.journal.validation_rule_inforcer");
+            let batches = cpython::PyList::new(
+                py,
+                &self.pending_batches
+                    .iter()
+                    .map(|b| b.to_py_object(py))
+                    .chain(batches_to_add.iter().map(|b| b.to_py_object(py)))
+                    .collect::<Vec<cpython::PyObject>>(),
+            );
+            let signer_pub_key = self.identity_signer
+                .call_method(py, "get_public_key", cpython::NoArgs, None)
+                .expect("IdentitySigner has no method 'get_public_key'")
+                .call_method(py, "as_hex", cpython::NoArgs, None)
+                .expect("PublicKey has no method 'as_hex'");
+            if !validation_enforcer
+                .call(
+                    py,
+                    "enforce_validation_rules",
+                    (self.settings_view.clone_ref(py), signer_pub_key, batches),
+                    None,
+                )
+                .expect(
+                    "Module validation_rule_enforcer has no function 'enforce_validation_rules'",
+                )
+                .extract::<bool>(py)
+                .unwrap()
+            {
+                return;
+            }
+
+            batches_to_add.push(batch);
+
+            for b in batches_to_add {
+                let batch_id = b.header_signature.clone();
+                self.pending_batches.push(b.clone());
+                self.pending_batch_ids.insert(batch_id.clone());
+
+                let injected = self.injected_batch_ids.contains(batch_id.as_str());
+
+                self.scheduler.add_batch(b, None, injected).unwrap()
+            }
+        } else {
+            debug!(
+                "Dropping batch due to missing dependencies: {}",
+                batch_header_signature.as_str()
+            );
         }
     }
 }
