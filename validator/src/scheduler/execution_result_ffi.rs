@@ -24,6 +24,7 @@ use proto::transaction_receipt::StateChange;
 
 use scheduler::TxnExecutionResult;
 
+#[derive(Clone)]
 pub struct BatchResult {
     pub state_hash: Option<String>,
 }
