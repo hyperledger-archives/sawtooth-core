@@ -38,6 +38,8 @@ message ConsensusBlock {
   bytes signer_id = 3;
   uint64 block_num = 4;
   bytes payload = 5;
+  // A summary of the contents of the block
+  bytes summary = 6;
 }
 
 // Information about a peer that is relevant to consensus
