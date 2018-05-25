@@ -22,12 +22,11 @@ extern crate crypto;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
-extern crate rustc_serialize;
 extern crate sawtooth_sdk;
 
 mod handler;
 
-use log::LogLevelFilter;
+use log::LevelFilter;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
@@ -53,10 +52,10 @@ fn main() {
 
     let console_log_level;
     match matches.occurrences_of("verbose") {
-        0 => console_log_level = LogLevelFilter::Warn,
-        1 => console_log_level = LogLevelFilter::Info,
-        2 => console_log_level = LogLevelFilter::Debug,
-        3 | _ => console_log_level = LogLevelFilter::Trace,
+        0 => console_log_level = LevelFilter::Warn,
+        1 => console_log_level = LevelFilter::Info,
+        2 => console_log_level = LevelFilter::Debug,
+        3 | _ => console_log_level = LevelFilter::Trace,
     }
 
     let stdout = ConsoleAppender::builder()
