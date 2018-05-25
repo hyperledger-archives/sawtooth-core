@@ -1,4 +1,22 @@
-use proto::batch::Batch;
+/*
+ * Copyright 2018 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+
+use batch::Batch;
+
 use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
@@ -35,7 +53,7 @@ impl IncomingBatchReceiver {
 
     pub fn get(&mut self, timeout: Duration) -> Result<Batch, BatchQueueError> {
         let batch = self.receiver.recv_timeout(timeout)?;
-        self.ids.lock()?.remove(batch.get_header_signature());
+        self.ids.lock()?.remove(&batch.header_signature);
         Ok(batch)
     }
 }
@@ -50,10 +68,8 @@ impl IncomingBatchSender {
         IncomingBatchSender { ids, sender }
     }
     pub fn put(&mut self, batch: Batch) -> Result<(), BatchQueueError> {
-        if !self.ids.lock()?.contains(batch.get_header_signature()) {
-            self.ids
-                .lock()?
-                .insert(batch.get_header_signature().to_string());
+        if !self.ids.lock()?.contains(&batch.header_signature) {
+            self.ids.lock()?.insert(batch.header_signature.clone());
             self.sender.send(batch).map_err(BatchQueueError::from)
         } else {
             Ok(())
@@ -119,8 +135,8 @@ impl PendingBatchesPool {
     }
 
     pub fn append(&mut self, batch: Batch) {
-        if !self.contains(&batch.get_header_signature()) {
-            self.ids.insert(batch.get_header_signature().into());
+        if !self.contains(&batch.header_signature) {
+            self.ids.insert(batch.header_signature.clone());
             self.batches.push(batch);
         }
     }
@@ -136,7 +152,7 @@ impl PendingBatchesPool {
         let committed_set = if let Some(committed) = committed {
             committed
                 .iter()
-                .map(|i| i.get_header_signature().into())
+                .map(|i| i.header_signature.clone())
                 .collect::<HashSet<String>>()
         } else {
             HashSet::new()
@@ -151,14 +167,14 @@ impl PendingBatchesPool {
 
         if let Some(batch_list) = uncommitted {
             for batch in batch_list {
-                if !committed_set.contains(batch.get_header_signature()) {
+                if !committed_set.contains(&batch.header_signature) {
                     self.append(batch);
                 }
             }
         }
 
         for batch in previous_batches {
-            if !committed_set.contains(batch.get_header_signature()) {
+            if !committed_set.contains(&batch.header_signature) {
                 self.append(batch);
             }
         }
@@ -167,7 +183,7 @@ impl PendingBatchesPool {
     pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: Batch) {
         let last_index = self.batches
             .iter()
-            .position(|i| i.get_header_signature() == last_sent.get_header_signature());
+            .position(|i| i.header_signature == last_sent.header_signature);
 
         let unsent = if let Some(idx) = last_index {
             let mut unsent = vec![];
