@@ -30,6 +30,7 @@ use log::LevelFilter;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
+
 use std::process;
 
 use sawtooth_sdk::processor::TransactionProcessor;
@@ -69,12 +70,20 @@ fn main() {
         .build(Root::builder().appender("stdout").build(console_log_level))
     {
         Ok(x) => x,
-        Err(_) => process::exit(1),
+        Err(e) => {
+            for err in e.errors().iter() {
+                info!("Configuration error: {}", err.to_string());
+            }
+            process::exit(1);
+        }
     };
 
     match log4rs::init_config(config) {
         Ok(_) => (),
-        Err(_) => process::exit(1),
+        Err(e) => {
+            info!("Configuration error: {}", e.to_string());
+            process::exit(1);
+        }
     }
 
     let handler = IntkeyTransactionHandler::new();
