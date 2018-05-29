@@ -35,7 +35,7 @@ pub mod execution;
 pub mod journal;
 mod metrics;
 pub mod proto;
-mod pylogger;
+pub mod pylogger;
 pub mod scheduler;
 pub mod state;
 
