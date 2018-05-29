@@ -43,7 +43,7 @@ sawset proposal
 ===============
 
 The Settings transaction family supports a
-simple voting mechanism for applying changes to on-change settings.
+simple voting mechanism for applying changes to on-chain settings.
 The ``sawset proposal`` subcommands provide tools to view,
 create and vote on proposed settings.
 
