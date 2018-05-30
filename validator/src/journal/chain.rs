@@ -49,7 +49,7 @@ const RECV_TIMEOUT_MILLIS: u64 = 100;
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
-        metrics::get_collector("sawtooth_validator.chain.ChainController");
+        metrics::get_collector("sawtooth_validator.chain");
 }
 
 #[derive(Debug)]
@@ -234,7 +234,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             .write()
             .expect("No lock holder should have poisoned the lock");
 
-        let mut blocks_considered_count = COLLECTOR.counter("blocks_considered_count", None, None);
+        let mut blocks_considered_count =
+            COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
         let new_block = result.block;
@@ -274,14 +275,14 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
                 state.chain_head.as_ref().unwrap()
             );
 
-            let mut chain_head_gauge = COLLECTOR.gauge("chain_head", None, None);
+            let mut chain_head_gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
             chain_head_gauge.set_value(&chain_head_block.header_signature()[0..8]);
 
             let mut committed_transactions_count =
-                COLLECTOR.counter("committed_transactions_count", None, None);
+                COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
             committed_transactions_count.inc_n(result.transaction_count);
 
-            let mut block_num_guage = COLLECTOR.gauge("block_num", None, None);
+            let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
             block_num_guage.set_value(chain_head_block.block_num());
 
             let chain_head = state.chain_head.clone().unwrap();
@@ -328,7 +329,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             };
 
             let mut committed_transactions_gauge =
-                COLLECTOR.gauge("committed_transactions_gauge", None, None);
+                COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
             committed_transactions_gauge.set_value(total_committed_txns);
         } else {
             info!("Rejected new chain head: {}", new_block);
@@ -396,8 +397,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             );
             let notify_block = chain_head.clone().unwrap();
             state.chain_head = chain_head;
-            let mut gauge = COLLECTOR.gauge("chain_head", None, None);
+            let mut gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
             gauge.set_value(&notify_block.header_signature()[0..8]);
+
+            let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
+            block_num_guage.set_value(&notify_block.block_num());
+
             notify_on_chain_updated(&mut state, notify_block, vec![], vec![]);
         }
     }
