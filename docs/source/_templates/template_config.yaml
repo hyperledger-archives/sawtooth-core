@@ -26,6 +26,11 @@ targets:
     args:
         language: Python
 
+  sdk_TP_tutorial_rust:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Rust
+
   sdk_TP_tutorial_js:
     template: sdk_TP_tutorial.rst
     args:
@@ -40,6 +45,11 @@ targets:
     template: sdk_overview_tutorial.rst
     args:
         language: Python
+
+  sdk_overview_tutorial_rust:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Rust
 
   sdk_overview_tutorial_js:
     template: sdk_overview_tutorial.rst
