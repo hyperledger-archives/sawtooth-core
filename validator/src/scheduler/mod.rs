@@ -56,6 +56,7 @@ pub struct ExecutionResults {
 
 pub type BatchExecutionResult = (String, Option<Vec<TxnExecutionResult>>);
 
+#[derive(Clone, Debug)]
 pub struct TxnExecutionResult {
     pub signature: String,
     pub is_valid: bool,
