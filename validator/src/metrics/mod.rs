@@ -142,6 +142,14 @@ impl Counter {
             .expect("Failed to call Counter.inc()");
     }
 
+    pub fn inc_n(&mut self, value: usize) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.py_counter
+            .call_method(py, "inc", (value,), None)
+            .expect("Failed to call Counter.inc()");
+    }
+
     pub fn dec(&mut self) {
         let gil = Python::acquire_gil();
         let py = gil.python();
