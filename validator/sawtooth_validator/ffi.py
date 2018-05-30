@@ -84,15 +84,21 @@ def from_c_bytes(c_data, c_data_len):
 class OwnedPointer(object, metaclass=ABCMeta):
     """An owned pointer will call drop when this pointer is garbage collected.
     """
-    def __init__(self, drop_ffi_call_fn):
+    def __init__(self, drop_ffi_call_fn, initialized_ptr=None):
         """Constructs an owned pointer.
         Initializing the pointer is left to the extending classes
 
         Args:
             drop_ffi_call_fn (str): the name of the FFI function to call on
                 drop or garbage collection.
+            initialized_ptr (ctypes.c_void_p:optional): a preinitialized
+                pointer to the native memory
         """
-        self._ptr = ctypes.c_void_p()
+        if initialized_ptr is not None:
+            self._ptr = initialized_ptr
+        else:
+            self._ptr = ctypes.c_void_p()
+
         self._drop_ffi_fn = drop_ffi_call_fn
 
     def drop(self):
@@ -132,3 +138,21 @@ class RefPointer(object):
 class CommonErrorCode(IntEnum):
     Success = 0
     NullPointerProvided = 0x01
+
+    Unknown = 0xff
+
+
+def python_to_sender_callback(sender):
+    """Wraps a sender in a callback.  The sender must have a "send" function
+    which receive the arguments from the callback
+
+    Args:
+        sender (:obj:) an object that has a "send" function
+
+    Returns:
+        a function
+    """
+    def callback_wrapper(*args):
+        return sender.send(*args)
+
+    return callback_wrapper
