@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-from enum import Enum
+from enum import IntEnum
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 NULL_BLOCK_IDENTIFIER = "0000000000000000"
 
 
-class BlockStatus(Enum):
+class BlockStatus(IntEnum):
     """
         The status of a block as the journal is concerned.
     """
