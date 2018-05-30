@@ -21,9 +21,9 @@ extern crate rand;
 extern crate zmq;
 
 use std::error::Error;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
+use std::sync::Arc;
 use std::time::Duration;
 
 use self::rand::Rng;

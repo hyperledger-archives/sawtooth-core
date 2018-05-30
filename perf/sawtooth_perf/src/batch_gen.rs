@@ -219,11 +219,11 @@ impl<'a> Iterator for SignedBatchIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::protobuf;
+    use super::protobuf::Message;
     use super::LengthDelimitedMessageSource;
     use super::SignedBatchProducer;
     use super::TransactionSource;
-    use super::protobuf;
-    use super::protobuf::Message;
     use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
     use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
     use sawtooth_sdk::signing;

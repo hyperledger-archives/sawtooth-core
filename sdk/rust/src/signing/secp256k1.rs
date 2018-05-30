@@ -17,16 +17,16 @@
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
-use rand::Rng;
 use rand::os::OsRng;
+use rand::Rng;
 use secp256k1;
 
+#[cfg(feature = "pem")]
+use signing::pem_loader::load_pem_key;
 use signing::Context;
 use signing::Error;
 use signing::PrivateKey;
 use signing::PublicKey;
-#[cfg(feature = "pem")]
-use signing::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
     fn from(e: secp256k1::Error) -> Self {
@@ -201,10 +201,10 @@ fn bytes_to_hex_str(b: &[u8]) -> String {
 
 #[cfg(test)]
 mod secp256k1_test {
+    use super::super::create_context;
     use super::super::CryptoFactory;
     use super::super::PrivateKey;
     use super::super::PublicKey;
-    use super::super::create_context;
     use super::Secp256k1PrivateKey;
     use super::Secp256k1PublicKey;
 

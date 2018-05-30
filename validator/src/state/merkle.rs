@@ -43,8 +43,8 @@ use database::lmdb::LmdbDatabaseWriter;
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
 
-use state::StateReader;
 use state::error::StateDatabaseError;
+use state::StateReader;
 
 const TOKEN_SIZE: usize = 2;
 

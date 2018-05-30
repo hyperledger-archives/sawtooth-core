@@ -35,7 +35,8 @@ use messages::consensus::*;
 use messages::validator::{Message, Message_MessageType};
 
 use std::collections::HashMap;
-use std::sync::{Arc, mpsc::{channel, RecvTimeoutError, Sender}};
+use std::sync::{mpsc::{channel, RecvTimeoutError, Sender},
+                Arc};
 
 const REGISTER_TIMEOUT: u64 = 300;
 const SERVICE_TIMEOUT: u64 = 300;

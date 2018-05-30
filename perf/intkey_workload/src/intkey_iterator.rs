@@ -166,9 +166,9 @@ fn wrap_in_cbor_value_u32(value: u32) -> Value {
 
 #[cfg(test)]
 mod tests {
+    use super::IntKeyIterator;
     use super::HALF_MAX_VALUE;
     use super::INCS_AND_DECS_PER_SET;
-    use super::IntKeyIterator;
 
     const MAX_VALUE: u32 = 4_294_967_295;
 
