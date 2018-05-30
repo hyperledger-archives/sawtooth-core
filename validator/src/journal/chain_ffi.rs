@@ -122,7 +122,11 @@ pub extern "C" fn chain_controller_new(
 pub extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    unsafe { Box::from_raw(chain_controller) };
+    unsafe {
+        Box::from_raw(
+            chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>,
+        )
+    };
     ErrorCode::Success
 }
 

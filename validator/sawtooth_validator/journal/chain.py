@@ -43,10 +43,13 @@ class ChainController(OwnedPointer):
         block_validator,
         chain_head_lock,
         on_chain_updated,
-        data_dir,
+        data_dir=None,
         observers=None
     ):
         super(ChainController, self).__init__('chain_controller_drop')
+
+        if data_dir is None:
+            data_dir = ''
 
         if observers is None:
             observers = []
@@ -79,6 +82,12 @@ class ChainController(OwnedPointer):
     def queue_block(self, block):
         _pylibexec('chain_controller_queue_block', self.pointer,
                    ctypes.py_object(block))
+
+    def on_block_received(self, block_wrapper):
+        """This is exposed for unit tests, and should not be called directly.
+        """
+        _pylibexec('chain_controller_on_block_received', self.pointer,
+                   ctypes.py_object(block_wrapper))
 
     @property
     def chain_head(self):

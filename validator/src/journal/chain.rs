@@ -167,7 +167,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         chain_head_update_observer: Box<ChainHeadUpdateObserver>,
         observers: Vec<Box<ChainObserver>>,
     ) -> Self {
-        ChainController {
+        let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
                 block_cache,
                 block_validator,
@@ -182,7 +182,11 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             validation_result_sender: None,
-        }
+        };
+
+        chain_controller.initialize_chain_head();
+
+        chain_controller
     }
 
     pub fn chain_head(&self) -> Option<BlockWrapper> {
@@ -373,34 +377,38 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         }
     }
 
+    fn initialize_chain_head(&mut self) {
+        // we need to check to see if a genesis block was created and stored,
+        // before this controller was started
+        let mut state = self.state
+            .write()
+            .expect("No lock holder should have poisoned the lock");
+
+        let chain_head = state
+            .chain_reader
+            .chain_head()
+            .expect("Invalid block store. Head of the block chain cannot be determined");
+
+        if chain_head.is_some() {
+            info!(
+                "Chain controller initialized with chain head: {}",
+                chain_head.as_ref().unwrap()
+            );
+            let notify_block = chain_head.clone().unwrap();
+            state.chain_head = chain_head;
+            let mut gauge = COLLECTOR.gauge("chain_head", None, None);
+            gauge.set_value(&notify_block.header_signature()[0..8]);
+            notify_on_chain_updated(&mut state, notify_block, vec![], vec![]);
+        }
+    }
+
     pub fn start(&mut self) {
+        // duplicating what happens at the constructor time, but there are multiple
+        // points in the lifetime of this object where the value of the
+        // block store's chain head may have been set
+        self.initialize_chain_head();
         let mut stop_handle = self.stop_handle.lock().unwrap();
         if stop_handle.is_none() {
-            {
-                // we need to check to see if a genesis block was created and stored,
-                // before this controller was started
-                let mut state = self.state
-                    .write()
-                    .expect("No lock holder should have poisoned the lock");
-
-                let chain_head = state
-                    .chain_reader
-                    .chain_head()
-                    .expect("Invalid block store. Head of the block chain cannot be determined");
-
-                if chain_head.is_some() {
-                    info!(
-                        "Chain controller initialized with chain head: {}",
-                        chain_head.as_ref().unwrap()
-                    );
-                    let notify_block = chain_head.clone().unwrap();
-                    state.chain_head = chain_head;
-                    let mut gauge = COLLECTOR.gauge("chain_head", None, None);
-                    gauge.set_value(&notify_block.header_signature()[0..8]);
-                    notify_on_chain_updated(&mut state, notify_block, vec![], vec![]);
-                }
-            }
-
             let (block_queue_sender, block_queue_receiver) = channel();
             let (validation_result_sender, validation_result_receiver) = channel();
 
