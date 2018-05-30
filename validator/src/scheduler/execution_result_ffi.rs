@@ -61,6 +61,14 @@ impl<'source> FromPyObject<'source> for TransactionResult {
     }
 }
 
+impl<'source> FromPyObject<'source> for TxnExecutionResult {
+    fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
+        Ok(TxnExecutionResult::from(try_pyobj_to_transaction_result(
+            py, obj,
+        )?))
+    }
+}
+
 impl From<TransactionResult> for TxnExecutionResult {
     fn from(other: TransactionResult) -> Self {
         TxnExecutionResult {
