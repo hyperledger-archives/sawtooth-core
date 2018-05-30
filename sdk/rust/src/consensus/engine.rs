@@ -16,7 +16,9 @@
  */
 
 use std::ops::Deref;
-use std::sync::{Mutex, atomic::{AtomicBool, Ordering}, mpsc::Receiver};
+use std::sync::{atomic::{AtomicBool, Ordering},
+                mpsc::Receiver,
+                Mutex};
 
 use hex;
 

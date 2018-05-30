@@ -20,8 +20,8 @@ use cpython::ObjectProtocol;
 
 use execution::execution_platform::ExecutionPlatform;
 
-use scheduler::Scheduler;
 use scheduler::py_scheduler::PyScheduler;
+use scheduler::Scheduler;
 
 pub struct PyExecutor {
     executor: cpython::PyObject,

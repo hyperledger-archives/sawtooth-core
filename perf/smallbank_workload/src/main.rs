@@ -32,11 +32,11 @@ use std::io::Read;
 use std::io::Write;
 use std::str::{FromStr, Split};
 
-use batch_gen::SignedBatchIterator;
 use batch_gen::generate_signed_batches;
-use batch_submit::InfiniteBatchListIterator;
+use batch_gen::SignedBatchIterator;
 use batch_submit::run_workload;
 use batch_submit::submit_signed_batches;
+use batch_submit::InfiniteBatchListIterator;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;

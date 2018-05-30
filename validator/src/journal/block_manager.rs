@@ -19,8 +19,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use block::Block;
-use journal::NULL_BLOCK_IDENTIFIER;
 use journal::block_store::{BlockStore, BlockStoreError};
+use journal::NULL_BLOCK_IDENTIFIER;
 
 #[derive(Debug, PartialEq)]
 pub enum BlockManagerError {
@@ -867,8 +867,8 @@ mod tests {
 
     use super::{BlockManager, BlockManagerError};
     use block::Block;
-    use journal::NULL_BLOCK_IDENTIFIER;
     use journal::block_store::InMemoryBlockStore;
+    use journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
         Block {

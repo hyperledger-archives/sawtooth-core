@@ -32,11 +32,11 @@ use std::time::Instant;
 use self::rand::Rng;
 use self::rand::SeedableRng;
 use self::rand::StdRng;
+use self::yaml_rust::yaml::Hash;
 use self::yaml_rust::EmitError;
 use self::yaml_rust::Yaml;
 use self::yaml_rust::YamlEmitter;
 use self::yaml_rust::YamlLoader;
-use self::yaml_rust::yaml::Hash;
 
 use smallbank;
 use smallbank::SmallbankTransactionPayload;
@@ -173,18 +173,18 @@ pub fn process_smallbank_playlist(
 
 pub fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
     match payload.get_payload_type() {
-        SBPayloadType::CREATE_ACCOUNT => vec![
-            customer_id_address(payload.get_create_account().get_customer_id()),
-        ],
-        SBPayloadType::DEPOSIT_CHECKING => vec![
-            customer_id_address(payload.get_deposit_checking().get_customer_id()),
-        ],
-        SBPayloadType::WRITE_CHECK => vec![
-            customer_id_address(payload.get_write_check().get_customer_id()),
-        ],
-        SBPayloadType::TRANSACT_SAVINGS => vec![
-            customer_id_address(payload.get_transact_savings().get_customer_id()),
-        ],
+        SBPayloadType::CREATE_ACCOUNT => vec![customer_id_address(
+            payload.get_create_account().get_customer_id(),
+        )],
+        SBPayloadType::DEPOSIT_CHECKING => vec![customer_id_address(
+            payload.get_deposit_checking().get_customer_id(),
+        )],
+        SBPayloadType::WRITE_CHECK => vec![customer_id_address(
+            payload.get_write_check().get_customer_id(),
+        )],
+        SBPayloadType::TRANSACT_SAVINGS => vec![customer_id_address(
+            payload.get_transact_savings().get_customer_id(),
+        )],
         SBPayloadType::SEND_PAYMENT => vec![
             customer_id_address(payload.get_send_payment().get_source_customer_id()),
             customer_id_address(payload.get_send_payment().get_dest_customer_id()),

@@ -42,8 +42,8 @@ use clap::{App, Arg, ArgMatches};
 use rand::{Rng, StdRng};
 
 use sawtooth_perf::batch_gen::SignedBatchIterator;
-use sawtooth_perf::batch_submit::InfiniteBatchListIterator;
 use sawtooth_perf::batch_submit::run_workload;
+use sawtooth_perf::batch_submit::InfiniteBatchListIterator;
 
 use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
