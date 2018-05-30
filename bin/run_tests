@@ -265,8 +265,6 @@ test_block_info() {
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml
     copy_coverage .coverage.validator
-    run_docker_test test_shutdown_smoke.yaml
-    copy_coverage .coverage.test_shutdown_smoke
     run_docker_test test_events_and_receipts
     copy_coverage .coverage.test_events_and_receipts
     run_docker_test test_namespace_restriction
@@ -338,8 +336,6 @@ test_rust_sdk() {
 }
 
 test_integration() {
-    run_docker_test test_poet_smoke
-    copy_coverage .coverage.test_poet_smoke
     run_docker_test test_dynamic_network --timeout 600
     copy_coverage .coverage.test_dynamic_network
     run_docker_test test_basic_auth_proxy
