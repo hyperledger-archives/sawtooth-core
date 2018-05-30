@@ -175,6 +175,11 @@ Use the same terminal window as the previous step.
      Processing config-genesis.batch...
      Generating /var/lib/sawtooth/genesis.batch
 
+   .. note::
+
+      The ``-u sawtooth`` option refers to the sawtooth user,
+      not the sawtooth command.
+
 
 .. _generate-root-key-ubuntu:
 
