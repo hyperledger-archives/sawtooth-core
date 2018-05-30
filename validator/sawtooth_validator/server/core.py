@@ -294,15 +294,13 @@ class Validator(object):
             permission_verifier=permission_verifier)
 
         chain_controller = ChainController(
+            block_store=block_store,
             block_cache=block_cache,
             block_validator=block_validator,
-            state_view_factory=state_view_factory,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
-            chain_id_manager=chain_id_manager,
             data_dir=data_dir,
-            config_dir=config_dir,
-            chain_observers=[
+            observers=[
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,

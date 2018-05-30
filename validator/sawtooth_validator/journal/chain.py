@@ -1,4 +1,4 @@
-# Copyright 2017 Intel Corporation
+# Copyright 2017-2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
 from abc import ABCMeta
 from abc import abstractmethod
-import logging
-import queue
-from threading import RLock
+import ctypes
+from enum import IntEnum
 
-from sawtooth_validator.concurrent.thread import InstrumentedThread
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.block_validator import BlockValidationFailure
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
-    TransactionReceipt
-from sawtooth_validator import metrics
-
-
-LOGGER = logging.getLogger(__name__)
-COLLECTOR = metrics.get_collector(__name__)
+from sawtooth_validator.ffi import PY_LIBRARY
+from sawtooth_validator.ffi import LIBRARY
+from sawtooth_validator.ffi import CommonErrorCode
+from sawtooth_validator.ffi import OwnedPointer
 
 
 class ChainObserver(object, metaclass=ABCMeta):
@@ -43,307 +35,99 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class _ChainThread(InstrumentedThread):
-    def __init__(self, chain_controller, block_queue, block_cache):
-        super().__init__(name='_ChainThread')
-        self._chain_controller = chain_controller
-        self._block_queue = block_queue
-        self._block_cache = block_cache
-        self._exit = False
+class ChainController(OwnedPointer):
+    def __init__(
+        self,
+        block_store,
+        block_cache,
+        block_validator,
+        chain_head_lock,
+        on_chain_updated,
+        data_dir,
+        observers=None
+    ):
+        super(ChainController, self).__init__('chain_controller_drop')
 
-    def run(self):
-        try:
-            while True:
-                try:
-                    block = self._block_queue.get(timeout=1)
-                    self._chain_controller.on_block_received(block)
-                except queue.Empty:
-                    # If getting a block times out, just try again.
-                    pass
+        if observers is None:
+            observers = []
 
-                if self._exit:
-                    return
-        # pylint: disable=broad-except
-        except Exception:
-            LOGGER.exception("ChainController thread exited with error.")
-
-    def stop(self):
-        self._exit = True
-
-
-class ChainController(object):
-    """
-    To evaluating new blocks to determine if they should extend or replace
-    the current chain. If they are valid extend the chain.
-    """
-
-    def __init__(self,
-                 block_cache,
-                 block_validator,
-                 state_view_factory,
-                 chain_head_lock,
-                 on_chain_updated,
-                 chain_id_manager,
-                 data_dir,
-                 config_dir,
-                 chain_observers):
-        """Initialize the ChainController
-        Args:
-            block_cache: The cache of all recent blocks and the processing
-                state associated with them.
-            block_validator: The object to use for submitting block validation
-                work.
-            state_view_factory: A factory that can be used to create read-
-                only views of state for a particular merkle root, in
-                particular the state as it existed when a particular block
-                was the chain head.
-            chain_head_lock: Lock to hold while the chain head is being
-                updated, this prevents other components that depend on the
-                chain head and the BlockStore from having the BlockStore change
-                under them. This lock is only for core Journal components
-                (BlockPublisher and ChainController), other components should
-                handle block not found errors from the BlockStore explicitly.
-            on_chain_updated: The callback to call to notify the rest of the
-                 system the head block in the chain has been changed.
-            chain_id_manager: The ChainIdManager instance.
-            data_dir: path to location where persistent data for the
-                consensus module can be stored.
-            config_dir: path to location where config data for the
-                consensus module can be found.
-            chain_observers (list of :obj:`ChainObserver`): A list of chain
-                observers.
-        Returns:
-            None
-        """
-        self._lock = RLock()
-        self._chain_head_lock = chain_head_lock
-        self._block_cache = block_cache
-        self._block_store = block_cache.block_store
-        self._state_view_factory = state_view_factory
-        self._notify_on_chain_updated = on_chain_updated
-        self._data_dir = data_dir
-        self._config_dir = config_dir
-
-        self._chain_id_manager = chain_id_manager
-
-        self._chain_head = None
-
-        self._chain_observers = chain_observers
-
-        self._chain_head_gauge = COLLECTOR.gauge('chain_head', instance=self)
-        self._committed_transactions_gauge = COLLECTOR.gauge(
-            'committed_transactions_gauge', instance=self)
-        self._committed_transactions_gauge.set_value(0)
-        self._committed_transactions_count = COLLECTOR.counter(
-            'committed_transactions_count', instance=self)
-        self._block_num_gauge = COLLECTOR.gauge('block_num', instance=self)
-        self._blocks_considered_count = COLLECTOR.counter(
-            'blocks_considered_count', instance=self)
-
-        self._block_queue = queue.Queue()
-        self._chain_thread = None
-
-        self._block_validator = block_validator
-
-        # Only run this after all member variables have been bound
-        self._set_chain_head_from_block_store()
-
-    def _set_chain_head_from_block_store(self):
-        try:
-            self._chain_head = self._block_store.chain_head
-            if self._chain_head is not None:
-                LOGGER.info("Chain controller initialized with chain head: %s",
-                            self._chain_head)
-                self._chain_head_gauge.set_value(
-                    self._chain_head.identifier[:8])
-        except Exception:
-            LOGGER.exception(
-                "Invalid block store. Head of the block chain cannot be"
-                " determined")
-            raise
+        _pylibexec(
+            'chain_controller_new',
+            ctypes.py_object(block_store),
+            ctypes.py_object(block_cache),
+            ctypes.py_object(block_validator),
+            ctypes.py_object(chain_head_lock),
+            ctypes.py_object(on_chain_updated),
+            ctypes.py_object(observers),
+            ctypes.c_char_p(data_dir.encode()),
+            ctypes.byref(self.pointer))
 
     def start(self):
-        self._set_chain_head_from_block_store()
-        self._notify_on_chain_updated(self._chain_head)
-
-        self._chain_thread = _ChainThread(
-            chain_controller=self,
-            block_queue=self._block_queue,
-            block_cache=self._block_cache)
-        self._chain_thread.start()
+        _libexec('chain_controller_start', self.pointer)
 
     def stop(self):
-        if self._chain_thread is not None:
-            self._chain_thread.stop()
-            self._chain_thread = None
+        _libexec('chain_controller_stop', self.pointer)
+
+    def has_block(self, block_id):
+        result = ctypes.c_bool()
+
+        _libexec('chain_controller_has_block',
+                 self.pointer, ctypes.c_char_p(block_id.encode()),
+                 ctypes.byref(result))
+        return result.value
 
     def queue_block(self, block):
-        """
-        New block has been received, queue it with the chain controller
-        for processing.
-        """
-        self._block_queue.put(block)
+        _pylibexec('chain_controller_queue_block', self.pointer,
+                   ctypes.py_object(block))
 
     @property
     def chain_head(self):
-        return self._chain_head
+        result = ctypes.py_object()
 
-    def _submit_blocks_for_verification(self, blocks):
-        self._block_validator.submit_blocks_for_verification(
-            blocks, self.on_block_validated)
+        _pylibexec('chain_controller_chain_head',
+                   self.pointer,
+                   ctypes.byref(result))
 
-    def on_block_validated(self, commit_new_block, result):
-        """Message back from the block validator, that the validation is
-        complete
-        Args:
-        commit_new_block (Boolean): whether the new block should become the
-        chain head or not.
-        result (Dict): Map of the results of the fork resolution.
-        Returns:
-            None
-        """
-        try:
-            with self._lock:
-                self._blocks_considered_count.inc()
-                new_block = result.block
+        return result.value
 
-                # if the head has changed, since we started the work.
-                if result.chain_head.identifier !=\
-                        self._chain_head.identifier:
-                    LOGGER.info(
-                        'Chain head updated from %s to %s while processing '
-                        'block: %s',
-                        result.chain_head,
-                        self._chain_head,
-                        new_block)
 
-                    LOGGER.debug('Verify block again: %s ', new_block)
-                    self._submit_blocks_for_verification([new_block])
+class ValidationResponseSender(OwnedPointer):
+    def __init__(self, sender_ptr):
+        super(ValidationResponseSender, self).__init__(
+            'sender_drop', initialized_ptr=sender_ptr)
 
-                # If the head is to be updated to the new block.
-                elif commit_new_block:
-                    with self._chain_head_lock:
-                        self._chain_head = new_block
+    def send(self, can_commit, result):
+        _pylibexec('sender_send', self.pointer,
+                   ctypes.py_object((can_commit, result)))
 
-                        # update the the block store to have the new chain
-                        self._block_store.update_chain(result.new_chain,
-                                                       result.current_chain)
 
-                        LOGGER.info(
-                            "Chain head updated to: %s",
-                            self._chain_head)
+def _libexec(name, *args):
+    return _exec(LIBRARY, name, *args)
 
-                        self._chain_head_gauge.set_value(
-                            self._chain_head.identifier[:8])
 
-                        self._committed_transactions_gauge.set_value(
-                            self._block_store.get_transaction_count())
+def _pylibexec(name, *args):
+    return _exec(PY_LIBRARY, name, *args)
 
-                        self._committed_transactions_count.inc(
-                            result.transaction_count)
 
-                        self._block_num_gauge.set_value(
-                            self._chain_head.block_num)
+def _exec(library, name, *args):
+    res = library.call(name, *args)
+    if res == ErrorCode.Success:
+        return
+    elif res == ErrorCode.NullPointerProvided:
+        raise ValueError("Provided null pointer(s)")
+    elif res == ErrorCode.InvalidDataDir:
+        raise ValueError("Invalid data dir")
+    elif res == ErrorCode.InvalidPythonObject:
+        raise ValueError("Invalid python object submitted")
+    elif res == ErrorCode.InvalidBlockId:
+        raise ValueError("Invalid block id provided.")
+    else:
+        raise TypeError("Unknown error occurred: {}".format(res.error))
 
-                        # tell the BlockPublisher else the chain is updated
-                        self._notify_on_chain_updated(
-                            self._chain_head,
-                            result.committed_batches,
-                            result.uncommitted_batches)
 
-                        for batch in new_block.batches:
-                            if batch.trace:
-                                LOGGER.debug("TRACE %s: %s",
-                                             batch.header_signature,
-                                             self.__class__.__name__)
-
-                    for block in reversed(result.new_chain):
-                        receipts = self._make_receipts(block.execution_results)
-                        # Update all chain observers
-                        for observer in self._chain_observers:
-                            observer.chain_update(block, receipts)
-
-                # The block is otherwise valid, but we have determined we
-                # don't want it as the chain head.
-                else:
-                    LOGGER.info('Rejected new chain head: %s', new_block)
-
-        # pylint: disable=broad-except
-        except Exception:
-            LOGGER.exception(
-                "Unhandled exception in ChainController.on_block_validated()")
-
-    def on_block_received(self, block):
-        try:
-            with self._lock:
-                if self.has_block(block.header_signature):
-                    # do we already have this block
-                    return
-
-                if self.chain_head is None:
-                    self._set_genesis(block)
-                    return
-
-                self._block_cache[block.identifier] = block
-
-                # schedule this block for validation.
-                self._submit_blocks_for_verification([block])
-
-        # pylint: disable=broad-except
-        except Exception:
-            LOGGER.exception(
-                "Unhandled exception in ChainController.on_block_received()")
-
-    def has_block(self, block_id):
-        with self._lock:
-            if block_id in self._block_cache:
-                return True
-
-            if self._block_validator.in_process(block_id):
-                return True
-
-            if self._block_validator.in_pending(block_id):
-                return True
-
-            return False
-
-    def _set_genesis(self, block):
-        # This is used by a non-genesis journal when it has received the
-        # genesis block from the genesis validator
-        if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
-            chain_id = self._chain_id_manager.get_block_chain_id()
-            if chain_id is not None and chain_id != block.identifier:
-                LOGGER.warning("Block id does not match block chain id %s. "
-                               "Cannot set initial chain head.: %s",
-                               chain_id[:8], block.identifier[:8])
-            else:
-                try:
-                    self._block_validator.validate_block(block)
-                except BlockValidationFailure as err:
-                    LOGGER.warning(
-                        'Cannot set chain head; '
-                        'genesis block %s is not valid: %s',
-                        block, err)
-                    return
-
-                if chain_id is None:
-                    self._chain_id_manager.save_block_chain_id(
-                        block.identifier)
-                self._block_store.update_chain([block])
-                self._chain_head = block
-                self._notify_on_chain_updated(self._chain_head)
-
-        else:
-            LOGGER.warning("Cannot set initial chain head, this is not a "
-                           "genesis block: %s", block)
-
-    def _make_receipts(self, results):
-        receipts = []
-        for result in results:
-            receipt = TransactionReceipt()
-            receipt.data.extend([data for data in result.data])
-            receipt.state_changes.extend(result.state_changes)
-            receipt.events.extend(result.events)
-            receipt.transaction_id = result.signature
-            receipts.append(receipt)
-        return receipts
+class ErrorCode(IntEnum):
+    Success = CommonErrorCode.Success
+    NullPointerProvided = CommonErrorCode.NullPointerProvided
+    InvalidDataDir = 0x02
+    InvalidPythonObject = 0x03
+    InvalidBlockId = 0x04
