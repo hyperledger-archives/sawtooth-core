@@ -3,6 +3,8 @@
     {% set short_lang = 'js' %}
 {% elif language == 'Go' %}
     {% set short_lang = 'go' %}
+{% elif language == 'Rust' %}
+    {% set short_lang = 'rust' %}
 {% endif %}
 
 {% set lowercase_lang = 'python' %}
@@ -10,6 +12,8 @@
     {% set lowercase_lang = 'javascript' %}
 {% elif language == 'Go' %}
     {% set lowercase_lang = 'go' %}
+{% elif language == 'Rust' %}
+    {% set lowercase_lang = 'rust' %}
 {% endif %}
 
 This tutorial describes how to develop a Sawtooth application with an example

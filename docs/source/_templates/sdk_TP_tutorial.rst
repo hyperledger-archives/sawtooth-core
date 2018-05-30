@@ -3,6 +3,8 @@
     {% set short_lang = 'js' %}
 {% elif language == 'Go' %}
     {% set short_lang = 'go' %}
+{% elif language == 'Rust' %}
+    {% set short_lang = 'rust' %}
 {% endif %}
 
 {% set lowercase_lang = 'python' %}
@@ -10,6 +12,8 @@
     {% set lowercase_lang = 'javascript' %}
 {% elif language == 'Go' %}
     {% set lowercase_lang = 'go' %}
+{% elif language == 'Rust' %}
+    {% set short_lang = 'rust' %}
 {% endif %}
 
 *****************************************************
@@ -73,6 +77,32 @@ to connect with the validator and the handler class.
 
         processor.Start()
     }
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: A simplified xo_rust/src/main.rs
+
+    extern crate sawtooth_sdk;
+
+    use sawtooth_sdk::processor::TransactionProcessor;
+    use handler::XoTransactionHandler;
+
+    fn main() {
+        let endpoint = "tcp://localhost:4004";
+
+        let handler = XoTransactionHandler::new();
+        let mut processor = TransactionProcessor::new(endpoint);
+
+        processor.add_handler(&handler);
+        processor.start();
+    }
+
+.. note::
+    If you're looking for a working implementation of an XO transaction
+    processor in Rust, check out the `xo_rust example
+    <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust>`_
+    in the Sawtooth repository.
 
 {% else %}
 
@@ -138,6 +168,63 @@ JavaScript SDK.
 
     func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/handler.rs Handler struct and implementation
+
+    use sawtooth_sdk::messages::processor::TpProcessRequest;
+    use sawtooth_sdk::processor::handler::ApplyError;
+    use sawtooth_sdk::processor::handler::TransactionContext;
+    use sawtooth_sdk::processor::handler::TransactionHandler;
+
+    pub fn get_xo_prefix() -> String {
+        let mut sha = Sha512::new();
+        sha.input_str("xo");
+        sha.result_str()[..6].to_string()
+    }
+
+    pub struct XoTransactionHandler {
+        family_name: String,
+        family_versions: Vec<String>,
+        namespaces: Vec<String>,
+    }
+
+    impl XoTransactionHandler {
+        pub fn new() -> XoTransactionHandler {
+            XoTransactionHandler {
+                family_name: String::from("xo"),
+                family_versions: vec![String::from("1.0")],
+                namespaces: vec![String::from(get_xo_prefix().to_string())],
+            }
+        }
+    }
+
+    impl TransactionHandler for XoTransactionHandler {
+        fn family_name(&self) -> String {
+            self.family_name.clone()
+        }
+
+        fn family_versions(&self) -> Vec<String> {
+            self.family_versions.clone()
+        }
+
+        fn namespaces(&self) -> Vec<String> {
+            self.namespaces.clone()
+        }
+
+        fn apply(
+            &self,
+            request: &TpProcessRequest,
+            context: &mut TransactionContext,
+        ) -> Result<(), ApplyError> {
+            // --snip--
+        }
+    }
+
+Note that the ``apply`` method is inside of the ``impl TransactionHandler for
+XoTransactionHandler``, which is where most of the handler's work is done.
+
 {% else %}
 
 .. code-block:: python
@@ -194,6 +281,16 @@ The transaction contains payload bytes that are opaque to the validator core,
 and transaction family specific. When implementing a transaction handler the
 binary serialization protocol is up to the implementer.
 
+{% elif language == 'Rust' %}
+``apply`` gets called with two arguments, ``request`` and ``context``.
+``request`` holds the command that is to be executed (e.g. taking a space or
+creating a game), while ``context`` contains information about the current
+state of the game (e.g. the board layout and whose turn it is).
+
+The transaction contains payload bytes that are opaque to the validator core,
+and transaction family specific. When implementing a transaction handler the
+binary serialization protocol is up to the implementer.
+
 {% else %}
 ``apply`` gets called with two arguments, ``transaction`` and
 ``context``. The argument ``transaction`` is an instance of the class
@@ -209,10 +306,22 @@ and transaction family specific. When implementing a transaction handler the
 binary serialization protocol is up to the implementer.
 {% endif %}
 
+{% if language == 'Rust' %}
 To separate details of state encoding and payload handling from validation
-logic, the XO example has ``XoState`` and ``XoPayload`` classes. The ``XoPayload`` has
-name, action, and space fields, while the ``XoState`` contains information about
-the game name, board, state, and which players are playing in the game.
+logic, the XO example has separate ``XoState`` and ``XoPayload`` structs. The
+``XoPayload`` has name, action, and space fields, while the ``XoState``
+contains information about a game (a ``Game`` object). The ``Game`` struct
+holds a game name, a board, the game's state, and the identities of both
+players.
+
+{% else %}
+To separate details of state encoding and payload handling from validation
+logic, the XO example has ``XoState`` and ``XoPayload`` classes. The
+``XoPayload`` has name, action, and space fields, while the ``XoState``
+contains information about the game name, board, state, and which players are
+playing in the game.
+{% endif %}
+
 
 Valid actions are: create a new game, take an unoccupied space, and delete a game.
 
@@ -273,6 +382,45 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
             return &processor.InvalidTransaction{
                 Msg: fmt.Sprintf("Invalid Action : '%v'", payload.Action)}
         }
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/handler.rs apply overview
+
+    fn apply(
+        &self,
+        request: &TpProcessRequest,
+        context: &mut TransactionContext,
+    ) -> Result<(), ApplyError> {
+        let header = &request.header;
+        let signer = match &header.as_ref() {
+            Some(s) => &s.signer_public_key,
+            None => {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Invalid header",
+                )))
+            }
+        };
+
+        let payload = XoPayload::new(&request.payload)?;
+
+        let mut state = XoState::new(context);
+
+        let game = state.get_game(payload.get_name().as_str())?;
+
+        match payload.get_action().as_str() {
+            "delete" => {
+                // --snip--
+            }
+            "create" => {
+                // --snip--
+            }
+            "take" => {
+                // --snip--
+                }
+        }
+    }
 
 {% else %}
 
@@ -382,6 +530,25 @@ The ``create`` action has the following implementation:
 
         return nil
     }
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/handler.rs apply "create" action
+
+    // --snip--
+    "create" => {
+        if game.is_none() {
+            let game = Game::new(payload.get_name());
+            state.set_game(payload.get_name().as_str(), game)?;
+            info!("Created game: {}", payload.get_name().as_str());
+        } else {
+            return Err(ApplyError::InvalidTransaction(String::from(
+                "Invalid action: Game already exists",
+            )));
+        }
+    }
+    // --snip--
+
 {% else %}
 
 .. code-block:: python
@@ -455,6 +622,22 @@ The ``delete`` action has the following implementation:
         }
         return nil
     }
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/handler.rs apply "delete" action
+
+    // --snip--
+    "delete" => {
+        if game.is_none() {
+            return Err(ApplyError::InvalidTransaction(String::from(
+                "Invalid action: game does not exist",
+            )));
+        }
+        state.delete_game(payload.get_name().as_str())?;
+    }
+    // --snip--
 
 {% else %}
 
@@ -630,6 +813,77 @@ The ``take`` action has the following implementation:
         return nil
     }
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/handler.rs apply "take" action
+
+    // --snip--
+    "take" => {
+            if let Some(mut g) = game {
+                match g.get_state().as_str() {
+                    "P1-WIN" | "P2-WIN" | "TIE" => {
+                        return Err(ApplyError::InvalidTransaction(String::from(
+                            "Invalid action: Game has ended",
+                        )))
+                    }
+                    "P1-NEXT" => {
+                        let p1 = g.get_player1();
+                        if !p1.is_empty() && p1.as_str() != signer {
+                            return Err(ApplyError::InvalidTransaction(String::from(
+                                "Not player 2's turn",
+                            )));
+                        }
+                    }
+                    "P2-NEXT" => {
+                        let p2 = g.get_player2();
+                        if !p2.is_empty() && p2.as_str() != signer {
+                            return Err(ApplyError::InvalidTransaction(String::from(
+                                "Not player 1's turn",
+                            )));
+                        }
+                    }
+                    _ => {
+                        return Err(ApplyError::InvalidTransaction(String::from(
+                            "Invalid state",
+                        )))
+                    }
+                }
+
+                let board_chars: Vec<char> = g.get_board().chars().collect();
+                if board_chars[payload.get_space() - 1] != '-' {
+                    return Err(ApplyError::InvalidTransaction(String::from(
+                        format!("Space {} is already taken", payload.get_space()).as_str(),
+                    )));
+                }
+
+                if g.get_player1().is_empty() {
+                    g.set_player1(signer);
+                } else if g.get_player2().is_empty() {
+                    g.set_player2(signer)
+                }
+
+                g.mark_space(payload.get_space())?;
+                g.update_state()?;
+
+                g.display();
+
+                state.set_game(payload.get_name().as_str(), g)?;
+            } else {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Invalid action: Take requires an existing game",
+                )));
+            }
+        }
+        other_action => {
+            return Err(ApplyError::InvalidTransaction(String::from(format!(
+                "Invalid action: '{}'",
+                other_action
+            ))));
+        }
+    }
+    // --snip--
+
 {% else %}
 
 .. code-block:: python
@@ -795,6 +1049,99 @@ where
         return &payload, nil
     }
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/payload.rs XoPayload struct and implementation
+
+    use sawtooth_sdk::processor::handler::ApplyError;
+
+    pub struct XoPayload {
+        name: String,
+        action: String,
+        space: usize,
+    }
+
+    impl XoPayload {
+        // payload_data is a utf-8 encoded string
+        pub fn new(payload_data: &[u8]) -> Result<XoPayload, ApplyError> {
+            let payload_string = match ::std::str::from_utf8(&payload_data) {
+                Ok(s) => s,
+                Err(_) => {
+                    return Err(ApplyError::InvalidTransaction(String::from(
+                        "Invalid payload serialization",
+                    )))
+                }
+            };
+
+            let items: Vec<&str> = payload_string.split(",").collect();
+
+            if items.len() != 3 {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Payload must have exactly 2 commas",
+                )));
+            }
+
+            let (name, action, space) = (items[0], items[1], items[2]);
+
+            if name.is_empty() {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Name is required",
+                )));
+            }
+
+            if action.is_empty() {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Action is required",
+                )));
+            }
+
+            if name.contains("|") {
+                return Err(ApplyError::InvalidTransaction(String::from(
+                    "Name cannot contain |",
+                )));
+            }
+            match action {
+                "create" | "take" | "delete" => (),
+                _ => {
+                    return Err(ApplyError::InvalidTransaction(String::from(
+                        format!("Invalid action: {}", action).as_str(),
+                    )));
+                }
+            };
+
+            let mut space_parsed: usize = 0; // Default, invalid value
+            if action == "take" {
+                if space.is_empty() {
+                    return Err(ApplyError::InvalidTransaction(String::from(
+                        "Space is required with action `take`",
+                    )));
+                }
+                space_parsed = match space.parse() {
+                    Ok(num) => num,
+                    Err(_) => {
+                        return Err(ApplyError::InvalidTransaction(String::from(
+                            "Space must be an integer",
+                        )))
+                    }
+                };
+                if space_parsed < 1 || space_parsed > 9 {
+                    return Err(ApplyError::InvalidTransaction(String::from(
+                        "Space must be an integer from 1 to 9",
+                    )));
+                }
+            }
+
+            Ok(XoPayload {
+                name: name.to_string(),
+                action: action.to_string(),
+                space: space_parsed,
+            })
+        }
+
+        // Getters/setters
+        // --snip--
+    }
 
 {% else %}
 
@@ -898,7 +1245,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
         getGame (name) {
             return this._loadGames(name).then((games) => games.get(name))
         }
-  
+
         setGame (name, game) {
             let address = _makeXoAddress(name)
 
@@ -1160,6 +1507,122 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
         return strings.ToLower(hex.EncodeToString(hashBytes))
     }
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+    :caption: xo_rust/src/handler/state.rs XoState and Game structs and their implementations
+
+    // Use statements
+    // --snip--
+
+    pub struct XoState<'a> {
+        context: &'a mut TransactionContext,
+        address_map: HashMap<String, Option<String>>,
+    }
+
+    impl<'a> XoState<'a> {
+        pub fn new(context: &'a mut TransactionContext) -> XoState {
+            XoState {
+                context: context,
+                address_map: HashMap::new(),
+            }
+        }
+
+        pub fn delete_game(&mut self, game_name: &str) -> Result<(), ApplyError> {
+            let mut games = self._load_games(game_name)?;
+            games.remove(game_name);
+            if games.is_empty() {
+                self._delete_game(game_name)?;
+            } else {
+                self._store_game(game_name, games)?;
+            }
+            Ok(())
+        }
+
+        pub fn set_game(&mut self, game_name: &str, g: Game) -> Result<(), ApplyError> {
+            let mut games = self._load_games(game_name)?;
+            games.insert(game_name.to_string(), g);
+            self._store_game(game_name, games)?;
+            Ok(())
+        }
+
+        pub fn get_game(&mut self, game_name: &str) -> Result<Option<Game>, ApplyError> {
+            let games = self._load_games(game_name)?;
+            if games.contains_key(game_name) {
+                Ok(Some(games[game_name].clone()))
+            } else {
+                Ok(None)
+            }
+        }
+
+        fn _store_game(
+            &mut self,
+            game_name: &str,
+            games: HashMap<String, Game>,
+        ) -> Result<(), ApplyError> {
+            let address = XoState::calculate_address(game_name);
+            let state_string = Game::serialize_games(games);
+            self.address_map
+                .insert(address.clone(), Some(state_string.clone()));
+            self.context
+                .set_state(&address, &state_string.into_bytes())?;
+            Ok(())
+        }
+
+        fn _delete_game(&mut self, game_name: &str) -> Result<(), ApplyError> {
+            let address = XoState::calculate_address(game_name);
+            if self.address_map.contains_key(&address) {
+                self.address_map.insert(address.clone(), None);
+            }
+            self.context.delete_state(vec![address])?;
+            Ok(())
+        }
+
+        fn _load_games(&mut self, game_name: &str) -> Result<HashMap<String, Game>, ApplyError> {
+            let address = XoState::calculate_address(game_name);
+            let mut games = HashMap::new();
+
+            if self.address_map.contains_key(&address) {
+                if let Some(ref serialized_games) = self.address_map[&address] {
+                    let t = Game::deserialize_games((*serialized_games).clone());
+                    match t {
+                        Some(g) => games = g,
+                        None => {
+                            return Err(ApplyError::InvalidTransaction(String::from(
+                                "Invalid serialization of game state",
+                            )))
+                        }
+                    }
+                }
+            } else {
+                if let Some(state_bytes) = self.context.get_state(&address)? {
+                    let state_string = match ::std::str::from_utf8(&state_bytes) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            return Err(ApplyError::InvalidTransaction(String::from(
+                                "Invalid serialization of game state",
+                            )))
+                        }
+                    };
+                    self.address_map
+                        .insert(address, Some(state_string.to_string()));
+                    let t = Game::deserialize_games(state_string.to_string());
+                    match t {
+                        Some(g) => games = g,
+                        None => {
+                            return Err(ApplyError::InvalidTransaction(String::from(
+                                "Invalid serialization of game state",
+                            )))
+                        }
+                    }
+                } else {
+                    self.address_map.insert(address, None);
+                }
+            }
+            Ok(games)
+        }
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -1328,17 +1791,17 @@ first 64 characters of the SHA-512 hash of the UTF-8 encoding of the
 game name.
 
 For example, the XO address for a game called "my-game" could be
-generated as follows:
+generated as follows (in Python):
 
 .. code-block:: pycon
 
-    >>> x = hashlib.sha512('xo'.encode('utf-8')).hexdigest()[:6]
-    >>> x
+    >>> XO_NAMESPACE = hashlib.sha512('xo'.encode('utf-8')).hexdigest()[:6]
+    >>> XO_NAMESPACE
     '5b7349'
     >>> y = hashlib.sha512('my-game'.encode('utf-8')).hexdigest()[:64]
     >>> y
     '4d4cffe9cf3fb4e41def5114a323e292af9b0e07925cca6299d671ce7fc7ec37'
-    >>> x+y
+    >>> XO_NAMESPACE+y
     '5b73494d4cffe9cf3fb4e41def5114a323e292af9b0e07925cca6299d671ce7fc7ec37'
 
 Addressing is implemented as follows:
@@ -1355,6 +1818,24 @@ Addressing is implemented as follows:
 
     func makeAddress(name string) string {
 	    return Namespace + hexdigest(name)[:64]
+    }
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use crypto::sha2::Sha512;
+
+    pub fn get_xo_prefix() -> String {
+        let mut sha = Sha512::new();
+        sha.input_str("xo");
+        sha.result_str()[..6].to_string()
+    }
+
+    pub fn calculate_address(name: &str) -> String {
+        let mut sha = Sha512::new();
+        sha.input_str(name);
+        get_xo_prefix() + &sha.result_str()[..64].to_string()
     }
 
 {% else %}
