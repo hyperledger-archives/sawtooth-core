@@ -139,7 +139,14 @@ class ConsensusSendToHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response):
-        self._proxy.send_to(request.peer_id, request.message)
+        try:
+            self._proxy.send_to(
+                request.peer_id,
+                request.message.SerializeToString())
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("ConsensusSendTo")
+            response.status =\
+                consensus_pb2.ConsensusSendToResponse.SERVICE_ERROR
 
 
 class ConsensusBroadcastHandler(ConsensusServiceHandler):
@@ -153,7 +160,12 @@ class ConsensusBroadcastHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response):
-        self._proxy.broadcast(request.message)
+        try:
+            self._proxy.broadcast(request.message.SerializeToString())
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("ConsensusBroadcast")
+            response.status =\
+                consensus_pb2.ConsensusBroadcastResponse.SERVICE_ERROR
 
 
 class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
@@ -355,7 +367,7 @@ class ConsensusBlocksGetHandler(ConsensusServiceHandler):
                 consensus_pb2.ConsensusBlock(
                     block_id=bytes.fromhex(block.identifier),
                     previous_id=bytes.fromhex(block.previous_block_id),
-                    signer_id=bytes.fromhex(block.header_signature),
+                    signer_id=bytes.fromhex(block.signer_public_key),
                     block_num=block.block_num,
                     payload=block.consensus)
                 for block in self._proxy.blocks_get(request.block_ids)

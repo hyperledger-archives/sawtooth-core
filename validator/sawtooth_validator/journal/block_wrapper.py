@@ -120,6 +120,10 @@ class BlockWrapper(object):
         """
         return self.header.previous_block_id
 
+    @property
+    def signer_public_key(self):
+        return self.header.signer_public_key
+
     @staticmethod
     def state_view_for_block(block_wrapper, state_view_factory):
         """

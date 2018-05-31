@@ -22,11 +22,15 @@ class ConsensusProxy:
     """Receives requests from the consensus engine handlers and delegates them
     to the appropriate components."""
 
-    def __init__(self, block_cache, chain_controller, block_publisher,
+    def __init__(self, block_cache, block_publisher,
+                 chain_controller, gossip, identity_signer,
                  settings_view_factory, state_view_factory):
         self._block_cache = block_cache
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
+        self._gossip = gossip
+        self._identity_signer = identity_signer
+        self._public_key = self._identity_signer.get_public_key().as_bytes()
         self._settings_view_factory = settings_view_factory
         self._state_view_factory = state_view_factory
 
@@ -40,10 +44,15 @@ class ConsensusProxy:
 
     # Using network service
     def send_to(self, peer_id, message):
-        raise NotImplementedError()
+        self._gossip.send_consensus_message(
+            peer_id=peer_id.hex(),
+            message=message,
+            public_key=self._public_key)
 
     def broadcast(self, message):
-        raise NotImplementedError()
+        self._gossip.broadcast_consensus_message(
+            message=message,
+            public_key=self._public_key)
 
     # Using block publisher
     def initialize_block(self, previous_id):

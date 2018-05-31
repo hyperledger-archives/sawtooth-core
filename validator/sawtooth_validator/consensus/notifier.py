@@ -51,11 +51,13 @@ class ConsensusNotifier:
             consensus_pb2.ConsensusNotifyPeerDisconnected(
                 peer_id=bytes.fromhex(peer_id)))
 
-    def notify_peer_message(self, message):
+    def notify_peer_message(self, message, sender_id):
         """A new message was received from a peer"""
         self._notify(
             validator_pb2.Message.CONSENSUS_NOTIFY_PEER_MESSAGE,
-            consensus_pb2.ConsensusNotifyPeerMessage(message=message))
+            consensus_pb2.ConsensusNotifyPeerMessage(
+                message=message,
+                sender_id=sender_id))
 
     def notify_block_new(self, block):
         """A new block was received and passed initial consensus validation"""

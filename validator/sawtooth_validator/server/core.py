@@ -353,7 +353,7 @@ class Validator(object):
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
             chain_controller.has_block, block_publisher.has_batch,
-            permission_verifier, block_publisher)
+            permission_verifier, block_publisher, consensus_notifier)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager,
@@ -376,6 +376,8 @@ class Validator(object):
             block_cache=block_cache,
             chain_controller=chain_controller,
             block_publisher=block_publisher,
+            gossip=gossip,
+            identity_signer=identity_signer,
             settings_view_factory=SettingsViewFactory(state_view_factory),
             state_view_factory=state_view_factory)
 

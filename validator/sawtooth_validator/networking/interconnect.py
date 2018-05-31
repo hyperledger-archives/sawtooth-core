@@ -741,6 +741,17 @@ class Interconnect(object):
             except KeyError:
                 return None
 
+    def public_key_to_connection_id(self, public_key):
+        """
+        Get stored connection id for a public key.
+        """
+        with self._connections_lock:
+            for connection_id, connection_info in self._connections.items():
+                if connection_info.public_key == public_key:
+                    return connection_id
+
+            return None
+
     def connection_id_to_endpoint(self, connection_id):
         """
         Get stored public key for a connection.
