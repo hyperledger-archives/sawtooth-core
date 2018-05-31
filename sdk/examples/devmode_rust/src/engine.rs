@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::str::FromStr;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread::sleep;
 use std::time;
@@ -117,6 +118,31 @@ impl DevmodeService {
         };
     }
 
+    fn broadcast_published_block(&mut self, block_id: BlockId) {
+        debug!("Broadcasting published block: {:?}", block_id);
+        self.service
+            .broadcast("published", Vec::from(block_id))
+            .expect("Failed to broadcast published block");
+    }
+
+    fn send_block_received(&mut self, block: &Block) {
+        let block = block.clone();
+
+        self.service
+            .send_to(
+                &PeerId::from(block.signer_id),
+                "received",
+                Vec::from(block.block_id),
+            )
+            .expect("Failed to send block received");
+    }
+
+    fn send_block_ack(&mut self, sender_id: PeerId, block_id: BlockId) {
+        self.service
+            .send_to(&sender_id, "ack", Vec::from(block_id))
+            .expect("Failed to send block ack");
+    }
+
     // Calculate the time to wait between publishing blocks. This will be a
     // random number between the settings sawtooth.consensus.min_wait_time and
     // sawtooth.consensus.max_wait_time if max > min, else DEFAULT_WAIT_TIME. If
@@ -216,6 +242,9 @@ impl Engine for DevmodeEngine {
 
                         Update::BlockValid(block_id) => {
                             let block = service.get_block(block_id.clone());
+
+                            service.send_block_received(&block);
+
                             chain_head = service.get_chain_head();
 
                             info!(
@@ -253,6 +282,33 @@ impl Engine for DevmodeEngine {
                             service.initialize_block();
                         }
 
+                        Update::PeerMessage(message, sender_id) => match DevmodeMessage::from_str(
+                            message.message_type.as_ref(),
+                        ).unwrap()
+                        {
+                            DevmodeMessage::Published => {
+                                let block_id = BlockId::from(message.content);
+                                info!(
+                                    "Received block published message from {:?}: {:?}",
+                                    sender_id, block_id
+                                );
+                            }
+
+                            DevmodeMessage::Received => {
+                                let block_id = BlockId::from(message.content);
+                                info!(
+                                    "Received block received message from {:?}: {:?}",
+                                    sender_id, block_id
+                                );
+                                service.send_block_ack(sender_id, block_id);
+                            }
+
+                            DevmodeMessage::Ack => {
+                                let block_id = BlockId::from(message.content);
+                                info!("Received ack message from {:?}: {:?}", sender_id, block_id);
+                            }
+                        },
+
                         // Devmode doesn't care about peer notifications
                         // or invalid blocks.
                         _ => {}
@@ -269,8 +325,10 @@ impl Engine for DevmodeEngine {
 
             if !published_at_height && time::Instant::now().duration_since(start) > wait_time {
                 info!("Timer expired -- publishing block");
-                service.finalize_block();
+                let new_block_id = service.finalize_block();
                 published_at_height = true;
+
+                service.broadcast_published_block(new_block_id);
             }
         }
     }
@@ -296,4 +354,23 @@ fn create_consensus(summary: &[u8]) -> Vec<u8> {
     let mut consensus: Vec<u8> = Vec::from(&b"Devmode"[..]);
     consensus.extend_from_slice(summary);
     consensus
+}
+
+pub enum DevmodeMessage {
+    Ack,
+    Published,
+    Received,
+}
+
+impl FromStr for DevmodeMessage {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ack" => Ok(DevmodeMessage::Ack),
+            "published" => Ok(DevmodeMessage::Published),
+            "received" => Ok(DevmodeMessage::Received),
+            _ => Err("Invalid message type"),
+        }
+    }
 }
