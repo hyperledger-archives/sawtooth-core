@@ -225,7 +225,10 @@ fn handle_update(
         CONSENSUS_NOTIFY_PEER_MESSAGE => {
             let mut request: ConsensusNotifyPeerMessage =
                 protobuf::parse_from_bytes(msg.get_content())?;
-            Update::PeerMessage(request.take_message().into())
+            Update::PeerMessage(
+                request.take_message().into(),
+                request.take_sender_id().into(),
+            )
         }
         CONSENSUS_NOTIFY_BLOCK_NEW => {
             let mut request: ConsensusNotifyBlockNew =
