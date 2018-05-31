@@ -60,15 +60,22 @@ impl DevmodeService {
 
     fn finalize_block(&mut self) -> BlockId {
         debug!("Finalizing block");
-        let mut query_result = self.service.finalize_block(Vec::from(&b"Devmode"[..]));
-
-        while let Err(Error::BlockNotReady) = query_result {
-            warn!("Block not ready");
+        let mut summary = self.service.summarize_block();
+        while let Err(Error::BlockNotReady) = summary {
+            warn!("Block not ready to summarize");
             sleep(time::Duration::from_secs(1));
-            query_result = self.service.finalize_block(Vec::from(&b"Devmode"[..]));
+            summary = self.service.summarize_block();
         }
 
-        query_result.expect("Failed to finalize block")
+        let consensus: Vec<u8> = create_consensus(&summary.expect("Failed to summarize block"));
+        let mut block_id = self.service.finalize_block(consensus.clone());
+        while let Err(Error::BlockNotReady) = block_id {
+            warn!("Block not ready to finalize");
+            sleep(time::Duration::from_secs(1));
+            block_id = self.service.finalize_block(consensus.clone());
+        }
+
+        block_id.expect("Failed to finalize block")
     }
 
     fn check_block(&mut self, block_id: BlockId) {
@@ -282,5 +289,11 @@ impl Engine for DevmodeEngine {
 }
 
 fn check_consensus(block: &Block) -> bool {
-    block.payload == b"Devmode"
+    block.payload == create_consensus(&block.summary)
+}
+
+fn create_consensus(summary: &[u8]) -> Vec<u8> {
+    let mut consensus: Vec<u8> = Vec::from(&b"Devmode"[..]);
+    consensus.extend_from_slice(summary);
+    consensus
 }
