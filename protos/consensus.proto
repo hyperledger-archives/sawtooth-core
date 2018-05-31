@@ -105,6 +105,7 @@ message ConsensusNotifyPeerDisconnected {
 // A new message was received from a peer
 message ConsensusNotifyPeerMessage {
   ConsensusPeerMessage message = 1;
+  bytes sender_id = 2;
 }
 
 // - Blocks -

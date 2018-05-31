@@ -112,3 +112,9 @@ message GossipBatchByTransactionIdRequest {
     uint32 time_to_live = 3;
 
 }
+
+message GossipConsensusMessage {
+    bytes message = 1;
+    bytes sender_id = 2;
+    uint32 time_to_live = 3;
+}

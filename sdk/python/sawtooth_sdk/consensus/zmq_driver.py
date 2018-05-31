@@ -125,7 +125,7 @@ class ZmqDriver(Driver):
             notification = consensus_pb2.ConsensusNotifyPeerMessage()
             notification.ParseFromString(message.content)
 
-            data = notification.message
+            data = notification.message, notification.sender_id
 
         elif type_tag == Message.CONSENSUS_NOTIFY_BLOCK_NEW:
             notification = consensus_pb2.ConsensusNotifyBlockNew()
