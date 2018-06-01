@@ -36,9 +36,12 @@ pub trait Service {
     /// head will be used.
     fn initialize_block(&mut self, previous_id: Option<BlockId>) -> Result<(), Error>;
 
-    /// Stop adding batches to the current block and finalize it. Include
-    /// the given consensus data in the block. If this call is successful,
-    /// the consensus engine will receive it afterwards.
+    /// Stop adding batches to the current block and return a summary of its
+    /// contents.
+    fn summarize_block(&mut self) -> Result<Vec<u8>, Error>;
+
+    /// Insert the given consensus data into the block and sign it. If this call is successful, the
+    /// consensus engine will receive the block afterwards.
     fn finalize_block(&mut self, data: Vec<u8>) -> Result<BlockId, Error>;
 
     /// Stop adding batches to the current block and abandon it.
@@ -102,6 +105,9 @@ pub mod tests {
         }
         fn initialize_block(&mut self, _previous_id: Option<BlockId>) -> Result<(), Error> {
             Ok(())
+        }
+        fn summarize_block(&mut self) -> Result<Vec<u8>, Error> {
+            Ok(Default::default())
         }
         fn finalize_block(&mut self, _data: Vec<u8>) -> Result<BlockId, Error> {
             Ok(Default::default())

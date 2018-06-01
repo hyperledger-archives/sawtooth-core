@@ -105,6 +105,32 @@ class ZmqService(Service):
             raise exceptions.ReceiveError(
                 'Failed with status {}'.format(status))
 
+    def summarize_block(self):
+        request = consensus_pb2.ConsensusSummarizeBlockRequest()
+
+        response_type = consensus_pb2.ConsensusSummarizeBlockResponse
+
+        response = self._send(
+            request=request,
+            message_type=Message.CONSENSUS_SUMMARIZE_BLOCK_REQUEST,
+            response_type=response_type)
+
+        status = response.status
+
+        if status == response_type.INVALID_STATE:
+            raise exceptions.InvalidState(
+                'Cannot summarize block in current state')
+
+        if status == response_type.BLOCK_NOT_READY:
+            raise exceptions.BLOCK_NOT_READY(
+                'Block not ready to be summarize')
+
+        if status != response_type.OK:
+            raise exceptions.ReceiveError(
+                'Failed with status {}'.format(status))
+
+        return response.summary
+
     def finalize_block(self, data):
         request = consensus_pb2.ConsensusFinalizeBlockRequest(data=data)
 

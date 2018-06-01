@@ -27,6 +27,8 @@ from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 
 LOGGER = logging.getLogger(__name__)
+REGISTER_TIMEOUT = 300
+SERVICE_TIMEOUT = 300
 
 
 class ZmqDriver(Driver):
@@ -40,7 +42,7 @@ class ZmqDriver(Driver):
     def start(self, endpoint):
         self._stream = Stream(endpoint)
 
-        self._register()
+        (chain_head, peers) = self._register()
 
         self._updates = Queue()
 
@@ -50,9 +52,11 @@ class ZmqDriver(Driver):
                 self._updates,
                 ZmqService(
                     stream=self._stream,
-                    timeout=10,
+                    timeout=SERVICE_TIMEOUT,
                     name=self._engine.name(),
-                    version=self._engine.version())))
+                    version=self._engine.version()),
+                chain_head,
+                peers))
 
         engine_thread.start()
 
@@ -63,7 +67,7 @@ class ZmqDriver(Driver):
                 break
 
             try:
-                message = self._stream.receive().result(10)
+                message = self._stream.receive().result(0.1)
             except concurrent.futures.TimeoutError:
                 continue
 
@@ -78,18 +82,27 @@ class ZmqDriver(Driver):
     def _register(self):
         self._stream.wait_for_ready()
 
-        future = self._stream.send(
-            message_type=Message.CONSENSUS_REGISTER_REQUEST,
-            content=consensus_pb2.ConsensusRegisterRequest(
-                name=self._engine.name(),
-                version=self._engine.version(),
-            ).SerializeToString(),
-        )
+        request = consensus_pb2.ConsensusRegisterRequest(
+            name=self._engine.name(),
+            version=self._engine.version(),
+        ).SerializeToString()
 
-        response = consensus_pb2.ConsensusRegisterResponse()
-        response.ParseFromString(future.result().content)
+        while True:
+            future = self._stream.send(
+                message_type=Message.CONSENSUS_REGISTER_REQUEST,
+                content=request)
+            response = consensus_pb2.ConsensusRegisterResponse()
+            response.ParseFromString(future.result(REGISTER_TIMEOUT).content)
 
-        if response.status != consensus_pb2.ConsensusRegisterResponse.OK:
+            if (
+                response.status
+                == consensus_pb2.ConsensusRegisterResponse.NOT_READY
+            ):
+                continue
+
+            if response.status == consensus_pb2.ConsensusRegisterResponse.OK:
+                return (response.chain_head, response.peers)
+
             raise exceptions.ReceiveError(
                 'Registration failed with status {}'.format(response.status))
 

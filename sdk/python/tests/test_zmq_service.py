@@ -91,6 +91,22 @@ class TestService(unittest.TestCase):
             content=consensus_pb2.ConsensusInitializeBlockRequest(
                 previous_id=b'test').SerializeToString())
 
+    def test_summarize_block(self):
+        self.mock_stream.send.return_value = self._make_future(
+            message_type=Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE,
+            content=consensus_pb2.ConsensusSummarizeBlockResponse(
+                status=consensus_pb2.ConsensusSummarizeBlockResponse.OK,
+                summary=b'summary'))
+
+        result = self.service.summarize_block()
+
+        self.mock_stream.send.assert_called_with(
+            message_type=Message.CONSENSUS_SUMMARIZE_BLOCK_REQUEST,
+            content=consensus_pb2.ConsensusSummarizeBlockRequest()
+                                 .SerializeToString())
+
+        self.assertEqual(result, b'summary')
+
     def test_finalize_block(self):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE,
