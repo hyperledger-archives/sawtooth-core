@@ -22,13 +22,17 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
+import sawtooth.sdk.protobuf.Event.Attribute;
+import sawtooth.sdk.protobuf.Event;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.Message.MessageType;
+import sawtooth.sdk.protobuf.TpEventAddRequest;
+import sawtooth.sdk.protobuf.TpEventAddResponse;
 import sawtooth.sdk.protobuf.TpStateEntry;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
 import sawtooth.sdk.protobuf.TpStateGetResponse;
 import sawtooth.sdk.protobuf.TpStateSetRequest;
 import sawtooth.sdk.protobuf.TpStateSetResponse;
-
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -144,5 +148,57 @@ public class State {
 
     return addressesThatWereSet;
   }
+  
+  /**Make an add event request on something happend on State Object for a specific context. 
+   * 
+   * @param eventType {String} - This is used to subscribe to events. It should
+   *     be globally unique and describe what, in general, has occurred
+   * @param attributes {Collection{key,value}} - Additional information about the event that
+   *     is transparent to the validator.  Attributes can be used by subscribers to
+   *     filter the type of events they receive   
+   * @param data {ByteString} - Additional information about the event that is
+   *     opaque to the validator 
+   * @throws InternalError something went wrong while processing transaction
+   */
 
+  public void addEvent(String eventType,
+                       Collection<java.util.Map.Entry<String, String>> 
+                       attributes,ByteString data)
+                       throws InternalError, InvalidTransactionException {    
+    if (attributes == null) {
+      attributes = new ArrayList<>();
+    }
+    sawtooth.sdk.protobuf.Event.Attribute.Builder attributeBuilder = null;
+    for (Map.Entry<String, String> entry : attributes) {
+      if (!entry.getKey().isEmpty()) {
+        attributeBuilder = sawtooth.sdk.protobuf.Event.Attribute.newBuilder()
+                           .setKey(entry.getKey())
+                           .setValue(entry.getValue());
+      }
+    }    
+    Event event = sawtooth.sdk.protobuf.Event.newBuilder()
+                  .setEventType(eventType)
+                  .setData(data)
+                  .addAttributes(attributeBuilder.build()).build();
+    TpEventAddRequest eventAddRequest = TpEventAddRequest
+                                        .newBuilder()
+                                        .setContextId(this.contextId)
+                                        .setEvent(event).build();
+    Future future = stream.send(MessageType.TP_EVENT_ADD_REQUEST, 
+                              eventAddRequest.toByteString());
+    TpEventAddResponse eventAddReponse = null; 
+    try {
+      eventAddReponse = TpEventAddResponse
+                        .parseFrom(future.getResult(TIME_OUT));
+    } catch (InvalidProtocolBufferException ipbe) {
+      throw new InvalidTransactionException(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
+    } 
+    if (eventAddReponse.getStatus() == TpEventAddResponse.Status.ERROR) {
+      throw new InternalError("Failed to add event : " + eventType.toString());
+    }
+  }
 }
