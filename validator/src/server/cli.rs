@@ -33,12 +33,16 @@ pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
     pydict.set_item(
         py,
         "maximum_peer_connectivity",
-        matches.value_of("maximum_peer_connectivity"),
+        matches
+            .value_of("maximum_peer_connectivity")
+            .and_then(|s| s.parse::<u32>().ok()),
     )?;
     pydict.set_item(
         py,
         "minimum_peer_connectivity",
-        matches.value_of("minimum-peer-connectivity"),
+        matches
+            .value_of("minimum-peer-connectivity")
+            .and_then(|s| s.parse::<u32>().ok()),
     )?;
     pydict.set_item(py, "opentsdb_db", matches.value_of("opentsdb-db"))?;
     pydict.set_item(py, "opentsdb_url", matches.value_of("opentsdb-url"))?;
@@ -166,6 +170,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
             Arg::with_name("minimum_peer_connectivity")
                 .long("minimum-peer-connectivity")
                 .takes_value(true)
+                .validator(is_positive_integer)
                 .help(
                     "set the minimum number of peers required before stopping \
                      peer search",
@@ -175,10 +180,18 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
             Arg::with_name("maximum_peer_connectivity")
                 .long("maximum-peer-connectivity")
                 .takes_value(true)
+                .validator(is_positive_integer)
                 .help("set the maximum number of peers to accept"),
         );
 
     app.get_matches()
+}
+
+fn is_positive_integer(arg_value: String) -> Result<(), String> {
+    match arg_value.parse::<u32>() {
+        Ok(i) if i > 0 => Ok(()),
+        _ => Err("The value must be a positive number, greater than 0".into()),
+    }
 }
 
 fn parse_roles<'a>(matches: &'a ArgMatches, py: Python) -> Option<PyDict> {
