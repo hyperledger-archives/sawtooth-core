@@ -52,6 +52,13 @@ pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
     pydict.set_item(py, "scheduler", matches.value_of("scheduler"))?;
     pydict.set_item(py, "seeds", parse_comma_separated_args("seeds", matches))?;
     pydict.set_item(py, "verbose", matches.occurrences_of("verbose"))?;
+    pydict.set_item(
+        py,
+        "state_pruning_block_depth",
+        matches
+            .value_of("state_pruning_block_depth")
+            .and_then(|s| s.parse::<u32>().ok()),
+    )?;
 
     Ok(pydict)
 }
@@ -182,6 +189,16 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 .takes_value(true)
                 .validator(is_positive_integer)
                 .help("set the maximum number of peers to accept"),
+        )
+        .arg(
+            Arg::with_name("state_pruning_block_depth")
+                .long("state-pruning-block-depth")
+                .takes_value(true)
+                .validator(is_positive_integer)
+                .help(
+                    "set the block depth below which state roots are \
+                     pruned from the global state database.",
+                ),
         );
 
     app.get_matches()
