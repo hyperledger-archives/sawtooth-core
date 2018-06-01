@@ -181,6 +181,43 @@ pub extern "C" fn block_publisher_drop(publisher: *mut c_void) -> ErrorCode {
     ErrorCode::Success
 }
 
+// block_publisher_on_check_publish_block is used in tests
+#[no_mangle]
+pub extern "C" fn block_publisher_on_check_publish_block(
+    publisher: *mut c_void,
+    force: bool,
+) -> ErrorCode {
+    check_null!(publisher);
+    unsafe {
+        (*(publisher as *mut BlockPublisher))
+            .publisher
+            .on_check_publish_block(force)
+    };
+    ErrorCode::Success
+}
+
+// block_publisher_on_batch_received is used in tests
+#[no_mangle]
+pub extern "C" fn block_publisher_on_batch_received(
+    publisher: *mut c_void,
+    batch: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(publisher, batch);
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let batch = unsafe {
+        PyObject::from_borrowed_ptr(py, batch)
+            .extract::<Batch>(py)
+            .unwrap()
+    };
+    unsafe {
+        (*(publisher as *mut BlockPublisher))
+            .publisher
+            .on_batch_received(batch)
+    };
+    ErrorCode::Success
+}
+
 #[no_mangle]
 pub extern "C" fn block_publisher_start(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);
@@ -239,6 +276,7 @@ pub extern "C" fn block_publisher_batch_sender(
     ErrorCode::Success
 }
 
+// convert_on_chain_updated_args is used in tests
 pub fn convert_on_chain_updated_args(
     py: Python,
     chain_head_ptr: *mut py_ffi::PyObject,
@@ -280,6 +318,41 @@ pub fn convert_on_chain_updated_args(
     };
 
     (chain_head, committed_batches, uncommitted_batches)
+}
+
+// block_publisher_on_chain_updated is used in tests
+#[no_mangle]
+pub extern "C" fn block_publisher_on_chain_updated(
+    publisher: *mut c_void,
+    chain_head_ptr: *mut py_ffi::PyObject,
+    committed_batches_ptr: *mut py_ffi::PyObject,
+    uncommitted_batches_ptr: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(
+        publisher,
+        chain_head_ptr,
+        committed_batches_ptr,
+        uncommitted_batches_ptr
+    );
+
+    let (chain_head, committed_batches, uncommitted_batches) = {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        convert_on_chain_updated_args(
+            py,
+            chain_head_ptr,
+            committed_batches_ptr,
+            uncommitted_batches_ptr,
+        )
+    };
+
+    unsafe {
+        (*(publisher as *mut BlockPublisher))
+            .publisher
+            .on_chain_updated_internal(chain_head, committed_batches, uncommitted_batches);
+    };
+
+    ErrorCode::Success
 }
 
 #[no_mangle]
