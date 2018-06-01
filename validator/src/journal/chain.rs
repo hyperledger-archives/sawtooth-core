@@ -124,6 +124,10 @@ pub enum ChainReadError {
 pub trait ChainReader: Send + Sync {
     fn chain_head(&self) -> Result<Option<BlockWrapper>, ChainReadError>;
     fn count_committed_transactions(&self) -> Result<usize, ChainReadError>;
+    fn get_block_by_block_num(
+        &self,
+        block_num: u64,
+    ) -> Result<Option<BlockWrapper>, ChainReadError>;
 }
 
 pub trait ChainWriter: Send + Sync {

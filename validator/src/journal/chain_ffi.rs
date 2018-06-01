@@ -575,6 +575,29 @@ impl ChainReader for PyBlockStore {
             })
     }
 
+    fn get_block_by_block_num(
+        &self,
+        block_num: u64,
+    ) -> Result<Option<BlockWrapper>, ChainReadError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_block_store
+            .call_method(py, "get_block_by_number", (block_num,), None)
+            .and_then(|result| result.extract(py))
+            .or_else(|py_err| {
+                if py_err.get_type(py).name(py) == "KeyError" {
+                    Ok(None)
+                } else {
+                    Err(py_err)
+                }
+            })
+            .map_err(|py_err| {
+                pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
+                ChainReadError::GeneralReadError("Unable to read from python block store".into())
+            })
+    }
+
     fn count_committed_transactions(&self) -> Result<usize, ChainReadError> {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
