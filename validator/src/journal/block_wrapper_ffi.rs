@@ -215,3 +215,29 @@ fn proto_txn_to_txn(proto_txn: &mut ProtoTxn) -> Transaction {
         signer_public_key: txn_header.take_signer_public_key(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use block::Block;
+    use cpython::{FromPyObject, PyObject, Python, ToPyObject};
+    use journal::block_wrapper::{BlockStatus, BlockWrapper};
+
+    #[test]
+    fn to_from_python() {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let block_wrapper = BlockWrapper {
+            block: Block::default(),
+            status: BlockStatus::Valid,
+            ..BlockWrapper::default()
+        };
+
+        let py_block_wrapper = block_wrapper.to_py_object(py);
+        let round_trip_obj: BlockWrapper = py_block_wrapper.extract(py).unwrap();
+
+        assert_eq!(BlockStatus::Valid, round_trip_obj.status);
+    }
+
+}

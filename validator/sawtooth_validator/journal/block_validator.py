@@ -521,7 +521,7 @@ class BlockValidator(object):
 
     def _wrap_callback(self, block, callback):
         # Internal cleanup after verification
-        def wrapper(commit_new_block, result):
+        def wrapper(commit_new_block, result, chain_head_updated=False):
             block = result.block
             LOGGER.debug("Removing block from processing %s", block.identifier)
             try:
@@ -555,7 +555,7 @@ class BlockValidator(object):
                     blocks_now_invalid.extend(
                         self._blocks_pending.pop(invalid_block.identifier, []))
 
-            else:
+            elif not chain_head_updated:
                 # If an error occured during validation, something is wrong
                 # internally and we need to abort validation of this block
                 # and all its children without marking them as invalid.
@@ -565,9 +565,10 @@ class BlockValidator(object):
                 while blocks_to_remove:
                     block = blocks_to_remove.pop()
 
-                    LOGGER.debug(
+                    LOGGER.error(
                         'Removing block from cache and pending due to error '
-                        'during validation: %s', block)
+                        'during validation: %s; status: %s',
+                        block, block.status)
 
                     del self._block_cache[block.identifier]
 
@@ -704,7 +705,9 @@ class BlockValidator(object):
             LOGGER.info("Finished block validation of: %s", block)
 
         except ChainHeadUpdated:
-            callback(False, result)
+            LOGGER.debug(
+                "Block validation failed due to chain head update: %s", block)
+            callback(False, result, chain_head_updated=True)
             return
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(

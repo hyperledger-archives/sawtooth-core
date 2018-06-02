@@ -182,9 +182,15 @@ class BlockTreeManager(object):
         consensus = mock_consensus.BlockPublisher()
         consensus.finalize_block(block_builder.block_header, weight=weight)
 
+        if invalid_consensus:
+            block_builder.block_header.consensus = b'BAD'
+
         header_bytes = block_builder.block_header.SerializeToString()
-        signature = self.identity_signer.sign(header_bytes)
-        block_builder.set_signature(signature)
+        if invalid_signature:
+            block_builder.set_signature('BAD')
+        else:
+            signature = self.identity_signer.sign(header_bytes)
+            block_builder.set_signature(signature)
 
         block_wrapper = BlockWrapper(block_builder.build_block())
 

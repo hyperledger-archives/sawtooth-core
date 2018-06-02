@@ -19,8 +19,11 @@ pub const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
 pub mod block_manager;
 pub mod block_store;
+pub mod block_validator;
 pub mod block_wrapper;
 pub mod block_wrapper_ffi;
 mod candidate_block;
+pub mod chain;
 mod chain_commit_state;
+pub mod chain_ffi;
 pub mod publisher;
