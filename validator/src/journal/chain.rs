@@ -156,6 +156,7 @@ pub struct ChainController<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> 
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
     block_queue_sender: Option<Sender<BlockWrapper>>,
     validation_result_sender: Option<Sender<(bool, BlockValidationResult)>>,
+    state_pruning_block_depth: u32,
 }
 
 impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + 'static>
@@ -169,6 +170,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         chain_head_lock: Box<ExternalLock + 'static>,
         data_dir: String,
         chain_head_update_observer: Box<ChainHeadUpdateObserver>,
+        state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
     ) -> Self {
         let mut chain_controller = ChainController {
@@ -186,6 +188,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             validation_result_sender: None,
+            state_pruning_block_depth,
         };
 
         chain_controller.initialize_chain_head();
@@ -350,6 +353,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: self.block_queue_sender.clone(),
             validation_result_sender: self.validation_result_sender.clone(),
+            state_pruning_block_depth: self.state_pruning_block_depth,
         }
     }
 

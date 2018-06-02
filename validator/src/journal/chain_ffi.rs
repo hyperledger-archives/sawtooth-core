@@ -58,6 +58,7 @@ pub extern "C" fn chain_controller_new(
     chain_head_lock: *mut py_ffi::PyObject,
     on_chain_updated: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
+    state_pruning_block_depth: u32,
     data_directory: *const c_char,
     chain_controller_ptr: *mut *const c_void,
 ) -> ErrorCode {
@@ -108,6 +109,7 @@ pub extern "C" fn chain_controller_new(
         Box::new(chain_head_lock),
         data_dir.into(),
         Box::new(PyChainHeadUpdateObserver::new(py_on_chain_updated)),
+        state_pruning_block_depth,
         observer_wrappers,
     );
 

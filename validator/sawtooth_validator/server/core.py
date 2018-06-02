@@ -79,6 +79,7 @@ class Validator(object):
                  permissions,
                  minimum_peer_connectivity,
                  maximum_peer_connectivity,
+                 state_pruning_block_depth,
                  network_public_key=None,
                  network_private_key=None,
                  roles=None):
@@ -299,6 +300,7 @@ class Validator(object):
             block_validator=block_validator,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
+            state_pruning_block_depth=state_pruning_block_depth,
             data_dir=data_dir,
             observers=[
                 event_broadcaster,
