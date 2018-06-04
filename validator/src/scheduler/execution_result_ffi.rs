@@ -35,7 +35,7 @@ pub struct BatchResult {
 pub struct TransactionResult {
     pub signature: String,
     pub is_valid: bool,
-    pub state_hash: String,
+    pub state_hash: Option<String>,
     pub state_changes: Vec<StateChange>,
     pub events: Vec<Event>,
     pub data: Vec<(String, Vec<u8>)>,
@@ -89,7 +89,7 @@ fn try_pyobj_to_transaction_result(
 ) -> Result<TransactionResult, cpython::PyErr> {
     let signature = return_string_from_pyobj(pyobj, py, "signature")?;
     let is_valid = return_bool_from_pyobj(pyobj, py, "is_valid")?;
-    let beginning_state_hash = return_string_from_pyobj(pyobj, py, "state_hash")?;
+    let beginning_state_hash = return_string_from_pyobj(pyobj, py, "state_hash").ok();
     let state_changes = return_statechanges_from_pyobj(pyobj, py, "state_changes")?;
     let events = return_events_from_pyobj(pyobj, py, "events")?;
     let data = return_data_from_pyobj(pyobj, py, "data")?;

@@ -148,7 +148,7 @@ impl Scheduler for PyScheduler {
 
             let beginning_state_hash = results
                 .first()
-                .map(|v| v.0.first().map(|r| r.state_hash.clone()))
+                .map(|v| v.0.first().map(|r| r.state_hash.clone()).unwrap_or(None))
                 .unwrap_or(None);
 
             let ending_state_hash = results
