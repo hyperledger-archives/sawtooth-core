@@ -136,8 +136,11 @@ impl Scheduler for PyScheduler {
                     let batch_result: cpython::PyObject = self.py_scheduler
                         .call_method(py, "get_batch_execution_result", (id,), None)
                         .expect("No method get_batch_execution_result on python scheduler");
-                    if batch_result.is_true(py).unwrap() {
-                        let result = batch_result.extract::<BatchResult>(py).unwrap();
+
+                    if batch_result != cpython::Python::None(py) {
+                        let result = batch_result
+                            .extract::<BatchResult>(py)
+                            .expect("Failed to extract BatchResult");
 
                         let txn_results: Vec<TransactionResult> = self.py_scheduler
                             .call_method(py, "get_transaction_execution_results", (id,), None)
@@ -168,8 +171,18 @@ impl Scheduler for PyScheduler {
                 .by_ref()
                 .map(|val| val.1.clone())
                 .filter(|batch_result| batch_result.is_some())
-                .find(|batch_result| batch_result.clone().unwrap().state_hash.is_some())
-                .map(|batch_result| batch_result.unwrap().state_hash)
+                .find(|batch_result| {
+                    batch_result
+                        .clone()
+                        .expect("Failed to unwrap batch result")
+                        .state_hash
+                        .is_some()
+                })
+                .map(|batch_result| {
+                    batch_result
+                        .expect("Failed to unwrap batch result")
+                        .state_hash
+                })
                 .unwrap_or(None);
 
             let batch_txn_results = results
