@@ -101,7 +101,8 @@ class ConnectHandler(Handler):
         # Need to use join here to get the string "0.0.0.0". Otherwise,
         # bandit thinks we are binding to all interfaces and returns a
         # Medium security risk.
-        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+        # So if I give it the string 0.0.0.0 bandit should complain.
+        interfaces = ['*', '0.0.0.0']
         interfaces += netifaces.interfaces()
         if self.is_valid_endpoint_host(interfaces, message.endpoint) is False:
             LOGGER.warning("Connecting peer provided an invalid endpoint: %s; "
