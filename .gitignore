@@ -132,8 +132,6 @@
 /validator/lib/
 /validator/src/proto
 
-/sdk/cxx/build/
-
 /perf/sawtooth_perf/Cargo.lock
 /perf/sawtooth_perf/target/
 /perf/sawtooth_workload/Cargo.lock
