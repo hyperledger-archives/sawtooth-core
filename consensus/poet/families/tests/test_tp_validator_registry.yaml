@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   poet-validator-registry-tp:
-    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: ./consensus/poet/families/Dockerfile
+    image: sawtooth-poet-validator-registry-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -31,7 +34,10 @@ services:
             /project/sawtooth-core/sdk/python"
 
   test-tp-validator-registry:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: ./consensus/poet/families/tests/tp-validator-registry-tests.dockerfile
+    image: tp-validator-registry-tests$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

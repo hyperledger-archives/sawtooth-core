@@ -19,7 +19,10 @@ version: "2.1"
 services:
 
   intkey-tp-rust:
-    image: sawtooth-intkey-tp-rust:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -30,7 +33,10 @@ services:
     stop_signal: SIGKILL
 
   test-tp-intkey-rust:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: sdk/python/tests/python-sdk-tests.dockerfile
+    image: python-sdk-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

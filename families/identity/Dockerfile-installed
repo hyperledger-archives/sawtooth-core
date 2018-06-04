@@ -110,6 +110,7 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  # -------------=== identity docker build ===-------------
 FROM ubuntu:xenial
 
+COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 COPY --from=identity-tp-builder /project/families/python3-sawtooth-identity*.deb /tmp
 

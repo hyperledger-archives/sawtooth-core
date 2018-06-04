@@ -63,27 +63,32 @@ node ('master') {
         // Use a docker container to build and protogen, so that the Jenkins
         // environment doesn't need all the dependencies.
         stage("Build Test Dependencies") {
-            sh './bin/build_all installed'
+            sh 'docker-compose -f docker-compose-installed.yaml build'
+            sh 'docker-compose -f docker/compose/run-lint.yaml build'
+            sh 'docker-compose -f docker/compose/external.yaml build'
+            sh 'docker build -f docker/bandit -t bandit:$ISOLATION_ID .'
+            sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
         }
 
         stage("Run Lint") {
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID run_lint'
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-go:$ISOLATION_ID run_go_fmt'
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-rust:$ISOLATION_ID run_lint_rust'
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-validator:$ISOLATION_ID run_lint_validator'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-python'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-go'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-rust'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-validator'
+            sh 'docker-compose -f docker/compose/run-lint.yaml down'
         }
 
         stage("Run Bandit") {
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID run_bandit'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core bandit:$ISOLATION_ID run_bandit'
         }
 
         // Run the tests
         stage("Run Tests") {
-            sh './bin/run_tests -i deployment'
+            sh 'INSTALL_TYPE="" ./bin/run_tests -i deployment'
         }
 
         stage("Compile coverage report") {
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-dev-python:$ISOLATION_ID /bin/bash -c "cd coverage && coverage combine && coverage html -d html"'
+            sh 'docker run --rm -v $(pwd):/project/sawtooth-core integration-tests:$ISOLATION_ID /bin/bash -c "cd coverage && coverage combine && coverage html -d html"'
         }
 
         stage("Create git archive") {
@@ -101,11 +106,9 @@ node ('master') {
         }
 
         stage("Archive Build artifacts") {
+            sh 'docker-compose -f docker/compose/copy-debs.yaml up'
             archiveArtifacts artifacts: '*.tgz, *.zip'
-            archiveArtifacts artifacts: 'build/debs/cxx/*.deb'
-            archiveArtifacts artifacts: 'build/debs/go/*.deb'
-            archiveArtifacts artifacts: 'build/debs/python/*.deb'
-            archiveArtifacts artifacts: 'build/debs/rust/*.deb'
+            archiveArtifacts artifacts: 'build/debs/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'

@@ -132,7 +132,7 @@ services:
     build:
       context: .
       dockerfile: consensus/poet/families/Dockerfile-installed
-    image: sawtooth-poet-families:${ISOLATION_ID}
+    image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
     container_name: sawtooth-poet-families-default
 
   poet-sgx:

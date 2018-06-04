@@ -43,6 +43,10 @@ directories="
     validator/tests
 "
 
+if [ ! -d "$top_dir/build" ]; then
+  mkdir $top_dir/build
+fi
+
 for dir in $directories
 do
     if [ -z $ignore ]

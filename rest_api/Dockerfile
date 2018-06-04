@@ -1,3 +1,5 @@
+# Copyright 2018 Cargill Incorporated
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,3 +47,9 @@ RUN mkdir /var/log/sawtooth
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
 WORKDIR /project/sawtooth-core
+
+CMD echo "\033[0;32m--- Building rest_api ---\n\033[0m" \
+ && bin/protogen \
+ && cd rest_api \
+ && python3 setup.py clean --all \
+ && python3 setup.py build

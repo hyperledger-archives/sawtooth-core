@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-poet-common:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: consensus/poet/common/tests/poet-common-tests.dockerfile
+    image: poet-common-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

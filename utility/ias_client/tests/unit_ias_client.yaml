@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-ias-client:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: utility/ias_client/tests/ias-client-tests.dockerfile
+    image: ias-client-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

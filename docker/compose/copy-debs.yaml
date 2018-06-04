@@ -126,9 +126,9 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  poet-families:
-    image: sawtooth-poet-families:${ISOLATION_ID}
-    container_name: sawtooth-poet-families-default
+  poet-validator-registry:
+    image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
+    container_name: sawtooth-poet-validator-registry-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -259,16 +259,6 @@ services:
   ias_proxy:
     image: sawtooth-ias-proxy:${ISOLATION_ID}
     container_name: sawtooth-ias-proxy-default
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  meta:
-    image: sawtooth-meta:${ISOLATION_ID}
-    container_name: sawtooth-meta
     volumes:
       - ../../build/debs:/build/debs
     command: |

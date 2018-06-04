@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-sawadm:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    build:
+      context: ../
+      dockerfile: ./adm/adm-tests.dockerfile
+    image: sawtooth-adm-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/adm

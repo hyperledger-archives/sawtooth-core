@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-rust-sdk:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    build:
+      context: ../..
+      dockerfile: ./sdk/rust/rust-sdk-tests.dockerfile
+    image: rust-sdk-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/rust

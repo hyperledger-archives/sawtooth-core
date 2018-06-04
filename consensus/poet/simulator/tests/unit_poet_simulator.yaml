@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-poet-simulator:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../../..
+      dockerfile: ./consensus/poet/simulator/tests/poet-simulator-tests.dockerfile
+    image: poet-simulator-tests$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   unit-rest-api:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../..
+      dockerfile: rest_api/tests/rest-api-tests.dockerfile
+    image: rest-api-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3

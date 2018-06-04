@@ -18,7 +18,10 @@ version: "2.1"
 services:
 
   battleship-tp:
-    image: sawtooth-battleship-tp:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/battleship/Dockerfile
+    image: sawtooth-battleship-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -27,7 +30,10 @@ services:
     stop_signal: SIGKILL
 
   test-tp-battleship:
-    image: sawtooth-dev-python:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./families/battleship/tests/battleship-tests.dockerfile
+    image: battleship-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
