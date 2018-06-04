@@ -1,4 +1,4 @@
-# Copyright 2017 Intel Corporation
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-[package]
-name = "sawtooth_sdk"
-version = "0.1.0"
-authors = ["sawtooth"]
-
-[dependencies]
-protobuf = "~1.4"
-secp256k1 = "0.7.1"
-rust-crypto = "0.2.36"
-zmq = "0.8"
-uuid = { version = "0.5", features = ["v4"] }
-log = "0.3"
-libc = "0.2"
-
-[dev-dependencies]
-env_logger = "0.3"
-
-[build-dependencies]
-cc = "1.0"
