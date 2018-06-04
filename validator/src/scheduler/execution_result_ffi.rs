@@ -47,11 +47,9 @@ impl<'source> FromPyObject<'source> for BatchResult {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         let state_hash = obj.getattr(py, "state_hash").unwrap();
 
-        let sh = state_hash.extract::<String>(py)?;
+        let sh: Option<String> = state_hash.extract(py)?;
 
-        Ok(BatchResult {
-            state_hash: Some(sh),
-        })
+        Ok(BatchResult { state_hash: sh })
     }
 }
 
