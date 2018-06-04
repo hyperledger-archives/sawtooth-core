@@ -142,9 +142,6 @@ main() {
                 go_sdk)
                     test_go_sdk
                     ;;
-                java_sdk)
-                    test_java_sdk
-                    ;;
                 python_sdk)
                     test_python_sdk
                     ;;
@@ -222,17 +219,6 @@ test_go_sdk() {
     copy_coverage .coverage.test_xo_smoke_go
     run_docker_test test_intkey_smoke_go
     copy_coverage .coverage.test_intkey_smoke_go
-}
-
-test_java_sdk() {
-    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_java.yaml
-    copy_coverage .coverage.java_sdk
-    run_docker_test test_intkey_smoke_java
-    copy_coverage .coverage.test_intkey_smoke_java
-    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_java.yaml
-    copy_coverage .coverage.test_tp_xo_java
-    run_docker_test test_xo_smoke_java
-    copy_coverage .coverage.test_xo_java_smoke
 }
 
 test_python_sdk() {
