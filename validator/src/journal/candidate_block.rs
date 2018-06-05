@@ -111,7 +111,7 @@ impl CandidateBlock {
         self.max_batches == 0 || self.pending_batches.len() < self.max_batches
     }
 
-    fn check_batch_dependencies(&mut self, batch: &Batch) -> bool {
+    fn check_batch_dependencies_add_batch(&mut self, batch: &Batch) -> bool {
         for txn in &batch.transactions {
             if self.txn_is_already_committed(txn, &self.committed_txn_cache) {
                 debug!(
@@ -124,6 +124,27 @@ impl CandidateBlock {
                 return false;
             }
             self.committed_txn_cache.add(txn.header_signature.clone());
+        }
+        true
+    }
+
+    fn check_batch_dependencies(
+        &mut self,
+        batch: &Batch,
+        committed_txn_cache: &mut TransactionCommitCache,
+    ) -> bool {
+        for txn in &batch.transactions {
+            if self.txn_is_already_committed(txn, committed_txn_cache) {
+                debug!(
+                    "Transaction rejected as it is already in the chain {}",
+                    txn.header_signature
+                );
+                return false;
+            } else if !self.check_transaction_dependencies(txn) {
+                committed_txn_cache.remove_batch(batch);
+                return false;
+            }
+            committed_txn_cache.add(txn.header_signature.clone());
         }
         true
     }
@@ -213,7 +234,7 @@ impl CandidateBlock {
                 batch_header_signature.as_str()
             );
             return;
-        } else if self.check_batch_dependencies(&batch) {
+        } else if self.check_batch_dependencies_add_batch(&batch) {
             let mut batches_to_add = vec![];
 
             // Inject blocks at the beginning of a Candidate Block
@@ -375,7 +396,7 @@ impl CandidateBlock {
                     };
                 }
             } else if valid_batch_ids.contains(&batch.header_signature) {
-                if !self.check_batch_dependencies(&batch) {
+                if !self.check_batch_dependencies(&batch, &mut committed_txn_cache) {
                     debug!(
                         "Batch {} is invalid, due to missing txn dependency",
                         header_signature
