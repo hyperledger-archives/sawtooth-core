@@ -347,7 +347,7 @@ impl CandidateBlock {
     }
 
     pub fn finalize(&mut self, force: bool) -> Result<FinalizeBlockResult, CandidateBlockError> {
-        if !force || self.pending_batches.is_empty() {
+        if !(force || !self.pending_batches.is_empty()) {
             return Err(CandidateBlockError::NoPendingBatchesRemaining);
         }
         {
