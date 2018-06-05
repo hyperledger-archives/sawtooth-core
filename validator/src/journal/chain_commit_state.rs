@@ -59,13 +59,16 @@ impl TransactionCommitCache {
     }
 
     pub fn contains(&self, transaction_id: &str) -> bool {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        self.committed.contains(transaction_id) || self.blockstore_has_txn(transaction_id)
+    }
 
-        self.committed.contains(transaction_id)
-            || self.blockstore
-                .call_method(py, "has_transaction", (transaction_id,), None)
-                .unwrap()
-                .extract::<bool>(py)
-                .unwrap()
+    fn blockstore_has_txn(&self, transaction_id: &str) -> bool {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.blockstore
+            .call_method(py, "has_transaction", (transaction_id,), None)
+            .unwrap()
+            .extract::<bool>(py)
+            .unwrap()
     }
 }
