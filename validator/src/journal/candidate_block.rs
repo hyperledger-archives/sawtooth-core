@@ -438,26 +438,11 @@ impl CandidateBlock {
                 debug!("Batch {} invalid, not added to block", header_signature);
             }
         }
-        if execution_results.ending_state_hash.is_none()
-            || builder
-                .getattr(py, "batches")
-                .expect("BlockBuilder has no attribute 'batches'")
-                .extract::<cpython::PyList>(py)
-                .unwrap()
-                .len(py) == 0
-        {
+        if execution_results.ending_state_hash.is_none() || self.no_batches_added(&builder) {
             debug!("Abandoning block, no batches added");
             return self.build_result(None, pending_batches);
         }
-        let block_header = builder
-            .getattr(py, "block_header")
-            .expect("BlockBuilder has no attribute 'block_header'");
-        if !self.consensus
-            .call_method(py, "finalize_block", (block_header,), None)
-            .expect("Consensus has no method 'finalize_block'")
-            .extract::<bool>(py)
-            .unwrap()
-        {
+        if !self.consensus_finalize_block(&builder) {
             debug!("Abandoning block consensus failed to finalize it");
             pending_batches.clear();
             pending_batches.append(&mut self.pending_batches
@@ -486,7 +471,31 @@ impl CandidateBlock {
                     .expect("BlockBuilder has no method 'build_block'"),
             ),
             pending_batches,
-        ))
+        )
+    }
+
+    fn consensus_finalize_block(&self, builder: &cpython::PyObject) -> bool {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        let block_header = builder
+            .getattr(py, "block_header")
+            .expect("BlockBuilder has no attribute 'block_header'");
+        !self.consensus
+            .call_method(py, "finalize_block", (block_header,), None)
+            .expect("Consensus has no method 'finalize_block'")
+            .extract::<bool>(py)
+            .unwrap()
+    }
+
+    fn no_batches_added(&self, builder: &cpython::PyObject) -> bool {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        builder
+            .getattr(py, "batches")
+            .expect("BlockBuilder has no attribute 'batches'")
+            .extract::<cpython::PyList>(py)
+            .unwrap()
+            .len(py) == 0
     }
 
     fn build_result(
