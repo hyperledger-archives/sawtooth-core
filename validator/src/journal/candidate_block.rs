@@ -219,7 +219,6 @@ impl CandidateBlock {
     pub fn add_batch(&mut self, batch: Batch) {
         let batch_header_signature = batch.header_signature.clone();
 
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
         if batch.trace {
             debug!(
                 "TRACE {}: {}",
@@ -240,7 +239,9 @@ impl CandidateBlock {
             // Inject blocks at the beginning of a Candidate Block
             let previous_block_id = self.previous_block_id();
             if self.pending_batches.is_empty() {
-                let mut injected_batches = self.poll_injectors(|injector: cpython::PyObject| {
+                let mut injected_batches = self.poll_injectors(|injector: &cpython::PyObject| {
+                    let gil = cpython::Python::acquire_gil();
+                    let py = gil.python();
                     match injector
                         .call_method(py, "block_start", (previous_block_id.as_str(),), None)
                         .expect("BlockInjector has not method 'block_start'")
@@ -259,37 +260,40 @@ impl CandidateBlock {
                 });
                 batches_to_add.append(&mut injected_batches);
             }
-
-            let validation_enforcer = py.import(
-                "sawtooth_validator.journal.validation_rule_inforcer",
-            ).expect("Unable to import sawtooth_validator.journal.validation_rule_inforcer");
-            let batches = cpython::PyList::new(
-                py,
-                &self.pending_batches
-                    .iter()
-                    .map(|b| b.to_py_object(py))
-                    .chain(batches_to_add.iter().map(|b| b.to_py_object(py)))
-                    .collect::<Vec<cpython::PyObject>>(),
-            );
-            let signer_pub_key = self.identity_signer
-                .call_method(py, "get_public_key", cpython::NoArgs, None)
-                .expect("IdentitySigner has no method 'get_public_key'")
-                .call_method(py, "as_hex", cpython::NoArgs, None)
-                .expect("PublicKey has no method 'as_hex'");
-            if !validation_enforcer
-                .call(
-                    py,
-                    "enforce_validation_rules",
-                    (self.settings_view.clone_ref(py), signer_pub_key, batches),
-                    None,
-                )
-                .expect(
-                    "Module validation_rule_enforcer has no function 'enforce_validation_rules'",
-                )
-                .extract::<bool>(py)
-                .unwrap()
             {
-                return;
+                let gil = cpython::Python::acquire_gil();
+                let py = gil.python();
+                let validation_enforcer = py.import(
+                    "sawtooth_validator.journal.validation_rule_enforcer",
+                ).expect("Unable to import sawtooth_validator.journal.validation_rule_enforcer");
+                let batches = cpython::PyList::new(
+                    py,
+                    &self.pending_batches
+                        .iter()
+                        .map(|b| b.to_py_object(py))
+                        .chain(batches_to_add.iter().map(|b| b.to_py_object(py)))
+                        .collect::<Vec<cpython::PyObject>>(),
+                );
+                let signer_pub_key = self.identity_signer
+                    .call_method(py, "get_public_key", cpython::NoArgs, None)
+                    .expect("IdentitySigner has no method 'get_public_key'")
+                    .call_method(py, "as_hex", cpython::NoArgs, None)
+                    .expect("PublicKey has no method 'as_hex'");
+                if !validation_enforcer
+                    .call(
+                        py,
+                        "enforce_validation_rules",
+                        (self.settings_view.clone_ref(py), signer_pub_key, batches),
+                        None,
+                    )
+                    .expect(
+                        "Module validation_rule_enforcer has no function 'enforce_validation_rules'",
+                    )
+                    .extract::<bool>(py)
+                    .unwrap()
+                {
+                    return;
+                }
             }
 
             batches_to_add.push(batch);
@@ -346,15 +350,23 @@ impl CandidateBlock {
         if !force || self.pending_batches.is_empty() {
             return Err(BlockPublisherError::NoPendingBatchesRemaining);
         }
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-        if !self.check_publish_block(py, &self.block_builder) {
-            return Err(BlockPublisherError::ConsensusNotReady);
+        {
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
+
+            if !self.check_publish_block(py, &self.block_builder) {
+                return Err(CandidateBlockError::ConsensusNotReady);
+            }
         }
 
         self.scheduler.finalize(true).unwrap();
         let execution_results = self.scheduler.complete(true).unwrap().unwrap();
 
-        let mut committed_txn_cache = TransactionCommitCache::new(self.block_store.clone_ref(py));
+        let mut committed_txn_cache = {
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
+            TransactionCommitCache::new(self.block_store.clone_ref(py))
+        };
 
         let batches_w_no_results: Vec<String> = execution_results
             .batch_results
@@ -373,7 +385,11 @@ impl CandidateBlock {
             .map(|(b_id, _)| b_id)
             .collect();
 
-        let builder = self.block_builder.clone_ref(py);
+        let builder = {
+            let gil = Python::acquire_gil();
+            let py = gil.python();
+            self.block_builder.clone_ref(py)
+        };
 
         let mut bad_batches = vec![];
         let mut pending_batches = vec![];
@@ -410,6 +426,8 @@ impl CandidateBlock {
                         .collect());
                     return self.build_result(None, pending_batches);
                 } else {
+                    let gil = Python::acquire_gil();
+                    let py = gil.python();
                     builder
                         .call_method(py, "add_batch", (batch.clone(),), None)
                         .expect("BlockBuilder has no method 'add_batch'");
@@ -449,7 +467,8 @@ impl CandidateBlock {
                 .collect());
             return self.build_result(None, pending_batches);
         }
-
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         builder
             .call_method(
                 py,
