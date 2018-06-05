@@ -20,6 +20,7 @@ use std::collections::HashSet;
 use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
+use cpython::Python;
 use cpython::ToPyObject;
 
 use batch::Batch;
@@ -31,16 +32,16 @@ use pylogger;
 
 use scheduler::Scheduler;
 
-pub enum BlockPublisherError {
+pub enum CandidateBlockError {
     ConsensusNotReady,
     NoPendingBatchesRemaining,
 }
 
 pub struct FinalizeBlockResult {
-    block: Option<cpython::PyObject>,
-    remaining_batches: Vec<Batch>,
-    last_batch: Option<Batch>,
-    injected_batch_ids: Vec<String>,
+    pub block: Option<cpython::PyObject>,
+    pub remaining_batches: Vec<Batch>,
+    pub last_batch: Batch,
+    pub injected_batch_ids: Vec<String>,
 }
 
 pub struct CandidateBlock {
@@ -49,10 +50,9 @@ pub struct CandidateBlock {
     scheduler: Box<Scheduler>,
     max_batches: usize,
     block_builder: cpython::PyObject,
-    batch_injectors: cpython::PyObject,
+    batch_injectors: Vec<cpython::PyObject>,
     identity_signer: cpython::PyObject,
     settings_view: cpython::PyObject,
-    permission_verifier: cpython::PyObject,
 
     pending_batches: Vec<Batch>,
     pending_batch_ids: HashSet<String>,
@@ -69,10 +69,9 @@ impl CandidateBlock {
         committed_txn_cache: TransactionCommitCache,
         block_builder: cpython::PyObject,
         max_batches: usize,
-        batch_injectors: cpython::PyObject,
+        batch_injectors: Vec<cpython::PyObject>,
         identity_signer: cpython::PyObject,
         settings_view: cpython::PyObject,
-        permission_verifier: cpython::PyObject,
     ) -> Self {
         CandidateBlock {
             block_store,
@@ -83,7 +82,6 @@ impl CandidateBlock {
             block_builder,
             batch_injectors,
             identity_signer,
-            permission_verifier,
             settings_view,
             pending_batches: vec![],
             pending_batch_ids: HashSet::new(),
@@ -96,7 +94,8 @@ impl CandidateBlock {
     }
 
     pub fn previous_block_id(&self) -> String {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         self.block_builder
             .getattr(py, "previous_block_id")
             .expect("BlockBuilder has no attribute 'previous_block_id'")
@@ -149,7 +148,8 @@ impl CandidateBlock {
         committed_txn_cache: &TransactionCommitCache,
     ) -> bool {
         committed_txn_cache.contains(txn.header_signature.as_str()) || {
-            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
             self.block_store
                 .call_method(py, "has_batch", (txn.header_signature.as_str(),), None)
                 .expect("Blockstore has no method 'has_batch'")
@@ -161,7 +161,8 @@ impl CandidateBlock {
     fn batch_is_already_committed(&self, batch: &Batch) -> bool {
         self.pending_batch_ids
             .contains(batch.header_signature.as_str()) || {
-            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
             self.block_store
                 .call_method(py, "has_batch", (batch.header_signature.as_str(),), None)
                 .expect("Blockstore has no method 'has_batch'")
@@ -170,22 +171,22 @@ impl CandidateBlock {
         }
     }
 
-    fn poll_injectors<F: Fn(cpython::PyObject) -> Vec<cpython::PyObject>>(
-        &self,
+    fn poll_injectors<F: Fn(&cpython::PyObject) -> Vec<cpython::PyObject>>(
+        &mut self,
         poller: F,
     ) -> Vec<Batch> {
         let mut batches = vec![];
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-        for injector in self.batch_injectors
-            .extract::<cpython::PyList>(py)
-            .unwrap()
-            .iter(py)
-        {
+        for injector in self.batch_injectors.iter() {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {
-                    match b.extract(py) {
-                        Ok(b) => batches.push(b),
+                    let gil = cpython::Python::acquire_gil();
+                    let py = gil.python();
+                    match b.extract::<Batch>(py) {
+                        Ok(b) => {
+                            self.injected_batch_ids.insert(b.header_signature.clone());
+                            batches.push(b);
+                        }
                         Err(err) => pylogger::exception(py, "During batch injection", err),
                     }
                 }
@@ -216,10 +217,11 @@ impl CandidateBlock {
             let mut batches_to_add = vec![];
 
             // Inject blocks at the beginning of a Candidate Block
+            let previous_block_id = self.previous_block_id();
             if self.pending_batches.is_empty() {
                 let mut injected_batches = self.poll_injectors(|injector: cpython::PyObject| {
                     match injector
-                        .call_method(py, "block_start", (self.previous_block_id(),), None)
+                        .call_method(py, "block_start", (previous_block_id.as_str(),), None)
                         .expect("BlockInjector has not method 'block_start'")
                         .extract::<cpython::PyList>(py)
                     {
@@ -289,7 +291,8 @@ impl CandidateBlock {
     }
 
     pub fn sign_block(&self, block_builder: &cpython::PyObject) {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         let header_bytes = block_builder
             .getattr(py, "block_header")
             .expect("BlockBuilder has no attribute 'block_header'")
@@ -384,7 +387,7 @@ impl CandidateBlock {
                         .into_iter()
                         .filter(|b| !bad_batches.contains(b))
                         .collect());
-                    return Ok(self.build_result(None, pending_batches));
+                    return self.build_result(None, pending_batches);
                 } else {
                     builder
                         .call_method(py, "add_batch", (batch.clone(),), None)
@@ -405,7 +408,7 @@ impl CandidateBlock {
                 .len(py) == 0
         {
             debug!("Abandoning block, no batches added");
-            return Ok(self.build_result(None, self.pending_batches.clone()));
+            return self.build_result(None, pending_batches);
         }
         let block_header = builder
             .getattr(py, "block_header")
@@ -423,7 +426,7 @@ impl CandidateBlock {
                 .into_iter()
                 .filter(|b| !bad_batches.contains(b))
                 .collect());
-            return Ok(self.build_result(None, pending_batches));
+            return self.build_result(None, pending_batches);
         }
 
         builder
@@ -436,7 +439,7 @@ impl CandidateBlock {
             .expect("BlockBuilder has no method 'set_state_hash'");
         self.sign_block(&builder);
 
-        Ok(self.build_result(
+        self.build_result(
             Some(
                 builder
                     .call_method(py, "build_block", cpython::NoArgs, None)
@@ -450,15 +453,19 @@ impl CandidateBlock {
         &self,
         block: Option<cpython::PyObject>,
         remaining: Vec<Batch>,
-    ) -> FinalizeBlockResult {
-        FinalizeBlockResult {
-            block,
-            remaining_batches: remaining,
-            last_batch: self.last_batch().cloned(),
-            injected_batch_ids: self.injected_batch_ids
-                .clone()
-                .into_iter()
-                .collect::<Vec<String>>(),
+    ) -> Result<FinalizeBlockResult, CandidateBlockError> {
+        if let Some(last_batch) = self.last_batch().cloned() {
+            Ok(FinalizeBlockResult {
+                block,
+                remaining_batches: remaining,
+                last_batch,
+                injected_batch_ids: self.injected_batch_ids
+                    .clone()
+                    .into_iter()
+                    .collect::<Vec<String>>(),
+            })
+        } else {
+            Err(CandidateBlockError::NoPendingBatchesRemaining)
         }
     }
 }
