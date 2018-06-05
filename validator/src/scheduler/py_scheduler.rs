@@ -36,7 +36,8 @@ impl From<ProtobufError> for SchedulerError {
 
 impl From<cpython::PyErr> for SchedulerError {
     fn from(other: cpython::PyErr) -> SchedulerError {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         SchedulerError::Other(other.get_type(py).name(py).into_owned())
     }
 }
@@ -55,6 +56,15 @@ impl PyScheduler {
             batch_ids: vec![],
         }
     }
+
+    fn is_complete(&self, block: bool) -> Result<bool, SchedulerError> {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        Ok(self.py_scheduler
+            .call_method(py, "complete", (block,), None)
+            .expect("No method complete on python scheduler")
+            .extract::<bool>(py)?)
+    }
 }
 
 impl Scheduler for PyScheduler {
@@ -69,7 +79,8 @@ impl Scheduler for PyScheduler {
         let state_hash_kwargs: Result<Option<cpython::PyDict>, cpython::PyErr> =
             expected_state_hash
                 .map(|state_hash| {
-                    let py = unsafe { cpython::Python::assume_gil_acquired() };
+                    let gil = cpython::Python::acquire_gil();
+                    let py = gil.python();
                     let kwargs = cpython::PyDict::new(py);
                     kwargs.set_item(py, "state_hash", state_hash)?;
                     kwargs.set_item(py, "required", required)?;
@@ -78,16 +89,20 @@ impl Scheduler for PyScheduler {
                 .map_or(Ok(None), |v: Result<cpython::PyDict, cpython::PyErr>| {
                     Ok(Some(v?))
                 });
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-        self.py_scheduler
-            .call_method(py, "add_batch", (batch,), state_hash_kwargs?.as_ref())
-            .expect("No method add_batch on python scheduler");
+        {
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
+            self.py_scheduler
+                .call_method(py, "add_batch", (batch,), state_hash_kwargs?.as_ref())
+                .expect("No method add_batch on python scheduler");
+        }
         self.batch_ids.push(header_signature);
         Ok(())
     }
 
     fn finalize(&mut self, unschedule_incomplete: bool) -> Result<(), SchedulerError> {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
 
         if unschedule_incomplete {
             self.py_scheduler
@@ -102,7 +117,8 @@ impl Scheduler for PyScheduler {
     }
 
     fn cancel(&mut self) -> Result<(), SchedulerError> {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
 
         self.py_scheduler
             .call_method(py, "cancel", cpython::NoArgs, None)
@@ -111,21 +127,20 @@ impl Scheduler for PyScheduler {
     }
 
     fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError> {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-
-        if self.py_scheduler
-            .call_method(py, "complete", (block,), None)
-            .expect("No method complete on python scheduler")
-            .extract::<bool>(py)?
-        {
+        if self.is_complete(block)? {
             let r: PyResult<CombinedOptionalBatchResult> = self.batch_ids
                 .iter()
                 .map(|id| {
+                    let gil = cpython::Python::acquire_gil();
+                    let py = gil.python();
                     let batch_result: cpython::PyObject = self.py_scheduler
                         .call_method(py, "get_batch_execution_result", (id,), None)
                         .expect("No method get_batch_execution_result on python scheduler");
-                    if batch_result.is_true(py).unwrap() {
-                        let result = batch_result.extract::<BatchResult>(py).unwrap();
+
+                    if batch_result != cpython::Python::None(py) {
+                        let result = batch_result
+                            .extract::<BatchResult>(py)
+                            .expect("Failed to extract BatchResult");
 
                         let txn_results: Vec<TransactionResult> = self.py_scheduler
                             .call_method(py, "get_transaction_execution_results", (id,), None)
@@ -148,7 +163,7 @@ impl Scheduler for PyScheduler {
 
             let beginning_state_hash = results
                 .first()
-                .map(|v| v.0.first().map(|r| r.state_hash.clone()))
+                .map(|v| v.0.first().map(|r| r.state_hash.clone()).unwrap_or(None))
                 .unwrap_or(None);
 
             let ending_state_hash = results
@@ -156,8 +171,18 @@ impl Scheduler for PyScheduler {
                 .by_ref()
                 .map(|val| val.1.clone())
                 .filter(|batch_result| batch_result.is_some())
-                .find(|batch_result| batch_result.clone().unwrap().state_hash.is_some())
-                .map(|batch_result| batch_result.unwrap().state_hash)
+                .find(|batch_result| {
+                    batch_result
+                        .clone()
+                        .expect("Failed to unwrap batch result")
+                        .state_hash
+                        .is_some()
+                })
+                .map(|batch_result| {
+                    batch_result
+                        .expect("Failed to unwrap batch result")
+                        .state_hash
+                })
                 .unwrap_or(None);
 
             let batch_txn_results = results
