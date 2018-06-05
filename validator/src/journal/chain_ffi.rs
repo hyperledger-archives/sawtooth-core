@@ -20,6 +20,7 @@ use database::lmdb::LmdbDatabase;
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain::*;
+use journal::chain_head_lock::ChainHeadLock;
 use py_ffi;
 use pylogger;
 use state::state_pruning_manager::StatePruningManager;
@@ -58,8 +59,7 @@ pub extern "C" fn chain_controller_new(
     block_cache: *mut py_ffi::PyObject,
     block_validator: *mut py_ffi::PyObject,
     state_database: *const c_void,
-    chain_head_lock: *mut py_ffi::PyObject,
-    on_chain_updated: *mut py_ffi::PyObject,
+    chain_head_lock: *const c_void,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
     data_directory: *const c_char,
@@ -71,7 +71,6 @@ pub extern "C" fn chain_controller_new(
         block_validator,
         state_database,
         chain_head_lock,
-        on_chain_updated,
         observers,
         data_directory
     );
@@ -89,11 +88,9 @@ pub extern "C" fn chain_controller_new(
     let py_block_store_writer = unsafe { PyObject::from_borrowed_ptr(py, block_store) };
     let py_block_cache = unsafe { PyObject::from_borrowed_ptr(py, block_cache) };
     let py_block_validator = unsafe { PyObject::from_borrowed_ptr(py, block_validator) };
-    let py_on_chain_updated = unsafe { PyObject::from_borrowed_ptr(py, on_chain_updated) };
     let py_observers = unsafe { PyObject::from_borrowed_ptr(py, observers) };
-    let chain_head_lock = PyLock {
-        py_lock: unsafe { PyObject::from_borrowed_ptr(py, chain_head_lock) },
-    };
+    let chain_head_lock_ref =
+        unsafe { (chain_head_lock as *const ChainHeadLock).as_ref().unwrap() };
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -114,9 +111,8 @@ pub extern "C" fn chain_controller_new(
         PyBlockValidator::new(py_block_validator),
         PyBlockStore::new(py_block_store_writer),
         Box::new(PyBlockStore::new(py_block_store_reader)),
-        Box::new(chain_head_lock),
+        chain_head_lock_ref.clone(),
         data_dir.into(),
-        Box::new(PyChainHeadUpdateObserver::new(py_on_chain_updated)),
         state_pruning_block_depth,
         observer_wrappers,
         state_pruning_manager,
@@ -331,45 +327,6 @@ pub extern "C" fn sender_send(
                 ErrorCode::Unknown
             }
         }
-    }
-}
-
-struct PyLock {
-    py_lock: PyObject,
-}
-
-impl ExternalLock for PyLock {
-    fn lock(&self) -> Box<ExternalLockGuard> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_lock
-            .call_method(py, "acquire", cpython::NoArgs, None)
-            .expect("Unable to call release on python lock");
-
-        let py_release_fn = self.py_lock
-            .getattr(py, "release")
-            .expect("unable to get release function");
-        Box::new(PyExternalLockGuard { py_release_fn })
-    }
-}
-
-struct PyExternalLockGuard {
-    py_release_fn: PyObject,
-}
-
-impl ExternalLockGuard for PyExternalLockGuard {
-    fn release(&self) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_release_fn
-            .call(py, cpython::NoArgs, None)
-            .expect("Unable to call release on python lock");
-    }
-}
-
-impl Drop for PyExternalLockGuard {
-    fn drop(&mut self) {
-        self.release();
     }
 }
 
@@ -643,43 +600,6 @@ impl ChainObserver for PyChainObserver {
             .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
-                ()
-            })
-            .unwrap_or(())
-    }
-}
-
-struct PyChainHeadUpdateObserver {
-    py_on_chain_updated: PyObject,
-}
-
-impl PyChainHeadUpdateObserver {
-    fn new(py_on_chain_updated: PyObject) -> Self {
-        PyChainHeadUpdateObserver {
-            py_on_chain_updated,
-        }
-    }
-}
-
-impl ChainHeadUpdateObserver for PyChainHeadUpdateObserver {
-    fn on_chain_head_updated(
-        &mut self,
-        block: BlockWrapper,
-        committed_batches: Vec<Batch>,
-        uncommitted_batches: Vec<Batch>,
-    ) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_on_chain_updated
-            .call(py, (block, committed_batches, uncommitted_batches), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    "Unable to call chain head observer on_chain_updated",
-                    py_err,
-                );
                 ()
             })
             .unwrap_or(())
