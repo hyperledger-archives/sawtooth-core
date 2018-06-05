@@ -16,11 +16,13 @@
  */
 use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use database::lmdb::LmdbDatabase;
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain::*;
 use py_ffi;
 use pylogger;
+use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::sync::mpsc::Sender;
@@ -55,6 +57,7 @@ pub extern "C" fn chain_controller_new(
     block_store: *mut py_ffi::PyObject,
     block_cache: *mut py_ffi::PyObject,
     block_validator: *mut py_ffi::PyObject,
+    state_database: *const c_void,
     chain_head_lock: *mut py_ffi::PyObject,
     on_chain_updated: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
@@ -66,6 +69,7 @@ pub extern "C" fn chain_controller_new(
         block_store,
         block_cache,
         block_validator,
+        state_database,
         chain_head_lock,
         on_chain_updated,
         observers,
@@ -101,6 +105,10 @@ pub extern "C" fn chain_controller_new(
         return ErrorCode::InvalidPythonObject;
     };
 
+    let state_database = unsafe { (*(state_database as *const LmdbDatabase)).clone() };
+
+    let state_pruning_manager = StatePruningManager::new(state_database);
+
     let chain_controller = ChainController::new(
         PyBlockCache::new(py_block_cache),
         PyBlockValidator::new(py_block_validator),
@@ -111,6 +119,7 @@ pub extern "C" fn chain_controller_new(
         Box::new(PyChainHeadUpdateObserver::new(py_on_chain_updated)),
         state_pruning_block_depth,
         observer_wrappers,
+        state_pruning_manager,
     );
 
     unsafe {
