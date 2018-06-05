@@ -27,3 +27,4 @@ pub mod chain;
 mod chain_commit_state;
 pub mod chain_ffi;
 pub mod publisher;
+pub mod publisher_ffi;
