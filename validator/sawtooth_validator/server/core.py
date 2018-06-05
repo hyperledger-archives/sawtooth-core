@@ -285,6 +285,8 @@ class Validator(object):
             batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory)
 
+        block_publisher_batch_sender = block_publisher.batch_sender()
+
         block_validator = BlockValidator(
             block_cache=block_cache,
             state_view_factory=state_view_factory,
@@ -325,7 +327,7 @@ class Validator(object):
 
         responder = Responder(completer)
 
-        completer.set_on_batch_received(block_publisher.queue_batch)
+        completer.set_on_batch_received(block_publisher_batch_sender.send)
         completer.set_on_block_received(chain_controller.queue_block)
         completer.set_chain_has_block(chain_controller.has_block)
 
