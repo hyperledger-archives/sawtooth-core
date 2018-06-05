@@ -24,6 +24,6 @@ use scheduler::Scheduler;
 /// implementation details of the merkle database.
 pub const NULL_STATE_HASH: &str = "";
 
-pub trait ExecutionPlatform {
+pub trait ExecutionPlatform: Sync + Send {
     fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr>;
 }
