@@ -298,6 +298,7 @@ class Validator(object):
             block_store=block_store,
             block_cache=block_cache,
             block_validator=block_validator,
+            state_database=global_state_db,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
             state_pruning_block_depth=state_pruning_block_depth,
