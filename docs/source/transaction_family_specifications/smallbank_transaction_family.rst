@@ -79,7 +79,7 @@ protobuf structure:
 .. code-block:: protobuf
 
     message SmallbankTransactionPayload {
-        enum Type {
+        enum PayloadType {
             CREATE_ACCOUNT = 1;
             DEPOSIT_CHECKING = 2;
             WRITE_CHECK = 3;
