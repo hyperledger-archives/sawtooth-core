@@ -136,7 +136,7 @@ Step 2: Start the Sawtooth Network
 
 #. Note that there is only one shell container for this Docker environment:
 
-    * ``sawtooth-poet-shell``
+    * ``sawtooth-shell-default``
 
 Step 3: Verify Connectivity
 ---------------------------
@@ -561,7 +561,7 @@ Confirm Network Functionality
    to the REST API on the first validator node.
 
      * Docker: Run the following command from the shell container,
-       ``sawtooth-poet-shell``.  This command specifies the container name and
+       ``sawtooth-shell-default``.  This command specifies the container name and
        port for the first node's REST API.
 
           .. code-block:: console
