@@ -346,9 +346,9 @@ impl CandidateBlock {
             .unwrap()
     }
 
-    pub fn finalize(&mut self, force: bool) -> Result<FinalizeBlockResult, BlockPublisherError> {
-        if !force || self.pending_batches.is_empty() {
-            return Err(BlockPublisherError::NoPendingBatchesRemaining);
+    pub fn finalize(&mut self, force: bool) -> Result<FinalizeBlockResult, CandidateBlockError> {
+        if !(force || !self.pending_batches.is_empty()) {
+            return Err(CandidateBlockError::NoPendingBatchesRemaining);
         }
         {
             let gil = cpython::Python::acquire_gil();
