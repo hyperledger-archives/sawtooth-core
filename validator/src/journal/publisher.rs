@@ -34,9 +34,15 @@ use journal::block_wrapper::BlockWrapper;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError, FinalizeBlockResult};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
+use metrics;
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
+
+lazy_static! {
+    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+        metrics::get_collector("sawtooth_validator.publisher");
+}
 
 /// Collects and tracks the changes in various states of the
 /// Publisher. For example it tracks `consensus_ready`,
@@ -381,6 +387,11 @@ impl SyncBlockPublisher {
         self.block_sender
             .call_method(py, "send", (block,), Some(&kwargs))
             .expect("BlockSender has no method send");
+
+        let mut blocks_published_count =
+            COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
+        blocks_published_count.inc();
+
         self.on_chain_updated(state, None, Vec::new(), Vec::new());
     }
 
@@ -765,6 +776,7 @@ pub struct PendingBatchesPool {
     batches: Vec<Batch>,
     ids: HashSet<String>,
     limit: QueueLimit,
+    gauge: metrics::Gauge,
 }
 
 impl PendingBatchesPool {
@@ -773,6 +785,7 @@ impl PendingBatchesPool {
             batches: Vec::new(),
             ids: HashSet::new(),
             limit: QueueLimit::new(sample_size, initial_value),
+            gauge: COLLECTOR.gauge("BlockPublisher.pending_batch_gauge", None, None),
         }
     }
 
@@ -837,6 +850,8 @@ impl PendingBatchesPool {
                 self.append(batch);
             }
         }
+
+        self.gauge.set_value(self.batches.len());
     }
 
     pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: Batch) {
@@ -860,6 +875,8 @@ impl PendingBatchesPool {
         for batch in unsent {
             self.append(batch);
         }
+
+        self.gauge.set_value(self.batches.len());
     }
 
     pub fn update_limit(&mut self, consumed: usize) {
