@@ -26,5 +26,6 @@ mod candidate_block;
 pub mod chain;
 mod chain_commit_state;
 pub mod chain_ffi;
+pub mod chain_head_lock;
 pub mod publisher;
 pub mod publisher_ffi;
