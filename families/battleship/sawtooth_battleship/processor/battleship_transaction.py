@@ -359,7 +359,7 @@ def _get_state_data(game_address, context):
 def _store_state_data(addr, new_state, context):
     LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s', new_state)
     addresses = context.set_state(
-        {addr, json.dumps(new_state).encode()}
+        {addr: json.dumps(new_state).encode()}
     )
 
     if len(addresses) < 1:
