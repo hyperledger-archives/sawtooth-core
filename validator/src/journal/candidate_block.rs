@@ -94,7 +94,8 @@ impl CandidateBlock {
     }
 
     pub fn previous_block_id(&self) -> String {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         self.block_builder
             .getattr(py, "previous_block_id")
             .expect("BlockBuilder has no attribute 'previous_block_id'")
@@ -147,7 +148,8 @@ impl CandidateBlock {
         committed_txn_cache: &TransactionCommitCache,
     ) -> bool {
         committed_txn_cache.contains(txn.header_signature.as_str()) || {
-            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
             self.block_store
                 .call_method(py, "has_batch", (txn.header_signature.as_str(),), None)
                 .expect("Blockstore has no method 'has_batch'")
@@ -159,7 +161,8 @@ impl CandidateBlock {
     fn batch_is_already_committed(&self, batch: &Batch) -> bool {
         self.pending_batch_ids
             .contains(batch.header_signature.as_str()) || {
-            let py = unsafe { cpython::Python::assume_gil_acquired() };
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
             self.block_store
                 .call_method(py, "has_batch", (batch.header_signature.as_str(),), None)
                 .expect("Blockstore has no method 'has_batch'")
@@ -179,8 +182,6 @@ impl CandidateBlock {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {
-                    match b.extract(py) {
-                        Ok(b) => batches.push(b),
                         Err(err) => pylogger::exception(py, "During batch injection", err),
                     }
                 }
@@ -289,7 +290,8 @@ impl CandidateBlock {
     }
 
     pub fn sign_block(&self, block_builder: &cpython::PyObject) {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         let header_bytes = block_builder
             .getattr(py, "block_header")
             .expect("BlockBuilder has no attribute 'block_header'")
