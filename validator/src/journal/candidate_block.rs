@@ -480,7 +480,7 @@ impl CandidateBlock {
         let block_header = builder
             .getattr(py, "block_header")
             .expect("BlockBuilder has no attribute 'block_header'");
-        !self.consensus
+        self.consensus
             .call_method(py, "finalize_block", (block_header,), None)
             .expect("Consensus has no method 'finalize_block'")
             .extract::<bool>(py)
