@@ -16,6 +16,7 @@
 import hashlib
 import sys
 import argparse
+import traceback
 import pkg_resources
 
 from sawtooth_sdk.processor.core import TransactionProcessor
@@ -95,7 +96,10 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     except Exception as e:  # pylint: disable=broad-except
-        print("Error: {}".format(e))
+        if opts.verbose:
+            traceback.print_exc()
+        else:
+            print("Error: {}".format(e))
     finally:
         if processor is not None:
             processor.stop()
