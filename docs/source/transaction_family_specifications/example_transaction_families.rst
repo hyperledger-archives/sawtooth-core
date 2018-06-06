@@ -20,8 +20,10 @@ your own transaction family.
   simply sets, increments, and decrements the value of entries stored in a state
   dictionary. IntegerKey is available in Go, Java, and JavaScript (Node.js).
   The family name is ``intkey``;
-  the associated transaction processors are ``intkey-tp-go``,
-  ``intkey-tp-java``, and ``intkey-tp-javascript``.
+  the associated transaction processor executables are ``intkey-tp-go``,
+  and ``intkey-tp-java``;
+  the processor in its own repo is
+  `JavaScript <https://github.com/hyperledger/sawtooth-sdk-javascript/blob/master/examples/intkey/>`__.
   The :doc:`intkey command </cli/intkey>` provides an example CLI client.
 
 * The :doc:`/transaction_family_specifications/validator_registry_transaction_family`
@@ -54,7 +56,9 @@ your own transaction family.
   :doc:`/app_developers_guide/intro_xo_transaction_family`).
   XO is written in Go, JavaScript/Node.js, and Python.
   The family name is ``xo``;
-  the associated transaction processors are ``xo-tp-go``,
-  ``xo-tp-javascript``, and ``xo-tp-python``.
+  the associated transaction processor executables  are ``xo-tp-go``,
+  and ``xo-tp-python``;
+  the processor in its own repo is
+  `JavaScript <https://github.com/hyperledger/sawtooth-sdk-javascript/blob/master/examples/xo/>`__.
   The :doc:`xo command </cli/xo>` provides an example CLI client.
 

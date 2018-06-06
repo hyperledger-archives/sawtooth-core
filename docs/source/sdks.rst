@@ -21,11 +21,8 @@ Go
 
 Javascript
 ----------
-
-- `Transaction Processor
-  <javascript_sdk/processor/index.html#http://>`__
-- `Signing
-  <javascript_sdk/signing/index.html#http://>`__
+- `Javascript SDK Reference
+  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/>`__
 
 Rust
 ----
