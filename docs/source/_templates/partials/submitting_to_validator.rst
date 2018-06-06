@@ -43,7 +43,8 @@ prepared the BatchList:
         response = urllib.request.urlopen(request)
 
     except HTTPError as e:
-        response = e.file
+        print(e.response)
+        quit(1)
 
 {% endif %}
 
