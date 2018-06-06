@@ -1,4 +1,3 @@
-// Reusable. No intkey-specific logic (except for Error type)
 use std::env;
 use std::io::prelude::*;
 use std::fs::File;
