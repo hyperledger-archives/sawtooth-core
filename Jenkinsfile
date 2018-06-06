@@ -71,10 +71,10 @@ node ('master') {
         }
 
         stage("Run Lint") {
-            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-python'
-            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-go'
-            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-rust'
-            sh 'docker-compose -f docker/compose/run-lint.yaml up lint-validator'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up --exit-code-from lint-python lint-python'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up --exit-code-from lint-go lint-go'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up --exit-code-from lint-rust lint-rust'
+            sh 'docker-compose -f docker/compose/run-lint.yaml up --exit-code-from lint-validator lint-validator'
             sh 'docker-compose -f docker/compose/run-lint.yaml down'
         }
 
