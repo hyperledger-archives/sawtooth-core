@@ -171,8 +171,8 @@ impl CandidateBlock {
         }
     }
 
-    fn poll_injectors<F: Fn(cpython::PyObject) -> Vec<cpython::PyObject>>(
-        &self,
+    fn poll_injectors<F: Fn(&cpython::PyObject) -> Vec<cpython::PyObject>>(
+        &mut self,
         poller: F,
     ) -> Vec<Batch> {
         let mut batches = vec![];
@@ -182,6 +182,11 @@ impl CandidateBlock {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {
+                    match b.extract::<Batch>(py) {
+                        Ok(b) => {
+                            self.injected_batch_ids.insert(b.header_signature.clone());
+                            batches.push(b);
+                        }
                         Err(err) => pylogger::exception(py, "During batch injection", err),
                     }
                 }
