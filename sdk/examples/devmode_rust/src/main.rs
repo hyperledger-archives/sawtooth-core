@@ -33,7 +33,7 @@ use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
 use engine::DevmodeEngine;
-use sawtooth_sdk::consensus::{driver::Driver, zmq_driver::ZmqDriver};
+use sawtooth_sdk::consensus::zmq_driver::ZmqDriver;
 
 fn main() {
     let matches = clap_app!(intkey =>
