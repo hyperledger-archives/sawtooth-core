@@ -20,7 +20,6 @@ use protobuf::{Message as ProtobufMessage, ProtobufError};
 use rand;
 use rand::Rng;
 
-use consensus::driver::Driver;
 use consensus::engine::*;
 use consensus::zmq_service::ZmqService;
 
@@ -50,15 +49,15 @@ pub struct ZmqDriver {
     exit: Exit,
 }
 
-impl Driver for ZmqDriver {
-    fn new(engine: Box<Engine>) -> Self {
+impl ZmqDriver {
+    pub fn new(engine: Box<Engine>) -> Self {
         ZmqDriver {
             engine: Arc::new(engine),
             exit: Exit::new(),
         }
     }
 
-    fn start(&self, endpoint: &str) -> Result<(), Error> {
+    pub fn start(&self, endpoint: &str) -> Result<(), Error> {
         let validator_connection = ZmqMessageConnection::new(endpoint);
         let (mut validator_sender, validator_receiver) = validator_connection.create();
 
@@ -120,7 +119,7 @@ impl Driver for ZmqDriver {
         Ok(())
     }
 
-    fn stop(&self) {
+    pub fn stop(&self) {
         self.exit.set();
     }
 }
