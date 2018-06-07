@@ -42,7 +42,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_SEND_TO_RESPONSE,
             content=consensus_pb2.ConsensusSendToResponse(
-                status=consensus_pb2.ConsensusSendToResponse.OK))
+                status=consensus_pb2.ConsensusSendToResponse.OK
+            ).SerializeToString())
 
         self.service.send_to(
             peer_id=b'peer_id',
@@ -63,7 +64,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_BROADCAST_RESPONSE,
             content=consensus_pb2.ConsensusBroadcastResponse(
-                status=consensus_pb2.ConsensusBroadcastResponse.OK))
+                status=consensus_pb2.ConsensusBroadcastResponse.OK
+            ).SerializeToString())
 
         self.service.broadcast(
             message_type='message_type',
@@ -82,7 +84,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_INITIALIZE_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusInitializeBlockResponse(
-                status=consensus_pb2.ConsensusInitializeBlockResponse.OK))
+                status=consensus_pb2.ConsensusInitializeBlockResponse.OK
+            ).SerializeToString())
 
         self.service.initialize_block(previous_id=b'test')
 
@@ -96,7 +99,7 @@ class TestService(unittest.TestCase):
             message_type=Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusSummarizeBlockResponse(
                 status=consensus_pb2.ConsensusSummarizeBlockResponse.OK,
-                summary=b'summary'))
+                summary=b'summary').SerializeToString())
 
         result = self.service.summarize_block()
 
@@ -112,7 +115,7 @@ class TestService(unittest.TestCase):
             message_type=Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusFinalizeBlockResponse(
                 status=consensus_pb2.ConsensusFinalizeBlockResponse.OK,
-                block_id=b'block_id'))
+                block_id=b'block_id').SerializeToString())
 
         result = self.service.finalize_block(data=b'test')
 
@@ -127,7 +130,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_CANCEL_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusCancelBlockResponse(
-                status=consensus_pb2.ConsensusCancelBlockResponse.OK))
+                status=consensus_pb2.ConsensusCancelBlockResponse.OK
+            ).SerializeToString())
 
         self.service.cancel_block()
 
@@ -141,7 +145,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_CHECK_BLOCKS_RESPONSE,
             content=consensus_pb2.ConsensusCheckBlocksResponse(
-                status=consensus_pb2.ConsensusCheckBlocksResponse.OK))
+                status=consensus_pb2.ConsensusCheckBlocksResponse.OK
+            ).SerializeToString())
 
         self.service.check_blocks(priority=[b'test1', b'test2'])
 
@@ -154,7 +159,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_COMMIT_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusCommitBlockResponse(
-                status=consensus_pb2.ConsensusCommitBlockResponse.OK))
+                status=consensus_pb2.ConsensusCommitBlockResponse.OK
+            ).SerializeToString())
 
         self.service.commit_block(block_id=b'test')
 
@@ -167,7 +173,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_IGNORE_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusIgnoreBlockResponse(
-                status=consensus_pb2.ConsensusIgnoreBlockResponse.OK))
+                status=consensus_pb2.ConsensusIgnoreBlockResponse.OK
+            ).SerializeToString())
 
         self.service.ignore_block(block_id=b'test')
 
@@ -180,7 +187,8 @@ class TestService(unittest.TestCase):
         self.mock_stream.send.return_value = self._make_future(
             message_type=Message.CONSENSUS_FAIL_BLOCK_RESPONSE,
             content=consensus_pb2.ConsensusFailBlockResponse(
-                status=consensus_pb2.ConsensusFailBlockResponse.OK))
+                status=consensus_pb2.ConsensusFailBlockResponse.OK
+            ).SerializeToString())
 
         self.service.fail_block(block_id=b'test')
 
@@ -208,7 +216,7 @@ class TestService(unittest.TestCase):
             message_type=Message.CONSENSUS_BLOCKS_GET_RESPONSE,
             content=consensus_pb2.ConsensusBlocksGetResponse(
                 status=consensus_pb2.ConsensusBlocksGetResponse.OK,
-                blocks=[block_1, block_2]))
+                blocks=[block_1, block_2]).SerializeToString())
 
         blocks = self.service.get_blocks(block_ids=[b'id1', b'id2'])
 
@@ -241,7 +249,7 @@ class TestService(unittest.TestCase):
             message_type=Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
             content=consensus_pb2.ConsensusChainHeadGetResponse(
                 status=consensus_pb2.ConsensusChainHeadGetResponse.OK,
-                block=block))
+                block=block).SerializeToString())
 
         chain_head = self.service.get_chain_head()
 
@@ -263,7 +271,7 @@ class TestService(unittest.TestCase):
                         value='value1'),
                     consensus_pb2.ConsensusSettingsEntry(
                         key='key2',
-                        value='value2')]))
+                        value='value2')]).SerializeToString())
 
         entries = self.service.get_settings(
             block_id=b'test',
@@ -292,7 +300,7 @@ class TestService(unittest.TestCase):
                         data=b'data1'),
                     consensus_pb2.ConsensusStateEntry(
                         address='address2',
-                        data=b'data2')]))
+                        data=b'data2')]).SerializeToString())
 
         entries = self.service.get_state(
             block_id=b'test',
