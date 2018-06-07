@@ -67,7 +67,7 @@ class ZmqDriver(Driver):
                 break
 
             try:
-                message = self._stream.receive().result(0.1)
+                message = self._stream.receive().result(10)
             except concurrent.futures.TimeoutError:
                 continue
 
