@@ -260,6 +260,9 @@ impl CandidateBlock {
                 });
                 batches_to_add.append(&mut injected_batches);
             }
+
+            batches_to_add.push(batch);
+
             {
                 let gil = cpython::Python::acquire_gil();
                 let py = gil.python();
@@ -295,8 +298,6 @@ impl CandidateBlock {
                     return;
                 }
             }
-
-            batches_to_add.push(batch);
 
             for b in batches_to_add {
                 let batch_id = b.header_signature.clone();
