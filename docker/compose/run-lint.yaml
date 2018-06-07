@@ -22,7 +22,6 @@ services:
       context: ../
       dockerfile: ./lint
     image: lint:${ISOLATION_ID}
-    container_name: lint-python-default
     volumes:
       - ../../:/project/sawtooth-core
     command: run_lint
@@ -32,7 +31,6 @@ services:
       context: ../
       dockerfile: ./lint
     image: lint:${ISOLATION_ID}
-    container_name: lint-go-default
     volumes:
       - ../../:/project/sawtooth-core
     command: run_go_fmt
@@ -42,7 +40,6 @@ services:
       context: ../
       dockerfile: ./lint
     image: lint:${ISOLATION_ID}
-    container_name: lint-rust-default
     volumes:
       - ../../:/project/sawtooth-core
     command: run_lint_rust
@@ -52,7 +49,6 @@ services:
       context: ../
       dockerfile: ./lint
     image: lint:${ISOLATION_ID}
-    container_name: lint-validator-default
     volumes:
       - ../../:/project/sawtooth-core
     command: run_lint_validator
