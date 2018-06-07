@@ -28,10 +28,13 @@ class ZmqService(Service):
         self._version = version
 
     def _send(self, request, message_type, response_type):
-        response = self._stream.send(
+        response_bytes = self._stream.send(
             message_type=message_type,
             content=request.SerializeToString(),
         ).result(self._timeout).content
+
+        response = response_type()
+        response.ParseFromString(response_bytes)
 
         return response
 
