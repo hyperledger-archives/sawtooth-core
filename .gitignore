@@ -105,6 +105,8 @@
 /sdk/examples/devmode_rust/bin/
 /sdk/examples/xo_go/bin/
 /sdk/examples/noop_go/bin/
+/sdk/examples/intkey_rust_cli/Cargo.lock
+/sdk/examples/intkey_rust_cli/target
 /sdk/go/pkg/
 /sdk/go/src/golang.org/
 /sdk/go/src/gopkg.in/

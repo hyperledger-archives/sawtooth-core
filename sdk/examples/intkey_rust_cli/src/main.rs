@@ -15,7 +15,6 @@ extern crate base64;
 extern crate users;
 extern crate sawtooth_sdk;
 extern crate failure;
-//extern crate term;
 
 use clap::{ App, Arg };
 use errors::IntkeyError;

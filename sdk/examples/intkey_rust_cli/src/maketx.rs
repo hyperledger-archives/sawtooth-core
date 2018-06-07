@@ -16,8 +16,6 @@ const MAX_NAME_LEN: usize = 20;
 
 // Do not change IntkeyPayload attribute names to lowercase. They will no
 // longer be accepted by the transaction processor.
-// IntkeyPaloadのフィールドのattributesを小文字にしないで下さい。そうすると、
-// transaction processorは受けません。
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct IntkeyPayload {

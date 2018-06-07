@@ -8,7 +8,6 @@ use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 
 use errors::IntkeyError;
 
-//User may or may not have specified a key
 pub fn load_signing_key(_name: Option<&str>) -> Result<Secp256k1PrivateKey, IntkeyError> {
     let username: String = _name.map(|s| String::from(s))
                            .ok_or_else(|| env::var("USER"))
