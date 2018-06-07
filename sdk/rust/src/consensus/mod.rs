@@ -20,3 +20,4 @@ pub mod engine;
 pub mod service;
 
 pub mod zmq_driver;
+pub mod zmq_service;
