@@ -213,6 +213,13 @@ impl<'a> LmdbDatabaseReaderCursor<'a> {
             .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
     }
 
+    pub fn next(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+        self.cursor
+            .next(&self.access)
+            .ok()
+            .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
+    }
+
     pub fn last(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .last(&self.access)

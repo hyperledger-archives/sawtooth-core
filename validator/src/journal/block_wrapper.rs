@@ -65,6 +65,10 @@ impl BlockWrapper {
     pub fn batches(&self) -> &[Batch] {
         &self.block.batches
     }
+
+    pub fn state_root_hash(&self) -> &str {
+        &self.block.state_root_hash
+    }
 }
 
 impl fmt::Display for BlockWrapper {

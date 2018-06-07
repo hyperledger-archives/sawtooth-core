@@ -258,6 +258,7 @@ def main(args):
         validator_config.permissions,
         validator_config.minimum_peer_connectivity,
         validator_config.maximum_peer_connectivity,
+        validator_config.state_pruning_block_depth,
         validator_config.network_public_key,
         validator_config.network_private_key,
         roles=validator_config.roles)

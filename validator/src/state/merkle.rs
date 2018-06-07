@@ -87,7 +87,7 @@ impl MerkleDatabase {
             return Ok(vec![]);
         }
 
-        let change_log = change_log.unwrap();
+        let mut change_log = change_log.unwrap();
         let removed_addresses = if change_log.get_successors().len() > 1 {
             // Currently, we don't clean up a parent with multiple successors
             vec![]
@@ -117,15 +117,42 @@ impl MerkleDatabase {
             change_log.get_additions().to_vec()
         } else {
             // deleting a parent
-            let mut successor = change_log.get_successors().first().unwrap();
-            for hash in successor.get_deletions() {
+            let mut successor = change_log.take_successors().pop().unwrap();
+
+            let mut deletion_candidates: HashSet<Vec<u8>> =
+                successor.take_deletions().into_iter().collect();
+            {
+                let mut cursor = db_writer.index_cursor(CHANGE_LOG_INDEX)?;
+
+                let mut change_log_entry = cursor.first();
+                loop {
+                    match change_log_entry.as_ref() {
+                        Some((root_hash_bytes, change_log_bytes))
+                            if root_hash_bytes != &root_bytes =>
+                        {
+                            let alternate_change_log: ChangeLogEntry =
+                                protobuf::parse_from_bytes(&change_log_bytes)?;
+                            for key in alternate_change_log.get_additions() {
+                                deletion_candidates.remove(key);
+                            }
+                        }
+                        // we found the same entry we're pruning
+                        Some(_) => (),
+                        None => break,
+                    }
+
+                    change_log_entry = cursor.next();
+                }
+            }
+
+            for hash in deletion_candidates.iter() {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
             }
 
             db_writer.index_delete(CHANGE_LOG_INDEX, &root_bytes)?;
 
-            successor.get_deletions().to_vec()
+            deletion_candidates.into_iter().collect()
         };
 
         db_writer.commit()?;
@@ -1054,7 +1081,12 @@ mod tests {
             );
 
             let reader = db.reader().unwrap();
-            for addition in parent_change_log.get_additions() {
+            for addition in parent_change_log
+                .get_successors()
+                .first()
+                .unwrap()
+                .get_deletions()
+            {
                 assert!(reader.get(addition).is_none());
             }
 
@@ -1132,6 +1164,65 @@ mod tests {
             assert_has_successors(&parent_change_log, &[&successor_root_right_bytes]);
 
             assert!(merkle_db.set_merkle_root(successor_root_left).is_err());
+        })
+    }
+
+    #[test]
+    /// This test creates a merkle trie with multiple entries and produces a
+    /// successor with duplicate That changes one new leaf, followed by a second
+    /// successor that produces a leaf with the same hash.  When the pruning the
+    /// initial root, the duplicate leaf node is not pruned as well.
+    fn merkle_trie_pruning_duplicate_leaves() {
+        run_test(|merkle_path| {
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
+            let mut updates: HashMap<String, Vec<u8>> = vec![
+                ("ab0000".to_string(), "0001".as_bytes().to_vec()),
+                ("ab0001".to_string(), "0002".as_bytes().to_vec()),
+                ("ab0002".to_string(), "0003".as_bytes().to_vec()),
+            ].into_iter()
+                .collect();
+
+            let parent_root = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+            let parent_root_bytes = ::hex::decode(parent_root.clone()).expect("Proper hex");
+
+            // create the middle root
+            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+            let mut updates: HashMap<String, Vec<u8>> = vec![
+                ("ab0000".to_string(), "change0".as_bytes().to_vec()),
+                ("ab0001".to_string(), "change1".as_bytes().to_vec()),
+            ].into_iter()
+                .collect();
+            let successor_root_middle = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+
+            // create the last root
+            merkle_db
+                .set_merkle_root(successor_root_middle.clone())
+                .unwrap();
+            // Set the value back to the original
+            let successor_root_last = merkle_db
+                .set("ab0000", "0001".as_bytes())
+                .expect("Set failed to work");
+
+            merkle_db.set_merkle_root(successor_root_last);
+            let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            assert_eq!(
+                parent_change_log
+                    .get_successors()
+                    .first()
+                    .unwrap()
+                    .get_deletions()
+                    .len() - 1,
+                MerkleDatabase::prune(&db, &parent_root)
+                    .expect("Prune should have no errors")
+                    .len()
+            );
+
+            assert_value_at_address(&merkle_db, "ab0000", "0001");
         })
     }
 

@@ -20,6 +20,7 @@ pub mod identity_view;
 pub mod merkle;
 pub mod merkle_ffi;
 pub mod settings_view;
+pub mod state_pruning_manager;
 
 use state::error::StateDatabaseError;
 

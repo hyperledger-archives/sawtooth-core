@@ -19,6 +19,7 @@
 # pylint: disable=unbalanced-tuple-unpacking
 
 import logging
+import os
 import shutil
 import tempfile
 from threading import RLock
@@ -26,6 +27,7 @@ import unittest
 from unittest.mock import patch
 
 from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -65,6 +67,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
+from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.settings_cache import SettingsCache
 
@@ -896,6 +899,11 @@ class TestChainController(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
 
+        self.state_database = NativeLmdbDatabase(
+            os.path.join(self.dir, 'merkle.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
+            _size=120 * 1024 * 1024)
+
         self.block_tree_manager = BlockTreeManager()
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
@@ -925,6 +933,7 @@ class TestChainController(unittest.TestCase):
             self.block_tree_manager.block_store,
             self.block_tree_manager.block_cache,
             self.block_validator,
+            self.state_database,
             self._chain_head_lock,
             chain_updated,
             data_dir=self.dir,
@@ -1228,6 +1237,11 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             batch_execution_result=None)
         self.executor = SynchronousExecutor()
 
+        self.state_database = NativeLmdbDatabase(
+            os.path.join(self.dir, 'merkle.lmdb'),
+            indexes=MerkleDatabase.create_index_configuration(),
+            _size=120 * 1024 * 1024)
+
         self.block_validator = None
         self.chain_ctrl = None
 
@@ -1251,6 +1265,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             self.block_tree_manager.block_store,
             self.block_tree_manager.block_cache,
             self.block_validator,
+            self.state_database,
             self.chain_head_lock,
             chain_updated,
             data_dir=self.dir,
@@ -1319,11 +1334,15 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
 class TestJournal(unittest.TestCase):
     def setUp(self):
+        self.dir = tempfile.mkdtemp()
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.permission_verifier = MockPermissionVerifier()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir)
 
     def test_publish_block(self):
         """
@@ -1369,10 +1388,16 @@ class TestJournal(unittest.TestCase):
                 config_dir=None,
                 permission_verifier=self.permission_verifier)
 
+            state_database = NativeLmdbDatabase(
+                os.path.join(self.dir, 'merkle.lmdb'),
+                indexes=MerkleDatabase.create_index_configuration(),
+                _size=120 * 1024 * 1024)
+
             chain_controller = ChainController(
                 btm.block_store,
                 btm.block_cache,
                 block_validator,
+                state_database,
                 block_publisher.chain_head_lock,
                 block_publisher.on_chain_updated,
                 data_dir=None,

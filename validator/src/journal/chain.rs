@@ -41,6 +41,7 @@ use journal;
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use metrics;
+use state::state_pruning_manager::StatePruningManager;
 
 use proto::transaction_receipt::TransactionReceipt;
 use scheduler::TxnExecutionResult;
@@ -124,6 +125,10 @@ pub enum ChainReadError {
 pub trait ChainReader: Send + Sync {
     fn chain_head(&self) -> Result<Option<BlockWrapper>, ChainReadError>;
     fn count_committed_transactions(&self) -> Result<usize, ChainReadError>;
+    fn get_block_by_block_num(
+        &self,
+        block_num: u64,
+    ) -> Result<Option<BlockWrapper>, ChainReadError>;
 }
 
 pub trait ChainWriter: Send + Sync {
@@ -144,6 +149,8 @@ struct ChainControllerState<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>
     chain_id_manager: ChainIdManager,
     chain_head_update_observer: Box<ChainHeadUpdateObserver>,
     observers: Vec<Box<ChainObserver>>,
+
+    state_pruning_manager: StatePruningManager,
 }
 
 #[derive(Clone)]
@@ -152,6 +159,7 @@ pub struct ChainController<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> 
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
     block_queue_sender: Option<Sender<BlockWrapper>>,
     validation_result_sender: Option<Sender<(bool, BlockValidationResult)>>,
+    state_pruning_block_depth: u32,
 }
 
 impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + 'static>
@@ -165,7 +173,9 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         chain_head_lock: Box<ExternalLock + 'static>,
         data_dir: String,
         chain_head_update_observer: Box<ChainHeadUpdateObserver>,
+        state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
+        state_pruning_manager: StatePruningManager,
     ) -> Self {
         let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
@@ -178,10 +188,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
                 chain_head_update_observer,
                 observers,
                 chain_head: None,
+                state_pruning_manager,
             })),
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             validation_result_sender: None,
+            state_pruning_block_depth,
         };
 
         chain_controller.initialize_chain_head();
@@ -262,6 +274,19 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             let chain_head_block = new_block.clone();
             state.chain_head = Some(new_block);
 
+            state.state_pruning_manager.update_queue(
+                &result
+                    .new_chain
+                    .iter()
+                    .map(|block| block.state_root_hash())
+                    .collect::<Vec<_>>(),
+                &result
+                    .current_chain
+                    .iter()
+                    .map(|block| (block.block_num(), block.state_root_hash()))
+                    .collect::<Vec<_>>(),
+            );
+
             if let Err(err) = state
                 .chain_writer
                 .update_chain(&result.new_chain, &result.current_chain)
@@ -331,6 +356,21 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             let mut committed_transactions_gauge =
                 COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
             committed_transactions_gauge.set_value(total_committed_txns);
+
+            let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num();
+            if chain_head_block_num + 1 > self.state_pruning_block_depth as u64 {
+                let prune_at = chain_head_block_num - (self.state_pruning_block_depth as u64);
+                match state.chain_reader.get_block_by_block_num(prune_at) {
+                    Ok(Some(block)) => state
+                        .state_pruning_manager
+                        .add_to_queue(block.block_num(), block.state_root_hash()),
+                    Ok(None) => warn!("No block at block height {}; ignoring...", prune_at),
+                    Err(err) => error!("Unable to fetch block at height {}: {:?}", prune_at, err),
+                }
+
+                // Execute pruning:
+                state.state_pruning_manager.execute(prune_at)
+            }
         } else {
             info!("Rejected new chain head: {}", new_block);
         }
@@ -346,6 +386,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: self.block_queue_sender.clone(),
             validation_result_sender: self.validation_result_sender.clone(),
+            state_pruning_block_depth: self.state_pruning_block_depth,
         }
     }
 
