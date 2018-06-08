@@ -59,6 +59,7 @@ node ('master') {
 
         // Set the ISOLATION_ID environment variable for the whole pipeline
         env.ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        env.COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
 
         // Use a docker container to build and protogen, so that the Jenkins
         // environment doesn't need all the dependencies.
@@ -66,6 +67,7 @@ node ('master') {
         stage("Build Lint Requirements") {
             sh 'docker-compose -f docker/compose/run-lint.yaml build'
             sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
+            sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
         }
 
         stage("Run Lint") {
@@ -115,6 +117,7 @@ node ('master') {
             archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
+            sh 'docker-compose -f docker/compose/copy-debs.yaml down'
         }
     }
 }
