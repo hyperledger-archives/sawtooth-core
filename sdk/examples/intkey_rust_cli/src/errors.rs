@@ -128,7 +128,7 @@ pub enum IntkeyError {
     #[fail(display = "Serde JSON decoder failed")]
     SerdeJsonError,
 
-    #[fail(display = "Sorry, the no matches found. The key(s) queried may not yet exist in the\
+    #[fail(display = "Sorry, there were no matches found. The key(s) queried may not yet exist in the\
                       current state tree. Use the 'set' verb to create a new key value pair.")]
     NonexistentKeyError,
 }

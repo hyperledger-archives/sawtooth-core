@@ -14,6 +14,10 @@ use errors::IntkeyError;
 use crypto::sha2::Sha512;
 use crypto::digest::Digest;
 
+const DEFAULT_URL: &'static str = "http://127.0.0.1:8008";
+const INTKEY_NAMESPACE_PREFIX: &'static str = "1cf126";
+const STATE_QUERY_ROUTE: &'static str = "/state?address=";
+
 pub fn storage_addr_from_name(_name: &str) -> String {
     let mut sha = Sha512::new();
     let name_bytes = _name.as_bytes();
@@ -44,25 +48,25 @@ pub fn decode_and_format_response(x: &Value) -> Result<(), IntkeyError> {
 
 }
 
-pub fn get_state(_url: Option<&str>, _key_name: Option<&str>) -> Result<(), IntkeyError> {
-
-
+pub fn req_url_as_string(_url: Option<&str>, _key_name: Option<&str>) -> String {
     let key_address = match _key_name {
         Some(v) => storage_addr_from_name(v),
         None => String::from(""),
     };
 
-    let get_url = match _url {
-        Some(v) => format!("{}{}{}", v, "/state?address=1cf126", key_address),
-        None => format!("http://127.0.0.1:8008/state?address=1cf126{}", key_address),
-    };
+    match _url {
+        Some(v) => format!("{}{}{}{}", v, STATE_QUERY_ROUTE, INTKEY_NAMESPACE_PREFIX, key_address),
+        None => format!("{}{}{}{}", DEFAULT_URL, STATE_QUERY_ROUTE, INTKEY_NAMESPACE_PREFIX, key_address),
+    }
+}
 
+pub fn get_state(_url: Option<&str>, _key_name: Option<&str>) -> Result<(), IntkeyError> {
 
+    let req_url_string: String = req_url_as_string(_url, _key_name);
 
-    //
-    let hyper_uri = match get_url.parse::<hyper::Uri>() {
+    let hyper_uri = match req_url_string.parse::<hyper::Uri>() {
         Ok(uri) => uri,
-        Err(e) => return Err(IntkeyError::SubmissionError{ error_details: (format!("Invalid get URL: {}: {}", e, get_url)) }),
+        Err(e) => return Err(IntkeyError::SubmissionError{ error_details: (format!("Invalid get URL: {}: {}", e, req_url_string)) }),
     };
     //
 
@@ -72,14 +76,14 @@ pub fn get_state(_url: Option<&str>, _key_name: Option<&str>) -> Result<(), Intk
                 return Err(IntkeyError::SubmissionError{
                     error_details: (format!(
                     "Unsupported scheme ({}) in URL: {}",
-                    scheme, get_url
+                    scheme, req_url_string
                 ))
                 });
             }
         }
         None => {
             return Err(IntkeyError::SubmissionError {
-                error_details: (format!("No scheme in URL: {}", get_url))
+                error_details: (format!("No scheme in URL: {}", req_url_string))
             });
         }
     }
@@ -117,3 +121,30 @@ pub fn get_state(_url: Option<&str>, _key_name: Option<&str>) -> Result<(), Intk
     Ok(())
 }
 
+
+#[cfg(test)]
+mod get_state_tests {
+    use super::{ req_url_as_string, storage_addr_from_name, DEFAULT_URL };
+    
+
+    #[test]
+    fn test_url_parsing_from_cli_args() {
+        let nonlocal_ip = "http://233.209.153.26:3030";
+        let test_key_address = storage_addr_from_name("testKey");
+        let target_local_somekey = format!("http://127.0.0.1:8008/state?address=1cf126{}", test_key_address);
+        let target_local_nonekey = format!("http://127.0.0.1:8008/state?address=1cf126{}", "");
+        let target_nonlocal_somekey = format!("http://233.209.153.26:3030/state?address=1cf126{}", test_key_address);
+        let target_nonlocal_nonekey = format!("http://233.209.153.26:3030/state?address=1cf126{}", "");
+
+        let candidate_local_somekey = req_url_as_string(Some(DEFAULT_URL), Some("testKey"));
+        let candidate_local_nonekey = req_url_as_string(Some(DEFAULT_URL), None);
+        let candidate_nonlocal_somekey = req_url_as_string(Some(nonlocal_ip), Some("testKey"));
+        let candidate_nonlocal_nonekey = req_url_as_string(Some(nonlocal_ip), None);
+
+        assert_eq!(target_local_somekey, candidate_local_somekey);
+        assert_eq!(target_local_nonekey, candidate_local_nonekey);
+        assert_eq!(target_nonlocal_somekey, candidate_nonlocal_somekey);
+        assert_eq!(target_nonlocal_nonekey, candidate_nonlocal_nonekey);
+    }
+
+}

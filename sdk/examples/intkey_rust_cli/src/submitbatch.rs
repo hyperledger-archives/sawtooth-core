@@ -11,18 +11,27 @@ use sawtooth_sdk::messages::batch::BatchList;
 use errors::IntkeyError;
 use protobuf::Message;
 
+const DEFAULT_URL: &'static str = "http://127.0.0.1:8008";
+const BATCHES_ROUTE: &'static str = "/batches";
 
 
-pub fn submit_batch_list(url: Option<&str>, batch_list: &BatchList) -> Result<(), IntkeyError> {
-    let url = match url {
-        Some(v) => String::from(v) + "/batches",
-        None => String::from("http://127.0.0.1:8008/batches")
-    };
+pub fn parse_batch_url(url: Option<&str>) -> String {
+    match url {
+        Some(v) => format!("{}{}", v, BATCHES_ROUTE),
+        None => format!("{}{}", DEFAULT_URL, BATCHES_ROUTE),
+    }
 
-    let hyper_uri = match url.parse::<hyper::Uri>() {
+}
+
+
+pub fn submit_batch_list(_url: Option<&str>, _batch_list: &BatchList) -> Result<(), IntkeyError> {
+
+    let batch_url_string: String = parse_batch_url(_url);
+
+    let hyper_uri = match batch_url_string.parse::<hyper::Uri>() {
         Ok(uri) => uri,
         Err(e) => return Err(IntkeyError::SubmissionError {
-            error_details: (format!("Invalid URL: {}: {}", e, url))
+            error_details: (format!("Invalid URL: {}: {}", e, batch_url_string))
         }),
     };
 
@@ -32,14 +41,14 @@ pub fn submit_batch_list(url: Option<&str>, batch_list: &BatchList) -> Result<()
                 return Err(IntkeyError::SubmissionError {
                     error_details: (format!(
                     "Unsupported scheme ({}) in URL: {}",
-                    scheme, url
+                    scheme, batch_url_string
                 ))
                 });
             }
         }
         None => {
             return Err(IntkeyError::SubmissionError {
-                error_details: (format!("No scheme in URL: {}", url))
+                error_details: (format!("No scheme in URL: {}", batch_url_string))
             });
         }
     }
@@ -48,7 +57,7 @@ pub fn submit_batch_list(url: Option<&str>, batch_list: &BatchList) -> Result<()
     let handle = core.handle();
     let client = Client::configure().build(&handle);
 
-    let bytes = batch_list.write_to_bytes()?;
+    let bytes = _batch_list.write_to_bytes()?;
 
     let mut req = Request::new(Method::Post, hyper_uri);
     req.headers_mut().set(ContentType::octet_stream());
@@ -70,4 +79,24 @@ pub fn submit_batch_list(url: Option<&str>, batch_list: &BatchList) -> Result<()
     core.run(work)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod batch_route_parsing {
+    use super::{ parse_batch_url, DEFAULT_URL };
+
+    #[test]
+    fn test_batch_url_parsing() {
+        let target_local = format!("http://127.0.0.1:8008/batches");
+        let target_nonlocal = format!("http://233.209.153.26:3030/batches");
+
+        let candidate_local = parse_batch_url(Some(DEFAULT_URL));
+        let candidate_nonlocal = parse_batch_url(Some("http://233.209.153.26:3030"));
+
+        assert_eq!(candidate_local, target_local);
+        assert_eq!(candidate_nonlocal, target_nonlocal);
+
+    }
+
+
 }
