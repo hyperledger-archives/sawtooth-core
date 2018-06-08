@@ -23,7 +23,7 @@ use batch::Batch;
 
 pub mod py_scheduler;
 
-pub trait Scheduler {
+pub trait Scheduler: Sync + Send {
     /// Add a batch to the scheduler, optionally specifying that the transactions
     /// in this batch and each of the batches in order up to this one should produce a
     /// Merkle root specified by expected_state_hash. If the two roots are equal, the results of

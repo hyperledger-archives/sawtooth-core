@@ -40,6 +40,7 @@ use batch::Batch;
 use journal;
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
+use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
 
@@ -82,14 +83,6 @@ impl From<ValidationError> for ChainControllerError {
 
 pub trait ChainObserver: Send + Sync {
     fn chain_update(&mut self, block: &BlockWrapper, receipts: &[&TransactionReceipt]);
-}
-
-pub trait ExternalLock: Send + Sync {
-    fn lock(&self) -> Box<ExternalLockGuard>;
-}
-
-pub trait ExternalLockGuard: Drop {
-    fn release(&self);
 }
 
 pub trait ChainHeadUpdateObserver: Send + Sync {
@@ -144,12 +137,9 @@ struct ChainControllerState<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>
     block_validator: BV,
     chain_writer: CW,
     chain_reader: Box<ChainReader>,
-    chain_head_lock: Box<ExternalLock>,
     chain_head: Option<BlockWrapper>,
     chain_id_manager: ChainIdManager,
-    chain_head_update_observer: Box<ChainHeadUpdateObserver>,
     observers: Vec<Box<ChainObserver>>,
-
     state_pruning_manager: StatePruningManager,
 }
 
@@ -160,6 +150,7 @@ pub struct ChainController<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> 
     block_queue_sender: Option<Sender<BlockWrapper>>,
     validation_result_sender: Option<Sender<(bool, BlockValidationResult)>>,
     state_pruning_block_depth: u32,
+    chain_head_lock: ChainHeadLock,
 }
 
 impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + 'static>
@@ -170,9 +161,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         block_validator: BV,
         chain_writer: CW,
         chain_reader: Box<ChainReader>,
-        chain_head_lock: Box<ExternalLock + 'static>,
+        chain_head_lock: ChainHeadLock,
         data_dir: String,
-        chain_head_update_observer: Box<ChainHeadUpdateObserver>,
         state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
         state_pruning_manager: StatePruningManager,
@@ -183,9 +173,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
                 block_validator,
                 chain_writer,
                 chain_reader,
-                chain_head_lock,
                 chain_id_manager: ChainIdManager::new(data_dir),
-                chain_head_update_observer,
                 observers,
                 chain_head: None,
                 state_pruning_manager,
@@ -194,6 +182,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             block_queue_sender: None,
             validation_result_sender: None,
             state_pruning_block_depth,
+            chain_head_lock,
         };
 
         chain_controller.initialize_chain_head();
@@ -219,7 +208,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
         }
 
         if state.chain_head.is_none() {
-            if let Err(err) = set_genesis(&mut state, block.clone()) {
+            if let Err(err) = set_genesis(&mut state, &self.chain_head_lock, block.clone()) {
                 warn!(
                     "Unable to set chain head; genesis block {} is not valid: {:?}",
                     block.header_signature(),
@@ -270,7 +259,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
                 error!("Unable to submit block for verification: {:?}", err);
             }
         } else if commit_new_block {
-            let _chain_head_guard = state.chain_head_lock.lock();
+            let mut chain_head_guard = self.chain_head_lock.acquire();
             let chain_head_block = new_block.clone();
             state.chain_head = Some(new_block);
 
@@ -311,9 +300,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             block_num_guage.set_value(chain_head_block.block_num());
 
             let chain_head = state.chain_head.clone().unwrap();
-            notify_on_chain_updated(
-                &mut state,
-                chain_head,
+            chain_head_guard.notify_on_chain_updated(
+                Some(chain_head),
                 result.committed_batches,
                 result.uncommitted_batches,
             );
@@ -387,6 +375,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
             block_queue_sender: self.block_queue_sender.clone(),
             validation_result_sender: self.validation_result_sender.clone(),
             state_pruning_block_depth: self.state_pruning_block_depth,
+            chain_head_lock: self.chain_head_lock.clone(),
         }
     }
 
@@ -443,8 +432,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
             block_num_guage.set_value(&notify_block.block_num());
-
-            notify_on_chain_updated(&mut state, notify_block, vec![], vec![]);
+            let mut guard = self.chain_head_lock.acquire();
+            guard.notify_on_chain_updated(Some(notify_block), vec![], vec![]);
         }
     }
 
@@ -532,6 +521,7 @@ fn has_block_no_lock<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
 /// genesis block from the genesis validator
 fn set_genesis<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
     state: &mut ChainControllerState<BC, BV, CW>,
+    lock: &ChainHeadLock,
     block: BlockWrapper,
 ) -> Result<(), ChainControllerError> {
     if block.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER {
@@ -557,24 +547,12 @@ fn set_genesis<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
 
             state.chain_writer.update_chain(&[block.clone()], &[])?;
             state.chain_head = Some(block.clone());
-            notify_on_chain_updated(state, block.clone(), vec![], vec![]);
+            let mut guard = lock.acquire();
+            guard.notify_on_chain_updated(Some(block.clone()), vec![], vec![]);
         }
     }
 
     Ok(())
-}
-
-fn notify_on_chain_updated<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
-    state: &mut ChainControllerState<BC, BV, CW>,
-    block: BlockWrapper,
-    committed_batches: Vec<Batch>,
-    uncommitted_batches: Vec<Batch>,
-) {
-    state.chain_head_update_observer.on_chain_head_updated(
-        block,
-        committed_batches,
-        uncommitted_batches,
-    );
 }
 
 impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {

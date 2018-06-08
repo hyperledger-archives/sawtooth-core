@@ -43,7 +43,6 @@ class ChainController(OwnedPointer):
         block_validator,
         state_database,
         chain_head_lock,
-        on_chain_updated,
         state_pruning_block_depth=1000,
         data_dir=None,
         observers=None
@@ -62,8 +61,7 @@ class ChainController(OwnedPointer):
             ctypes.py_object(block_cache),
             ctypes.py_object(block_validator),
             state_database.pointer,
-            ctypes.py_object(chain_head_lock),
-            ctypes.py_object(on_chain_updated),
+            chain_head_lock.pointer,
             ctypes.py_object(observers),
             ctypes.c_long(state_pruning_block_depth),
             ctypes.c_char_p(data_dir.encode()),

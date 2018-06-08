@@ -19,6 +19,7 @@ from concurrent.futures import Executor
 
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
+from sawtooth_validator.execution.scheduler import TxnExecutionResult
 
 from sawtooth_validator.journal.batch_sender import BatchSender
 from sawtooth_validator.journal.block_sender import BlockSender
@@ -109,7 +110,30 @@ class MockScheduler(Scheduler):
             state_hash='0' * 70)
 
     def get_transaction_execution_results(self, batch_signature):
-        return []
+        txn_execution_results = []
+        is_valid_always_false = False
+        if not self.batch_execution_result:
+            is_valid_always_false = True
+
+        batch = self.batches[batch_signature]
+        for txn in batch.transactions:
+            if is_valid_always_false:
+                is_valid = False
+                context_id = None
+            else:
+                if txn.payload == b'BAD':
+                    is_valid = False
+                    context_id = None
+                else:
+                    is_valid = True
+                    context_id = "test"
+            txn_execution_results.append(
+                TxnExecutionResult(
+                    signature=txn.header_signature,
+                    is_valid=is_valid,
+                    context_id=context_id,
+                    state_hash=None))
+        return txn_execution_results
 
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):

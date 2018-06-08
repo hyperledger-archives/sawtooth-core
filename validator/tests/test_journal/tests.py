@@ -17,6 +17,7 @@
 # pylint: disable=pointless-statement
 # pylint: disable=protected-access
 # pylint: disable=unbalanced-tuple-unpacking
+# pylint: disable=arguments-differ
 
 import logging
 import os
@@ -134,7 +135,11 @@ class TestBlockPublisher(unittest.TestCase):
     The publisher chain head might be updated several times in a test.
     '''
 
-    def setUp(self):
+    @unittest.mock.patch('test_journal.mock.MockBatchInjectorFactory')
+    def setUp(self, mock_batch_injector_factory):
+
+        mock_batch_injector_factory.create_injectors.return_value = []
+
         self.block_tree_manager = BlockTreeManager()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
@@ -157,7 +162,8 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=mock_batch_injector_factory)
 
         self.init_chain_head = self.block_tree_manager.chain_head
 
@@ -294,11 +300,14 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.assert_no_block_published()
 
-    def test_batches_rejected_by_scheduler(self):
+    @unittest.mock.patch('test_journal.mock.MockBatchInjectorFactory')
+    def test_batches_rejected_by_scheduler(self, mock_batch_injector_factory):
         '''
         Test that no block is published with
         batches rejected by the scheduler
         '''
+
+        mock_batch_injector_factory.create_injectors.return_value = []
         self.publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(
                 batch_execution_result=False),
@@ -316,7 +325,8 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=mock_batch_injector_factory)
 
         self.receive_batches()
 
@@ -324,10 +334,14 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.assert_no_block_published()
 
-    def test_max_block_size(self):
+    @unittest.mock.patch('test_journal.mock.MockBatchInjectorFactory')
+    def test_max_block_size(self, mock_batch_injector_factory):
         '''
         Test block publisher obeys the block size limits
         '''
+
+        mock_batch_injector_factory.create_injectors.return_value = []
+
         # Create a publisher that has a state view
         # with a batch limit
         addr, value = CreateSetting(
@@ -351,7 +365,8 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=mock_batch_injector_factory)
 
         self.assert_no_block_published()
 
@@ -416,7 +431,9 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.assert_batch_in_block(injected_batch)
 
-    def test_validation_rules_reject_batches(self):
+    @unittest.mock.patch('test_journal.mock.MockBatchInjectorFactory')
+    def test_validation_rules_reject_batches(self,
+                                             mock_batch_injector_factory):
         """Test that a batch is not added to the block if it will violate the
         block validation rules.
 
@@ -432,6 +449,8 @@ class TestBlockPublisher(unittest.TestCase):
             'sawtooth.validator.block_validation_rules', 'NofX:1,test')
         self.state_view_factory = MockStateViewFactory(
             {addr: value})
+
+        mock_batch_injector_factory.create_injectors.return_value = []
 
         batch1 = self.make_batch(txn_count=1)
         batch2 = self.make_batch(txn_count=1)
@@ -452,7 +471,8 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=mock_batch_injector_factory)
 
         self.receive_batches(batches=[batch1, batch2])
 
@@ -1229,7 +1249,6 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
         self.chain_id_manager = ChainIdManager(self.dir)
-        self.chain_head_lock = RLock()
         self.permission_verifier = MockPermissionVerifier()
         self.state_view_factory = MockStateViewFactory(
             self.block_tree_manager.state_db)
@@ -1241,6 +1260,32 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             os.path.join(self.dir, 'merkle.lmdb'),
             indexes=MerkleDatabase.create_index_configuration(),
             _size=120 * 1024 * 1024)
+        self.block_sender = MockBlockSender()
+        self.batch_sender = MockBatchSender()
+
+        self.publisher = BlockPublisher(
+            transaction_executor=self.txn_executor,
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=MockStateViewFactory(
+                self.block_tree_manager.state_db),
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            chain_head=self.block_tree_manager.block_store.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
+            batch_injector_factory=DefaultBatchInjectorFactory(
+                block_store=self.block_tree_manager.block_store,
+                state_view_factory=MockStateViewFactory(
+                    self.block_tree_manager.state_db),
+                signer=self.block_tree_manager.identity_signer))
 
         self.block_validator = None
         self.chain_ctrl = None
@@ -1257,17 +1302,12 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             permission_verifier=self.permission_verifier,
             thread_pool=self.executor)
 
-        def chain_updated(head, committed_batches=None,
-                          uncommitted_batches=None):
-            pass
-
         self.chain_ctrl = ChainController(
             self.block_tree_manager.block_store,
             self.block_tree_manager.block_cache,
             self.block_validator,
             self.state_database,
-            self.chain_head_lock,
-            chain_updated,
+            self.publisher.chain_head_lock,
             data_dir=self.dir,
             observers=[])
 
@@ -1399,11 +1439,10 @@ class TestJournal(unittest.TestCase):
                 block_validator,
                 state_database,
                 block_publisher.chain_head_lock,
-                block_publisher.on_chain_updated,
                 data_dir=None,
                 observers=[])
 
-            self.gossip.on_batch_received = block_publisher.queue_batch
+            self.gossip.on_batch_received = block_publisher.batch_sender().send
             self.gossip.on_block_received = chain_controller.queue_block
 
             block_publisher.start()
@@ -1411,7 +1450,7 @@ class TestJournal(unittest.TestCase):
 
             # feed it a batch
             batch = Batch()
-            block_publisher.queue_batch(batch)
+            block_publisher.batch_sender().send(batch)
 
             wait_until(lambda: self.block_sender.new_block is not None, 2)
             self.assertTrue(self.block_sender.new_block is not None)
