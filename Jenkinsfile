@@ -117,6 +117,7 @@ node ('master') {
             archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
+            sh 'docker-compose -f docker/compose/copy-debs.yaml down'
         }
     }
 }
