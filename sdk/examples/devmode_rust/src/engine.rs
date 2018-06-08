@@ -186,13 +186,11 @@ impl DevmodeService {
     }
 }
 
-pub struct DevmodeEngine {
-    exit: Exit,
-}
+pub struct DevmodeEngine {}
 
 impl DevmodeEngine {
     pub fn new() -> Self {
-        DevmodeEngine { exit: Exit::new() }
+        DevmodeEngine {}
     }
 }
 
@@ -219,15 +217,14 @@ impl Engine for DevmodeEngine {
         loop {
             let incoming_message = updates.recv_timeout(time::Duration::from_millis(10));
 
-            if self.exit.get() {
-                break;
-            }
-
             match incoming_message {
                 Ok(update) => {
                     debug!("Received message: {:?}", update);
 
                     match update {
+                        Update::Shutdown => {
+                            break;
+                        }
                         Update::BlockNew(block) => {
                             info!("Checking consensus data: {:?}", block);
 
@@ -331,10 +328,6 @@ impl Engine for DevmodeEngine {
                 service.broadcast_published_block(new_block_id);
             }
         }
-    }
-
-    fn stop(&self) {
-        self.exit.set();
     }
 
     fn version(&self) -> String {
