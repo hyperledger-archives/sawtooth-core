@@ -67,6 +67,7 @@ node ('master') {
         stage("Build Lint Requirements") {
             sh 'docker-compose -f docker/compose/run-lint.yaml build'
             sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
+            sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
         }
 
         stage("Run Lint") {
