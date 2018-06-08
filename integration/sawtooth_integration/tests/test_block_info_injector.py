@@ -26,6 +26,8 @@ from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoConfig
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
+
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -80,6 +82,10 @@ def make_batches(keys):
 
 
 class TestBlockInfoInjector(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        wait_for_rest_apis(['rest-api:8008'])
+
     def test_block_info_injector(self):
         """Tests that BlockInfo transactions are injected and committed for
         each block that is created by submitting intkey batches and then
