@@ -18,7 +18,6 @@ services:
 
   settings-tp:
     image: sawtooth-settings-tp:${ISOLATION_ID}
-    container_name: sawtooth-settings-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -28,7 +27,6 @@ services:
 
   intkey-tp-python:
     image: sawtooth-intkey-tp-python:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tp-python-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -38,7 +36,6 @@ services:
 
   xo-tp-python:
     image: sawtooth-xo-tp-python:${ISOLATION_ID}
-    container_name: sawtooth-xo-tp-python-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -48,7 +45,6 @@ services:
 
   validator:
     image: sawtooth-validator:${ISOLATION_ID}
-    container_name: sawtooth-validator-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -58,7 +54,6 @@ services:
 
   rest-api:
     image: sawtooth-rest-api:${ISOLATION_ID}
-    container_name: sawtooth-rest-api-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -68,7 +63,6 @@ services:
 
   shell:
     image: sawtooth-shell:${ISOLATION_ID}
-    container_name: sawtooth-shell-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -78,7 +72,6 @@ services:
 
   admin-tools:
     image: sawtooth-admin-tools:${ISOLATION_ID}
-    container_name: sawtooth-admin-tools
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -88,7 +81,6 @@ services:
 
   sawtooth-cli:
     image: sawtooth-cli:${ISOLATION_ID}
-    container_name: sawtooth-cli-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -98,7 +90,6 @@ services:
 
   poet-cli:
     image: sawtooth-poet-cli:${ISOLATION_ID}
-    container_name: sawtooth-poet-cli-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -108,7 +99,6 @@ services:
 
   poet-common:
     image: sawtooth-poet-common:${ISOLATION_ID}
-    container_name: sawtooth-poet-common-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -118,7 +108,6 @@ services:
 
   poet-core:
     image: sawtooth-poet-core:${ISOLATION_ID}
-    container_name: sawtooth-poet-core-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -128,7 +117,6 @@ services:
 
   poet-validator-registry:
     image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
-    container_name: sawtooth-poet-validator-registry-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -138,7 +126,6 @@ services:
 
   poet-sgx:
     image: sawtooth-poet-sgx:${ISOLATION_ID}
-    container_name: sawtooth-poet-sgx-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -148,7 +135,6 @@ services:
 
   poet-simulator:
     image: sawtooth-poet-simulator:${ISOLATION_ID}
-    container_name: sawtooth-poet-simulator-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -158,7 +144,6 @@ services:
 
   block-info-tp:
     image: sawtooth-block-info-tp:${ISOLATION_ID}
-    container_name: sawtooth-block-info-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -168,7 +153,6 @@ services:
 
   identity-tp:
     image: sawtooth-identity-tp:${ISOLATION_ID}
-    container_name: sawtooth-identity-tp-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -178,7 +162,6 @@ services:
 
   smallbank-tp-go:
     image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-smallbank-tp-go-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -188,7 +171,6 @@ services:
 
   cxx-sdk:
     image: sawtooth-cxx-sdk:${ISOLATION_ID}
-    container_name: sawtooth-sdk-cxx-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -198,7 +180,6 @@ services:
 
   sawtooth-intkey-tp-go:
     image: sawtooth-intkey-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tp-go-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -208,7 +189,6 @@ services:
 
   sawtooth-noop-tp-go:
     image: sawtooth-noop-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-noop-tp-go-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -218,7 +198,6 @@ services:
 
   sawtooth-xo-tp-go:
     image: sawtooth-xo-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-xo-tp-go-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -228,7 +207,6 @@ services:
 
   python-sdk:
     image: sawtooth-sdk-python:${ISOLATION_ID}
-    container_name: sawtooth-sdk-python-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -238,7 +216,6 @@ services:
 
   signing:
     image: sawtooth-signing:${ISOLATION_ID}
-    container_name: sawtooth-signing-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -248,7 +225,6 @@ services:
 
   ias_client:
     image: sawtooth-ias-client:${ISOLATION_ID}
-    container_name: sawtooth-ias-client-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -258,7 +234,6 @@ services:
 
   ias_proxy:
     image: sawtooth-ias-proxy:${ISOLATION_ID}
-    container_name: sawtooth-ias-proxy-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
