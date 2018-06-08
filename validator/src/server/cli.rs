@@ -22,12 +22,13 @@ const DISTRIBUTION_NAME: &str = "sawtooth-validator";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
-    let (bind_component, bind_network) = parse_bindings(matches);
+    let (bind_component, bind_network, bind_consensus) = parse_bindings(matches);
 
     let pydict = PyDict::new(py);
 
     pydict.set_item(py, "bind_component", bind_component)?;
     pydict.set_item(py, "bind_network", bind_network)?;
+    pydict.set_item(py, "bind_consensus", bind_consensus)?;
     pydict.set_item(py, "config_dir", matches.value_of("config_dir"))?;
     pydict.set_item(py, "endpoint", matches.value_of("endpoint"))?;
     pydict.set_item(
@@ -82,9 +83,9 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 .help(
                     "set the URL for the network or validator \
                      component service endpoints with the format \
-                     network:<endpoint> or component:<endpoint>. \
-                     Use two --bind options to specify both \
-                     endpoints.",
+                     network:<endpoint>, component:<endpoint>, or \
+                     consensus:<endpoint>. Use multiple --bind options \
+                     to specify all endpoints.",
                 ),
         )
         .arg(
@@ -222,9 +223,12 @@ fn parse_roles<'a>(matches: &'a ArgMatches, py: Python) -> Option<PyDict> {
     }
 }
 
-fn parse_bindings<'a>(matches: &'a ArgMatches) -> (Option<&'a str>, Option<&'a str>) {
+fn parse_bindings<'a>(
+    matches: &'a ArgMatches,
+) -> (Option<&'a str>, Option<&'a str>, Option<&'a str>) {
     let mut bind_network = None;
     let mut bind_component = None;
+    let mut bind_consensus = None;
 
     if let Some(bindings) = parse_multiple_args("bind", matches) {
         for binding in bindings {
@@ -235,10 +239,14 @@ fn parse_bindings<'a>(matches: &'a ArgMatches) -> (Option<&'a str>, Option<&'a s
             if binding.starts_with("component") {
                 bind_component = Some(binding.splitn(2, ':').skip(1).collect::<Vec<_>>()[0]);
             }
+
+            if binding.starts_with("consensus") {
+                bind_consensus = Some(binding.splitn(2, ':').skip(1).collect::<Vec<_>>()[0]);
+            }
         }
     };
 
-    (bind_component, bind_network)
+    (bind_component, bind_network, bind_consensus)
 }
 
 fn parse_comma_separated_args(name: &str, matches: &ArgMatches) -> Option<Vec<String>> {

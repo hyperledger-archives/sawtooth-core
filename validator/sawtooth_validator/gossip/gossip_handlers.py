@@ -21,7 +21,9 @@ from sawtooth_validator.networking.dispatch import PreprocessorResult
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf.network_pb2 import GossipConsensusMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator.protobuf.network_pb2 import GetPeersRequest
@@ -288,3 +290,21 @@ def gossip_batch_response_preprocessor(message_content_bytes):
     content = batch, message_content_bytes
 
     return PreprocessorResult(content=content)
+
+
+class GossipConsensusMessageHandler(Handler):
+    def __init__(self, notifier):
+        self._notifier = notifier
+
+    def handle(self, connection_id, message_content):
+        gossip_message = GossipConsensusMessage()
+        gossip_message.ParseFromString(message_content)
+
+        peer_message = ConsensusPeerMessage()
+        peer_message.ParseFromString(gossip_message.message)
+
+        self._notifier.notify_peer_message(
+            message=peer_message,
+            sender_id=gossip_message.sender_id)
+
+        return HandlerResult(status=HandlerStatus.PASS)

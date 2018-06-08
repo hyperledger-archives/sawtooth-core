@@ -1375,7 +1375,7 @@ class TestJournal(unittest.TestCase):
                 check_publish_block_frequency=0.1,
                 batch_observers=[],
                 batch_injector_factory=DefaultBatchInjectorFactory(
-                    block_store=btm.block_store,
+                    block_cache=btm.block_store,
                     state_view_factory=MockStateViewFactory(btm.state_db),
                     signer=btm.identity_signer))
 

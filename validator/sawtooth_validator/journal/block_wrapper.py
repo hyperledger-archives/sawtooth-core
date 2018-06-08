@@ -120,6 +120,10 @@ class BlockWrapper(object):
         """
         return self.header.previous_block_id
 
+    @property
+    def signer_public_key(self):
+        return self.header.signer_public_key
+
     @staticmethod
     def state_view_for_block(block_wrapper, state_view_factory):
         """
@@ -152,6 +156,40 @@ class BlockWrapper(object):
             StateView object
         """
         return BlockWrapper.state_view_for_block(self, state_view_factory)
+
+    @staticmethod
+    def settings_view_for_block(block_wrapper, settings_view_factory):
+        """
+        Returns the settings view for an arbitrary block.
+
+        Args:
+            block_wrapper (BlockWrapper): The block for which a settings
+                view is to be returned
+            settings_view_factory (SettingsViewFactory): The settings
+                view factory used to create the SettingsView object
+
+        Returns:
+            SettingsView object associated with the block
+        """
+        state_root_hash = \
+            block_wrapper.state_root_hash \
+            if block_wrapper is not None else None
+
+        return settings_view_factory.create_settings_view(state_root_hash)
+
+    def get_settings_view(self, settings_view_factory):
+        """
+        Returns the settings view associated with this block
+
+        Args:
+            settings_view_factory (SettingsViewFactory): The settings
+                view factory used to create the SettingsView object
+
+        Returns:
+            SettingsView object
+        """
+        return BlockWrapper.settings_view_for_block(
+            self, settings_view_factory)
 
     def __repr__(self):
         return "{}({}, S:{}, P:{})". \

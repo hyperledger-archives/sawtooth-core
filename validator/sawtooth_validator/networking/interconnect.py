@@ -741,6 +741,17 @@ class Interconnect(object):
             except KeyError:
                 return None
 
+    def public_key_to_connection_id(self, public_key):
+        """
+        Get stored connection id for a public key.
+        """
+        with self._connections_lock:
+            for connection_id, connection_info in self._connections.items():
+                if connection_info.public_key == public_key:
+                    return connection_id
+
+            return None
+
     def connection_id_to_endpoint(self, connection_id):
         """
         Get stored public key for a connection.
@@ -987,6 +998,13 @@ class Interconnect(object):
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESULT:
             LOGGER.debug("Unable to complete Challenge Authorization.")
             self.remove_connection(connection_id)
+
+    def send_all(self, message_type, data):
+        futures = []
+        with self._connections_lock:
+            for connection_id in self._connections:
+                futures.append(self.send(message_type, data, connection_id))
+        return futures
 
     def send(self, message_type, data, connection_id, callback=None,
              one_way=False):

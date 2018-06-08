@@ -166,6 +166,7 @@ def validator_cmds(num,
         '--endpoint {}'.format(endpoint(num)),
         '--bind component:{}'.format(bind_component(num)),
         '--bind network:{}'.format(bind_network(num)),
+        '--bind consensus:{}'.format(bind_consensus(num)),
         peering_func(num)])
 
     # genesis stuff
@@ -350,6 +351,10 @@ def bind_component(num):
 
 def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
+
+
+def bind_consensus(num):
+    return 'tcp://127.0.0.1:{}'.format(5050 + num)
 
 
 # execution
