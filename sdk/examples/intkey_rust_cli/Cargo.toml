@@ -5,7 +5,7 @@ authors = ["cbailey555 <cbailey555*at*protonmail.ch>"]
 
 [dependencies]
 clap = "2.31.2"
-sawtooth_sdk = { path = "/home/trkkmi/VmShared/litheBantenShared/sawtooth-core/sdk/rust/" }
+sawtooth_sdk = { path = "/<path_to_your_copy_of>/sawtooth-core/sdk/rust/" }
 serde = "1.0.59"
 serde_derive = "1.0.59"
 serde_cbor = "0.8.2"
