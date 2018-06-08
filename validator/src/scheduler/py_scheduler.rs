@@ -75,27 +75,18 @@ impl Scheduler for PyScheduler {
         required: bool,
     ) -> Result<(), SchedulerError> {
         let header_signature = batch.header_signature.clone();
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
 
-        let state_hash_kwargs: Result<Option<cpython::PyDict>, cpython::PyErr> =
-            expected_state_hash
-                .map(|state_hash| {
-                    let gil = cpython::Python::acquire_gil();
-                    let py = gil.python();
-                    let kwargs = cpython::PyDict::new(py);
-                    kwargs.set_item(py, "state_hash", state_hash)?;
-                    kwargs.set_item(py, "required", required)?;
-                    Ok(kwargs)
-                })
-                .map_or(Ok(None), |v: Result<cpython::PyDict, cpython::PyErr>| {
-                    Ok(Some(v?))
-                });
-        {
-            let gil = cpython::Python::acquire_gil();
-            let py = gil.python();
-            self.py_scheduler
-                .call_method(py, "add_batch", (batch,), state_hash_kwargs?.as_ref())
-                .expect("No method add_batch on python scheduler");
-        }
+        self.py_scheduler
+            .call_method(
+                py,
+                "add_batch",
+                (batch, expected_state_hash, required),
+                None,
+            )
+            .expect("No method add_batch on python scheduler");
+
         self.batch_ids.push(header_signature);
         Ok(())
     }
