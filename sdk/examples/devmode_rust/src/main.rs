@@ -76,9 +76,8 @@ fn main() {
         process::exit(1);
     });
 
-    let driver = ZmqDriver::new(Box::new(DevmodeEngine::new()));
-
-    driver.start(&endpoint).unwrap_or_else(|err| {
+    let (driver, _stop) = ZmqDriver::new();
+    driver.start(endpoint, DevmodeEngine::new()).unwrap_or_else(|err| {
         error!("{}", err);
         process::exit(1);
     });
