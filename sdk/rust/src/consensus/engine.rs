@@ -148,12 +148,12 @@ pub struct PeerMessage {
 /// Finally, as an optimization, the consensus engine can send prioritized lists of blocks to the
 /// chain controller for checking instead of sending them one at a time, which allows the chain
 /// controller to intelligently work ahead while the consensus engine makes its decisions.
-pub trait Engine: Sync + Send {
+pub trait Engine {
     /// Called after the engine is initialized, when a connection to the validator has been
     /// established. Notifications from the validator are sent along `updates`. `service` is used
     /// to send requests to the validator.
     fn start(
-        &self,
+        &mut self,
         updates: Receiver<Update>,
         service: Box<Service>,
         chain_head: Block,
@@ -260,7 +260,7 @@ pub mod tests {
 
     impl Engine for MockEngine {
         fn start(
-            &self,
+            &mut self,
             updates: Receiver<Update>,
             _service: Box<Service>,
             _chain_head: Block,
@@ -321,8 +321,13 @@ pub mod tests {
 
     #[test]
     fn test_engine() {
-        let eng = Arc::new(MockEngine::new());
-        let eng_clone = eng.clone();
+        // Create the mock engine with this vec so we can refer to it later. Once we put the engine
+        // in a box, it is hard to get the vec back out.
+        let calls = Arc::new(Mutex::new(Vec::new()));
+
+        // We are going to run two threads to simulate the validator and the driver
+        let mut mock_engine = MockEngine::with(calls.clone());
+
         let (sender, receiver) = channel();
         sender
             .send(Update::PeerConnected(Default::default()))
@@ -343,22 +348,22 @@ pub mod tests {
             .unwrap();
         let handle = ::std::thread::spawn(move || {
             let svc = Box::new(MockService {});
-            eng_clone.start(receiver, svc, Default::default(), Default::default());
+            mock_engine.start(receiver, svc, Default::default(), Default::default());
         });
         sender.send(Update::Shutdown).unwrap();
         handle.join().unwrap();
-        assert!(contains(&eng, "start"));
-        assert!(contains(&eng, "PeerConnected"));
-        assert!(contains(&eng, "PeerDisconnected"));
-        assert!(contains(&eng, "PeerMessage"));
-        assert!(contains(&eng, "BlockNew"));
-        assert!(contains(&eng, "BlockValid"));
-        assert!(contains(&eng, "BlockInvalid"));
-        assert!(contains(&eng, "BlockCommit"));
+        assert!(contains(&calls, "start"));
+        assert!(contains(&calls, "PeerConnected"));
+        assert!(contains(&calls, "PeerDisconnected"));
+        assert!(contains(&calls, "PeerMessage"));
+        assert!(contains(&calls, "BlockNew"));
+        assert!(contains(&calls, "BlockValid"));
+        assert!(contains(&calls, "BlockInvalid"));
+        assert!(contains(&calls, "BlockCommit"));
     }
 
-    fn contains(eng: &Arc<MockEngine>, expected: &str) -> bool {
-        for call in eng.calls() {
+    fn contains(calls: &Arc<Mutex<Vec<String>>>, expected: &str) -> bool {
+        for call in &*(calls.lock().unwrap()) {
             if expected == call {
                 return true;
             }

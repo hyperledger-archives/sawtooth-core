@@ -196,7 +196,7 @@ impl DevmodeEngine {
 
 impl Engine for DevmodeEngine {
     fn start(
-        &self,
+        &mut self,
         updates: Receiver<Update>,
         service: Box<Service>,
         mut chain_head: Block,
