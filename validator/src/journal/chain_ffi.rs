@@ -29,8 +29,6 @@ use std::os::raw::{c_char, c_void};
 use std::sync::mpsc::Sender;
 use std::thread;
 
-use batch::Batch;
-
 use protobuf::Message;
 
 use proto::transaction_receipt::TransactionReceipt;
@@ -109,7 +107,7 @@ pub extern "C" fn chain_controller_new(
     let chain_controller = ChainController::new(
         PyBlockCache::new(py_block_cache),
         PyBlockValidator::new(py_block_validator),
-        PyBlockStore::new(py_block_store_writer),
+        Box::new(PyBlockStore::new(py_block_store_writer)),
         Box::new(PyBlockStore::new(py_block_store_reader)),
         chain_head_lock_ref.clone(),
         data_dir.into(),
@@ -130,9 +128,7 @@ pub extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorC
     check_null!(chain_controller);
 
     unsafe {
-        Box::from_raw(
-            chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>,
-        )
+        Box::from_raw(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)
     };
     ErrorCode::Success
 }
@@ -142,8 +138,7 @@ pub extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> Error
     check_null!(chain_controller);
 
     unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
-            .start();
+        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)).start();
     }
 
     ErrorCode::Success
@@ -154,8 +149,7 @@ pub extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorC
     check_null!(chain_controller);
 
     unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
-            .stop();
+        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)).stop();
     }
     ErrorCode::Success
 }
@@ -176,8 +170,7 @@ pub extern "C" fn chain_controller_has_block(
     };
 
     unsafe {
-        *result = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+        *result = (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .has_block(block_id);
     }
 
@@ -209,7 +202,7 @@ pub extern "C" fn chain_controller_queue_block(
     };
     unsafe {
         let controller = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .light_clone();
 
         py.allow_threads(move || {
@@ -254,7 +247,7 @@ pub extern "C" fn chain_controller_on_block_received(
     };
     unsafe {
         let mut controller = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .light_clone();
 
         py.allow_threads(move || {
@@ -284,7 +277,7 @@ pub extern "C" fn chain_controller_chain_head(
     check_null!(chain_controller);
     unsafe {
         let chain_head = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .chain_head();
 
         let gil_guard = Python::acquire_gil();

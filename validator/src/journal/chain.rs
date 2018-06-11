@@ -113,10 +113,10 @@ pub trait ChainWriter: Send + Sync {
     ) -> Result<(), ChainControllerError>;
 }
 
-struct ChainControllerState<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> {
+struct ChainControllerState<BC: BlockCache, BV: BlockValidator> {
     block_cache: BC,
     block_validator: BV,
-    chain_writer: CW,
+    chain_writer: Box<ChainWriter>,
     chain_reader: Box<ChainReader>,
     chain_head: Option<BlockWrapper>,
     chain_id_manager: ChainIdManager,
@@ -125,8 +125,8 @@ struct ChainControllerState<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>
 }
 
 #[derive(Clone)]
-pub struct ChainController<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> {
-    state: Arc<RwLock<ChainControllerState<BC, BV, CW>>>,
+pub struct ChainController<BC: BlockCache, BV: BlockValidator> {
+    state: Arc<RwLock<ChainControllerState<BC, BV>>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
     block_queue_sender: Option<Sender<BlockWrapper>>,
     validation_result_sender: Option<Sender<(bool, BlockValidationResult)>>,
@@ -134,13 +134,11 @@ pub struct ChainController<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> 
     chain_head_lock: ChainHeadLock,
 }
 
-impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + 'static>
-    ChainController<BC, BV, CW>
-{
+impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC, BV> {
     pub fn new(
         block_cache: BC,
         block_validator: BV,
-        chain_writer: CW,
+        chain_writer: Box<ChainWriter>,
         chain_reader: Box<ChainReader>,
         chain_head_lock: ChainHeadLock,
         data_dir: String,
@@ -490,8 +488,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + '
     }
 }
 
-fn has_block_no_lock<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
-    state: &ChainControllerState<BC, BV, CW>,
+fn has_block_no_lock<BC: BlockCache, BV: BlockValidator>(
+    state: &ChainControllerState<BC, BV>,
     block_id: &str,
 ) -> bool {
     state.block_cache.contains(block_id) || state.block_validator.in_process(block_id)
@@ -500,8 +498,8 @@ fn has_block_no_lock<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
 
 /// This is used by a non-genesis journal when it has received the
 /// genesis block from the genesis validator
-fn set_genesis<BC: BlockCache, BV: BlockValidator, CW: ChainWriter>(
-    state: &mut ChainControllerState<BC, BV, CW>,
+fn set_genesis<BC: BlockCache, BV: BlockValidator>(
+    state: &mut ChainControllerState<BC, BV>,
     lock: &ChainHeadLock,
     block: BlockWrapper,
 ) -> Result<(), ChainControllerError> {
@@ -553,8 +551,8 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     }
 }
 
-struct ChainThread<BC: BlockCache, BV: BlockValidator, CW: ChainWriter> {
-    chain_controller: ChainController<BC, BV, CW>,
+struct ChainThread<BC: BlockCache, BV: BlockValidator> {
+    chain_controller: ChainController<BC, BV>,
     block_queue: Receiver<BlockWrapper>,
     exit: Arc<AtomicBool>,
 }
@@ -563,11 +561,9 @@ trait StopHandle: Clone {
     fn stop(&self);
 }
 
-impl<BC: BlockCache + 'static, BV: BlockValidator + 'static, CW: ChainWriter + 'static>
-    ChainThread<BC, BV, CW>
-{
+impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainThread<BC, BV> {
     fn new(
-        chain_controller: ChainController<BC, BV, CW>,
+        chain_controller: ChainController<BC, BV>,
         block_queue: Receiver<BlockWrapper>,
         exit_flag: Arc<AtomicBool>,
     ) -> Self {
