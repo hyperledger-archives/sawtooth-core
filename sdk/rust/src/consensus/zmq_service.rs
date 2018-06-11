@@ -30,6 +30,7 @@ use messages::consensus::*;
 use messages::validator::Message_MessageType;
 
 use std::collections::HashMap;
+use std::time::Duration;
 
 /// Generates a random correlation id for use in Message
 fn generate_correlation_id() -> String {
@@ -39,7 +40,7 @@ fn generate_correlation_id() -> String {
 
 pub fn register(
     sender: &mut MessageSender,
-    timeout: ::std::time::Duration,
+    timeout: Duration,
     name: String,
     version: String,
 ) -> Result<(Block, Vec<PeerInfo>), Error> {
@@ -116,7 +117,7 @@ pub fn register(
 
 pub struct ZmqService {
     sender: ZmqMessageSender,
-    timeout: ::std::time::Duration,
+    timeout: Duration,
     name: String,
     version: String,
 }
@@ -474,6 +475,7 @@ mod tests {
     use messaging::stream::MessageConnection;
     use messaging::zmq_stream::ZmqMessageConnection;
     use std::default::Default;
+    use std::thread;
     use zmq;
 
     fn recv_rep<I: protobuf::Message, O: protobuf::Message>(
@@ -527,7 +529,7 @@ mod tests {
             .expect("Failed to bind socket");
         let addr = socket.get_last_endpoint().unwrap().unwrap();
 
-        let svc_thread = ::std::thread::spawn(move || {
+        let svc_thread = thread::spawn(move || {
             let connection = ZmqMessageConnection::new(&addr);
             let (sender, _) = connection.create();
             let mut svc =

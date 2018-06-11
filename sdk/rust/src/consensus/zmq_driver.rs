@@ -32,7 +32,9 @@ use messaging::zmq_stream::{ZmqMessageConnection, ZmqMessageSender};
 use messages::consensus::*;
 use messages::validator::{Message, Message_MessageType};
 
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
+use std::sync::mpsc::{self, channel, Receiver, RecvTimeoutError, Sender};
+use std::thread;
+use std::time::Duration;
 
 const REGISTER_TIMEOUT: u64 = 300;
 const SERVICE_TIMEOUT: u64 = 300;
@@ -71,7 +73,7 @@ impl ZmqDriver {
 
         let (chain_head, peers) = register(
             &mut validator_sender,
-            ::std::time::Duration::from_secs(REGISTER_TIMEOUT),
+            Duration::from_secs(REGISTER_TIMEOUT),
             engine.name(),
             engine.version(),
         )?;
@@ -90,7 +92,7 @@ impl ZmqDriver {
             update_receiver,
             Box::new(ZmqService::new(
                 validator_sender_clone,
-                ::std::time::Duration::from_secs(SERVICE_TIMEOUT),
+                Duration::from_secs(SERVICE_TIMEOUT),
                 name,
                 version,
             )),
@@ -123,7 +125,7 @@ fn driver_loop(
     validator_receiver: Receiver<Result<Message, ReceiveError>>,
 ) -> Result<(), Error> {
     loop {
-        match validator_receiver.recv_timeout(::std::time::Duration::from_millis(100)) {
+        match validator_receiver.recv_timeout(Duration::from_millis(100)) {
             Err(RecvTimeoutError::Timeout) => {
                 if let Ok(_) = stop_receiver.try_recv() {
                     update_sender.send(Update::Shutdown)?;
@@ -154,7 +156,7 @@ fn driver_loop(
 
 pub fn register(
     sender: &mut MessageSender,
-    timeout: ::std::time::Duration,
+    timeout: Duration,
     name: String,
     version: String,
 ) -> Result<(Block, Vec<PeerInfo>), Error> {
@@ -340,8 +342,8 @@ impl From<SendError> for Error {
     }
 }
 
-impl From<::std::sync::mpsc::SendError<Update>> for Error {
-    fn from(error: ::std::sync::mpsc::SendError<Update>) -> Error {
+impl From<mpsc::SendError<Update>> for Error {
+    fn from(error: mpsc::SendError<Update>) -> Error {
         Error::SendError(format!("{}", error))
     }
 }
@@ -424,9 +426,7 @@ mod tests {
 
         let (driver, stop) = ZmqDriver::new();
 
-        let driver_thread = ::std::thread::spawn(move || {
-            driver.start(&addr, mock_engine)
-        });
+        let driver_thread = thread::spawn(move || driver.start(&addr, mock_engine));
 
         let mut response = ConsensusRegisterResponse::new();
         response.set_status(ConsensusRegisterResponse_Status::OK);
