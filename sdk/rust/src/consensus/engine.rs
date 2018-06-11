@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::error;
+use std::fmt;
 use std::ops::Deref;
 use std::sync::mpsc::Receiver;
 
@@ -54,8 +56,8 @@ impl From<Vec<u8>> for BlockId {
         BlockId(v)
     }
 }
-impl ::std::fmt::Debug for BlockId {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for BlockId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
     }
 }
@@ -70,8 +72,8 @@ pub struct Block {
     pub payload: Vec<u8>,
     pub summary: Vec<u8>,
 }
-impl ::std::fmt::Debug for Block {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for Block {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "Block(block_num: {:?}, block_id: {:?}, previous_id: {:?}, signer_id: {:?}, payload: {}, summary: {})",
@@ -104,8 +106,8 @@ impl From<Vec<u8>> for PeerId {
         PeerId(v)
     }
 }
-impl ::std::fmt::Debug for PeerId {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for PeerId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
     }
 }
@@ -179,7 +181,7 @@ pub enum Error {
     BlockNotReady,
 }
 
-impl ::std::error::Error for Error {
+impl error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
         match *self {
@@ -194,7 +196,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         use self::Error::*;
         match *self {
             EncodingError(_) => None,
@@ -209,8 +211,8 @@ impl ::std::error::Error for Error {
     }
 }
 
-impl ::std::fmt::Display for Error {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
         match *self {
             EncodingError(ref s) => write!(f, "EncodingError: {}", s),
@@ -232,6 +234,8 @@ pub mod tests {
     use std::default::Default;
     use std::sync::mpsc::{channel, RecvTimeoutError};
     use std::sync::{Arc, Mutex};
+    use std::thread;
+    use std::time::Duration;
 
     use consensus::service::tests::MockService;
 
@@ -268,7 +272,7 @@ pub mod tests {
         ) {
             (*self.calls.lock().unwrap()).push("start".into());
             loop {
-                match updates.recv_timeout(::std::time::Duration::from_millis(100)) {
+                match updates.recv_timeout(Duration::from_millis(100)) {
                     Ok(update) => {
                         // We don't check for exit() here because we want to drain all the updates
                         // before we exit. In a real implementation, exit() should also be checked
@@ -346,7 +350,7 @@ pub mod tests {
         sender
             .send(Update::BlockCommit(Default::default()))
             .unwrap();
-        let handle = ::std::thread::spawn(move || {
+        let handle = thread::spawn(move || {
             let svc = Box::new(MockService {});
             mock_engine.start(receiver, svc, Default::default(), Default::default());
         });
