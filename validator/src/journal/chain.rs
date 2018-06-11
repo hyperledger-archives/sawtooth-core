@@ -83,23 +83,6 @@ pub trait ChainObserver: Send + Sync {
     fn chain_update(&mut self, block: &BlockWrapper, receipts: &[&TransactionReceipt]);
 }
 
-pub trait ChainHeadUpdateObserver: Send + Sync {
-    /// Called when the chain head has updated.
-    ///
-    /// Args:
-    ///     block: the new chain head
-    ///     committed_batches: all of the batches that have been committed
-    ///         on the given fork. This may be across multiple blocks.
-    ///     uncommitted_batches: all of the batches that have been uncommitted
-    ///         from the previous fork, if one was dropped.
-    fn on_chain_head_updated(
-        &mut self,
-        block: BlockWrapper,
-        committed_batches: Vec<Batch>,
-        uncommitted_batches: Vec<Batch>,
-    );
-}
-
 pub trait BlockCache: Send + Sync {
     fn contains(&self, block_id: &str) -> bool;
 
