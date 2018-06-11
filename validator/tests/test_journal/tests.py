@@ -1282,7 +1282,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             check_publish_block_frequency=0.1,
             batch_observers=[],
             batch_injector_factory=DefaultBatchInjectorFactory(
-                block_store=self.block_tree_manager.block_store,
+                block_cache=self.block_tree_manager.block_cache,
                 state_view_factory=MockStateViewFactory(
                     self.block_tree_manager.state_db),
                 signer=self.block_tree_manager.identity_signer))
