@@ -124,6 +124,50 @@ struct ChainControllerState<BC: BlockCache, BV: BlockValidator> {
     state_pruning_manager: StatePruningManager,
 }
 
+impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
+    fn has_block(&self, block_id: &str) -> bool {
+        self.block_cache.contains(block_id) || self.block_validator.in_process(block_id)
+            || self.block_validator.in_pending(block_id)
+    }
+
+    /// This is used by a non-genesis journal when it has received the
+    /// genesis block from the genesis validator
+    fn set_genesis(
+        &mut self,
+        lock: &ChainHeadLock,
+        block: BlockWrapper,
+    ) -> Result<(), ChainControllerError> {
+        if block.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER {
+            let chain_id = self.chain_id_manager.get_block_chain_id()?;
+            if chain_id
+                .as_ref()
+                .map(|block_id| block_id != block.header_signature())
+                .unwrap_or(false)
+            {
+                warn!(
+                    "Block id does not match block chain id {}. Ignoring initial chain head: {}",
+                    chain_id.unwrap(),
+                    block.header_signature()
+                );
+            } else {
+                self.block_validator.validate_block(block.clone())?;
+
+                if chain_id.is_none() {
+                    self.chain_id_manager
+                        .save_block_chain_id(block.header_signature())?;
+                }
+
+                self.chain_writer.update_chain(&[block.clone()], &[])?;
+                self.chain_head = Some(block.clone());
+                let mut guard = lock.acquire();
+                guard.notify_on_chain_updated(Some(block.clone()), vec![], vec![]);
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 pub struct ChainController<BC: BlockCache, BV: BlockValidator> {
     state: Arc<RwLock<ChainControllerState<BC, BV>>>,
@@ -182,12 +226,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .write()
             .expect("No lock holder should have poisoned the lock");
 
-        if has_block_no_lock(&state, block.header_signature()) {
+        if state.has_block(block.header_signature()) {
             return Ok(());
         }
 
         if state.chain_head.is_none() {
-            if let Err(err) = set_genesis(&mut state, &self.chain_head_lock, block.clone()) {
+            if let Err(err) = state.set_genesis(&self.chain_head_lock, block.clone()) {
                 warn!(
                     "Unable to set chain head; genesis block {} is not valid: {:?}",
                     block.header_signature(),
@@ -206,7 +250,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         let state = self.state
             .read()
             .expect("No lock holder should have poisoned the lock");
-        has_block_no_lock(&state, block_id)
+        state.has_block(block_id)
     }
 
     fn on_block_validated(&mut self, commit_new_block: bool, result: BlockValidationResult) {
@@ -486,52 +530,6 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             handle.stop();
         }
     }
-}
-
-fn has_block_no_lock<BC: BlockCache, BV: BlockValidator>(
-    state: &ChainControllerState<BC, BV>,
-    block_id: &str,
-) -> bool {
-    state.block_cache.contains(block_id) || state.block_validator.in_process(block_id)
-        || state.block_validator.in_pending(block_id)
-}
-
-/// This is used by a non-genesis journal when it has received the
-/// genesis block from the genesis validator
-fn set_genesis<BC: BlockCache, BV: BlockValidator>(
-    state: &mut ChainControllerState<BC, BV>,
-    lock: &ChainHeadLock,
-    block: BlockWrapper,
-) -> Result<(), ChainControllerError> {
-    if block.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER {
-        let chain_id = state.chain_id_manager.get_block_chain_id()?;
-        if chain_id
-            .as_ref()
-            .map(|block_id| block_id != block.header_signature())
-            .unwrap_or(false)
-        {
-            warn!(
-                "Block id does not match block chain id {}. Ignoring initial chain head: {}",
-                chain_id.unwrap(),
-                block.header_signature()
-            );
-        } else {
-            state.block_validator.validate_block(block.clone())?;
-
-            if chain_id.is_none() {
-                state
-                    .chain_id_manager
-                    .save_block_chain_id(block.header_signature())?;
-            }
-
-            state.chain_writer.update_chain(&[block.clone()], &[])?;
-            state.chain_head = Some(block.clone());
-            let mut guard = lock.acquire();
-            guard.notify_on_chain_updated(Some(block.clone()), vec![], vec![]);
-        }
-    }
-
-    Ok(())
 }
 
 impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
