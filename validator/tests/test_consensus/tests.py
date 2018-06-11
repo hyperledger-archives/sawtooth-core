@@ -4,7 +4,13 @@ from unittest.mock import Mock
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 
-from sawtooth_validator.journal.publisher import FinalizeBlockResult
+
+class FinalizeBlockResult:
+    def __init__(self, block, remaining_batches, last_batch, injected_batches):
+        self.block = block
+        self.remaining_batches = remaining_batches
+        self.last_batch = last_batch
+        self.injected_batches = injected_batches
 
 
 class TestHandlers(unittest.TestCase):
