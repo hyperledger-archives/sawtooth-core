@@ -270,3 +270,12 @@ services:
       bash -c "
         cp /tmp/*.deb /build/debs
       "
+
+  smallbank-workload:
+    image: sawtooth-smallbank-workload:${ISOLATION_ID}
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
