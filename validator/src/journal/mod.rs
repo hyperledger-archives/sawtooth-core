@@ -28,6 +28,7 @@ mod chain_commit_state;
 pub mod chain_ffi;
 pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
+mod chain_id_manager;
 pub mod incoming_batch_queue_ffi;
 pub mod publisher;
 pub mod publisher_ffi;

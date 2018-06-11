@@ -15,12 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::fs::File;
 use std::io;
-use std::io::prelude::*;
 use std::marker::Send;
 use std::marker::Sync;
-use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
@@ -41,6 +38,7 @@ use journal;
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain_head_lock::ChainHeadLock;
+use journal::chain_id_manager::ChainIdManager;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
 
@@ -635,44 +633,6 @@ impl ChainThreadStopHandle {
 impl StopHandle for ChainThreadStopHandle {
     fn stop(&self) {
         self.exit.store(true, Ordering::Relaxed)
-    }
-}
-
-/// The ChainIdManager is in charge of of keeping track of the block-chain-id
-/// stored in the data_dir.
-#[derive(Clone, Debug)]
-struct ChainIdManager {
-    data_dir: String,
-}
-
-impl ChainIdManager {
-    pub fn new(data_dir: String) -> Self {
-        ChainIdManager { data_dir }
-    }
-
-    pub fn save_block_chain_id(&self, block_chain_id: &str) -> Result<(), io::Error> {
-        let mut path = PathBuf::new();
-        path.push(&self.data_dir);
-        path.push("block-chain-id");
-
-        let mut file = File::create(path)?;
-        file.write_all(block_chain_id.as_bytes())
-    }
-
-    pub fn get_block_chain_id(&self) -> Result<Option<String>, io::Error> {
-        let mut path = PathBuf::new();
-        path.push(&self.data_dir);
-        path.push("block-chain-id");
-
-        match File::open(path) {
-            Ok(mut file) => {
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-                Ok(Some(contents))
-            }
-            Err(ref err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
-            Err(err) => Err(err),
-        }
     }
 }
 
