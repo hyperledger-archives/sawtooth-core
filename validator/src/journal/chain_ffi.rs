@@ -59,6 +59,7 @@ pub extern "C" fn chain_controller_new(
     block_validator: *mut py_ffi::PyObject,
     state_database: *const c_void,
     chain_head_lock: *const c_void,
+    consensus_notifier: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
     data_directory: *const c_char,
@@ -70,6 +71,7 @@ pub extern "C" fn chain_controller_new(
         block_validator,
         state_database,
         chain_head_lock,
+        consensus_notifier,
         observers,
         data_directory
     );
@@ -90,6 +92,7 @@ pub extern "C" fn chain_controller_new(
     let py_observers = unsafe { PyObject::from_borrowed_ptr(py, observers) };
     let chain_head_lock_ref =
         unsafe { (chain_head_lock as *const ChainHeadLock).as_ref().unwrap() };
+    let py_consensus_notifier = unsafe { PyObject::from_borrowed_ptr(py, consensus_notifier) };
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -111,6 +114,7 @@ pub extern "C" fn chain_controller_new(
         Box::new(PyBlockStore::new(py_block_store_writer)),
         Box::new(PyBlockStore::new(py_block_store_reader)),
         chain_head_lock_ref.clone(),
+        Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
         data_dir.into(),
         state_pruning_block_depth,
         observer_wrappers,
@@ -222,7 +226,96 @@ macro_rules! chain_controller_block_ffi {
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &mut block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
-chain_controller_block_ffi!(chain_controller_queue_block, queue_block, block, block);
+
+#[no_mangle]
+pub extern "C" fn chain_controller_queue_block(
+    chain_controller: *mut c_void,
+    block: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(chain_controller, block);
+
+    let gil_guard = Python::acquire_gil();
+    let py = gil_guard.python();
+
+    let block: BlockWrapper = unsafe {
+        match PyObject::from_borrowed_ptr(py, block).extract(py) {
+            Ok(val) => val,
+            Err(py_err) => {
+                pylogger::exception(
+                    py,
+                    "chain_controller_queue_block: unable to get block",
+                    py_err,
+                );
+                return ErrorCode::InvalidPythonObject;
+            }
+        }
+    };
+    unsafe {
+        let controller = (*(chain_controller
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
+            .light_clone();
+
+        py.allow_threads(move || {
+            let builder = thread::Builder::new().name("ChainController.queue_block".into());
+            builder
+                .spawn(move || {
+                    controller.queue_block(block);
+                })
+                .unwrap()
+                .join()
+                .unwrap();
+        });
+    }
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub extern "C" fn chain_controller_submit_blocks_for_verification(
+    chain_controller: *mut c_void,
+    blocks: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(chain_controller, blocks);
+
+    let gil_guard = Python::acquire_gil();
+    let py = gil_guard.python();
+
+    let blocks: Vec<BlockWrapper> = unsafe {
+        match PyObject::from_borrowed_ptr(py, blocks).extract(py) {
+            Ok(val) => val,
+            Err(py_err) => {
+                pylogger::exception(
+                    py,
+                    "chain_controller_on_block_received: unable to get block",
+                    py_err,
+                );
+                return ErrorCode::InvalidPythonObject;
+            }
+        }
+    };
+    unsafe {
+        let controller = (*(chain_controller
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
+            .light_clone();
+
+        py.allow_threads(move || {
+            // A thread has to be spawned here, otherwise, any subsequent attempt to
+            // re-acquire the GIL and import of python modules will fail.
+            let builder = thread::Builder::new().name("ChainController.submit_blocks_for_verification".into());
+            builder
+                .spawn(move || match controller.submit_blocks_for_verification(&blocks) {
+                    Ok(_) => ErrorCode::Success,
+                    Err(err) => {
+                        error!("Unable to call submit_blocks_for_verification: {:?}", err);
+                        ErrorCode::Unknown
+                    }
+                })
+                .unwrap()
+                .join()
+                .unwrap()
+        })
+    }
+}
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
@@ -586,6 +679,103 @@ impl ChainObserver for PyChainObserver {
             .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
+                ()
+            })
+            .unwrap_or(())
+    }
+}
+
+struct PyConsensusNotifier {
+    py_consensus_notifier: PyObject,
+}
+
+impl PyConsensusNotifier {
+    fn new(py_consensus_notifier: PyObject) -> Self {
+        PyConsensusNotifier {
+            py_consensus_notifier,
+        }
+    }
+}
+
+impl Clone for PyConsensusNotifier {
+    fn clone(&self) -> Self {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        PyConsensusNotifier {
+            py_consensus_notifier: self.py_consensus_notifier.clone_ref(py),
+        }
+    }
+}
+
+impl ConsensusNotifier for PyConsensusNotifier {
+    fn notify_block_new(&self, block: &BlockWrapper) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_new", (block,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_new",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_valid(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_valid", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_valid",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_invalid(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_invalid", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_invalid",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_commit(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_commit", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_commit",
+                    py_err,
+                );
                 ()
             })
             .unwrap_or(())
