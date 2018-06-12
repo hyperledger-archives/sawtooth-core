@@ -321,6 +321,7 @@ class Validator(object):
             block_validator=block_validator,
             state_database=global_state_db,
             chain_head_lock=block_publisher.chain_head_lock,
+            consensus_notifier=consensus_notifier,
             state_pruning_block_depth=state_pruning_block_depth,
             data_dir=data_dir,
             observers=[

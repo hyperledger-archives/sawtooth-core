@@ -127,6 +127,13 @@ pub trait ChainWriter: Send + Sync {
     ) -> Result<(), ChainControllerError>;
 }
 
+pub trait ConsensusNotifier: Send + Sync {
+    fn notify_block_new(&self, block: &BlockWrapper);
+    fn notify_block_valid(&self, block_id: &str);
+    fn notify_block_invalid(&self, block_id: &str);
+    fn notify_block_commit(&self, block_id: &str);
+}
+
 /// Holds the results of Block Validation.
 struct ForkResolutionResult<'a> {
     pub block: &'a BlockWrapper,
@@ -328,7 +335,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
                             // need to put it back in the cache
                             self.block_cache.put(block);
                         }
-                        None => break
+                        None => break,
                     }
                 }
 
@@ -411,6 +418,10 @@ fn get_batch_commit_changes(
 pub struct ChainController<BC: BlockCache, BV: BlockValidator> {
     state: Arc<RwLock<ChainControllerState<BC, BV>>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
+
+    consensus_notifier: Arc<ConsensusNotifier>,
+
+    // Queues
     block_queue_sender: Option<Sender<BlockWrapper>>,
     commit_queue_sender: Option<Sender<BlockWrapper>>,
     validation_result_sender: Option<Sender<BlockWrapper>>,
@@ -426,6 +437,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         chain_writer: Box<ChainWriter>,
         chain_reader: Box<ChainReader>,
         chain_head_lock: ChainHeadLock,
+        consensus_notifier: Box<ConsensusNotifier>,
         data_dir: String,
         state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
@@ -448,6 +460,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             validation_result_sender: None,
             state_pruning_block_depth,
             chain_head_lock,
+            consensus_notifier: Arc::from(consensus_notifier),
         };
 
         chain_controller.initialize_chain_head();
@@ -484,7 +497,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         }
 
         state.block_cache.put(block.clone());
-        self.submit_blocks_for_verification(&state.block_validator, &[block])?;
+        self.consensus_notifier.notify_block_new(&block);
         Ok(())
     }
 
@@ -500,7 +513,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn fail_block(&self, block: &mut BlockWrapper) {
-        let mut state = self.state.write()
+        let mut state = self.state
+            .write()
             .expect("No lock holder should have poisoned the lock");
 
         block.status = BlockStatus::Invalid;
@@ -533,6 +547,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             self.consensus_notifier
                 .notify_block_invalid(block.header_signature());
         }
+        // Reset the block in the cache with a valid status (which otherwise
+        // would be lost)
+        //
+        self.state.write()
+            .expect("No lock holder should have poisoned the lock")
+            .block_cache.put(block.clone());
     }
 
     fn handle_block_commit(&mut self, block: &BlockWrapper) -> Result<(), ChainControllerError> {
@@ -643,6 +663,9 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 state.state_pruning_manager.execute(prune_at)
             }
 
+            self.consensus_notifier
+                .notify_block_commit(block.header_signature());
+
             // Updated the block, so we're done
             break Ok(());
         }
@@ -661,12 +684,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             validation_result_sender: self.validation_result_sender.clone(),
             state_pruning_block_depth: self.state_pruning_block_depth,
             chain_head_lock: self.chain_head_lock.clone(),
+            consensus_notifier: self.consensus_notifier.clone(),
         }
     }
 
-    fn submit_blocks_for_verification(
+    pub fn submit_blocks_for_verification(
         &self,
-        block_validator: &BV,
         blocks: &[BlockWrapper],
     ) -> Result<(), ChainControllerError> {
         let sender = self.validation_result_sender
@@ -675,7 +698,12 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 "Attempted to submit blocks for validation before starting the chain controller",
             )
             .clone();
-        block_validator.submit_blocks_for_verification(blocks, sender);
+
+        self.state
+            .write()
+            .expect("No lock holder should have poisoned the lock")
+            .block_validator
+            .submit_blocks_for_verification(blocks, sender);
         Ok(())
     }
 
@@ -797,7 +825,11 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .unwrap();
     }
 
-    fn start_commit_queue_thread(&self, commit_thread_exit: Arc<AtomicBool>, commit_queue_receiver: Receiver<BlockWrapper>) {
+    fn start_commit_queue_thread(
+        &self,
+        commit_thread_exit: Arc<AtomicBool>,
+        commit_queue_receiver: Receiver<BlockWrapper>,
+    ) {
         // Setup the Commit thread:
         let commit_thread_builder =
             thread::Builder::new().name("ChainThread:CommitReceiver".into());
