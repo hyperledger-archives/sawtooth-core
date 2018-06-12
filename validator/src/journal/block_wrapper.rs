@@ -20,7 +20,7 @@ use block::Block;
 use scheduler::TxnExecutionResult;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BlockStatus {
     Unknown = 0,
     Invalid = 1,

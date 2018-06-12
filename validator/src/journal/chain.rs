@@ -35,8 +35,8 @@ use protobuf;
 
 use batch::Batch;
 use journal;
-use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
-use journal::block_wrapper::BlockWrapper;
+use journal::block_validator::{BlockValidator, ValidationError};
+use journal::block_wrapper::{BlockStatus, BlockWrapper};
 use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
 use metrics;
@@ -57,6 +57,8 @@ pub enum ChainControllerError {
     QueueRecvError(RecvError),
     ChainIdError(io::Error),
     ChainUpdateError(String),
+    ChainReadError(ChainReadError),
+    ForkResolutionError(String),
     BlockValidationError(ValidationError),
     BrokenQueue,
 }
@@ -76,6 +78,18 @@ impl From<io::Error> for ChainControllerError {
 impl From<ValidationError> for ChainControllerError {
     fn from(err: ValidationError) -> Self {
         ChainControllerError::BlockValidationError(err)
+    }
+}
+
+impl From<ChainReadError> for ChainControllerError {
+    fn from(err: ChainReadError) -> Self {
+        ChainControllerError::ChainReadError(err)
+    }
+}
+
+impl From<ForkResolutionError> for ChainControllerError {
+    fn from(err: ForkResolutionError) -> Self {
+        ChainControllerError::ForkResolutionError(err.0)
     }
 }
 
@@ -113,6 +127,38 @@ pub trait ChainWriter: Send + Sync {
     ) -> Result<(), ChainControllerError>;
 }
 
+/// Holds the results of Block Validation.
+struct ForkResolutionResult<'a> {
+    pub block: &'a BlockWrapper,
+    pub chain_head: &'a Option<BlockWrapper>,
+
+    pub new_chain: Vec<BlockWrapper>,
+    pub current_chain: Vec<BlockWrapper>,
+
+    pub committed_batches: Vec<Batch>,
+    pub uncommitted_batches: Vec<Batch>,
+
+    pub transaction_count: usize,
+}
+
+impl<'a> ForkResolutionResult<'a> {
+    fn new(block: &'a BlockWrapper) -> Self {
+        ForkResolutionResult {
+            block,
+            chain_head: &None,
+            new_chain: vec![],
+            current_chain: vec![],
+            committed_batches: vec![],
+            uncommitted_batches: vec![],
+            transaction_count: 0,
+        }
+    }
+}
+
+/// Indication that an error occured during fork resolution.
+#[derive(Debug)]
+struct ForkResolutionError(String);
+
 struct ChainControllerState<BC: BlockCache, BV: BlockValidator> {
     block_cache: BC,
     block_validator: BV,
@@ -126,8 +172,7 @@ struct ChainControllerState<BC: BlockCache, BV: BlockValidator> {
 
 impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
     fn has_block(&self, block_id: &str) -> bool {
-        self.block_cache.contains(block_id) || self.block_validator.in_process(block_id)
-            || self.block_validator.in_pending(block_id)
+        self.block_cache.contains(block_id) || self.block_validator.has_block(block_id)
     }
 
     /// This is used by a non-genesis journal when it has received the
@@ -166,6 +211,200 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
 
         Ok(())
     }
+
+    fn build_fork<'a>(
+        &mut self,
+        block: &'a BlockWrapper,
+        chain_head: &'a BlockWrapper,
+    ) -> Result<ForkResolutionResult<'a>, ChainControllerError> {
+        let mut result = ForkResolutionResult::new(block);
+
+        let mut current_block = chain_head.clone();
+        let mut new_block = block.clone();
+
+        let chain_comparison = compare_chain_height(&current_block, &new_block);
+        let (compared_block, chain) = if chain_comparison {
+            self.build_fork_diff_to_common_height(&current_block, &new_block)?
+        } else {
+            self.build_fork_diff_to_common_height(&new_block, &current_block)?
+        };
+
+        if chain_comparison {
+            current_block = compared_block;
+            result.current_chain = chain;
+        } else {
+            new_block = compared_block;
+            result.new_chain = chain;
+        }
+
+        self.extend_fork_diff_to_common_anscestor(
+            &new_block,
+            &current_block,
+            &mut result.new_chain,
+            &mut result.current_chain,
+        )?;
+
+        result.transaction_count = result.new_chain.iter().map(|b| b.num_transactions).sum();
+
+        info!(
+            "Comparing current chain head '{}' against new block '{}'",
+            &chain_head, &block
+        );
+
+        let (commit, uncommit) = get_batch_commit_changes(&result.new_chain, &result.current_chain);
+        result.committed_batches = commit;
+        result.uncommitted_batches = uncommit;
+
+        if result.new_chain[0].previous_block_id() != chain_head.header_signature() {
+            let mut moved_to_fork_count =
+                COLLECTOR.counter("ChainController.chain_head_moved_to_fork_count", None, None);
+            moved_to_fork_count.inc();
+        }
+
+        Ok(result)
+    }
+
+    fn build_fork_diff_to_common_height<'a>(
+        &self,
+        head_long: &BlockWrapper,
+        head_short: &BlockWrapper,
+    ) -> Result<(BlockWrapper, Vec<BlockWrapper>), ForkResolutionError> {
+        let mut fork_diff = vec![];
+
+        let last = head_short.block_num();
+        let mut block = head_long.clone();
+
+        loop {
+            if block.block_num() == last
+                || block.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER
+            {
+                return Ok((block, fork_diff));
+            }
+
+            fork_diff.push(block.clone());
+
+            block =
+                self.get_from_cache_strict(block.previous_block_id(), "Failed to build fork diff")?;
+        }
+    }
+
+    /// Returns a block from the cache, or an error if it is not found
+    fn get_from_cache_strict(
+        &self,
+        block_id: &str,
+        error_msg_prefix: &'static str,
+    ) -> Result<BlockWrapper, ForkResolutionError> {
+        match self.block_cache.get(block_id) {
+            Some(block) => Ok(block),
+            None => {
+                return Err(ForkResolutionError(format!(
+                    "{}: block missing predecessor {}",
+                    error_msg_prefix, block_id
+                )))
+            }
+        }
+    }
+
+    /// Finds a common ancestor of the two chains. new_blkw and cur_blkw must be
+    /// at the same height, or this will always fail.
+    fn extend_fork_diff_to_common_anscestor(
+        &mut self,
+        new_block: &BlockWrapper,
+        cur_block: &BlockWrapper,
+        new_chain: &mut Vec<BlockWrapper>,
+        cur_chain: &mut Vec<BlockWrapper>,
+    ) -> Result<(), ForkResolutionError> {
+        let mut new = new_block.clone();
+        let mut current = cur_block.clone();
+
+        while current.header_signature() != new.header_signature() {
+            if current.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER
+                || new.previous_block_id() == journal::NULL_BLOCK_IDENTIFIER
+            {
+                loop {
+                    match new_chain.pop() {
+                        Some(mut block) => {
+                            block.status = BlockStatus::Invalid;
+                            // need to put it back in the cache
+                            self.block_cache.put(block);
+                        }
+                        None => break
+                    }
+                }
+
+                return Err(ForkResolutionError(format!(
+                    "Block {} rejected due to wrong genesis {}",
+                    current, new
+                )));
+            }
+
+            new_chain.push(new);
+            new = self.get_from_cache_strict(
+                new_chain.last().unwrap().previous_block_id(),
+                "Failed to extend new chain",
+            )?;
+
+            cur_chain.push(current);
+            current = self.block_cache
+                .get(cur_chain.last().unwrap().previous_block_id())
+                .expect("Could not find current chain predecessor in block cache");
+        }
+
+        Ok(())
+    }
+
+    fn check_chain_head_updated(
+        &self,
+        chain_head: &BlockWrapper,
+        block: &BlockWrapper,
+    ) -> Result<bool, ChainControllerError> {
+        let current_chain_head = self.chain_reader.chain_head()?;
+        if current_chain_head
+            .as_ref()
+            .map(|block| block.header_signature() != chain_head.header_signature())
+            .unwrap_or(false)
+        {
+            warn!(
+                "Chain head updated from {} to {} while resolving \
+                 fork for block {}. Reprocessing resolution.",
+                chain_head,
+                current_chain_head.as_ref().unwrap(),
+                block
+            );
+            return Ok(true);
+        }
+
+        return Ok(false);
+    }
+}
+
+/// Returns true if head_a is taller, false if head_b is taller, and true if
+/// the heights are the same.
+fn compare_chain_height(block_a: &BlockWrapper, block_b: &BlockWrapper) -> bool {
+    block_a.block_num() >= block_b.block_num()
+}
+
+/// Get all the batches that should be committed from the new chain and
+/// all the batches that should be uncommitted from the current chain.
+fn get_batch_commit_changes(
+    new_chain: &[BlockWrapper],
+    cur_chain: &[BlockWrapper],
+) -> (Vec<Batch>, Vec<Batch>) {
+    let mut committed_batches = vec![];
+    for block in new_chain {
+        for batch in block.batches() {
+            committed_batches.push(batch.clone());
+        }
+    }
+
+    let mut uncommitted_batches = vec![];
+    for block in cur_chain {
+        for batch in block.batches() {
+            uncommitted_batches.push(batch.clone());
+        }
+    }
+
+    (committed_batches, uncommitted_batches)
 }
 
 #[derive(Clone)]
@@ -173,7 +412,9 @@ pub struct ChainController<BC: BlockCache, BV: BlockValidator> {
     state: Arc<RwLock<ChainControllerState<BC, BV>>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
     block_queue_sender: Option<Sender<BlockWrapper>>,
-    validation_result_sender: Option<Sender<(bool, BlockValidationResult)>>,
+    commit_queue_sender: Option<Sender<BlockWrapper>>,
+    validation_result_sender: Option<Sender<BlockWrapper>>,
+
     state_pruning_block_depth: u32,
     chain_head_lock: ChainHeadLock,
 }
@@ -203,6 +444,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             })),
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
+            commit_queue_sender: None,
             validation_result_sender: None,
             state_pruning_block_depth,
             chain_head_lock,
@@ -253,38 +495,63 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         state.has_block(block_id)
     }
 
-    fn on_block_validated(&mut self, commit_new_block: bool, result: BlockValidationResult) {
-        let mut state = self.state
-            .write()
+    pub fn ignore_block(&self, block: &BlockWrapper) {
+        info!("Ignoring block {}", block)
+    }
+
+    pub fn fail_block(&self, block: &mut BlockWrapper) {
+        let mut state = self.state.write()
             .expect("No lock holder should have poisoned the lock");
 
+        block.status = BlockStatus::Invalid;
+
+        state.block_cache.put(block.clone());
+    }
+
+    pub fn commit_block(&self, block: BlockWrapper) {
+        if let Some(sender) = self.commit_queue_sender.as_ref() {
+            if let Err(err) = sender.send(block) {
+                error!("Unable to add block to block queue: {}", err);
+            }
+        } else {
+            debug!(
+                "Attempting to commit block {} before chain controller is started; Ignoring",
+                block
+            );
+        }
+    }
+
+    fn on_block_validated(&self, block: &BlockWrapper) {
         let mut blocks_considered_count =
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
-        let new_block = result.block;
-        let initial_chain_head = result.chain_head.header_signature().clone();
-        if state
-            .chain_head
-            .as_ref()
-            .map(|block| initial_chain_head != block.header_signature())
-            .unwrap_or(false)
-        {
-            info!(
-                "Chain head updated from {} to {} while processing block {}",
-                result.chain_head,
-                state.chain_head.as_ref().unwrap(),
-                new_block
+        if block.status == BlockStatus::Valid {
+            self.consensus_notifier
+                .notify_block_valid(block.header_signature());
+        } else {
+            self.consensus_notifier
+                .notify_block_invalid(block.header_signature());
+        }
+    }
+
+    fn handle_block_commit(&mut self, block: &BlockWrapper) -> Result<(), ChainControllerError> {
+        let mut state = self.state
+            .write()
+            .expect("No lock holder should have poisoned the lock");
+
+        loop {
+            let chain_head = state.chain_reader.chain_head()?.expect(
+                "Attempting to handle block commit before a genesis block has been committed",
             );
-            if let Err(err) =
-                self.submit_blocks_for_verification(&state.block_validator, &[new_block])
-            {
-                error!("Unable to submit block for verification: {:?}", err);
-            }
-        } else if commit_new_block {
+            let result = state.build_fork(block, &chain_head)?;
+
             let mut chain_head_guard = self.chain_head_lock.acquire();
-            let chain_head_block = new_block.clone();
-            state.chain_head = Some(new_block);
+            if state.check_chain_head_updated(&chain_head, block)? {
+                continue;
+            }
+
+            state.chain_head = Some(block.clone());
 
             state.state_pruning_manager.update_queue(
                 &result
@@ -299,13 +566,9 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                     .collect::<Vec<_>>(),
             );
 
-            if let Err(err) = state
+            state
                 .chain_writer
-                .update_chain(&result.new_chain, &result.current_chain)
-            {
-                error!("Unable to update chain {:?}", err);
-                return;
-            }
+                .update_chain(&result.new_chain, &result.current_chain)?;
 
             info!(
                 "Chain head updated to {}",
@@ -313,14 +576,14 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             );
 
             let mut chain_head_gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
-            chain_head_gauge.set_value(&chain_head_block.header_signature()[0..8]);
+            chain_head_gauge.set_value(&block.header_signature()[0..8]);
 
             let mut committed_transactions_count =
                 COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
             committed_transactions_count.inc_n(result.transaction_count);
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(chain_head_block.block_num());
+            block_num_guage.set_value(block.block_num());
 
             let chain_head = state.chain_head.clone().unwrap();
             chain_head_guard.notify_on_chain_updated(
@@ -340,10 +603,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 })
             });
 
-            let mut new_chain = result.new_chain;
-            new_chain.reverse();
-
-            for block in new_chain {
+            for block in result.new_chain.iter().rev() {
                 let receipts: Vec<TransactionReceipt> = block
                     .execution_results
                     .iter()
@@ -382,8 +642,9 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 // Execute pruning:
                 state.state_pruning_manager.execute(prune_at)
             }
-        } else {
-            info!("Rejected new chain head: {}", new_block);
+
+            // Updated the block, so we're done
+            break Ok(());
         }
     }
 
@@ -396,6 +657,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             // publicly accessible instance
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: self.block_queue_sender.clone(),
+            commit_queue_sender: self.commit_queue_sender.clone(),
             validation_result_sender: self.validation_result_sender.clone(),
             state_pruning_block_depth: self.state_pruning_block_depth,
             chain_head_lock: self.chain_head_lock.clone(),
@@ -469,9 +731,11 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         if stop_handle.is_none() {
             let (block_queue_sender, block_queue_receiver) = channel();
             let (validation_result_sender, validation_result_receiver) = channel();
+            let (commit_queue_sender, commit_queue_receiver) = channel();
 
             self.block_queue_sender = Some(block_queue_sender);
             self.validation_result_sender = Some(validation_result_sender);
+            self.commit_queue_sender = Some(commit_queue_sender);
 
             let thread_chain_controller = self.light_clone();
             let exit_flag = Arc::new(AtomicBool::new(false));
@@ -482,7 +746,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             );
             *stop_handle = Some(ChainThreadStopHandle::new(exit_flag.clone()));
             let chain_thread_builder =
-                thread::Builder::new().name("ChainThread:BlockRecevier".into());
+                thread::Builder::new().name("ChainThread:BlockReceiver".into());
             chain_thread_builder
                 .spawn(move || {
                     if let Err(err) = chain_thread.run() {
@@ -490,37 +754,85 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                     }
                 })
                 .unwrap();
-            let result_thread_builder =
-                thread::Builder::new().name("ChainThread:ValidationResultRecevier".into());
-            let mut result_thread_controller = self.light_clone();
-            let result_thread_exit = exit_flag.clone();
-            result_thread_builder
-                .spawn(move || loop {
-                    let (can_commit, result) = match validation_result_receiver
-                        .recv_timeout(Duration::from_millis(RECV_TIMEOUT_MILLIS))
-                    {
-                        Err(mpsc::RecvTimeoutError::Timeout) => {
-                            if result_thread_exit.load(Ordering::Relaxed) {
-                                break;
-                            } else {
-                                continue;
-                            }
-                        }
-                        Err(_) => {
-                            error!("Result queue shutdown unexpectedly");
-                            break;
-                        }
-                        Ok(res) => res,
-                    };
 
-                    if !result_thread_exit.load(Ordering::Relaxed) {
-                        result_thread_controller.on_block_validated(can_commit, result);
-                    } else {
+            self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
+            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+        }
+    }
+
+    fn start_validation_result_thread(
+        &self,
+        result_thread_exit: Arc<AtomicBool>,
+        validation_result_receiver: Receiver<BlockWrapper>,
+    ) {
+        // Setup the ValidationResult thread
+        let result_thread_builder =
+            thread::Builder::new().name("ChainThread:ValidationResultReceiver".into());
+        let result_thread_controller = self.light_clone();
+        result_thread_builder
+            .spawn(move || loop {
+                let block = match validation_result_receiver
+                    .recv_timeout(Duration::from_millis(RECV_TIMEOUT_MILLIS))
+                {
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        if result_thread_exit.load(Ordering::Relaxed) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+                    Err(_) => {
+                        error!("Result queue shutdown unexpectedly");
                         break;
                     }
-                })
-                .unwrap();
-        }
+                    Ok(res) => res,
+                };
+
+                if !result_thread_exit.load(Ordering::Relaxed) {
+                    result_thread_controller.on_block_validated(&block);
+                } else {
+                    break;
+                }
+            })
+            .unwrap();
+    }
+
+    fn start_commit_queue_thread(&self, commit_thread_exit: Arc<AtomicBool>, commit_queue_receiver: Receiver<BlockWrapper>) {
+        // Setup the Commit thread:
+        let commit_thread_builder =
+            thread::Builder::new().name("ChainThread:CommitReceiver".into());
+        let mut commit_thread_controller = self.light_clone();
+        commit_thread_builder
+            .spawn(move || loop {
+                let block = match commit_queue_receiver
+                    .recv_timeout(Duration::from_millis(RECV_TIMEOUT_MILLIS))
+                {
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        if commit_thread_exit.load(Ordering::Relaxed) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+                    Err(_) => {
+                        error!("Commit queue shutdown unexpectedly");
+                        break;
+                    }
+                    Ok(res) => res,
+                };
+
+                if !commit_thread_exit.load(Ordering::Relaxed) {
+                    if let Err(err) = commit_thread_controller.handle_block_commit(&block) {
+                        error!(
+                            "An error occurred while committing block {}: {:?}",
+                            block, err
+                        );
+                    }
+                } else {
+                    break;
+                }
+            })
+            .unwrap();
     }
 
     pub fn stop(&mut self) {
