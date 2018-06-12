@@ -25,6 +25,22 @@ RUN apt-get update \
  pkg-config \
  unzip
 
+RUN \
+ if [ ! -z $HTTP_PROXY ] && [ -z $http_proxy ]; then \
+  http_proxy=$HTTP_PROXY; \
+ fi; \
+ if [ ! -z $HTTPS_PROXY ] && [ -z $https_proxy ]; then \
+  https_proxy=$HTTPS_PROXY; \
+ fi; \
+ if [ ! -z $http_proxy ]; then \
+  http_proxy_host=$(printf $http_proxy | sed 's|http.*://\(.*\):\(.*\)$|\1|');\
+  http_proxy_port=$(printf $http_proxy | sed 's|http.*://\(.*\):\(.*\)$|\2|');\
+  mkdir -p $HOME/.cargo \
+  && echo "[http]" >> $HOME/.cargo/config \
+  && echo 'proxy = "'$http_proxy_host:$http_proxy_port'"' >> $HOME/.cargo/config \
+  && cat $HOME/.cargo/config; \
+ fi;
+
 # For Building Protobufs
 RUN curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
  && unzip protoc-3.5.1-linux-x86_64.zip -d protoc3 \
