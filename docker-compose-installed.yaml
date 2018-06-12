@@ -225,3 +225,24 @@ services:
       dockerfile: utility/ias_proxy/Dockerfile-installed
     image: sawtooth-ias-proxy:${ISOLATION_ID}
     container_name: sawtooth-ias-proxy-default
+
+  intkey-tests:
+    build:
+      context: .
+      dockerfile: sdk/examples/intkey_python/Dockerfile-tests-installed
+    image: sawtooth-intkey-tests:${ISOLATION_ID}
+    container_name: sawtooth-intkey-tests-default
+
+  xo-tests:
+    build:
+      context: .
+      dockerfile: sdk/examples/xo_python/Dockerfile-tests-installed
+    image: sawtooth-xo-tests:${ISOLATION_ID}
+    container_name: sawtooth-xo-tests-default
+
+  integration:
+    build:
+      context: .
+      dockerfile: integration/Dockerfile-installed
+    image: sawtooth-integration:${ISOLATION_ID}
+    container_name: sawtooth-integration-default

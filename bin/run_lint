@@ -35,6 +35,7 @@ find_packages() {
         | grep ^:: \
         | sed -e 's/^::\s//' \
         | grep -v /setup.py$ \
+        | grep -v /setup_tests.py$ \
         | grep -v _pb2\.py$ \
         | grep -v poet_enclave\.py$
 }
