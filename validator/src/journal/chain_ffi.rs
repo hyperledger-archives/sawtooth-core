@@ -15,9 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{FromPyObject, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject,
+              ToPyObject};
 use database::lmdb::LmdbDatabase;
-use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
+use journal::block_validator::{BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
@@ -177,48 +178,51 @@ pub extern "C" fn chain_controller_has_block(
     ErrorCode::Success
 }
 
-#[no_mangle]
-pub extern "C" fn chain_controller_queue_block(
-    chain_controller: *mut c_void,
-    block: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(chain_controller, block);
+macro_rules! chain_controller_block_ffi {
+    ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+        #[no_mangle]
+        pub extern "C" fn $ffi_fn_name(
+            chain_controller: *mut c_void,
+            block: *mut py_ffi::PyObject,
+        ) -> ErrorCode {
+            check_null!(chain_controller, block);
 
-    let gil_guard = Python::acquire_gil();
-    let py = gil_guard.python();
+            let gil_guard = Python::acquire_gil();
+            let py = gil_guard.python();
 
-    let block: BlockWrapper = unsafe {
-        match PyObject::from_borrowed_ptr(py, block).extract(py) {
-            Ok(val) => val,
-            Err(py_err) => {
-                pylogger::exception(
-                    py,
-                    "chain_controller_queue_block: unable to get block",
-                    py_err,
-                );
-                return ErrorCode::InvalidPythonObject;
+            let mut $block: BlockWrapper = unsafe {
+                match PyObject::from_borrowed_ptr(py, block).extract(py) {
+                    Ok(val) => val,
+                    Err(py_err) => {
+                        pylogger::exception(
+                            py,
+                            "chain_controller_queue_block: unable to get block",
+                            py_err,
+                        );
+                        return ErrorCode::InvalidPythonObject;
+                    }
+                }
+            };
+
+            unsafe {
+                let controller = (*(chain_controller
+                    as *mut ChainController<PyBlockCache, PyBlockValidator>))
+                    .light_clone();
+
+                py.allow_threads(move || {
+                    controller.$cc_fn_name($($block_args)*);
+                });
             }
+
+            ErrorCode::Success
         }
-    };
-    unsafe {
-        let controller = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator>))
-            .light_clone();
-
-        py.allow_threads(move || {
-            let builder = thread::Builder::new().name("ChainController.queue_block".into());
-            builder
-                .spawn(move || {
-                    controller.queue_block(block);
-                })
-                .unwrap()
-                .join()
-                .unwrap();
-        });
     }
-
-    ErrorCode::Success
 }
+
+chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
+chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &mut block);
+chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
+chain_controller_block_ffi!(chain_controller_queue_block, queue_block, block, block);
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
@@ -292,28 +296,25 @@ pub extern "C" fn chain_controller_chain_head(
 pub extern "C" fn sender_drop(sender: *const c_void) -> ErrorCode {
     check_null!(sender);
 
-    unsafe { Box::from_raw(sender as *mut Sender<(bool, BlockValidationResult)>) };
+    unsafe { Box::from_raw(sender as *mut Sender<BlockWrapper>) };
 
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn sender_send(
-    sender: *const c_void,
-    result_tuple: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(sender, result_tuple);
+pub extern "C" fn sender_send(sender: *const c_void, block: *mut py_ffi::PyObject) -> ErrorCode {
+    check_null!(sender, block);
 
     let gil_guard = Python::acquire_gil();
     let py = gil_guard.python();
 
-    let py_result_tuple = unsafe { PyObject::from_borrowed_ptr(py, result_tuple) };
-    let (can_commit, result): (bool, BlockValidationResult) = py_result_tuple
+    let py_block_wrapper = unsafe { PyObject::from_borrowed_ptr(py, block) };
+    let block: BlockWrapper = py_block_wrapper
         .extract(py)
-        .expect("Unable to extract result tuple");
+        .expect("Unable to extract block");
 
     unsafe {
-        match (*(sender as *mut Sender<(bool, BlockValidationResult)>)).send((can_commit, result)) {
+        match (*(sender as *mut Sender<BlockWrapper>)).send(block) {
             Ok(_) => ErrorCode::Success,
             Err(err) => {
                 error!("Unable to send validation result: {:?}", err);
@@ -415,13 +416,15 @@ impl PyBlockValidator {
             py_callback_maker,
         }
     }
+}
 
-    fn query_block_status(&self, fn_name: &str, block_id: &str) -> bool {
+impl BlockValidator for PyBlockValidator {
+    fn has_block(&self, block_id: &str) -> bool {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
         match self.py_block_validator
-            .call_method(py, fn_name, (block_id,), None)
+            .call_method(py, "has_block", (block_id,), None)
         {
             Err(_) => {
                 // Presumably a KeyError, so no
@@ -429,16 +432,6 @@ impl PyBlockValidator {
             }
             Ok(py_bool) => py_bool.extract(py).expect("Unable to extract boolean"),
         }
-    }
-}
-
-impl BlockValidator for PyBlockValidator {
-    fn in_process(&self, block_id: &str) -> bool {
-        self.query_block_status("in_process", block_id)
-    }
-
-    fn in_pending(&self, block_id: &str) -> bool {
-        self.query_block_status("in_pending", block_id)
     }
 
     fn validate_block(&self, block: BlockWrapper) -> Result<(), ValidationError> {
@@ -456,7 +449,7 @@ impl BlockValidator for PyBlockValidator {
     fn submit_blocks_for_verification(
         &self,
         blocks: &[BlockWrapper],
-        response_sender: Sender<(bool, BlockValidationResult)>,
+        response_sender: Sender<BlockWrapper>,
     ) {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
@@ -623,20 +616,5 @@ impl ToPyObject for TransactionReceipt {
             .expect("Unable to ParseFromString");
 
         py_txn_receipt
-    }
-}
-
-impl<'source> FromPyObject<'source> for BlockValidationResult {
-    fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        Ok(BlockValidationResult {
-            chain_head: obj.getattr(py, "chain_head")?.extract(py)?,
-            block: obj.getattr(py, "block")?.extract(py)?,
-            transaction_count: obj.getattr(py, "transaction_count")?.extract(py)?,
-            new_chain: obj.getattr(py, "new_chain")?.extract(py)?,
-            current_chain: obj.getattr(py, "current_chain")?.extract(py)?,
-
-            committed_batches: obj.getattr(py, "committed_batches")?.extract(py)?,
-            uncommitted_batches: obj.getattr(py, "uncommitted_batches")?.extract(py)?,
-        })
     }
 }

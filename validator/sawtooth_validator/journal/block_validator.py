@@ -14,17 +14,13 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from threading import RLock
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
-from sawtooth_validator.concurrent.atomic import ConcurrentSet
-from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.consensus.consensus_factory import \
-    ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
 from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
@@ -54,39 +50,6 @@ class BlockValidationError(Exception):
     """
 
 
-class ChainHeadUpdated(Exception):
-    """ Raised when a chain head changed event is detected and we need to abort
-    processing and restart processing with the new chain head.
-    """
-
-
-class BlockValidationResult:
-    def __init__(self, block):
-        self.block = block
-        self.chain_head = None
-        self.new_chain = []
-        self.current_chain = []
-        self.committed_batches = []
-        self.uncommitted_batches = []
-        # NOTE: The following are for all blocks validated in order to validate
-        # this block, i.e., all blocks on this block's fork
-        self.execution_results = []
-        self.transaction_count = 0
-
-    def __bool__(self):
-        return self.block.status == BlockStatus.Valid
-
-    def __str__(self):
-        keys = ("block", "valid", "chain_head", "new_chain", "current_chain",
-                "committed_batches", "uncommitted_batches",
-                "execution_results", "transaction_count")
-
-        out = "{"
-        for key in keys:
-            out += "%s: %s," % (key, self.__getattribute(key))
-        return out[:-1] + "}"
-
-
 # Need to disable this new pylint check until the function can be refactored
 # to return instead of raise StopIteration, which it does by calling next()
 # pylint: disable=stop-iteration-return
@@ -109,9 +72,7 @@ def look_ahead(iterable):
 
 class BlockValidator:
     """
-    Responsible for validating a block, handles both chain extensions and fork
-    will determine if the new block should be the head of the chain and return
-    the information necessary to do the switch if necessary.
+    Responsible for validating a block.
     """
 
     def __init__(self,
@@ -158,15 +119,7 @@ class BlockValidator:
         self._thread_pool = InstrumentedThreadPoolExecutor(1) \
             if thread_pool is None else thread_pool
 
-        self._moved_to_fork_count = COLLECTOR.counter(
-            'chain_head_moved_to_fork_count', instance=self)
-
-        # Blocks that are currently being processed
-        self._blocks_processing = ConcurrentSet()
-
-        # Descendant blocks that are waiting for an in process block
-        # to complete
-        self._blocks_pending = ConcurrentMultiMap()
+        self._block_scheduler = BlockScheduler(block_cache)
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -202,27 +155,42 @@ class BlockValidator:
         if not blkw.block.batches:
             return
 
+        scheduler = None
         try:
-            chain_commit_state = ChainCommitState(
-                blkw.previous_block_id,
-                self._block_cache,
-                self._block_cache.block_store)
+            while True:
+                try:
+                    chain_head = self._block_cache.block_store.chain_head
+
+                    chain_commit_state = ChainCommitState(
+                        blkw.previous_block_id,
+                        self._block_cache,
+                        self._block_cache.block_store)
+
+                    chain_commit_state.check_for_duplicate_batches(
+                        blkw.block.batches)
+
+                    transactions = []
+                    for batch in blkw.block.batches:
+                        transactions.extend(batch.transactions)
+
+                    chain_commit_state.check_for_duplicate_transactions(
+                        transactions)
+
+                    chain_commit_state.check_for_transaction_dependencies(
+                        transactions)
+
+                    if not self._check_chain_head_updated(chain_head, blkw):
+                        break
+
+                except (DuplicateBatch,
+                        DuplicateTransaction,
+                        MissingDependency) as err:
+                    if not self._check_chain_head_updated(chain_head, blkw):
+                        raise BlockValidationFailure(
+                            "Block {} failed validation: {}".format(blkw, err))
 
             scheduler = self._transaction_executor.create_scheduler(
                 prev_state_root)
-
-            chain_commit_state.check_for_duplicate_batches(
-                blkw.block.batches)
-
-            transactions = []
-            for batch in blkw.block.batches:
-                transactions.extend(batch.transactions)
-
-            chain_commit_state.check_for_duplicate_transactions(
-                transactions)
-
-            chain_commit_state.check_for_transaction_dependencies(
-                transactions)
 
             for batch, has_more in look_ahead(blkw.block.batches):
                 if has_more:
@@ -230,15 +198,9 @@ class BlockValidator:
                 else:
                     scheduler.add_batch(batch, blkw.state_root_hash)
 
-        except (DuplicateBatch,
-                DuplicateTransaction,
-                MissingDependency) as err:
-            scheduler.cancel()
-            raise BlockValidationFailure(
-                "Block {} failed validation: {}".format(blkw, err))
-
         except Exception:
-            scheduler.cancel()
+            if scheduler is not None:
+                scheduler.cancel()
             raise
 
         scheduler.finalize()
@@ -265,6 +227,29 @@ class BlockValidator:
                 "Block {} failed state root hash validation. Expected {}"
                 " but got {}".format(
                     blkw, blkw.state_root_hash, state_hash))
+
+    def _check_chain_head_updated(self, chain_head, block):
+        # The validity of blocks depends partially on whether or not
+        # there are any duplicate transactions or batches in the block.
+        # This can only be checked accurately if the block store does
+        # not update during validation. The current practice is the
+        # assume this will not happen and, if it does, to reprocess the
+        # validation. This has been experimentally proven to be more
+        # performant than locking the chain head and block store around
+        # duplicate checking.
+        if chain_head is None:
+            return False
+
+        current_chain_head = self._block_cache.block_store.chain_head
+        if chain_head.identifier != current_chain_head.identifier:
+            LOGGER.warning(
+                "Chain head updated from %s to %s while checking "
+                "duplicates and dependencies in block %s. "
+                "Reprocessing validation.",
+                chain_head, current_chain_head, block)
+            return True
+
+        return False
 
     def _validate_permissions(self, blkw, prev_state_root):
         """
@@ -294,7 +279,7 @@ class BlockValidator:
                 blkw.batches)
         return True
 
-    def validate_block(self, blkw, chain_head=None):
+    def validate_block(self, blkw):
         if blkw.status == BlockStatus.Valid:
             return
         if blkw.status == BlockStatus.Invalid:
@@ -303,11 +288,19 @@ class BlockValidator:
 
         # pylint: disable=broad-except
         try:
-            if chain_head is None:
-                # Try to get the chain head from the block store; note that the
-                # block store may also return None for the chain head if a
-                # genesis block hasn't been committed yet.
-                chain_head = self._block_cache.block_store.chain_head
+            try:
+                prev_block = self._block_cache[blkw.previous_block_id]
+            except KeyError:
+                prev_block = None
+            else:
+                if prev_block.status == BlockStatus.Invalid:
+                    raise BlockValidationFailure(
+                        "Block {} rejected due to invalid predecessor"
+                        " {}".format(blkw, prev_block))
+                elif prev_block.status == BlockStatus.Unknown:
+                    raise BlockValidationError(
+                        "Attempted to validate block {} before its predecessor"
+                        " {}".format(blkw, prev_block))
 
             try:
                 prev_state_root = self._get_previous_block_state_root(blkw)
@@ -320,42 +313,12 @@ class BlockValidator:
                 raise BlockValidationFailure(
                     'Block {} failed permission validation'.format(blkw))
 
-            try:
-                prev_block = self._block_cache[blkw.previous_block_id]
-            except KeyError:
-                prev_block = None
-
-            consensus = self._load_consensus(prev_block)
-            public_key = \
-                self._identity_signer.get_public_key().as_hex()
-            consensus_block_verifier = consensus.BlockVerifier(
-                block_cache=self._block_cache,
-                state_view_factory=self._state_view_factory,
-                data_dir=self._data_dir,
-                config_dir=self._config_dir,
-                validator_id=public_key)
-
-            if not consensus_block_verifier.verify_block(blkw):
-                raise BlockValidationFailure(
-                    'Block {} failed {} consensus validation'.format(
-                        blkw, consensus))
-
             if not self._validate_on_chain_rules(blkw, prev_state_root):
                 raise BlockValidationFailure(
                     'Block {} failed on-chain validation rules'.format(
                         blkw))
 
             self._validate_batches_in_block(blkw, prev_state_root)
-
-            # since changes to the chain-head can change the state of the
-            # blocks in BlockStore we have to revalidate this block.
-            block_store = self._block_cache.block_store
-
-            # The chain_head is None when this is the genesis block or if the
-            # block store has no chain_head.
-            if chain_head is not None:
-                if chain_head.identifier != block_store.chain_head.identifier:
-                    raise ChainHeadUpdated()
 
             blkw.status = BlockStatus.Valid
 
@@ -367,230 +330,55 @@ class BlockValidator:
             blkw.status = BlockStatus.Unknown
             raise err
 
-        except ChainHeadUpdated as e:
-            raise e
-
         except Exception as e:
             LOGGER.exception(
                 "Unhandled exception BlockValidator.validate_block()")
             raise e
 
-    @staticmethod
-    def _compare_chain_height(head_a, head_b):
-        """Returns True if head_a is taller, False if head_b is taller, and
-        True if the heights are the same."""
-        return head_a.block_num - head_b.block_num >= 0
-
-    def _build_fork_diff_to_common_height(self, head_long, head_short):
-        """Returns a list of blocks on the longer chain since the greatest
-        common height between the two chains. Note that the chains may not
-        have the same block id at the greatest common height.
-
-        Args:
-            head_long (BlockWrapper)
-            head_short (BlockWrapper)
-
-        Returns:
-            (list of BlockWrapper) All blocks in the longer chain since the
-            last block in the shorter chain. Ordered newest to oldest.
-
-        Raises:
-            BlockValidationError
-                The block is missing a predecessor. Note that normally this
-                shouldn't happen because of the completer."""
-        fork_diff = []
-
-        last = head_short.block_num
-        blk = head_long
-
-        while blk.block_num > last:
-            if blk.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                break
-
-            fork_diff.append(blk)
-            try:
-                blk = self._block_cache[blk.previous_block_id]
-            except KeyError:
-                raise BlockValidationError(
-                    'Failed to build fork diff: block {} missing predecessor'
-                    .format(blk))
-
-        return blk, fork_diff
-
-    def _extend_fork_diff_to_common_ancestor(
-        self, new_blkw, cur_blkw, new_chain, cur_chain
-    ):
-        """ Finds a common ancestor of the two chains. new_blkw and cur_blkw
-        must be at the same height, or this will always fail.
-        """
-        while cur_blkw.identifier != new_blkw.identifier:
-            if NULL_BLOCK_IDENTIFIER in (
-                cur_blkw.previous_block_id,
-                new_blkw.previous_block_id,
-            ):
-                # We are at a genesis block and the blocks are not the same
-                for b in new_chain:
-                    b.status = BlockStatus.Invalid
-                raise BlockValidationFailure(
-                    'Block {} rejected due to wrong genesis {}'.format(
-                        cur_blkw, new_blkw))
-
-            new_chain.append(new_blkw)
-            try:
-                new_blkw = self._block_cache[new_blkw.previous_block_id]
-            except KeyError:
-                raise BlockValidationError(
-                    'Block {} rejected due to missing predecessor {}'.format(
-                        new_blkw, new_blkw.previous_block_id))
-
-            cur_chain.append(cur_blkw)
-            cur_blkw = self._block_cache[cur_blkw.previous_block_id]
-
-    def _compare_forks_consensus(self, chain_head, new_block):
-        """Ask the consensus module which fork to choose.
-        """
-        public_key = self._identity_signer.get_public_key().as_hex()
-        consensus = self._load_consensus(chain_head)
-        fork_resolver = consensus.ForkResolver(
-            block_cache=self._block_cache,
-            state_view_factory=self._state_view_factory,
-            data_dir=self._data_dir,
-            config_dir=self._config_dir,
-            validator_id=public_key)
-
-        return fork_resolver.compare_forks(chain_head, new_block)
-
-    def _load_consensus(self, block):
-        """Load the consensus module using the state as of the given block."""
-        if block is not None:
-            return ConsensusFactory.get_configured_consensus_module(
-                block.header_signature,
-                BlockWrapper.state_view_for_block(
-                    block,
-                    self._state_view_factory))
-        return ConsensusFactory.get_consensus_module('genesis')
-
-    @staticmethod
-    def _get_batch_commit_changes(new_chain, cur_chain):
-        """
-        Get all the batches that should be committed from the new chain and
-        all the batches that should be uncommitted from the current chain.
-        """
-        committed_batches = []
-        for blkw in new_chain:
-            for batch in blkw.batches:
-                committed_batches.append(batch)
-
-        uncommitted_batches = []
-        for blkw in cur_chain:
-            for batch in blkw.batches:
-                uncommitted_batches.append(batch)
-
-        return (committed_batches, uncommitted_batches)
-
     def submit_blocks_for_verification(self, blocks, callback):
-        for block in blocks:
-            if self.in_process(block.header_signature):
-                LOGGER.debug("Block already in process: %s", block)
-                continue
-
-            if self.in_process(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' in process,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
-            if self.in_pending(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' is pending,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
-            LOGGER.debug(
-                "Adding block %s for processing", block.identifier)
-
-            # Add the block to the set of blocks being processed
-            self._blocks_processing.add(block.identifier)
-
+        ready = self._block_scheduler.schedule(blocks)
+        for block in ready:
             # Schedule the block for processing
             self._thread_pool.submit(
-                self.process_block_verification, block,
-                self._wrap_callback(block, callback))
+                self.process_block_verification, block, callback)
 
-    def _wrap_callback(self, block, callback):
-        # Internal cleanup after verification
-        def wrapper(commit_new_block, result, chain_head_updated=False):
-            block = result.block
-            LOGGER.debug("Removing block from processing %s", block.identifier)
-            try:
-                self._blocks_processing.remove(block.identifier)
-            except KeyError:
-                LOGGER.warning(
-                    "Tried to remove block from in process but it"
-                    " wasn't in processes: %s",
-                    block.identifier)
+    def _release_pending(self, block):
+        """Removes the block from processing and returns any blocks that should
+        now be scheduled for processing, cleaning up the pending block trackers
+        in the process.
+        """
+        ready = []
+        if block.status == BlockStatus.Valid:
+            ready.extend(self._block_scheduler.done(block))
 
-            # If the block was valid, submit all pending blocks for validation
-            if block.status == BlockStatus.Valid:
-                blocks_now_ready = self._blocks_pending.pop(
-                    block.identifier, [])
-                self.submit_blocks_for_verification(blocks_now_ready, callback)
+        elif block.status == BlockStatus.Invalid:
+            # Mark all pending blocks as invalid
+            invalid = self._block_scheduler.done(block, and_descendants=True)
+            for blk in invalid:
+                blk.status = BlockStatus.Invalid
+                LOGGER.debug('Marking descendant block invalid: %s', blk)
 
-            elif block.status == BlockStatus.Invalid:
-                # If the block was invalid, mark all pending blocks as invalid
-                blocks_now_invalid = self._blocks_pending.pop(
-                    block.identifier, [])
-
-                while blocks_now_invalid:
-                    invalid_block = blocks_now_invalid.pop()
-                    invalid_block.status = BlockStatus.Invalid
-
-                    LOGGER.debug(
-                        'Marking descendant block invalid: %s',
-                        invalid_block)
-
-                    # Get descendants of the descendant
-                    blocks_now_invalid.extend(
-                        self._blocks_pending.pop(invalid_block.identifier, []))
-
-            elif not chain_head_updated:
-                # If an error occured during validation, something is wrong
-                # internally and we need to abort validation of this block
-                # and all its children without marking them as invalid.
-                blocks_to_remove = self._blocks_pending.pop(
-                    block.identifier, [])
-
-                while blocks_to_remove:
-                    block = blocks_to_remove.pop()
-
-                    LOGGER.error(
-                        'Removing block from cache and pending due to error '
-                        'during validation: %s; status: %s',
-                        block, block.status)
-
+        else:
+            # An error occured during validation, something is wrong internally
+            # and we need to abort validation of this block and all its
+            # children without marking them as invalid.
+            unknown = self._block_scheduler.done(block, and_descendants=True)
+            for blk in unknown:
+                LOGGER.debug(
+                    'Removing block from cache and pending due to error '
+                    'during validation: %s', block)
+                try:
                     del self._block_cache[block.identifier]
+                except KeyError:
+                    LOGGER.exception(
+                        "Tried to delete a descendant pending block from the"
+                        " block cache because of an error, but the descendant"
+                        " was not in the cache.")
 
-                    # Get descendants of the descendant
-                    blocks_to_remove.extend(
-                        self._blocks_pending.pop(block.identifier, []))
+        return ready
 
-            callback(commit_new_block, result)
-
-        return wrapper
-
-    def in_process(self, block_id):
-        return block_id in self._blocks_processing
-
-    def in_pending(self, block_id):
-        return block_id in self._blocks_pending
-
-    def _add_block_to_pending(self, block):
-        previous = block.previous_block_id
-        self._blocks_pending.append(previous, block)
+    def has_block(self, block_id):
+        return block_id in self._block_scheduler
 
     def process_block_verification(self, block, callback):
         """
@@ -600,119 +388,170 @@ class BlockValidator:
         so that the change over can be made if necessary.
         """
         try:
-            result = BlockValidationResult(block)
-            LOGGER.info("Starting block validation of : %s", block)
-
-            # Get the current chain_head and store it in the result
-            chain_head = self._block_cache.block_store.chain_head
-            result.chain_head = chain_head
-
-            # Create new local variables for current and new block, since
-            # these variables get modified later
-            current_block = chain_head
-            new_block = block
-
-            try:
-                # Get all the blocks since the greatest common height from the
-                # longer chain.
-                if self._compare_chain_height(current_block, new_block):
-                    current_block, result.current_chain =\
-                        self._build_fork_diff_to_common_height(
-                            current_block, new_block)
-                else:
-                    new_block, result.new_chain =\
-                        self._build_fork_diff_to_common_height(
-                            new_block, current_block)
-
-                # Add blocks to the two chains until a common ancestor is found
-                # or raise an exception if no common ancestor is found
-                self._extend_fork_diff_to_common_ancestor(
-                    new_block, current_block,
-                    result.new_chain, result.current_chain)
-            except BlockValidationFailure as err:
-                LOGGER.warning(
-                    'Block %s failed validation: %s',
-                    block, err)
-                block.status = BlockStatus.Invalid
-            except BlockValidationError as err:
-                LOGGER.error(
-                    'Encountered an error while validating %s: %s',
-                    block, err)
-                callback(False, result)
-                return
-
-            valid = True
-            for blk in reversed(result.new_chain):
-                if valid:
-                    try:
-                        self.validate_block(
-                            blk, chain_head)
-                    except BlockValidationFailure as err:
-                        LOGGER.warning(
-                            'Block %s failed validation: %s',
-                            blk, err)
-                        valid = False
-                    except BlockValidationError as err:
-                        LOGGER.error(
-                            'Encountered an error while validating %s: %s',
-                            blk, err)
-                        callback(False, result)
-                    result.transaction_count += block.num_transactions
-                else:
-                    LOGGER.info(
-                        "Block marked invalid (invalid predecessor): %s", blk)
-                    blk.status = BlockStatus.Invalid
-
-            if not valid:
-                callback(False, result)
-                return
-
-            # Ask consensus if the new chain should be committed
+            self.validate_block(block)
             LOGGER.info(
-                "Comparing current chain head '%s' against new block '%s'",
-                chain_head, new_block)
-            for i in range(max(
-                len(result.new_chain), len(result.current_chain)
-            )):
-                cur = new = num = "-"
-                if i < len(result.current_chain):
-                    cur = result.current_chain[i].header_signature[:8]
-                    num = result.current_chain[i].block_num
-                if i < len(result.new_chain):
-                    new = result.new_chain[i].header_signature[:8]
-                    num = result.new_chain[i].block_num
-                LOGGER.info(
-                    "Fork comparison at height %s is between %s and %s",
-                    num, cur, new)
-
-            commit_new_chain = self._compare_forks_consensus(chain_head, block)
-
-            # If committing the new chain, get the list of committed batches
-            # from the current chain that need to be uncommitted and the list
-            # of uncommitted batches from the new chain that need to be
-            # committed.
-            if commit_new_chain:
-                commit, uncommit =\
-                    self._get_batch_commit_changes(
-                        result.new_chain, result.current_chain)
-                result.committed_batches = commit
-                result.uncommitted_batches = uncommit
-
-                if result.new_chain[0].previous_block_id \
-                        != chain_head.identifier:
-                    self._moved_to_fork_count.inc()
-
-            # Pass the results to the callback function
-            callback(commit_new_chain, result)
-            LOGGER.info("Finished block validation of: %s", block)
-
-        except ChainHeadUpdated:
-            LOGGER.debug(
-                "Block validation failed due to chain head update: %s", block)
-            callback(False, result, chain_head_updated=True)
-            return
+                'Block %s passed validation', block)
+        except BlockValidationFailure as err:
+            LOGGER.warning(
+                'Block %s failed validation: %s', block, err)
+        except BlockValidationError as err:
+            LOGGER.error(
+                'Encountered an error while validating %s: %s', block, err)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "Block validation failed with unexpected error: %s", block)
-            # callback to clean up the block out of the processing list.
-            callback(False, result)
+
+        try:
+            blocks_now_ready = self._release_pending(block)
+            self.submit_blocks_for_verification(blocks_now_ready, callback)
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception(
+                "Submitting pending blocks failed with unexpected error: %s",
+                block)
+
+        callback(block)
+
+class BlockScheduler:
+
+    def __init__(self, block_cache):
+        # Blocks that are currently being processed
+        self._processing = set()
+
+        self._processing_gauge = COLLECTOR.gauge(
+            'blocks_processing', instance=self)
+        self._processing_gauge.set_value(0)
+
+        # Descendant blocks that are waiting for an in process block
+        # to complete
+        self._pending = set()
+        self._descendants = dict()
+
+        self._pending_gauge = COLLECTOR.gauge(
+            'blocks_pending', instance=self)
+        self._pending_gauge.set_value(0)
+
+        self._block_cache = block_cache
+
+        self._lock = RLock()
+
+    def schedule(self, blocks):
+        """Add the blocks to the scheduler and return any blocks that are
+        ready to be processed immediately.
+        """
+        ready = []
+        with self._lock:
+            for block in blocks:
+                block_id = block.header_signature
+                prev_id = block.previous_block_id
+
+                if block_id in self._processing:
+                    LOGGER.debug("Block already in process: %s", block)
+                    continue
+
+                if block_id in self._pending:
+                    LOGGER.debug("Block already pending: %s", block)
+                    continue
+
+                if prev_id in self._processing:
+                    LOGGER.debug(
+                        "Previous block '%s' in process, adding '%s' to "
+                        " pending",
+                        block.previous_block_id, block)
+                    self._add_block_to_pending(block)
+                    continue
+
+                if prev_id in self._pending:
+                    LOGGER.debug(
+                        "Previous block '%s' is pending, adding '%s' to "
+                        " pending",
+                        block.previous_block_id, block)
+                    self._add_block_to_pending(block)
+                    continue
+
+                try:
+                    prev_block = self._block_cache[block.previous_block_id]
+                except KeyError:
+                    LOGGER.error(
+                        "Block %s submitted for processing but predecessor %s"
+                        " is missing. Adding to pending.",
+                        block,
+                        block.previous_block_id)
+                    self._add_block_to_pending(block)
+                    continue
+                else:
+                    if prev_block.status == BlockStatus.Unknown:
+                        LOGGER.warning(
+                            "Block %s submitted for processing but predecessor"
+                            " %s has not been validated and is not pending."
+                            " Adding to pending.", block, prev_block)
+                        self._add_block_to_pending(block)
+                    else:
+                        LOGGER.debug(
+                            "Adding block %s for processing",
+                            block.identifier)
+
+                        # Add the block to the set of blocks being processed
+                        self._processing.add(block.identifier)
+                        ready.append(block)
+
+        self._update_gauges()
+
+        return ready
+
+    def done(self, block, and_descendants=False):
+        """Mark the given in process block as done and return any blocks that
+        are now ready to be processed.
+
+        Args:
+            block: The block to mark as done
+            and_descendants: If true, also mark all descendants as done and
+                return them.
+
+        Returns:
+            A list of blocks ready to be processed
+        """
+        block_id = block.header_signature
+        ready = []
+        with self._lock:
+            LOGGER.debug("Removing block from processing %s", block_id)
+            try:
+                self._processing.remove(block_id)
+            except KeyError:
+                LOGGER.warning(
+                    "Tried to remove block from in process but it wasn't in"
+                    " processes: %s",
+                    block_id)
+
+            if and_descendants:
+                descendants = self._descendants.pop(block_id, [])
+                while descendants:
+                    blk = descendants.pop()
+                    self._pending.remove(blk.header_signature)
+                    descendants.extend(self._descendants.pop(
+                        blk.header_signature, []))
+                    ready.append(blk)
+
+            else:
+                ready.extend(self._descendants.pop(block_id, []))
+                for blk in ready:
+                    self._pending.remove(blk.header_signature)
+
+        return ready
+
+    def __contains__(self, block_id):
+        with self._lock:
+            return block_id in self._processing or block_id in self._pending
+
+    def _add_block_to_pending(self, block):
+        with self._lock:
+            self._pending.add(block.identifier)
+            previous = block.previous_block_id
+            if previous not in self._descendants:
+                self._descendants[previous] = [block]
+            else:
+                if block not in self._descendants[previous]:
+                    self._descendants[previous].append(block)
+
+    def _update_gauges(self):
+        self._pending_gauge.set_value(len(self._pending))
+        self._processing_gauge.set_value(len(self._processing))

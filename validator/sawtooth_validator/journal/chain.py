@@ -107,9 +107,9 @@ class ValidationResponseSender(OwnedPointer):
         super(ValidationResponseSender, self).__init__(
             'sender_drop', initialized_ptr=sender_ptr)
 
-    def send(self, can_commit, result):
+    def send(self, block):
         _pylibexec('sender_send', self.pointer,
-                   ctypes.py_object((can_commit, result)))
+                   ctypes.py_object(block))
 
 
 def _libexec(name, *args):
