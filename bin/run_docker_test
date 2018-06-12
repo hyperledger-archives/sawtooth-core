@@ -72,6 +72,8 @@ def main():
 
     compose_down = compose + ['down', '--remove-orphans']
 
+    compose_build = compose + ['build']
+
     scrape = [
         'docker', 'ps', '-a',
         '--format={{.Names}},{{.Image}},{{.Label "install-type"}}',
@@ -112,7 +114,12 @@ def main():
             LOGGER.info("Bringing up with %s", str(compose_up))
 
             try:
-                # 1. Run the tests
+                # 1. Build test images
+                subprocess.run(
+                    compose_build,
+                    check=True
+                    )
+                # 2. Run the tests
                 subprocess.run(
                     compose_up,
                     check=True,
