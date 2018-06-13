@@ -107,7 +107,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         let mut public_key_file = OpenOptions::new()
             .write(true)
             .create(true)
-            .mode(0o640)
+            .mode(0o644)
             .open(public_key_path.as_path())
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
