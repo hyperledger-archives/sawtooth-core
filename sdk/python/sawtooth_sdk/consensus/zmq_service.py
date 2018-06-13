@@ -303,7 +303,7 @@ class ZmqService(Service):
             raise exceptions.ReceiveError(
                 'Failed with status {}'.format(status))
 
-        return response.block
+        return Block(response.block)
 
     def get_settings(self, block_id, settings):
         request = consensus_pb2.ConsensusSettingsGetRequest(

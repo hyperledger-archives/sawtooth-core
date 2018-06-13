@@ -258,7 +258,11 @@ class TestService(unittest.TestCase):
             content=consensus_pb2.ConsensusChainHeadGetRequest()
             .SerializeToString())
 
-        self.assertEqual(chain_head, block)
+        self.assertEqual(chain_head.block_id, b'block')
+        self.assertEqual(chain_head.previous_id, b'block0')
+        self.assertEqual(chain_head.signer_id, b'signer')
+        self.assertEqual(chain_head.block_num, 1)
+        self.assertEqual(chain_head.payload, b'test')
 
     def test_get_settings(self):
         self.mock_stream.send.return_value = self._make_future(
