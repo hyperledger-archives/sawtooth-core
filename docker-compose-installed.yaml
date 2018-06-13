@@ -246,3 +246,10 @@ services:
       dockerfile: integration/Dockerfile-installed
     image: sawtooth-integration:${ISOLATION_ID}
     container_name: sawtooth-integration-default
+
+  smallbank-workload:
+    build:
+      context: .
+      dockerfile: perf/smallbank_workload/Dockerfile-installed
+    image: sawtooth-smallbank-workload:${ISOLATION_ID}
+    container_name: sawtooth-smallbank-workload
