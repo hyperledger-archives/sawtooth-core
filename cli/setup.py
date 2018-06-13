@@ -19,6 +19,12 @@ import subprocess
 
 from setuptools import setup, find_packages
 
+conf_dir = "/etc/sawtooth"
+
+data_files = [
+    (conf_dir, ['cli.toml.example'])
+]
+
 setup(
     name='sawtooth-cli',
     version=subprocess.check_output(
@@ -31,6 +37,7 @@ setup(
         'colorlog', 'protobuf', 'sawtooth-signing', 'toml', 'PyYAML',
         'requests'
     ],
+    data_files=data_files,
     entry_points={
         'console_scripts': [
             'sawadm = sawtooth_cli.sawadm:main_wrapper',
