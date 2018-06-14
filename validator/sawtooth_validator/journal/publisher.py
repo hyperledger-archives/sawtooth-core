@@ -338,3 +338,6 @@ class BlockPublisher(OwnedPointer):
             ctypes.byref(c_result), ctypes.byref(c_result_len))
 
         return ffi.from_c_bytes(c_result, c_result_len)
+
+    def cancel_block(self):
+        self._call("cancel_block")

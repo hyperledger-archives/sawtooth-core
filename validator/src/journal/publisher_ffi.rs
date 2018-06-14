@@ -37,6 +37,7 @@ pub enum ErrorCode {
     BlockInProgress = 0x03,
     BlockNotInitialized = 0x04,
     BlockEmpty = 0x05,
+    BlockNotInProgress = 0x06,
 }
 
 macro_rules! check_null {
@@ -423,4 +424,16 @@ pub extern "C" fn block_publisher_has_batch(
         *has = (*(publisher as *mut BlockPublisher)).has_batch(batch_id);
     }
     ErrorCode::Success
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) -> ErrorCode {
+    check_null!(publisher);
+
+    unsafe {
+        match (*(publisher as *mut BlockPublisher)).cancel_block() {
+            Ok(_) => ErrorCode::Success,
+            Err(_) => ErrorCode::BlockNotInProgress,
+        }
+    }
 }
