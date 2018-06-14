@@ -351,10 +351,10 @@ class TransactionExecutorThread:
                 {signature: fut}
 
     def remove_broken_connection(self, connection_id):
+        self._processor_manager.remove(connection_id)
         if connection_id not in self._open_futures:
             # Connection has already been removed.
             return
-        self._processor_manager.remove(connection_id)
         futures_to_set = [
             self._open_futures[connection_id][key]
             for key in self._open_futures[connection_id]
@@ -477,8 +477,7 @@ class TransactionExecutor:
 
     def _remove_broken_connection(self, connection_id):
         for t in self._alive_threads:
-            if not t.is_done():
-                t.remove_broken_connection(connection_id)
+            t.remove_broken_connection(connection_id)
 
     def execute(self, scheduler):
         self._remove_done_threads()
