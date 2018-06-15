@@ -97,7 +97,6 @@ impl BlockPublisherState {
 pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
-    check_publish_block_frequency: Duration,
     batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
     block_wrapper_class: PyObject,
@@ -126,7 +125,6 @@ impl Clone for SyncBlockPublisher {
 
         SyncBlockPublisher {
             state,
-            check_publish_block_frequency: self.check_publish_block_frequency.clone(),
             batch_observers: self.batch_observers
                 .iter()
                 .map(|i| i.clone_ref(py))
@@ -493,7 +491,6 @@ impl BlockPublisher {
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
-        check_publish_block_frequency: Duration,
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
         block_wrapper_class: PyObject,
@@ -522,7 +519,6 @@ impl BlockPublisher {
             data_dir,
             config_dir,
             permission_verifier,
-            check_publish_block_frequency,
             batch_observers,
             batch_injector_factory,
             block_wrapper_class,
@@ -545,10 +541,9 @@ impl BlockPublisher {
         let block_publisher = self.publisher.clone();
         builder
             .spawn(move || {
-                let check_period = { block_publisher.check_publish_block_frequency };
                 loop {
                     // Receive and process a batch
-                    match batch_rx.get(check_period) {
+                    match batch_rx.get(Duration::from_millis(100)) {
                         Err(err) => match err {
                             BatchQueueError::Timeout => {
                                 if block_publisher.exit.get() {
