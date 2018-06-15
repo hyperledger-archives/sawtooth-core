@@ -404,14 +404,14 @@ class Validator:
     def start(self):
         self._component_dispatcher.start()
         self._component_service.start()
-        self._consensus_dispatcher.start()
-        self._consensus_service.start()
         if self._genesis_controller.requires_genesis():
             self._genesis_controller.start(self._start)
         else:
             self._start()
 
     def _start(self):
+        self._consensus_dispatcher.start()
+        self._consensus_service.start()
         self._network_dispatcher.start()
         self._network_service.start()
 
