@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, SendError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
 use execution::py_executor::PyExecutor;
@@ -42,22 +42,6 @@ const INITIAL_PUBLISH_COUNT: usize = 30;
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
         metrics::get_collector("sawtooth_validator.publisher");
-}
-
-/// Collects and tracks the changes in various states of the
-/// Publisher. For example it tracks `consensus_ready`,
-/// which denotes entering or exiting this state.
-#[derive(Clone)]
-struct PublisherLoggingStates {
-    consensus_ready: bool,
-}
-
-impl PublisherLoggingStates {
-    fn new() -> Self {
-        PublisherLoggingStates {
-            consensus_ready: true,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -83,7 +67,6 @@ pub struct BlockPublisherState {
     pub chain_head: Option<BlockWrapper>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
-    publisher_logging_states: PublisherLoggingStates,
 }
 
 impl BlockPublisherState {
@@ -98,7 +81,6 @@ impl BlockPublisherState {
             chain_head,
             candidate_block,
             pending_batches,
-            publisher_logging_states: PublisherLoggingStates::new(),
         }
     }
 }
@@ -109,7 +91,6 @@ pub struct SyncBlockPublisher {
     check_publish_block_frequency: Duration,
     batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
-    consensus_factory: PyObject,
     block_wrapper_class: PyObject,
     block_header_class: PyObject,
     block_builder_class: PyObject,
@@ -142,7 +123,6 @@ impl Clone for SyncBlockPublisher {
                 .map(|i| i.clone_ref(py))
                 .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            consensus_factory: self.consensus_factory.clone_ref(py),
             block_wrapper_class: self.block_wrapper_class.clone_ref(py),
             block_header_class: self.block_header_class.clone_ref(py),
             block_builder_class: self.block_builder_class.clone_ref(py),
@@ -255,8 +235,6 @@ impl SyncBlockPublisher {
 
             let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
-            let consensus =
-                self.load_consensus(py, previous_block, &state_view, public_key.clone());
             let batch_injectors = self.load_injectors(py, &previous_block.block.header_signature);
 
             let kwargs = PyDict::new(py);
@@ -281,21 +259,6 @@ impl SyncBlockPublisher {
                 .call(py, (block_header,), None)
                 .expect("BlockBuilder could not be constructed");
 
-            let consensus_check: bool = consensus
-                .call_method(
-                    py,
-                    "initialize_block",
-                    (block_builder.getattr(py, "block_header").unwrap(),),
-                    None,
-                )
-                .expect("Call to consensus.initialize_block failed")
-                .extract(py)
-                .unwrap();
-
-            if !consensus_check {
-                return Err(InitializeBlockError::ConsensusNotReady);
-            }
-
             let scheduler = state
                 .transaction_executor
                 .create_scheduler(&previous_block.block.state_root_hash)
@@ -313,7 +276,6 @@ impl SyncBlockPublisher {
 
             CandidateBlock::new(
                 block_store,
-                consensus,
                 scheduler,
                 committed_txn_cache,
                 block_builder,
@@ -392,49 +354,7 @@ impl SyncBlockPublisher {
             COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
         blocks_published_count.inc();
 
-        self.on_chain_updated(state, None, Vec::new(), Vec::new());
-    }
-
-    fn load_consensus(
-        &self,
-        py: Python,
-        block: &BlockWrapper,
-        state_view: &PyObject,
-        public_key: String,
-    ) -> PyObject {
-        let kwargs = PyDict::new(py);
-        kwargs
-            .set_item(py, "block_cache", self.block_cache.clone_ref(py))
-            .unwrap();
-        kwargs
-            .set_item(
-                py,
-                "state_view_factory",
-                self.state_view_factory.clone_ref(py),
-            )
-            .unwrap();
-        kwargs
-            .set_item(py, "batch_publisher", self.batch_publisher.clone_ref(py))
-            .unwrap();
-        kwargs
-            .set_item(py, "data_dir", self.data_dir.clone_ref(py))
-            .unwrap();
-        kwargs
-            .set_item(py, "config_dir", self.config_dir.clone_ref(py))
-            .unwrap();
-        kwargs
-            .set_item(py, "validator_id", public_key.clone())
-            .unwrap();
-        let consensus_block_publisher = self.consensus_factory
-            .call_method(
-                py,
-                "get_configured_consensus_module",
-                (block.header_signature(), state_view),
-                None,
-            )
-            .expect("ConsensusFactory has no method get_configured_consensus_module")
-            .call_method(py, "BlockPublisher", NoArgs, Some(&kwargs));
-        consensus_block_publisher.unwrap()
+        block_id
     }
 
     fn get_public_key(&self, py: Python) -> String {
@@ -453,20 +373,6 @@ impl SyncBlockPublisher {
 
     fn can_build_block(&self, state: &BlockPublisherState) -> bool {
         state.chain_head.is_some() && state.pending_batches.len() > 0
-    }
-
-    fn log_consensus_state(&self, state: &mut BlockPublisherState, ready: bool) {
-        if ready {
-            if !state.publisher_logging_states.consensus_ready {
-                state.publisher_logging_states.consensus_ready = true;
-                debug!("Consensus is ready to build candidate block");
-            }
-        } else {
-            if state.publisher_logging_states.consensus_ready {
-                state.publisher_logging_states.consensus_ready = false;
-                debug!("Consensus not ready to build candidate block");
-            }
-        }
     }
 
     pub fn on_batch_received(&self, batch: Batch) {
@@ -493,38 +399,6 @@ impl SyncBlockPublisher {
             if let Some(ref mut candidate_block) = state.candidate_block {
                 if candidate_block.can_add_batch() {
                     candidate_block.add_batch(batch);
-                }
-            }
-        }
-    }
-
-    pub fn on_check_publish_block(&mut self, force: bool) {
-        let mut state = self.state
-            .write()
-            .expect("RwLock was poisoned during a write lock");
-        if !self.is_building_block(&state) && self.can_build_block(&state) {
-            let chain_head = state.chain_head.clone().unwrap();
-            match self.initialize_block(&mut state, &chain_head) {
-                Ok(_) => self.log_consensus_state(&mut state, true),
-                Err(InitializeBlockError::ConsensusNotReady) => {
-                    self.log_consensus_state(&mut state, false)
-                }
-                Err(InitializeBlockError::InvalidState) => {
-                    warn!("Tried to initialize block but block already initialized.")
-                }
-            }
-        }
-
-        if self.is_building_block(&state) {
-            if let Ok(result) = self.finalize_block(&mut state, force) {
-                if result.block.is_some() {
-                    self.publish_block(
-                        &mut state,
-                        result.block.unwrap(),
-                        result.injected_batch_ids,
-                    );
-                } else {
-                    debug!("FinalizeBlockResult.block was None");
                 }
             }
         }
@@ -562,7 +436,6 @@ impl BlockPublisher {
         check_publish_block_frequency: Duration,
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
-        consensus_factory: PyObject,
         block_wrapper_class: PyObject,
         block_header_class: PyObject,
         block_builder_class: PyObject,
@@ -592,7 +465,6 @@ impl BlockPublisher {
             check_publish_block_frequency,
             batch_observers,
             batch_injector_factory,
-            consensus_factory,
             block_wrapper_class,
             block_header_class,
             block_builder_class,
@@ -610,10 +482,9 @@ impl BlockPublisher {
     pub fn start(&mut self) {
         let builder = thread::Builder::new().name("PublisherThread".into());
         let mut batch_rx = self.batch_rx.take().unwrap();
-        let mut block_publisher = self.publisher.clone();
+        let block_publisher = self.publisher.clone();
         builder
             .spawn(move || {
-                let mut now = Instant::now();
                 let check_period = { block_publisher.check_publish_block_frequency };
                 loop {
                     // Receive and process a batch
@@ -628,13 +499,6 @@ impl BlockPublisher {
                         },
                         Ok(batch) => {
                             block_publisher.on_batch_received(batch);
-                        }
-                    }
-                    if now.elapsed() >= check_period {
-                        block_publisher.on_check_publish_block(false);
-                        now = Instant::now();
-                        if block_publisher.exit.get() {
-                            break;
                         }
                     }
                 }
