@@ -19,7 +19,6 @@ use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
-use std::time::Duration;
 
 use cpython::{PyClone, PyList, PyObject, Python};
 
@@ -59,7 +58,6 @@ pub extern "C" fn block_publisher_new(
     data_dir_ptr: *mut py_ffi::PyObject,
     config_dir_ptr: *mut py_ffi::PyObject,
     permission_verifier_ptr: *mut py_ffi::PyObject,
-    check_publish_block_frequency_ptr: *mut py_ffi::PyObject,
     batch_observers_ptr: *mut py_ffi::PyObject,
     batch_injector_factory_ptr: *mut py_ffi::PyObject,
     block_publisher_ptr: *mut *const c_void,
@@ -76,7 +74,6 @@ pub extern "C" fn block_publisher_new(
         data_dir_ptr,
         config_dir_ptr,
         permission_verifier_ptr,
-        check_publish_block_frequency_ptr,
         batch_observers_ptr,
         batch_injector_factory_ptr
     );
@@ -94,8 +91,6 @@ pub extern "C" fn block_publisher_new(
     let data_dir = unsafe { PyObject::from_borrowed_ptr(py, data_dir_ptr) };
     let config_dir = unsafe { PyObject::from_borrowed_ptr(py, config_dir_ptr) };
     let permission_verifier = unsafe { PyObject::from_borrowed_ptr(py, permission_verifier_ptr) };
-    let check_publish_block_frequency =
-        unsafe { PyObject::from_borrowed_ptr(py, check_publish_block_frequency_ptr) };
     let batch_observers = unsafe { PyObject::from_borrowed_ptr(py, batch_observers_ptr) };
     let batch_injector_factory =
         unsafe { PyObject::from_borrowed_ptr(py, batch_injector_factory_ptr) };
@@ -107,8 +102,6 @@ pub extern "C" fn block_publisher_new(
             .extract(py)
             .expect("Got chain head that wasn't a BlockWrapper")
     };
-    let check_publish_block_frequency: Duration =
-        Duration::from_millis(check_publish_block_frequency.extract(py).unwrap());
     let batch_observers: Vec<PyObject> = batch_observers
         .extract::<PyList>(py)
         .unwrap()
@@ -160,7 +153,6 @@ pub extern "C" fn block_publisher_new(
         data_dir,
         config_dir,
         permission_verifier,
-        check_publish_block_frequency,
         batch_observers,
         batch_injector_factory,
         block_wrapper_class,

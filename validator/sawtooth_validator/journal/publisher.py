@@ -173,7 +173,6 @@ class BlockPublisher(OwnedPointer):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 check_publish_block_frequency,
                  batch_observers,
                  batch_injector_factory=None):
         """
@@ -213,7 +212,6 @@ class BlockPublisher(OwnedPointer):
             ctypes.py_object(data_dir),
             ctypes.py_object(config_dir),
             ctypes.py_object(permission_verifier),
-            ctypes.py_object(check_publish_block_frequency * 1000),
             ctypes.py_object(batch_observers),
             ctypes.py_object(batch_injector_factory),
             ctypes.byref(self.pointer)))
