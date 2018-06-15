@@ -93,7 +93,15 @@ impl MerkleDatabase {
             vec![]
         } else if change_log.get_successors().len() == 0 {
             // deleting the tip of a trie lineage
-            for hash in change_log.get_additions() {
+
+            let mut deletion_candidates: HashSet<Vec<u8>> =
+                MerkleDatabase::remove_duplicate_hashes(
+                    &mut db_writer,
+                    &root_bytes,
+                    change_log.take_additions(),
+                )?;
+
+            for hash in deletion_candidates.iter() {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
             }
@@ -114,36 +122,17 @@ impl MerkleDatabase {
                 write_change_log(&mut db_writer, parent_root_bytes, &parent_change_log)?;
             }
 
-            change_log.get_additions().to_vec()
+            deletion_candidates.into_iter().collect()
         } else {
             // deleting a parent
             let mut successor = change_log.take_successors().pop().unwrap();
 
             let mut deletion_candidates: HashSet<Vec<u8>> =
-                successor.take_deletions().into_iter().collect();
-            {
-                let mut cursor = db_writer.index_cursor(CHANGE_LOG_INDEX)?;
-
-                let mut change_log_entry = cursor.first();
-                loop {
-                    match change_log_entry.as_ref() {
-                        Some((root_hash_bytes, change_log_bytes))
-                            if root_hash_bytes != &root_bytes =>
-                        {
-                            let alternate_change_log: ChangeLogEntry =
-                                protobuf::parse_from_bytes(&change_log_bytes)?;
-                            for key in alternate_change_log.get_additions() {
-                                deletion_candidates.remove(key);
-                            }
-                        }
-                        // we found the same entry we're pruning
-                        Some(_) => (),
-                        None => break,
-                    }
-
-                    change_log_entry = cursor.next();
-                }
-            }
+                MerkleDatabase::remove_duplicate_hashes(
+                    &mut db_writer,
+                    &root_bytes,
+                    successor.take_deletions(),
+                )?;
 
             for hash in deletion_candidates.iter() {
                 let hash_hex = ::hex::encode(hash);
@@ -157,6 +146,35 @@ impl MerkleDatabase {
 
         db_writer.commit()?;
         Ok(removed_addresses.iter().map(::hex::encode).collect())
+    }
+
+    fn remove_duplicate_hashes(
+        db_writer: &mut LmdbDatabaseWriter,
+        root_bytes: &Vec<u8>,
+        deletions: protobuf::RepeatedField<Vec<u8>>,
+    ) -> Result<HashSet<Vec<u8>>, StateDatabaseError> {
+        let mut deletion_candidates: HashSet<Vec<u8>> = deletions.into_iter().collect();
+        let mut cursor = db_writer.index_cursor(CHANGE_LOG_INDEX)?;
+
+        let mut change_log_entry = cursor.first();
+        loop {
+            match change_log_entry.as_ref() {
+                Some((root_hash_bytes, change_log_bytes)) if root_hash_bytes != root_bytes => {
+                    let alternate_change_log: ChangeLogEntry =
+                        protobuf::parse_from_bytes(&change_log_bytes)?;
+                    for key in alternate_change_log.get_additions() {
+                        deletion_candidates.remove(key);
+                    }
+                }
+                // we found the same entry we're pruning
+                Some(_) => (),
+                None => break,
+            }
+
+            change_log_entry = cursor.next();
+        }
+
+        Ok(deletion_candidates)
     }
 
     /// Returns the current merkle root for this MerkleDatabase
@@ -1218,6 +1236,61 @@ mod tests {
                     .get_deletions()
                     .len() - 1,
                 MerkleDatabase::prune(&db, &parent_root)
+                    .expect("Prune should have no errors")
+                    .len()
+            );
+
+            assert_value_at_address(&merkle_db, "ab0000", "0001");
+        })
+    }
+    #[test]
+    /// This test creates a merkle trie with multiple entries and produces a
+    /// successor with duplicate That changes one new leaf, followed by a second
+    /// successor that produces a leaf with the same hash.  When the pruning the
+    /// last root, the duplicate leaf node is not pruned as well.
+    fn merkle_trie_pruning_successor_duplicate_leaves() {
+        run_test(|merkle_path| {
+            let db = make_lmdb(&merkle_path);
+            let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
+            let mut updates: HashMap<String, Vec<u8>> = vec![
+                ("ab0000".to_string(), "0001".as_bytes().to_vec()),
+                ("ab0001".to_string(), "0002".as_bytes().to_vec()),
+                ("ab0002".to_string(), "0003".as_bytes().to_vec()),
+            ].into_iter()
+                .collect();
+
+            let parent_root = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+
+            // create the middle root
+            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+            let mut updates: HashMap<String, Vec<u8>> = vec![
+                ("ab0000".to_string(), "change0".as_bytes().to_vec()),
+                ("ab0001".to_string(), "change1".as_bytes().to_vec()),
+            ].into_iter()
+                .collect();
+            let successor_root_middle = merkle_db
+                .update(&updates, &[], false)
+                .expect("Update failed to work");
+
+            // create the last root
+            merkle_db
+                .set_merkle_root(successor_root_middle.clone())
+                .unwrap();
+            // Set the value back to the original
+            let successor_root_last = merkle_db
+                .set("ab0000", "0001".as_bytes())
+                .expect("Set failed to work");
+            let successor_root_bytes =
+                ::hex::decode(successor_root_last.clone()).expect("Proper hex");
+
+            // set back to the parent root
+            merkle_db.set_merkle_root(parent_root);
+            let mut last_change_log = expect_change_log(&db, &successor_root_bytes);
+            assert_eq!(
+                last_change_log.get_additions().len() - 1,
+                MerkleDatabase::prune(&db, &successor_root_last)
                     .expect("Prune should have no errors")
                     .len()
             );
