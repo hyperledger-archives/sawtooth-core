@@ -21,8 +21,13 @@ import logging
 
 from enum import IntEnum
 
+from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY, LIBRARY
 from sawtooth_validator.ffi import OwnedPointer
+
+from sawtooth_validator.consensus.handlers import BlockEmpty
+from sawtooth_validator.consensus.handlers import BlockInProgress
+from sawtooth_validator.consensus.handlers import BlockNotInitialized
 
 LOGGER = logging.getLogger(__name__)
 
@@ -144,6 +149,9 @@ class BlockPublisherErrorCode(IntEnum):
     Success = 0
     NullPointerProvided = 0x01
     InvalidInput = 0x02
+    BlockInProgress = 0x03
+    BlockNotInitialized = 0x04
+    BlockEmpty = 0x05
 
 
 class BlockPublisher(OwnedPointer):
@@ -226,6 +234,12 @@ class BlockPublisher(OwnedPointer):
             raise TypeError("Provided null pointer(s)")
         elif res == BlockPublisherErrorCode.InvalidInput:
             raise ValueError("Input was not valid ")
+        elif res == BlockPublisherErrorCode.BlockInProgress:
+            raise BlockInProgress("A block is already in progress")
+        elif res == BlockPublisherErrorCode.BlockNotInitialized:
+            raise BlockNotInitialized("A block is not initialized")
+        elif res == BlockPublisherErrorCode.BlockEmpty:
+            raise BlockEmpty("The block is empty")
 
     def batch_sender(self):
         sender_ptr = ctypes.c_void_p()
@@ -252,12 +266,6 @@ class BlockPublisher(OwnedPointer):
             ctypes.byref(c_limit))
 
         return (c_length.value, c_limit.value)
-
-    def on_check_publish_block(self, force=False):
-
-        self._py_call(
-            'on_check_publish_block',
-            ctypes.c_bool(force))
 
     def on_batch_received(self, batch):
         self._py_call(
@@ -307,3 +315,25 @@ class BlockPublisher(OwnedPointer):
             ctypes.byref(has))
 
         return has
+
+    def initialize_block(self, block):
+        self._py_call('initialize_block', ctypes.py_object(block))
+
+    def summarize_block(self, force=False):
+        (c_result, c_result_len) = ffi.prepare_byte_result()
+        self._call(
+            'summarize_block',
+            ctypes.c_bool(force),
+            ctypes.byref(c_result), ctypes.byref(c_result_len))
+
+        return ffi.from_c_bytes(c_result, c_result_len)
+
+    def finalize_block(self, consensus=None, force=False):
+        (c_result, c_result_len) = ffi.prepare_byte_result()
+        self._call(
+            'finalize_block',
+            consensus, len(consensus),
+            ctypes.c_bool(force),
+            ctypes.byref(c_result), ctypes.byref(c_result_len))
+
+        return ffi.from_c_bytes(c_result, c_result_len)
