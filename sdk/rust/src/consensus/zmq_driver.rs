@@ -177,6 +177,8 @@ pub fn register(
 
     // Keep trying to register until the response is something other
     // than NOT_READY.
+
+    let mut retry_delay = Duration::from_millis(100);
     loop {
         match msg.get_message_type() {
             Message_MessageType::CONSENSUS_REGISTER_RESPONSE => {
@@ -197,6 +199,8 @@ pub fn register(
                         break;
                     }
                     ConsensusRegisterResponse_Status::NOT_READY => {
+                        thread::sleep(retry_delay);
+                        retry_delay = retry_delay * 2;
                         msg = sender
                             .send(
                                 Message_MessageType::CONSENSUS_REGISTER_REQUEST,
