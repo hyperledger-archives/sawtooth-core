@@ -31,7 +31,7 @@ use std::time::Duration;
 use execution::execution_platform::ExecutionPlatform;
 use execution::py_executor::PyExecutor;
 use journal::block_wrapper::BlockWrapper;
-use journal::candidate_block::{CandidateBlock, CandidateBlockError, FinalizeBlockResult};
+use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
@@ -46,15 +46,13 @@ lazy_static! {
 
 #[derive(Debug)]
 pub enum InitializeBlockError {
-    ConsensusNotReady,
-    InvalidState,
+    BlockInProgress,
 }
 
 #[derive(Debug)]
 pub enum FinalizeBlockError {
-    ConsensusNotReady,
-    NoPendingBatchesRemaining,
-    InvalidState,
+    BlockNotInitialized,
+    BlockEmpty,
 }
 
 #[derive(Debug)]
@@ -82,6 +80,12 @@ impl BlockPublisherState {
             candidate_block,
             pending_batches,
         }
+    }
+
+    pub fn get_previous_block_id(&self) -> Option<String> {
+        let candidate_block = self.candidate_block.as_ref();
+        let optional_block_id = candidate_block.map(|cb| cb.previous_block_id());
+        optional_block_id
     }
 }
 
@@ -211,7 +215,7 @@ impl SyncBlockPublisher {
     ) -> Result<(), InitializeBlockError> {
         if state.candidate_block.is_some() {
             warn!("Tried to initialize block but block already initialized");
-            return Err(InitializeBlockError::InvalidState);
+            return Err(InitializeBlockError::BlockInProgress);
         }
         let mut candidate_block = {
             let gil = Python::acquire_gil();
@@ -301,53 +305,104 @@ impl SyncBlockPublisher {
     fn finalize_block(
         &self,
         state: &mut BlockPublisherState,
+        consensus_data: Vec<u8>,
         force: bool,
-    ) -> Result<FinalizeBlockResult, FinalizeBlockError> {
+    ) -> Result<String, FinalizeBlockError> {
         let mut option_result = None;
         if let Some(ref mut candidate_block) = &mut state.candidate_block {
-            option_result = Some(candidate_block.finalize(force));
+            option_result = Some(candidate_block.finalize(consensus_data, force));
         }
 
-        if let Some(result) = option_result {
-            match result {
+        let res = match option_result {
+            Some(result) => match result {
                 Ok(finalize_result) => {
                     state.pending_batches.update(
                         finalize_result.remaining_batches.clone(),
                         finalize_result.last_batch.clone(),
                     );
                     state.candidate_block = None;
-                    Ok(finalize_result)
-                }
-                Err(err) => Err(match err {
-                    CandidateBlockError::ConsensusNotReady => FinalizeBlockError::ConsensusNotReady,
-                    CandidateBlockError::NoPendingBatchesRemaining => {
-                        FinalizeBlockError::NoPendingBatchesRemaining
+                    match finalize_result.block {
+                        Some(block) => {
+                            Some(Ok(self.publish_block(
+                            block,
+                            finalize_result.injected_batch_ids,
+                        )))
+                        },
+                        None => {
+                            None
+                        },
                     }
-                }),
-            }
+                }
+                Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
+            },
+            None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
+        };
+        if let Some(val) = res {
+            val
         } else {
-            Err(FinalizeBlockError::InvalidState)
+            self.restart_block(state);
+            Err(FinalizeBlockError::BlockEmpty)
         }
     }
 
-    fn publish_block(
+    fn get_block(&self, block_id: &str) -> BlockWrapper {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.block_cache
+            .get_item(py, block_id)
+            .expect("BlockCache has not implemented __get_item__")
+            .extract::<BlockWrapper>(py)
+            .expect("Unable to extract BlockWrapper")
+    }
+
+    fn restart_block(&self, state: &mut BlockPublisherState) {
+        if let Some(previous_block) = state
+            .get_previous_block_id()
+            .map(|previous_block_id| self.get_block(previous_block_id.as_str()))
+        {
+            state.candidate_block = None;
+            self.initialize_block(state, &previous_block)
+                .expect("Initialization failed unexpectedly");
+        }
+    }
+
+    fn summarize_block(
         &self,
         state: &mut BlockPublisherState,
-        block: PyObject,
-        injected_batches: Vec<String>,
-    ) {
+        force: bool,
+    ) -> Result<Vec<u8>, FinalizeBlockError> {
+        let result = match state.candidate_block {
+            None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
+            Some(ref mut candidate_block) => match candidate_block.summarize(force) {
+                Ok(summary) => {
+                    if let Some(s) = summary {
+                        Some(Ok(s))
+                    } else {
+                        None
+                    }
+                }
+                Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
+            },
+        };
+        if let Some(res) = result {
+            res
+        } else {
+            self.restart_block(state);
+            Err(FinalizeBlockError::BlockEmpty)
+        }
+    }
+
+    fn publish_block(&self, block: PyObject, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let block: Block = block
             .extract(py)
             .expect("Got block to publish that wasn't a BlockWrapper");
 
-        let kwargs = PyDict::new(py);
-        kwargs
-            .set_item(py, "keep_batches", injected_batches)
-            .unwrap();
+        let block_id = block.header_signature.clone();
+
         self.block_sender
-            .call_method(py, "send", (block,), Some(&kwargs))
+            .call_method(py, "send", (block, injected_batches), None)
             .expect("BlockSender has no method send");
 
         let mut blocks_published_count =
@@ -517,6 +572,29 @@ impl BlockPublisher {
 
     pub fn batch_sender(&self) -> IncomingBatchSender {
         self.batch_tx.clone()
+    }
+
+    pub fn initialize_block(
+        &self,
+        previous_block: BlockWrapper,
+    ) -> Result<(), InitializeBlockError> {
+        let mut state = self.publisher.state.write().expect("RwLock was poisoned");
+        self.publisher.initialize_block(&mut state, &previous_block)
+    }
+
+    pub fn finalize_block(
+        &self,
+        consensus_data: Vec<u8>,
+        force: bool,
+    ) -> Result<String, FinalizeBlockError> {
+        let mut state = self.publisher.state.write().expect("RwLock is poisoned");
+        self.publisher
+            .finalize_block(&mut state, consensus_data, force)
+    }
+
+    pub fn summarize_block(&self, force: bool) -> Result<Vec<u8>, FinalizeBlockError> {
+        let mut state = self.publisher.state.write().expect("RwLock is poisoned");
+        self.publisher.summarize_block(&mut state, force)
     }
 
     pub fn pending_batch_info(&self) -> (i32, i32) {
