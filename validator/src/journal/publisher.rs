@@ -18,7 +18,7 @@
 use batch::Batch;
 use block::Block;
 
-use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
+use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, Python};
 use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
@@ -158,18 +158,26 @@ impl SyncBlockPublisher {
     ) {
         if let Some(chain_head) = chain_head {
             info!("Now building on top of block, {}", chain_head);
-            self.cancel_block(state);
-            state
-                .pending_batches
-                .update_limit(chain_head.block.batches.len());
+            let batches_len = chain_head.block.batches.len();
+            state.chain_head = Some(chain_head);
+            let mut previous_block_id = None;
+            if self.is_building_block(state) {
+                previous_block_id = state
+                    .get_previous_block_id()
+                    .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
+                    .unwrap_or(None);
+                self.cancel_block(state);
+            }
+
+            state.pending_batches.update_limit(batches_len);
             state
                 .pending_batches
                 .rebuild(Some(committed_batches), Some(uncommitted_batches));
-            state.chain_head = Some(chain_head);
-        } else {
-            info!("Block publishing is suspended until new chain head arrives");
-            self.cancel_block(state);
-            state.chain_head = None;
+
+            if let Some(block_id) = previous_block_id {
+                self.initialize_block(state, &block_id)
+                    .expect("Unable to initialize block after canceling");
+            }
         }
     }
 
@@ -325,15 +333,11 @@ impl SyncBlockPublisher {
                     );
                     state.candidate_block = None;
                     match finalize_result.block {
-                        Some(block) => {
-                            Some(Ok(self.publish_block(
+                        Some(block) => Some(Ok(self.publish_block(
                             block,
                             finalize_result.injected_batch_ids,
-                        )))
-                        },
-                        None => {
-                            None
-                        },
+                        ))),
+                        None => None,
                     }
                 }
                 Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
@@ -348,13 +352,15 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn get_block(&self, block_id: &str) -> BlockWrapper {
+    fn get_block_checked(&self, block_id: &str) -> Result<BlockWrapper, PyErr> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        self.block_cache
-            .get_item(py, block_id)
-            .expect("BlockCache has not implemented __get_item__")
-            .extract::<BlockWrapper>(py)
+        let res = self.block_cache.get_item(py, block_id);
+        res.map(|i| i.extract::<BlockWrapper>(py))?
+    }
+
+    fn get_block(&self, block_id: &str) -> BlockWrapper {
+        self.get_block_checked(block_id)
             .expect("Unable to extract BlockWrapper")
     }
 
