@@ -16,14 +16,17 @@
  */
 use py_ffi;
 use std::ffi::CStr;
+use std::mem;
 use std::os::raw::{c_char, c_void};
+use std::slice;
 use std::time::Duration;
 
 use cpython::{PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use journal::block_wrapper::BlockWrapper;
-use journal::publisher::{BlockPublisher, IncomingBatchSender};
+use journal::publisher::{BlockPublisher, FinalizeBlockError, IncomingBatchSender,
+                         InitializeBlockError};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -31,6 +34,9 @@ pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,
     InvalidInput = 0x02,
+    BlockInProgress = 0x03,
+    BlockNotInitialized = 0x04,
+    BlockEmpty = 0x05,
 }
 
 macro_rules! check_null {
@@ -119,10 +125,6 @@ pub extern "C" fn block_publisher_new(
         )
         .expect("Unable to create BatchPublisher");
 
-    let consensus_factory_mod = py.import("sawtooth_validator.journal.consensus.consensus_factory")
-        .expect("Unable to import 'sawtooth_validator.journal.consensus.consensus_factory'");
-    let consensus_factory = consensus_factory_mod.get(py, "ConsensusFactory").unwrap();
-
     let block_wrapper_mod = py.import("sawtooth_validator.journal.block_wrapper")
         .expect("Unable to import 'sawtooth_validator.journal.block_wrapper'");
 
@@ -160,7 +162,6 @@ pub extern "C" fn block_publisher_new(
         check_publish_block_frequency,
         batch_observers,
         batch_injector_factory,
-        consensus_factory,
         block_wrapper_class,
         block_header_class,
         block_builder_class,
@@ -178,21 +179,6 @@ pub extern "C" fn block_publisher_new(
 pub extern "C" fn block_publisher_drop(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);
     unsafe { Box::from_raw(publisher as *mut BlockPublisher) };
-    ErrorCode::Success
-}
-
-// block_publisher_on_check_publish_block is used in tests
-#[no_mangle]
-pub extern "C" fn block_publisher_on_check_publish_block(
-    publisher: *mut c_void,
-    force: bool,
-) -> ErrorCode {
-    check_null!(publisher);
-    unsafe {
-        (*(publisher as *mut BlockPublisher))
-            .publisher
-            .on_check_publish_block(force)
-    };
     ErrorCode::Success
 }
 
@@ -259,6 +245,73 @@ pub extern "C" fn block_publisher_pending_batch_info(
         *limit = info.1;
     }
     ErrorCode::Success
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_initialize_block(
+    publisher: *mut c_void,
+    previous_block: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let block = unsafe {
+        PyObject::from_borrowed_ptr(py, previous_block)
+            .extract::<BlockWrapper>(py)
+            .unwrap()
+    };
+
+    match unsafe { (*(publisher as *mut BlockPublisher)).initialize_block(block) } {
+        Err(InitializeBlockError::BlockInProgress) => ErrorCode::BlockInProgress,
+        Ok(_) => ErrorCode::Success,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_finalize_block(
+    publisher: *mut c_void,
+    consensus: *const u8,
+    consensus_len: usize,
+    force: bool,
+    result: *mut *const u8,
+    result_len: *mut usize,
+) -> ErrorCode {
+    check_null!(publisher, consensus);
+    let consensus = unsafe { slice::from_raw_parts(consensus, consensus_len).to_vec() };
+    match unsafe { (*(publisher as *mut BlockPublisher)).finalize_block(consensus, force) } {
+        Err(FinalizeBlockError::BlockNotInitialized) => ErrorCode::BlockNotInitialized,
+        Err(FinalizeBlockError::BlockEmpty) => ErrorCode::BlockEmpty,
+        Ok(block_id) => unsafe {
+            *result = block_id.as_ptr();
+            *result_len = block_id.as_bytes().len();
+
+            mem::forget(block_id);
+
+            ErrorCode::Success
+        },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_summarize_block(
+    publisher: *mut c_void,
+    force: bool,
+    result: *mut *const u8,
+    result_len: *mut usize,
+) -> ErrorCode {
+    check_null!(publisher);
+
+    match unsafe { (*(publisher as *mut BlockPublisher)).summarize_block(force) } {
+        Err(FinalizeBlockError::BlockEmpty) => ErrorCode::BlockEmpty,
+        Err(FinalizeBlockError::BlockNotInitialized) => ErrorCode::BlockNotInitialized,
+        Ok(consensus) => unsafe {
+            *result = consensus.as_ptr();
+            *result_len = consensus.as_slice().len();
+
+            mem::forget(result);
+
+            ErrorCode::Success
+        },
+    }
 }
 
 #[no_mangle]
