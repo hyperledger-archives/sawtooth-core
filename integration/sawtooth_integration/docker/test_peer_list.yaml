@@ -36,7 +36,8 @@ services:
         sawtooth-validator -vv \
             --endpoint tcp://validator-0:8800 \
             --bind component:tcp://eth0:4004 \
-            --bind network:tcp://eth0:8800
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
     \""
     stop_signal: SIGKILL
 
@@ -58,6 +59,7 @@ services:
           --endpoint tcp://validator-1:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5005 \
           --peers tcp://validator-0:8800
     \""
     stop_signal: SIGKILL
@@ -81,6 +83,7 @@ services:
           --endpoint tcp://validator-2:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5005 \
           --peers tcp://validator-1:8800
     \""
     stop_signal: SIGKILL
@@ -104,6 +107,7 @@ services:
           --endpoint tcp://validator-3:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5005 \
           --peers tcp://validator-1:8800
     \""
     stop_signal: SIGKILL
@@ -127,8 +131,64 @@ services:
           --endpoint tcp://validator-4:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5005 \
           --peers tcp://validator-2:8800,tcp://validator-3:8800
     \""
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-0:5005 -v
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-1:5005 -v
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-2:5005 -v
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-3:5005 -v
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-4:5005 -v
     stop_signal: SIGKILL
 
   rest-api-0:
