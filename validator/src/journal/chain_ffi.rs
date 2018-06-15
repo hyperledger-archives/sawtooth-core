@@ -373,12 +373,16 @@ pub extern "C" fn chain_controller_chain_head(
 ) -> ErrorCode {
     check_null!(chain_controller);
     unsafe {
-        let chain_head = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator>))
-            .chain_head();
-
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
+
+        let controller = (*(chain_controller
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
+            .light_clone();
+
+        let chain_head = py.allow_threads(move || {
+            controller.chain_head()
+        });
 
         *block = chain_head.to_py_object(py).steal_ptr();
     }
