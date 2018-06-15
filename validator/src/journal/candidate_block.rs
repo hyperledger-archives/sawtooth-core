@@ -36,10 +36,12 @@ use pylogger;
 
 use scheduler::Scheduler;
 
+#[derive(Debug)]
 pub enum CandidateBlockError {
     BlockEmpty,
 }
 
+#[derive(Debug)]
 pub struct FinalizeBlockResult {
     pub block: Option<cpython::PyObject>,
     pub remaining_batches: Vec<Batch>,
