@@ -87,7 +87,7 @@ impl fmt::Debug for Block {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd)]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
