@@ -411,13 +411,16 @@ pub extern "C" fn sender_send(sender: *const c_void, block: *mut py_ffi::PyObjec
         .expect("Unable to extract block");
 
     unsafe {
-        match (*(sender as *mut Sender<BlockWrapper>)).send(block) {
-            Ok(_) => ErrorCode::Success,
-            Err(err) => {
-                error!("Unable to send validation result: {:?}", err);
-                ErrorCode::Unknown
+        let sender = (*(sender as *mut Sender<BlockWrapper>)).clone();
+        py.allow_threads(move || {
+            match sender.send(block) {
+                Ok(_) => ErrorCode::Success,
+                Err(err) => {
+                    error!("Unable to send validation result: {:?}", err);
+                    ErrorCode::Unknown
+                }
             }
-        }
+        })
     }
 }
 
