@@ -152,38 +152,36 @@ impl SyncBlockPublisher {
     pub fn on_chain_updated(
         &self,
         state: &mut BlockPublisherState,
-        chain_head: Option<BlockWrapper>,
+        chain_head: BlockWrapper,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
-        if let Some(chain_head) = chain_head {
-            info!("Now building on top of block, {}", chain_head);
-            let batches_len = chain_head.block.batches.len();
-            state.chain_head = Some(chain_head);
-            let mut previous_block_id = None;
-            if self.is_building_block(state) {
-                previous_block_id = state
-                    .get_previous_block_id()
-                    .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
-                    .unwrap_or(None);
-                self.cancel_block(state);
-            }
+        info!("Now building on top of block, {}", chain_head);
+        let batches_len = chain_head.block.batches.len();
+        state.chain_head = Some(chain_head);
+        let mut previous_block_id = None;
+        if self.is_building_block(state) {
+            previous_block_id = state
+                .get_previous_block_id()
+                .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
+                .unwrap_or(None);
+            self.cancel_block(state);
+        }
 
-            state.pending_batches.update_limit(batches_len);
-            state
-                .pending_batches
-                .rebuild(Some(committed_batches), Some(uncommitted_batches));
+        state.pending_batches.update_limit(batches_len);
+        state
+            .pending_batches
+            .rebuild(Some(committed_batches), Some(uncommitted_batches));
 
-            if let Some(block_id) = previous_block_id {
-                self.initialize_block(state, &block_id)
-                    .expect("Unable to initialize block after canceling");
-            }
+        if let Some(block_id) = previous_block_id {
+            self.initialize_block(state, &block_id)
+                .expect("Unable to initialize block after canceling");
         }
     }
 
     pub fn on_chain_updated_internal(
         &mut self,
-        chain_head: Option<BlockWrapper>,
+        chain_head: BlockWrapper,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {

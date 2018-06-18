@@ -212,7 +212,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
                 self.chain_writer.update_chain(&[block.clone()], &[])?;
                 self.chain_head = Some(block.clone());
                 let mut guard = lock.acquire();
-                guard.notify_on_chain_updated(Some(block.clone()), vec![], vec![]);
+                guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
             }
         }
 
@@ -746,7 +746,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
             block_num_guage.set_value(&notify_block.block_num());
             let mut guard = self.chain_head_lock.acquire();
-            guard.notify_on_chain_updated(Some(notify_block), vec![], vec![]);
+            guard.notify_on_chain_updated(notify_block, vec![], vec![]);
         }
     }
 
