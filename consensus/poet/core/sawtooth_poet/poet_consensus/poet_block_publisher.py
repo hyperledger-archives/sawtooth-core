@@ -22,8 +22,12 @@ import json
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 from sawtooth_validator.state.settings_view import SettingsView
+
+try:
+    import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
+except ImportError:
+    import sawtooth_sdk.protobuf.transaction_pb2 as txn_pb
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
