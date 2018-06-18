@@ -328,7 +328,7 @@ pub fn convert_on_chain_updated_args(
     chain_head_ptr: *mut py_ffi::PyObject,
     committed_batches_ptr: *mut py_ffi::PyObject,
     uncommitted_batches_ptr: *mut py_ffi::PyObject,
-) -> (Option<BlockWrapper>, Vec<Batch>, Vec<Batch>) {
+) -> (BlockWrapper, Vec<Batch>, Vec<Batch>) {
     let chain_head = unsafe { PyObject::from_borrowed_ptr(py, chain_head_ptr) };
     let py_committed_batches = unsafe { PyObject::from_borrowed_ptr(py, committed_batches_ptr) };
     let committed_batches: Vec<Batch> = if py_committed_batches == Python::None(py) {
@@ -353,15 +353,9 @@ pub fn convert_on_chain_updated_args(
             .map(|pyobj| pyobj.extract::<Batch>(py).unwrap())
             .collect()
     };
-    let chain_head = if chain_head == Python::None(py) {
-        None
-    } else {
-        Some(
-            chain_head
-                .extract(py)
-                .expect("Got a new chain head that wasn't a BlockWrapper"),
-        )
-    };
+    let chain_head = chain_head
+        .extract(py)
+        .expect("Got a new chain head that wasn't a BlockWrapper");
 
     (chain_head, committed_batches, uncommitted_batches)
 }
