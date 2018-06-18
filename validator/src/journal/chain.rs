@@ -477,26 +477,29 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn on_block_received(&mut self, block: BlockWrapper) -> Result<(), ChainControllerError> {
-        let mut state = self.state
-            .write()
-            .expect("No lock holder should have poisoned the lock");
+        {
+            // Only hold this lock while modifying chain state
+            let mut state = self.state
+                .write()
+                .expect("No lock holder should have poisoned the lock");
 
-        if state.has_block(block.header_signature()) {
-            return Ok(());
-        }
-
-        if state.chain_head.is_none() {
-            if let Err(err) = state.set_genesis(&self.chain_head_lock, block.clone()) {
-                warn!(
-                    "Unable to set chain head; genesis block {} is not valid: {:?}",
-                    block.header_signature(),
-                    err
-                );
+            if state.has_block(block.header_signature()) {
+                return Ok(());
             }
-            return Ok(());
-        }
 
-        state.block_cache.put(block.clone());
+            if state.chain_head.is_none() {
+                if let Err(err) = state.set_genesis(&self.chain_head_lock, block.clone()) {
+                    warn!(
+                        "Unable to set chain head; genesis block {} is not valid: {:?}",
+                        block.header_signature(),
+                        err
+                    );
+                }
+                return Ok(());
+            }
+
+            state.block_cache.put(block.clone());
+        }
         self.consensus_notifier.notify_block_new(&block);
         Ok(())
     }
@@ -550,125 +553,135 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         // Reset the block in the cache with a valid status (which otherwise
         // would be lost)
         //
-        self.state.write()
+        self.state
+            .write()
             .expect("No lock holder should have poisoned the lock")
-            .block_cache.put(block.clone());
+            .block_cache
+            .put(block.clone());
     }
 
     fn handle_block_commit(&mut self, block: &BlockWrapper) -> Result<(), ChainControllerError> {
-        let mut state = self.state
-            .write()
-            .expect("No lock holder should have poisoned the lock");
+        {
+            // only hold this lock as long as the loop is active.
+            let mut state = self.state
+                .write()
+                .expect("No lock holder should have poisoned the lock");
 
-        loop {
-            let chain_head = state.chain_reader.chain_head()?.expect(
-                "Attempting to handle block commit before a genesis block has been committed",
-            );
-            let result = state.build_fork(block, &chain_head)?;
+            loop {
+                let chain_head = state.chain_reader.chain_head()?.expect(
+                    "Attempting to handle block commit before a genesis block has been committed",
+                );
+                let result = state.build_fork(block, &chain_head)?;
 
-            let mut chain_head_guard = self.chain_head_lock.acquire();
-            if state.check_chain_head_updated(&chain_head, block)? {
-                continue;
-            }
+                let mut chain_head_guard = self.chain_head_lock.acquire();
+                if state.check_chain_head_updated(&chain_head, block)? {
+                    continue;
+                }
 
-            state.chain_head = Some(block.clone());
+                state.chain_head = Some(block.clone());
 
-            state.state_pruning_manager.update_queue(
-                &result
-                    .new_chain
-                    .iter()
-                    .map(|block| block.state_root_hash())
-                    .collect::<Vec<_>>(),
-                &result
-                    .current_chain
-                    .iter()
-                    .map(|block| (block.block_num(), block.state_root_hash()))
-                    .collect::<Vec<_>>(),
-            );
+                state.state_pruning_manager.update_queue(
+                    &result
+                        .new_chain
+                        .iter()
+                        .map(|block| block.state_root_hash())
+                        .collect::<Vec<_>>(),
+                    &result
+                        .current_chain
+                        .iter()
+                        .map(|block| (block.block_num(), block.state_root_hash()))
+                        .collect::<Vec<_>>(),
+                );
 
-            state
-                .chain_writer
-                .update_chain(&result.new_chain, &result.current_chain)?;
+                state
+                    .chain_writer
+                    .update_chain(&result.new_chain, &result.current_chain)?;
 
-            info!(
-                "Chain head updated to {}",
-                state.chain_head.as_ref().unwrap()
-            );
+                info!(
+                    "Chain head updated to {}",
+                    state.chain_head.as_ref().unwrap()
+                );
 
-            let mut chain_head_gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
-            chain_head_gauge.set_value(&block.header_signature()[0..8]);
+                let mut chain_head_gauge =
+                    COLLECTOR.gauge("ChainController.chain_head", None, None);
+                chain_head_gauge.set_value(&block.header_signature()[0..8]);
 
-            let mut committed_transactions_count =
-                COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
-            committed_transactions_count.inc_n(result.transaction_count);
+                let mut committed_transactions_count =
+                    COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
+                committed_transactions_count.inc_n(result.transaction_count);
 
-            let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(block.block_num());
+                let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
+                block_num_guage.set_value(block.block_num());
 
-            let chain_head = state.chain_head.clone().unwrap();
-            chain_head_guard.notify_on_chain_updated(
-                Some(chain_head),
-                result.committed_batches,
-                result.uncommitted_batches,
-            );
+                let chain_head = state.chain_head.clone().unwrap();
+                chain_head_guard.notify_on_chain_updated(
+                    chain_head,
+                    result.committed_batches,
+                    result.uncommitted_batches,
+                );
 
-            state.chain_head.as_ref().map(|block| {
-                block.batches().iter().for_each(|batch| {
-                    if batch.trace {
-                        debug!(
-                            "TRACE: {}: ChainController.on_block_validated",
-                            batch.header_signature
-                        )
+                state.chain_head.as_ref().map(|block| {
+                    block.batches().iter().for_each(|batch| {
+                        if batch.trace {
+                            debug!(
+                                "TRACE: {}: ChainController.on_block_validated",
+                                batch.header_signature
+                            )
+                        }
+                    })
+                });
+
+                for block in result.new_chain.iter().rev() {
+                    let receipts: Vec<TransactionReceipt> = block
+                        .execution_results
+                        .iter()
+                        .map(TransactionReceipt::from)
+                        .collect();
+                    for observer in state.observers.iter_mut() {
+                        observer.chain_update(&block, &receipts.iter().collect::<Vec<_>>());
                     }
-                })
-            });
-
-            for block in result.new_chain.iter().rev() {
-                let receipts: Vec<TransactionReceipt> = block
-                    .execution_results
-                    .iter()
-                    .map(TransactionReceipt::from)
-                    .collect();
-                for observer in state.observers.iter_mut() {
-                    observer.chain_update(&block, &receipts.iter().collect::<Vec<_>>());
                 }
+                let total_committed_txns = match state.chain_reader.count_committed_transactions() {
+                    Ok(count) => count,
+                    Err(err) => {
+                        error!(
+                            "Unable to read total committed transactions count: {:?}",
+                            err
+                        );
+                        0
+                    }
+                };
+
+                let mut committed_transactions_gauge =
+                    COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
+                committed_transactions_gauge.set_value(total_committed_txns);
+
+                let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num();
+                if chain_head_block_num + 1 > self.state_pruning_block_depth as u64 {
+                    let prune_at = chain_head_block_num - (self.state_pruning_block_depth as u64);
+                    match state.chain_reader.get_block_by_block_num(prune_at) {
+                        Ok(Some(block)) => state
+                            .state_pruning_manager
+                            .add_to_queue(block.block_num(), block.state_root_hash()),
+                        Ok(None) => warn!("No block at block height {}; ignoring...", prune_at),
+                        Err(err) => {
+                            error!("Unable to fetch block at height {}: {:?}", prune_at, err)
+                        }
+                    }
+
+                    // Execute pruning:
+                    state.state_pruning_manager.execute(prune_at)
+                }
+
+                // Updated the block, so we're done
+                break;
             }
-            let total_committed_txns = match state.chain_reader.count_committed_transactions() {
-                Ok(count) => count,
-                Err(err) => {
-                    error!(
-                        "Unable to read total committed transactions count: {:?}",
-                        err
-                    );
-                    0
-                }
-            };
-
-            let mut committed_transactions_gauge =
-                COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
-            committed_transactions_gauge.set_value(total_committed_txns);
-
-            let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num();
-            if chain_head_block_num + 1 > self.state_pruning_block_depth as u64 {
-                let prune_at = chain_head_block_num - (self.state_pruning_block_depth as u64);
-                match state.chain_reader.get_block_by_block_num(prune_at) {
-                    Ok(Some(block)) => state
-                        .state_pruning_manager
-                        .add_to_queue(block.block_num(), block.state_root_hash()),
-                    Ok(None) => warn!("No block at block height {}; ignoring...", prune_at),
-                    Err(err) => error!("Unable to fetch block at height {}: {:?}", prune_at, err),
-                }
-
-                // Execute pruning:
-                state.state_pruning_manager.execute(prune_at)
-            }
-
-            self.consensus_notifier
-                .notify_block_commit(block.header_signature());
-
-            // Updated the block, so we're done
-            break Ok(());
         }
+
+        self.consensus_notifier
+            .notify_block_commit(block.header_signature());
+
+        Ok(())
     }
 
     /// Light clone makes a copy of this controller, without access to the stop
