@@ -115,6 +115,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
@@ -137,6 +138,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
@@ -159,6 +161,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
@@ -181,6 +184,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
@@ -203,6 +207,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 

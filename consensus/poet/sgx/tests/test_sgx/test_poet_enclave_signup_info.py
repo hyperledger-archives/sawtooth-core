@@ -21,10 +21,9 @@ from unittest import TestCase
 from unittest import mock
 
 from test_sgx.utils import create_random_public_key_hash
+from test_sgx.path import get_default_path_config
 # pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
-
-from sawtooth_validator.config.path import get_default_path_config
 
 
 class TestPoetEnclaveSignupInfo(TestCase):

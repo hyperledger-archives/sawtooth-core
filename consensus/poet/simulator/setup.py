@@ -42,7 +42,7 @@ setup(name='sawtooth-poet-simulator',
           'sawtooth-poet-common',
           'sawtooth-poet-simulator',
           'sawtooth-signing',
-          'sawtooth-validator',
+          'sawtooth-sdk',
       ],
       data_files=data_files,
       entry_points={})

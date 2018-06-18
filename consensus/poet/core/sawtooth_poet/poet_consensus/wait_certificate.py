@@ -17,7 +17,7 @@ import logging
 import requests
 from requests import Timeout
 
-from sawtooth_validator.exceptions import NotAvailableException
+from sawtooth_poet.exceptions import NotAvailableException
 
 LOGGER = logging.getLogger(__name__)
 

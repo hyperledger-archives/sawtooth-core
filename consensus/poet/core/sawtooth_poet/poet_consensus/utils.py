@@ -16,7 +16,7 @@
 import json
 import logging
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_poet.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 

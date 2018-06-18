@@ -27,13 +27,12 @@ import sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator \
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 from sawtooth_poet.poet_consensus.wait_timer import WaitTimer
 from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
+from sawtooth_poet.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import ValidatorInfo
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import SignUpInfo
-
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from test_consensus.utils import create_random_public_key_hash
 

@@ -19,16 +19,15 @@ import hashlib
 import time
 import json
 
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.consensus.consensus \
-    import BlockPublisherInterface
-from sawtooth_validator.state.settings_view import SettingsView
-
 try:
-    import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
-except ImportError:
     import sawtooth_sdk.protobuf.transaction_pb2 as txn_pb
+except TypeError:
+    import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 
+from sawtooth_poet.journal.block_wrapper import BlockWrapper
+from sawtooth_poet.journal.consensus.consensus \
+    import BlockPublisherInterface
+from sawtooth_poet.state.settings_view import SettingsView
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
@@ -44,7 +43,6 @@ from sawtooth_poet.poet_consensus.wait_certificate import WaitCertificate
 from sawtooth_poet.poet_consensus import utils
 
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
-
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
 
