@@ -37,7 +37,7 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
 WORKDIR /project/sawtooth-core/
 
 CMD cd adm \
- && echo "\033[0;32m--- Building smallbank-workload ---\n\033[0m" \
+ && echo "\033[0;32m--- Building sawtooth admin tools ---\n\033[0m" \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \
