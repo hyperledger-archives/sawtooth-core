@@ -367,11 +367,14 @@ class TestProxy(unittest.TestCase):
     def test_state_get(self):
         self._mock_block_cache[b'block'.hex()] = MockBlock()
 
+        address_1 = '1' * 70
+        address_2 = '2' * 70
+
         self.assertEqual(
-            self._proxy.state_get(b'block', ['address-1', 'address-2']),
+            self._proxy.state_get(b'block', [address_1, address_2]),
             [
-                ('address-1', b'mock-address-1'),
-                ('address-2', b'mock-address-2'),
+                (address_1, 'mock-{}'.format(address_1).encode()),
+                (address_2, 'mock-{}'.format(address_2).encode()),
             ])
 
 
