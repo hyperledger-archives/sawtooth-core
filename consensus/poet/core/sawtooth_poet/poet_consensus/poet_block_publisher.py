@@ -580,6 +580,41 @@ class PoetBlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block good and should be generated.
             False if the block should be abandoned.
         """
+        if isinstance(block_header, bytes):
+            # Using the current chain head, we need to create a state
+            # view so we can create a PoET enclave.
+            state_view = \
+                BlockWrapper.state_view_for_block(
+                    block_wrapper=self._block_cache.block_store.chain_head,
+                    state_view_factory=self._state_view_factory)
+
+            poet_enclave_module = \
+                factory.PoetEnclaveFactory.get_poet_enclave_module(
+                    state_view=state_view,
+                    config_dir=self._config_dir,
+                    data_dir=self._data_dir)
+
+            # We need to create a wait certificate for the block and
+            # then serialize that into the block header consensus field.
+            active_key = self._poet_key_state_store.active_key
+            poet_key_state = self._poet_key_state_store[active_key]
+            sealed_signup_data = poet_key_state.sealed_signup_data
+            try:
+                wait_certificate = \
+                    WaitCertificate.create_wait_certificate(
+                        poet_enclave_module=poet_enclave_module,
+                        sealed_signup_data=sealed_signup_data,
+                        wait_timer=self._wait_timer,
+                        block_hash=block_header)
+                consensus = json.dumps(wait_certificate.dump()).encode()
+            except ValueError as ve:
+                LOGGER.error('Failed to create wait certificate: %s', ve)
+                return None
+
+            LOGGER.debug('Created wait certificate: %s', wait_certificate)
+
+            return consensus
+
         # To compute the block hash, we are going to perform a hash using the
         # previous block ID and the batch IDs contained in the block
         hasher = hashlib.sha256(block_header.previous_block_id.encode())
