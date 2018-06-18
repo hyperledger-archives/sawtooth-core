@@ -248,7 +248,8 @@ class MessageFactory(object):
     def create_delete_response(self, addresses):
         self._validate_addresses(addresses)
         return TpStateDeleteResponse(
-            addresses=addresses
+            addresses=addresses,
+            status=TpStateDeleteResponse.OK
         )
 
     def create_add_event_request(self, event_type, attributes=None, data=None):
