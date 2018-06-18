@@ -94,56 +94,6 @@ class ChainHeadLock(OwnedPointer):
         self._ptr = chain_head_lock_ptr
         self._guard = None
 
-    def acquire(self):
-        guard_ptr = ctypes.c_void_p()
-        res = LIBRARY.call(
-            "chain_head_lock_acquire",
-            self._ptr,
-            ctypes.byref(guard_ptr))
-
-        if res == ChainHeadLockErrorCode.Success:
-            self._guard = ChainHeadGuard(guard_ptr)
-            return self._guard
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
-    def release(self):
-        res = LIBRARY.call(
-            "chain_head_guard_drop",
-            self._guard.pointer)
-
-        if res == ChainHeadLockErrorCode.Success:
-            return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
-
-class ChainHeadGuard:
-    def __init__(self, guard_ptr):
-        self.pointer = guard_ptr
-
-    def notify_on_chain_updated(self,
-                                chain_head,
-                                committed_batches=None,
-                                uncommitted_batches=None):
-        res = LIBRARY.call(
-            "chain_head_guard_on_chain_updated",
-            self.pointer,
-            ctypes.py_object(chain_head),
-            ctypes.py_object(committed_batches),
-            ctypes.py_object(uncommitted_batches))
-
-        if res == ChainHeadLockErrorCode.Success:
-            return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
 
 class BlockPublisherErrorCode(IntEnum):
     Success = 0
