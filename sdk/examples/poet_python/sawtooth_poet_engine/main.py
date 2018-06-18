@@ -15,16 +15,23 @@
 
 import sys
 import argparse
+import logging
 import pkg_resources
 
 from sawtooth_sdk.processor.log import init_console_logging
 from sawtooth_sdk.processor.log import log_configuration
+from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 
 from sawtooth_sdk.consensus.zmq_driver import ZmqDriver
 from sawtooth_poet_engine.engine import PoetEngine
 
+from sawtooth_poet.config.path import load_path_config
+from sawtooth_poet.exceptions import LocalConfigurationError
+
 DISTRIBUTION_NAME = 'sawtooth-poet'
+
+LOGGER = logging.getLogger(__name__)
 
 
 def parse_args(args):
@@ -35,6 +42,11 @@ def parse_args(args):
         '-C', '--connect',
         default='tcp://localhost:5050',
         help='Endpoint for the validator connection')
+
+    parser.add_argument(
+        '--component',
+        default='tcp://localhost:4004',
+        help='Endpoint for the validator component connection')
 
     parser.add_argument('-v', '--verbose',
                         action='count',
@@ -57,6 +69,12 @@ def parse_args(args):
 
 
 def main(args=None):
+    try:
+        path_config = load_path_config()
+    except LocalConfigurationError as local_config_err:
+        LOGGER.error(str(local_config_err))
+        sys.exit(1)
+
     if args is None:
         args = sys.argv[1:]
     opts = parse_args(args)
@@ -69,11 +87,16 @@ def main(args=None):
 
         init_console_logging(verbose_level=opts.verbose)
 
-        driver = ZmqDriver(PoetEngine())
+        driver = ZmqDriver(
+            PoetEngine(
+                path_config=path_config,
+                component_endpoint=opts.component))
+
         driver.start(endpoint=opts.connect)
+
     except KeyboardInterrupt:
         pass
-    except Exception as e:  # pylint: disable=broad-except
-        print("Error: {}".format(e), file=sys.stderr)
+    except Exception:  # pylint: disable=broad-except
+        LOGGER.exception("Error starting PoET Engine")
     finally:
         pass
