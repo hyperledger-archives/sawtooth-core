@@ -40,7 +40,10 @@ sys.path.insert(0, os.path.join(
     'signing'))
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'validator'))
+    'sdk', 'examples', 'poet_python'))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'sdk', 'python'))
 
 from sawtooth_poet_cli.main import main_wrapper
 
