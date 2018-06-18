@@ -138,7 +138,26 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_state_view(
                 self._state_view_factory)
 
-        return _map_with_none(state_view.get, addresses)
+        result = []
+
+        for address in addresses:
+            # a fully specified address
+            if len(address) == 70:
+                try:
+                    value = state_view.get(address)
+                except KeyError:
+                    value = None
+
+                result.append((address, value))
+                continue
+
+            # an address prefix
+            leaves = state_view.leaves(address)
+
+            for leaf in leaves:
+                result.append(leaf)
+
+        return result
 
     def _get_blocks(self, block_ids):
         try:
