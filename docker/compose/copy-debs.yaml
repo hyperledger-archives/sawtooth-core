@@ -169,15 +169,6 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  cxx-sdk:
-    image: sawtooth-cxx-sdk:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   sawtooth-intkey-tp-go:
     image: sawtooth-intkey-tp-go:${ISOLATION_ID}
     volumes:

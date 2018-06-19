@@ -170,13 +170,6 @@ services:
     image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
     container_name: sawtooth-smallbank-tp-go-default
 
-  cxx-sdk:
-    build:
-      context: .
-      dockerfile: sdk/cxx/Dockerfile-installed
-    image: sawtooth-cxx-sdk:${ISOLATION_ID}
-    container_name: sawtooth-sdk-cxx-default
-
   sawtooth-intkey-tp-go:
     build:
       context: .
