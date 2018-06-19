@@ -88,6 +88,9 @@ def main():
     compose_dict = load_compose_file(compose_file)
     _validate_compose_dict(compose_dict, test_service, compose_file)
 
+    test_service_image = _get_test_service_image(
+        compose_dict, test_service, compose_file)
+
     if not args.clean:
         _check_for_existing_containers(
             compose_file, compose_dict, isolation_id)
@@ -103,6 +106,10 @@ def main():
     try:
         if not args.clean:
             exit_status = 0
+
+            if not _check_for_existing_image(test_service_image, isolation_id):
+                _build_test_service_image(test_service, compose)
+
             timer.start()
 
             test_service_uppercase = test_service.upper()
@@ -263,10 +270,34 @@ def parse_args():
     return parser.parse_args()
 
 
+def _build_test_service_image(test_service, compose):
+    cmd = compose + ['build', test_service]
+    try:
+        build = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE)
+
+        for line in build.stdout:
+            print("build_test_image  | " + line.decode().strip())
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to build image for {}".format(test_service))
+        LOGGER.exception(err)
+        raise
+
+
 def _get_test_service(compose_file):
     return os.path.basename(
         compose_file
     ).replace('.yaml', '').replace('_', '-')
+
+
+def _get_test_service_image(compose_dict, test_service, compose_file):
+    if "image" not in compose_dict['services'][test_service]:
+        raise RunDockerTestError(
+            "Test service '{}' does not have an image specified: '{}'".format(
+                test_service, compose_file))
+    else:
+        return compose_dict['services'][test_service]['image'].split(":")[0]
 
 
 def _validate_compose_dict(compose_dict, test_service, compose_file):
@@ -289,6 +320,13 @@ def _check_for_existing_containers(compose_file, compose_dict, isolation_id):
                         container_name_to_create, compose_file
                     )
                 )
+
+
+def _check_for_existing_image(test_service, isolation_id):
+    images = _get_existing_images()
+    image_to_create = '{}:{}'.format(test_service, isolation_id)
+    if image_to_create in images:
+        return True
 
 
 def _check_for_existing_network(isolation_id, compose_file):
@@ -329,6 +367,33 @@ def _get_existing_containers():
         raise RunDockerTestError("Failed to get list of docker containers.")
 
     return containers
+
+
+def _get_existing_images():
+    cmd = ['docker', 'images', '--format={{.Repository}}:{{.Tag}}']
+    success = False
+    try:
+        images = subprocess.run(
+            cmd, stdout=subprocess.PIPE, check=True, timeout=DOCKER_PS_TIMEOUT
+        ).stdout.decode().strip()
+        success = True
+
+    except FileNotFoundError as err:
+        LOGGER.error("Bad docker images command")
+        LOGGER.exception(err)
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to retrieve image list.")
+        LOGGER.exception(err)
+
+    except subprocess.TimeoutExpired as err:
+        LOGGER.error("Retrieving image list timed out.")
+        LOGGER.exception(err)
+
+    if not success:
+        raise RunDockerTestError("Failed to get list of docker images.")
+
+    return images
 
 
 def _get_existing_networks():
