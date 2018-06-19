@@ -80,10 +80,17 @@ def main(args=None):
     opts = parse_args(args)
 
     try:
-        log_dir = get_log_dir()
-        log_configuration(
-            log_dir=log_dir,
-            name='poet-engine')
+        log_config = get_log_config('poet-engine-log-config.toml')
+        if log_config is None:
+            log_config = get_log_config('poet-engine-log-config.yaml')
+
+        if log_config is not None:
+            log_configuration(log_config=log_config)
+        else:
+            log_dir = get_log_dir()
+            log_configuration(
+                log_dir=log_dir,
+                name='poet-engine')
 
         init_console_logging(verbose_level=opts.verbose)
 
