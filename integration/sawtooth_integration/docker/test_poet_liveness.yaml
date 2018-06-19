@@ -15,6 +15,18 @@
 
 version: "2.1"
 
+volumes:
+  sawtooth-keys-0:
+  sawtooth-db-0:
+  sawtooth-keys-1:
+  sawtooth-db-1:
+  sawtooth-keys-2:
+  sawtooth-db-2:
+  sawtooth-keys-3:
+  sawtooth-db-3:
+  sawtooth-keys-4:
+  sawtooth-db-4:
+
 services:
 
   test-poet-liveness:
@@ -82,6 +94,8 @@ services:
     image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-0:/etc/sawtooth/keys
+      - sawtooth-db-0:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -111,13 +125,9 @@ services:
           config-genesis.batch config.batch poet.batch poet-settings.batch && \
         sawtooth-validator -v
     \""
-    environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
 
   validator-1:
     build:
@@ -126,6 +136,8 @@ services:
     image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-1:/etc/sawtooth/keys
+      - sawtooth-db-1:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -135,11 +147,7 @@ services:
         sawtooth-validator -v
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/block_info"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-2:
@@ -149,6 +157,8 @@ services:
     image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-2:/etc/sawtooth/keys
+      - sawtooth-db-2:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -158,11 +168,7 @@ services:
         sawtooth-validator -v
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/block_info"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-3:
@@ -172,6 +178,8 @@ services:
     image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-3:/etc/sawtooth/keys
+      - sawtooth-db-3:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -181,11 +189,7 @@ services:
         sawtooth-validator -v
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/block_info"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-4:
@@ -195,6 +199,8 @@ services:
     image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-4:/etc/sawtooth/keys
+      - sawtooth-db-4:/var/lib/sawtooth
     expose:
       - 4004
       - 8800
@@ -204,12 +210,83 @@ services:
         sawtooth-validator -v
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
-        /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/block_info"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
+
+  poet-0:
+    image: poet-engine-local:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/engine/Dockerfile
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-0:/etc/sawtooth/keys
+      - sawtooth-db-0:/var/lib/sawtooth
+    command: poet-engine --connect tcp://validator-0:5005 --component tcp://validator-0:4004 -vv
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/signing:"
+
+  poet-1:
+    image: poet-engine-local:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/engine/Dockerfile
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-1:/etc/sawtooth/keys
+      - sawtooth-db-1:/var/lib/sawtooth
+    command: poet-engine --connect tcp://validator-1:5005 --component tcp://validator-1:4004 -vv
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/signing:"
+
+  poet-2:
+    image: poet-engine-local:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/engine/Dockerfile
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-2:/etc/sawtooth/keys
+      - sawtooth-db-2:/var/lib/sawtooth
+    command: poet-engine --connect tcp://validator-2:5005 --component tcp://validator-2:4004 -vv
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/signing:"
+
+  poet-3:
+    image: poet-engine-local:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/engine/Dockerfile
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-3:/etc/sawtooth/keys
+      - sawtooth-db-3:/var/lib/sawtooth
+    command: poet-engine --connect tcp://validator-3:5005 --component tcp://validator-3:4004 -vv
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/signing:"
+
+  poet-4:
+    image: poet-engine-local:$ISOLATION_ID
+    build:
+      context: ../../..
+      dockerfile: ./consensus/poet/engine/Dockerfile
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - sawtooth-keys-4:/etc/sawtooth/keys
+      - sawtooth-db-4:/var/lib/sawtooth
+    command: poet-engine --connect tcp://validator-4:5005 --component tcp://validator-4:4004 -vv
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/signing:"
 
   rest-api-0:
     build:
