@@ -34,6 +34,15 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
+  poet-engine:
+    image: sawtooth-poet-engine:${ISOLATION_ID}
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
   xo-tp-python:
     image: sawtooth-xo-tp-python:${ISOLATION_ID}
     volumes:
