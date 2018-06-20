@@ -27,6 +27,7 @@ RUN apt-get install -y -q \
     python3-colorlog \
     python3-cryptography-vectors=1.7.2-1 \
     python3-cryptography=1.7.2-1 \
+    python3-dev \
     python3-lmdb \
     python3-netifaces=0.10.4-0.1build2 \
     python3-pip \
@@ -49,6 +50,7 @@ RUN apt-get install -y -q --allow-downgrades \
     git \
     libssl-dev \
     libzmq3-dev \
+    libpython3.5 \
     openssl \
     python3-grpcio-tools=1.1.3-1
 
