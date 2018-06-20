@@ -24,7 +24,7 @@ services:
     image: lint:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
-    command: run_lint
+    command: bash -c "bin/protogen && run_lint"
 
   lint-go:
     build:
