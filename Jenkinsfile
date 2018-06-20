@@ -69,7 +69,11 @@ node ('master') {
 
             stage("Build Lint Requirements") {
                 sh 'docker-compose -f docker/compose/run-lint.yaml build'
-                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up validator'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up xo-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up intkey-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up smallbank-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up smallbank-workload'
                 sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
             }
 
