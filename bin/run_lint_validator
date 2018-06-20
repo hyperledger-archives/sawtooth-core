@@ -31,7 +31,7 @@ for dir in $dirs; do
 
     echo "-- rustfmt"
 
-    diff=$(cargo fmt -- --write-mode=diff)
+    diff=$(cargo check && cargo fmt -- --write-mode=diff)
     rustfmt_exit=$?
 
     # rustfmt returns the following exit codes:
