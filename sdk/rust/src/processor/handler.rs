@@ -24,6 +24,7 @@ use protobuf::RepeatedField;
 
 use std;
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::error::Error as StdError;
 
 use messages::events::Event;
@@ -189,10 +190,10 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
-    pub fn get_state(&mut self, address: &str) -> Result<Option<Vec<u8>>, ContextError> {
+    pub fn get_state(&mut self, addresses: Vec<String>) -> Result<Option<Vec<u8>>, ContextError> {
         let mut request = TpStateGetRequest::new();
         request.set_context_id(self.context_id.clone());
-        request.set_addresses(RepeatedField::from_vec(vec![String::from(address)]));
+        request.set_addresses(RepeatedField::from_vec(addresses.to_vec()));
         let serialized = request.write_to_bytes()?;
         let x: &[u8] = &serialized;
 
@@ -220,8 +221,8 @@ impl TransactionContext {
             }
             TpStateGetResponse_Status::AUTHORIZATION_ERROR => {
                 Err(ContextError::AuthorizationError(format!(
-                    "Tried to get unauthorized address: {}",
-                    address
+                    "Tried to get unauthorized address: {:?}",
+                    addresses
                 )))
             }
             TpStateGetResponse_Status::STATUS_UNSET => Err(ContextError::ResponseAttributeError(
@@ -237,14 +238,20 @@ impl TransactionContext {
     ///
     /// * `address` - address of where to store the data
     /// * `paylaod` - payload is the data to store at the address
-    pub fn set_state(&mut self, address: &str, payload: &[u8]) -> Result<(), ContextError> {
-        let mut entry = TpStateEntry::new();
-        entry.set_address(String::from(address));
-        entry.set_data(Vec::from(payload));
+    pub fn set_state(&mut self, entries: HashMap<String, Vec<u8>>) -> Result<(), ContextError> {
+        let state_entries: Vec<TpStateEntry> = entries
+            .iter()
+            .map(|(address, payload)| {
+                let mut entry = TpStateEntry::new();
+                entry.set_address(address.to_string());
+                entry.set_data(payload.to_vec());
+                entry
+            })
+            .collect();
 
         let mut request = TpStateSetRequest::new();
         request.set_context_id(self.context_id.clone());
-        request.set_entries(RepeatedField::from_slice(&[entry]));
+        request.set_entries(RepeatedField::from_vec(state_entries.to_vec()));
         let serialized = request.write_to_bytes()?;
         let x: &[u8] = &serialized;
 
@@ -259,8 +266,8 @@ impl TransactionContext {
             TpStateSetResponse_Status::OK => Ok(()),
             TpStateSetResponse_Status::AUTHORIZATION_ERROR => {
                 Err(ContextError::AuthorizationError(format!(
-                    "Tried to set unauthorized address: {}",
-                    address
+                    "Tried to set unauthorized address: {:?}",
+                    state_entries
                 )))
             }
             TpStateSetResponse_Status::STATUS_UNSET => Err(ContextError::ResponseAttributeError(

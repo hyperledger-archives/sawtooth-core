@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::collections::HashMap;
+
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 use protobuf;
@@ -279,7 +281,7 @@ fn load_account(
     context: &mut TransactionContext,
 ) -> Result<Option<Account>, ApplyError> {
     let response = context
-        .get_state(&create_smallbank_address(&format!("{}", customer_id)))
+        .get_state(vec![create_smallbank_address(&format!("{}", customer_id))])
         .map_err(|err| {
             warn!("Invalid transaction: Failed to load Account: {:?}", err);
             ApplyError::InvalidTransaction(format!("Failed to load Account: {:?}", err))
@@ -300,7 +302,9 @@ fn save_account(account: &Account, context: &mut TransactionContext) -> Result<(
         ApplyError::InvalidTransaction(format!("Failed to serialize Account: {:?}", err))
     })?;
 
-    context.set_state(&address, &data).map_err(|err| {
+    let mut sets = HashMap::new();
+    sets.insert(address, data);
+    context.set_state(sets).map_err(|err| {
         warn!("Invalid transaction: Failed to load Account: {:?}", err);
         ApplyError::InvalidTransaction(format!("Failed to load Account: {:?}", err))
     })

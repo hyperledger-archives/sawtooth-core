@@ -86,8 +86,9 @@ impl<'a> XoState<'a> {
         let state_string = Game::serialize_games(games);
         self.address_map
             .insert(address.clone(), Some(state_string.clone()));
-        self.context
-            .set_state(&address, &state_string.into_bytes())?;
+        let mut sets = HashMap::new();
+        sets.insert(address, state_string.into_bytes());
+        self.context.set_state(sets)?;
         Ok(())
     }
 
@@ -117,7 +118,7 @@ impl<'a> XoState<'a> {
                 }
             }
         } else {
-            if let Some(state_bytes) = self.context.get_state(&address)? {
+            if let Some(state_bytes) = self.context.get_state(vec![address.to_string()])? {
                 let state_string = match ::std::str::from_utf8(&state_bytes) {
                     Ok(s) => s,
                     Err(_) => {
