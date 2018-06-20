@@ -259,19 +259,12 @@ class TestProxy(unittest.TestCase):
         self.assertEqual(summary, b"summary")
 
     def test_finalize_block(self):
-        self._mock_block_publisher.finalize_block.return_value =\
-            FinalizeBlockResult(
-                block=None,
-                remaining_batches=None,
-                last_batch=None,
-                injected_batches=None)
-        self._mock_block_publisher.publish_block.return_value = "00"
+        self._mock_block_publisher.finalize_block.return_value = "00"
 
         data = bytes([0x56])
         self._proxy.finalize_block(data)
         self._mock_block_publisher.finalize_block.assert_called_with(
             consensus=data)
-        self._mock_block_publisher.publish_block.assert_called_with(None, None)
 
     def test_cancel_block(self):
         self._proxy.cancel_block()
