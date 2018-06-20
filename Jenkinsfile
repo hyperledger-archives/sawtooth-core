@@ -82,6 +82,7 @@ node ('master') {
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-go lint-go'
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-rust lint-rust'
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-validator lint-validator'
+                sh 'docker-compose -f docker/compose/run-lint.yaml down'
             }
 
             stage("Build Test Dependencies") {
