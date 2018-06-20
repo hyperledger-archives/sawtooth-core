@@ -70,7 +70,7 @@ def main():
         'up', '--abort-on-container-exit'
     ]
 
-    compose_down = compose + ['down', '--remove-orphans']
+    compose_down = compose + ['down', '--remove-orphans', '--volumes']
 
     scrape = [
         'docker', 'ps', '-a',
