@@ -68,13 +68,15 @@ class ZmqDriver(Driver):
 
     def _driver_loop(self):
         try:
+            future = self._stream.receive()
             while True:
                 if self._exit:
                     self._engine.stop()
                     break
 
                 try:
-                    message = self._stream.receive().result(10)
+                    message = future.result(10)
+                    future = self._stream.receive()
                 except concurrent.futures.TimeoutError:
                     continue
 
