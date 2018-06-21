@@ -1,0 +1,24 @@
+version: "2.1"
+
+services:
+  battleship-tp-rust:
+    build:
+      context: ../../
+      dockerfile: families/battleship/battleship_rust/Dockerfile
+    container_name: battleship-tp-rust
+    entrypoint: battleship-tp -vv -C tcp://validator:4004
+    depends_on:
+      - validator
+
+  battleship-cli-python:
+    build:
+      context: ../../
+      dockerfile: families/battleship/battleship_python/Dockerfile
+    container_name: battleship-cli-python
+    volumes:
+      - ../../:/project/sawtooth-core
+    command: "bash -c \"\
+        battleship-cli-python init --url http://rest-api:8008 && \
+        tail -f /dev/null \
+        \""
+    stop_signal: SIGKILL

@@ -286,7 +286,7 @@ def do_fire(args, config):
     reveal_space = None
     reveal_nonce = None
 
-    if 'LastFireColumn' in state_game:
+    if state_game.get('LastFireColumn'):
         last_col = ord(state_game['LastFireColumn']) - ord('A')
         last_row = int(state_game['LastFireRow']) - 1
 

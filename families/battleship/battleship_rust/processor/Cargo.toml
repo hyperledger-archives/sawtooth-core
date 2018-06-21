@@ -1,0 +1,15 @@
+[package]
+name = "battleship-tp"
+version = "0.1.0"
+authors = ["Kenneth Koski <knkski@bitwise.io>"]
+
+[dependencies]
+sawtooth_sdk = { path = "../../../../sdk/rust" }
+rust-crypto = "0.2"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+clap = "2"
+protobuf = "2.0"
+log = "0.3"
+log4rs = "0.7"
