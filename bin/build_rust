@@ -54,7 +54,7 @@ echo -e "\033[0;32m--- Building devmode-rust ---\n\033[0m"
 rm -rf $top_dir/sdk/examples/devmode_rust/bin/
 mkdir -p $top_dir/sdk/examples/devmode_rust/bin/
 cd $top_dir/sdk/examples/devmode_rust
-cargo build --release && cp ./target/release/devmode_rust $top_dir/sdk/examples/devmode_rust/bin/devmode_rust
+cargo build --release && cp ./target/release/devmode-rust $top_dir/sdk/examples/devmode_rust/bin/devmode-rust
 
 echo -e "\033[0;32m--- Building xo-tp-rust ---\n\033[0m"
 rm -rf $top_dir/sdk/examples/xo_rust/bin/

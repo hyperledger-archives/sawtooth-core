@@ -1,7 +1,11 @@
 [package]
-name = "devmode_rust"
+name = "sawtooth-devmode-rust"
 version = "0.1.0"
 authors = ["Intel Corporation"]
+
+[[bin]]
+name = "devmode-rust"
+path = "src/main.rs"
 
 [dependencies]
 clap = "2"
