@@ -477,30 +477,37 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn on_block_received(&mut self, block: BlockWrapper) -> Result<(), ChainControllerError> {
-        {
-            // Only hold this lock while modifying chain state
-            let mut state = self.state
-                .write()
-                .expect("No lock holder should have poisoned the lock");
+        let mut state = self.state
+            .write()
+            .expect("No lock holder should have poisoned the lock");
 
-            if state.has_block(block.header_signature()) {
-                return Ok(());
-            }
-
-            if state.chain_head.is_none() {
-                if let Err(err) = state.set_genesis(&self.chain_head_lock, block.clone()) {
-                    warn!(
-                        "Unable to set chain head; genesis block {} is not valid: {:?}",
-                        block.header_signature(),
-                        err
-                    );
-                }
-                return Ok(());
-            }
-
-            state.block_cache.put(block.clone());
+        if state.has_block(block.header_signature()) {
+            return Ok(());
         }
-        self.consensus_notifier.notify_block_new(&block);
+
+        if state.chain_head.is_none() {
+            if let Err(err) = state.set_genesis(&self.chain_head_lock, block.clone()) {
+                warn!(
+                    "Unable to set chain head; genesis block {} is not valid: {:?}",
+                    block.header_signature(),
+                    err
+                );
+            }
+            return Ok(());
+        }
+
+        state.block_cache.put(block.clone());
+        let sender = self.validation_result_sender
+            .as_ref()
+            .expect(
+                "Attempted to submit blocks for validation before starting the chain controller",
+            )
+            .clone();
+
+        state
+            .block_validator
+            .submit_blocks_for_verification(&[block], sender);
+
         Ok(())
     }
 
@@ -543,13 +550,6 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
-        if block.status == BlockStatus::Valid {
-            self.consensus_notifier
-                .notify_block_valid(block.header_signature());
-        } else {
-            self.consensus_notifier
-                .notify_block_invalid(block.header_signature());
-        }
         // Reset the block in the cache with a valid status (which otherwise
         // would be lost)
         //
@@ -558,6 +558,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .expect("No lock holder should have poisoned the lock")
             .block_cache
             .put(block.clone());
+
+        self.consensus_notifier.notify_block_new(block);
     }
 
     fn handle_block_commit(&mut self, block: &BlockWrapper) -> Result<(), ChainControllerError> {
