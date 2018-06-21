@@ -246,3 +246,10 @@ services:
       dockerfile: perf/smallbank_workload/Dockerfile-installed
     image: sawtooth-smallbank-workload:${ISOLATION_ID}
     container_name: sawtooth-smallbank-workload
+
+  devmode-rust:
+    build:
+      context: .
+      dockerfile: sdk/examples/devmode_rust/Dockerfile-installed
+    image: sawtooth-devmode-rust:${ISOLATION_ID}
+    container_name: sawtooth-devmode-rust

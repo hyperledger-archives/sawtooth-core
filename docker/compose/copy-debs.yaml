@@ -270,3 +270,12 @@ services:
       bash -c "
         cp /tmp/*.deb /build/debs
       "
+
+  devmode-rust:
+    image: sawtooth-devmode-rust:${ISOLATION_ID}
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "

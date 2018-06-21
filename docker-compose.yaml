@@ -108,6 +108,7 @@ services:
     expose:
       - 4004
       - 8800
+      - 5050
     ports:
       - "4004:4004"
     # start the validator with an empty genesis batch
@@ -128,6 +129,7 @@ services:
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5050 \
       "
     stop_signal: SIGKILL
 
@@ -151,5 +153,26 @@ services:
         python3 setup.py clean --all
         python3 setup.py build
         sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+      "
+    stop_signal: SIGKILL
+
+
+  devmode-rust:
+    build:
+      context: .
+      dockerfile: sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode-rust-local:${ISOLATION_ID}
+    volumes:
+      - ./:/project/sawtooth-core
+    container_name: sawtooth-devmode-rust-local
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        cd sdk/examples/devmode_rust
+        cargo build --release
+        mkdir -p bin
+        cp ./target/release/devmode-rust bin/devmode-rust
+        devmode-rust -v --connect tcp://validator:5050
       "
     stop_signal: SIGKILL
