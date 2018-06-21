@@ -53,11 +53,13 @@ class ConsensusServiceHandler(Handler):
         request_type,
         response_class,
         response_type,
+        handler_status=HandlerStatus.RETURN
     ):
         self._request_class = request_class
         self._request_type = request_type
         self._response_class = response_class
         self._response_type = response_type
+        self._handler_status = handler_status
 
     def handle_request(self, request, response):
         raise NotImplementedError()
@@ -91,7 +93,7 @@ class ConsensusServiceHandler(Handler):
             self.handle_request(request, response)
 
         return HandlerResult(
-            status=HandlerStatus.RETURN,
+            status=self._handler_status,
             message_out=response,
             message_type=self._response_type)
 
