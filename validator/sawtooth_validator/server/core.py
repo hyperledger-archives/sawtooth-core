@@ -383,7 +383,10 @@ class Validator(object):
             state_view_factory=state_view_factory)
 
         consensus_handlers.add(
-            consensus_dispatcher, consensus_thread_pool, consensus_proxy)
+            consensus_dispatcher,
+            consensus_thread_pool,
+            consensus_proxy,
+            consensus_notifier)
 
         self._consensus_dispatcher = consensus_dispatcher
         self._consensus_service = consensus_service
