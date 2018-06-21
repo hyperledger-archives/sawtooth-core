@@ -20,6 +20,7 @@ def add(
         dispatcher,
         thread_pool,
         consensus_proxy,
+        consensus_notifier,
 ):
 
     handler = handlers.ConsensusRegisterHandler(consensus_proxy)
@@ -44,6 +45,10 @@ def add(
     dispatcher.add_handler(handler.request_type, handler, thread_pool)
 
     handler = handlers.ConsensusCheckBlocksHandler(consensus_proxy)
+    dispatcher.add_handler(handler.request_type, handler, thread_pool)
+
+    handler = handlers.ConsensusCheckBlocksNotifier(
+        consensus_proxy, consensus_notifier)
     dispatcher.add_handler(handler.request_type, handler, thread_pool)
 
     handler = handlers.ConsensusCommitBlockHandler(consensus_proxy)
