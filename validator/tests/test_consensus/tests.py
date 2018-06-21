@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
+from sawtooth_validator.consensus.proxy import UnknownBlock
 
 
 class FinalizeBlockResult:
@@ -276,9 +277,9 @@ class TestProxy(unittest.TestCase):
         self._mock_block_cache["56"] = "block0"
         self._mock_block_cache["78"] = "block1"
         self._proxy.check_blocks(block_ids)
-        self._mock_chain_controller\
-            .submit_blocks_for_verification\
-            .assert_called_with(["block0", "block1"])
+
+        with self.assertRaises(UnknownBlock):
+            self._proxy.check_blocks([bytes([0x00])])
 
     def test_commit_block(self):
         self._mock_block_cache["34"] = "a block"
