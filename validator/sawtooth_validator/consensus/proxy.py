@@ -76,17 +76,21 @@ class ConsensusProxy:
     def cancel_block(self):
         self._block_publisher.cancel_block()
 
-    # Using chain controller
     def check_blocks(self, block_ids):
+        for block_id in block_ids:
+            if block_id.hex() not in self._block_cache:
+                raise UnknownBlock(block_id.hex())
+
+    def get_block_statuses(self, block_ids):
+        """Returns a list of tuples of (lblock id, BlockStatus) pairs.
+        """
         try:
-            blocks = [
-                self._block_cache[block_id.hex()]
+            return [
+                (block_id.hex(), self._block_cache[block_id.hex()].status)
                 for block_id in block_ids
             ]
         except KeyError as key_error:
             raise UnknownBlock(key_error.args[0])
-
-        self._chain_controller.submit_blocks_for_verification(blocks)
 
     def commit_block(self, block_id):
         try:
