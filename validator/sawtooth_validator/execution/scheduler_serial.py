@@ -399,12 +399,12 @@ class SerialScheduler(Scheduler):
         with self._condition:
             if not self._cancelled and not self._final \
                     and self._previous_context_id:
+                self._cancelled = True
                 self._squash(
                     state_root=self._previous_state_hash,
                     context_ids=[self._previous_context_id],
                     persist=False,
                     clean_up=True)
-                self._cancelled = True
                 self._condition.notify_all()
 
     def is_cancelled(self):
