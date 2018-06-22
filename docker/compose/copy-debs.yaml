@@ -234,7 +234,6 @@ services:
 
   intkey-tests:
     image: sawtooth-intkey-tests:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tests-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -244,7 +243,6 @@ services:
 
   xo-tests:
     image: sawtooth-xo-tests:${ISOLATION_ID}
-    container_name: sawtooth-xo-tests-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -254,7 +252,6 @@ services:
 
   integration:
     image: sawtooth-integration:${ISOLATION_ID}
-    container_name: sawtooth-integration-default
     volumes:
       - ../../build/debs:/build/debs
     command: |
