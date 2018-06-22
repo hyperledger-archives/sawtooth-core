@@ -15,11 +15,11 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/sdk/examples/devmode_rust/bin/devmode_rust
+bin=$top_dir/sdk/examples/devmode_rust/bin/devmode-rust
 
 if [ -e $bin ]
 then
     $bin $*
 else
-    echo "Please build devmode_rust first with 'build_all' or 'build_rust'"
+    echo "Please build devmode-rust first with 'build_all' or 'build_rust'"
 fi

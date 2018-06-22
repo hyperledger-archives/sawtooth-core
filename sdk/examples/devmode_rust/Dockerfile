@@ -1,4 +1,4 @@
-# Copyright 2018 Cargill Incorporated
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# docker build -f adm/Dockerfile -t sawtooth-adm-local .
+# ------------------------------------------------------------------------------
 
 FROM ubuntu:xenial
 
@@ -36,9 +35,9 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
 
 WORKDIR /project/sawtooth-core/
 
-CMD cd adm \
- && echo "\033[0;32m--- Building sawtooth admin tools ---\n\033[0m" \
+CMD cd sdk/examples/devmode_rust \
+ && echo "\033[0;32m--- Building sawtooth-devmode-rust ---\n\033[0m" \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \
- && cp ./target/release/sawadm ./bin/sawadm
+ && cp ./target/release/devmode-rust ./bin/devmode-rust
