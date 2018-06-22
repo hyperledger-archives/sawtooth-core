@@ -134,7 +134,17 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_settings_view(
                 self._settings_view_factory)
 
-        return _map_with_none(settings_view.get_setting, settings)
+        result = []
+        for setting in settings:
+            try:
+                value = settings_view.get_setting(key)
+            except KeyError:
+                # if the key is missing, leave it out of the response
+                continue
+
+            result.append((key, value))
+
+        return result
 
     def state_get(self, block_id, addresses):
         '''Returns a list of address/data pairs (str, bytes)'''
@@ -150,7 +160,8 @@ class ConsensusProxy:
                 try:
                     value = state_view.get(address)
                 except KeyError:
-                    value = None
+                    # if the key is missing, leave it out of the response
+                    continue
 
                 result.append((address, value))
                 continue
@@ -171,17 +182,3 @@ class ConsensusProxy:
             ]
         except KeyError:
             raise UnknownBlock()
-
-
-def _map_with_none(function, keys):
-    result = []
-
-    for key in keys:
-        try:
-            value = function(key)
-        except KeyError:
-            value = None
-
-        result.append((key, value))
-
-    return result
