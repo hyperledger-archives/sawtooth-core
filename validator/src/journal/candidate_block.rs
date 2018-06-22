@@ -27,6 +27,7 @@ use batch::Batch;
 use transaction::Transaction;
 
 use journal::chain_commit_state::TransactionCommitCache;
+use journal::validation_rule_enforcer;
 
 use pylogger;
 
@@ -172,7 +173,12 @@ impl CandidateBlock {
             let gil = cpython::Python::acquire_gil();
             let py = gil.python();
             self.block_store
-                .call_method(py, "has_batch", (txn.header_signature.as_str(),), None)
+                .call_method(
+                    py,
+                    "has_transaction",
+                    (txn.header_signature.as_str(),),
+                    None,
+                )
                 .expect("Blockstore has no method 'has_batch'")
                 .extract::<bool>(py)
                 .unwrap()
@@ -264,37 +270,15 @@ impl CandidateBlock {
             batches_to_add.push(batch);
 
             {
-                let gil = cpython::Python::acquire_gil();
-                let py = gil.python();
-                let validation_enforcer = py.import(
-                    "sawtooth_validator.journal.validation_rule_enforcer",
-                ).expect("Unable to import sawtooth_validator.journal.validation_rule_enforcer");
-                let batches = cpython::PyList::new(
-                    py,
-                    &self.pending_batches
-                        .iter()
-                        .map(|b| b.to_py_object(py))
-                        .chain(batches_to_add.iter().map(|b| b.to_py_object(py)))
-                        .collect::<Vec<cpython::PyObject>>(),
-                );
-                let signer_pub_key = self.identity_signer
-                    .call_method(py, "get_public_key", cpython::NoArgs, None)
-                    .expect("IdentitySigner has no method 'get_public_key'")
-                    .call_method(py, "as_hex", cpython::NoArgs, None)
-                    .expect("PublicKey has no method 'as_hex'");
-                if !validation_enforcer
-                    .call(
-                        py,
-                        "enforce_validation_rules",
-                        (self.settings_view.clone_ref(py), signer_pub_key, batches),
-                        None,
-                    )
-                    .expect(
-                        "Module validation_rule_enforcer has no function 'enforce_validation_rules'",
-                    )
-                    .extract::<bool>(py)
-                    .unwrap()
-                {
+                let batches_to_test = self.pending_batches
+                    .iter()
+                    .chain(batches_to_add.iter())
+                    .collect::<Vec<_>>();
+                if !validation_rule_enforcer::enforce_validation_rules(
+                    &self.settings_view,
+                    &self.get_signer_public_key_hex(),
+                    &batches_to_test,
+                ) {
                     return;
                 }
             }
@@ -314,6 +298,19 @@ impl CandidateBlock {
                 batch_header_signature.as_str()
             );
         }
+    }
+
+    fn get_signer_public_key_hex(&self) -> String {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        self.identity_signer
+            .call_method(py, "get_public_key", cpython::NoArgs, None)
+            .expect("IdentitySigner has no method 'get_public_key'")
+            .call_method(py, "as_hex", cpython::NoArgs, None)
+            .expect("PublicKey has no method 'as_hex'")
+            .extract(py)
+            .expect("Unable to convert python string to rust")
     }
 
     pub fn sign_block(&self, block_builder: &cpython::PyObject) {
