@@ -1138,6 +1138,7 @@ class ParallelScheduler(Scheduler):
     def cancel(self):
         with self._condition:
             if not self._cancelled and not self._final:
+                self._cancelled = True
                 contexts = [
                     tr.context_id for tr in self._txn_results.values()
                     if tr.context_id
@@ -1147,7 +1148,6 @@ class ParallelScheduler(Scheduler):
                     contexts,
                     persist=False,
                     clean_up=True)
-                self._cancelled = True
                 self._condition.notify_all()
 
     def is_cancelled(self):
