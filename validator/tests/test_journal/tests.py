@@ -27,6 +27,9 @@ from threading import RLock
 import unittest
 from unittest.mock import patch
 
+from sawtooth_validator.consensus.handlers import BlockInProgress, BlockEmpty, \
+    BlockNotInitialized
+
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
@@ -115,24 +118,27 @@ class TestBlockCache(unittest.TestCase):
 
 class TestBlockPublisher(unittest.TestCase):
     '''
-    The block publisher has three main functions, and in these tests
+    The block publisher has five main functions, and in these tests
     those functions are given the following wrappers for convenience:
         * on_batch_received -> receive_batches
         * on_chain_updated -> update_chain_head
-        * on_check_publish_block -> publish_block
+        * initialize_block -> initialize_block
+        * summarize_block -> summarize_block
+        * finalize_block -> finalize_block
+    Additionally, the publish_block is provided to call both initialize_block
+    and finalize_block.
 
-    After publishing a block, publish_block sends its block to the
-    mock block sender, and that block is named result_block. This block
+    After finalizing a block, finalize_block sends its block
+    to the mock block sender, and that block is named result_block. This block
     is what is checked by the test assertions.
 
     The basic pattern for the publisher tests (with variations) is:
         0) make a list of batches (usually in setUp);
         1) receive the batches;
-        2) publish a block;
-        3) verify the block (checking that it contains the correct batches,
-           or checking that it doesn't exist, or whatever).
-
-    The publisher chain head might be updated several times in a test.
+        2) initialize a block;
+        3) finalize a block;
+        4) verify the block (checking that it contains the correct batches,
+           or checking that it doesn't exist, etc.).
     '''
 
     @unittest.mock.patch('test_journal.mock.MockBatchInjectorFactory')
@@ -184,6 +190,42 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.verify_block()
 
+    def test_receive_after_initialize(self):
+        '''
+        Receive batches after initialization
+        '''
+        self.initialize_block()
+        self.receive_batches()
+        self.finalize_block()
+        self.verify_block()
+
+    def test_summarize_block(self):
+        '''
+        Initialize a block and summarize it
+        '''
+        self.receive_batches()
+        self.initialize_block()
+        self.assertIsNotNone(self.summarize_block(),
+            'Expected block summary')
+
+    def test_reject_double_initialization(self):
+        '''
+        Test that you can't initialize a candidate block twice
+        '''
+        self.initialize_block()
+        with self.assertRaises(BlockInProgress,
+                msg='Second initialization should have rejected'):
+            self.initialize_block()
+
+    def test_reject_finalize_without_initialize(self):
+        '''
+        Test that no block is published if the block hasn't been initialized
+        '''
+        self.receive_batches()
+        with self.assertRaises(BlockNotInitialized,
+                msg='Block should not be finalized'):
+            self.finalize_block()
+
     def test_reject_duplicate_batches_from_receive(self):
         '''
         Test that duplicate batches from on_batch_received are rejected
@@ -199,8 +241,6 @@ class TestBlockPublisher(unittest.TestCase):
         '''
         Test that duplicate batches from block store are rejected
         '''
-        self.update_chain_head(None)
-
         self.update_chain_head(
             head=self.init_chain_head,
             uncommitted=self.batches)
@@ -211,38 +251,11 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.verify_block()
 
-    def test_no_chain_head(self):
-        '''
-        Test that nothing gets published with a null chain head,
-        then test that publishing resumes after updating
-        '''
-        self.update_chain_head(None)
-
-        self.receive_batches()
-
-        # try to publish block (failing)
-        self.publish_block()
-
-        self.assert_no_block_published()
-
-        # reset chain head several times,
-        # making sure batches remain queued
-        for _ in range(3):
-            self.update_chain_head(None)
-            self.update_chain_head(self.init_chain_head)
-
-        # try to publish block (succeeding)
-        self.publish_block()
-
-        self.verify_block()
-
     def test_committed_batches(self):
         '''
         Test that batches committed upon updating the chain head
         are not included in the next block.
         '''
-        self.update_chain_head(None)
-
         self.update_chain_head(
             head=self.init_chain_head,
             committed=self.batches)
@@ -260,8 +273,6 @@ class TestBlockPublisher(unittest.TestCase):
         Test that batches uncommitted upon updating the chain head
         are included in the next block.
         '''
-        self.update_chain_head(None)
-
         self.update_chain_head(
             head=self.init_chain_head,
             uncommitted=self.batches)
@@ -275,14 +286,15 @@ class TestBlockPublisher(unittest.TestCase):
         Test that no block is published if the pending queue is empty
         '''
         # try to publish with no pending queue (failing)
-        self.publish_block()
+        with self.assertRaises(BlockEmpty, msg='Block should not be published'):
+            self.publish_block()
 
         self.assert_no_block_published()
 
         # receive batches, then try again (succeeding)
         self.receive_batches()
 
-        self.publish_block()
+        self.finalize_block()
 
         self.verify_block()
 
@@ -295,7 +307,9 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.receive_batches()
 
-        self.publish_block()
+        # Block should be empty, since batches with missing deps aren't added
+        with self.assertRaises(BlockEmpty, msg='Block should be empty'):
+            self.publish_block()
 
         self.assert_no_block_published()
 
@@ -328,7 +342,9 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.receive_batches()
 
-        self.publish_block()
+        # Block should be empty since all batches are rejected
+        with self.assertRaises(BlockEmpty, msg='Block should be empty'):
+            self.publish_block()
 
         self.assert_no_block_published()
 
@@ -392,7 +408,8 @@ class TestBlockPublisher(unittest.TestCase):
         # build a new set of batches with the same transactions in them
         self.batches = self.make_batches_with_duplicate_txn()
         self.receive_batches()
-        self.publish_block()
+        with self.assertRaises(BlockEmpty, msg='Block should be empty'):
+            self.publish_block()
         self.assert_no_block_published()  # block should be empty after batch
         # with duplicate transaction is dropped.
 
@@ -533,10 +550,20 @@ class TestBlockPublisher(unittest.TestCase):
         for batch in batches:
             self.receive_batch(batch)
 
-    def publish_block(self):
-        self.publisher.on_check_publish_block()
+    def initialize_block(self):
+        self.publisher.initialize_block(self.block_tree_manager.chain_head)
+
+    def summarize_block(self):
+        return self.publisher.summarize_block()
+
+    def finalize_block(self):
+        self.publisher.finalize_block("")
         self.result_block = self.block_sender.new_block
         self.block_sender.new_block = None
+
+    def publish_block(self):
+        self.initialize_block()
+        self.finalize_block()
 
     def update_chain_head(self, head, committed=None, uncommitted=None):
         if head:
