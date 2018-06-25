@@ -26,6 +26,7 @@ node ('master') {
         ws("workspace/${env.BUILD_TAG}") {
             stage("Clone Repo") {
                 checkout scm
+                sh 'git fetch --tag'
             }
 
             if (!(env.BRANCH_NAME == 'master' && env.JOB_BASE_NAME == 'master')) {
