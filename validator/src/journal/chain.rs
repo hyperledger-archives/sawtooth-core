@@ -550,15 +550,6 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
-        // Reset the block in the cache with a valid status (which otherwise
-        // would be lost)
-        //
-        self.state
-            .write()
-            .expect("No lock holder should have poisoned the lock")
-            .block_cache
-            .put(block.clone());
-
         self.consensus_notifier.notify_block_new(block);
     }
 

@@ -336,6 +336,10 @@ class BlockValidator(object):
             raise e
 
     def submit_blocks_for_verification(self, blocks, callback):
+        # This is a work-around for the fact that the blocks passed to this
+        # function are both from the ChainController (in Rust) or itself.
+        # This ensures that the blocks being operated on come from the cache
+        blocks = [self._block_cache[b.identifier] for b in blocks]
         ready = self._block_scheduler.schedule(blocks)
         for block in ready:
             # Schedule the block for processing
