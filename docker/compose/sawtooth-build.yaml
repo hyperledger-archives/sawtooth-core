@@ -32,11 +32,11 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  smallbank-rust-tp:
+  smallbank-tp-rust:
     build:
       context: ../../
       dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
-    image: smallbank-rust-tp-local:${ISOLATION_ID}
+    image: smallbank-tp-rust-local:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
 
