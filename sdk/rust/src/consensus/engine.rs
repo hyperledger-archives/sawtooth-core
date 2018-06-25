@@ -56,6 +56,11 @@ impl From<Vec<u8>> for BlockId {
         BlockId(v)
     }
 }
+impl AsRef<[u8]> for BlockId {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 impl fmt::Debug for BlockId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
@@ -104,6 +109,11 @@ impl From<PeerId> for Vec<u8> {
 impl From<Vec<u8>> for PeerId {
     fn from(v: Vec<u8>) -> PeerId {
         PeerId(v)
+    }
+}
+impl AsRef<[u8]> for PeerId {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 impl fmt::Debug for PeerId {
