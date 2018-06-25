@@ -137,12 +137,12 @@ class ConsensusProxy:
         result = []
         for setting in settings:
             try:
-                value = settings_view.get_setting(key)
+                value = settings_view.get_setting(setting)
             except KeyError:
                 # if the key is missing, leave it out of the response
                 continue
 
-            result.append((key, value))
+            result.append((setting, value))
 
         return result
 
