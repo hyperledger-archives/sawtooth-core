@@ -73,7 +73,7 @@ impl ZmqDriver {
         let validator_sender_clone = validator_sender.clone();
         let (update_sender, update_receiver) = channel();
 
-        let (chain_head, peers) = register(
+        let startup_state = register(
             &mut validator_sender,
             Duration::from_secs(REGISTER_TIMEOUT),
             engine.name(),
@@ -98,8 +98,7 @@ impl ZmqDriver {
                 name,
                 version,
             )),
-            chain_head,
-            peers,
+            startup_state,
         );
 
         driver_thread.join().expect("Driver panicked")
@@ -161,7 +160,7 @@ pub fn register(
     timeout: Duration,
     name: String,
     version: String,
-) -> Result<(Block, Vec<PeerInfo>), Error> {
+) -> Result<StartupState, Error> {
     let mut request = ConsensusRegisterRequest::new();
     request.set_name(name);
     request.set_version(version);
@@ -175,7 +174,7 @@ pub fn register(
         )?
         .get_timeout(timeout)?;
 
-    let ret: Result<(Block, Vec<PeerInfo>), Error>;
+    let ret: Result<StartupState, Error>;
 
     // Keep trying to register until the response is something other
     // than NOT_READY.
@@ -189,14 +188,15 @@ pub fn register(
 
                 match response.get_status() {
                     ConsensusRegisterResponse_Status::OK => {
-                        ret = Ok((
-                            response.take_chain_head().into(),
-                            response
+                        ret = Ok(StartupState {
+                            chain_head: response.take_chain_head().into(),
+                            peers: response
                                 .take_peers()
                                 .into_iter()
                                 .map(|info| info.into())
                                 .collect(),
-                        ));
+                            local_peer_info: response.take_local_peer_info().into(),
+                        });
 
                         break;
                     }

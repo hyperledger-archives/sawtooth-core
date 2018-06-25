@@ -199,10 +199,10 @@ impl Engine for DevmodeEngine {
         &mut self,
         updates: Receiver<Update>,
         service: Box<Service>,
-        mut chain_head: Block,
-        _peers: Vec<PeerInfo>,
+        startup_state: StartupState,
     ) {
         let mut service = DevmodeService::new(service);
+        let mut chain_head = startup_state.chain_head;
 
         let mut wait_time = service.calculate_wait_time(chain_head.block_id.clone());
         let mut published_at_height = false;

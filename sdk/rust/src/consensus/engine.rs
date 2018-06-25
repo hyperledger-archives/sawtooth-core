@@ -158,8 +158,7 @@ pub trait Engine {
         &mut self,
         updates: Receiver<Update>,
         service: Box<Service>,
-        chain_head: Block,
-        peers: Vec<PeerInfo>,
+        startup_state: StartupState,
     );
 
     /// Get the version of this engine
@@ -167,6 +166,14 @@ pub trait Engine {
 
     /// Get the name of the engine, typically the algorithm being implemented
     fn name(&self) -> String;
+}
+
+/// State provided to an engine when it is started
+#[derive(Debug, Default)]
+pub struct StartupState {
+    pub chain_head: Block,
+    pub peers: Vec<PeerInfo>,
+    pub local_peer_info: PeerInfo,
 }
 
 #[derive(Debug)]
@@ -267,8 +274,7 @@ pub mod tests {
             &mut self,
             updates: Receiver<Update>,
             _service: Box<Service>,
-            _chain_head: Block,
-            _peers: Vec<PeerInfo>,
+            _startup_state: StartupState,
         ) {
             (*self.calls.lock().unwrap()).push("start".into());
             loop {
@@ -352,7 +358,7 @@ pub mod tests {
             .unwrap();
         let handle = thread::spawn(move || {
             let svc = Box::new(MockService {});
-            mock_engine.start(receiver, svc, Default::default(), Default::default());
+            mock_engine.start(receiver, svc, Default::default());
         });
         sender.send(Update::Shutdown).unwrap();
         handle.join().unwrap();

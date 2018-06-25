@@ -19,6 +19,7 @@ from queue import Queue
 from threading import Thread
 
 from sawtooth_sdk.consensus.driver import Driver
+from sawtooth_sdk.consensus.engine import StartupState
 from sawtooth_sdk.consensus.zmq_service import ZmqService
 from sawtooth_sdk.consensus import exceptions
 from sawtooth_sdk.messaging.stream import Stream
@@ -42,7 +43,7 @@ class ZmqDriver(Driver):
     def start(self, endpoint):
         self._stream = Stream(endpoint)
 
-        (chain_head, peers) = self._register()
+        startup_state = self._register()
 
         self._updates = Queue()
 
@@ -58,8 +59,7 @@ class ZmqDriver(Driver):
                     timeout=SERVICE_TIMEOUT,
                     name=self._engine.name(),
                     version=self._engine.version()),
-                chain_head,
-                peers)
+                startup_state)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("Uncaught engine exception")
 
@@ -113,7 +113,10 @@ class ZmqDriver(Driver):
                 continue
 
             if response.status == consensus_pb2.ConsensusRegisterResponse.OK:
-                return (response.chain_head, response.peers)
+                return StartupState(
+                    response.chain_head,
+                    response.peers,
+                    response.local_peer_info)
 
             raise exceptions.ReceiveError(
                 'Registration failed with status {}'.format(response.status))
