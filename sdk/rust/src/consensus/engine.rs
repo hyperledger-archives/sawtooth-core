@@ -15,10 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::error;
+use std::fmt;
 use std::ops::Deref;
-use std::sync::{atomic::{AtomicBool, Ordering},
-                mpsc::Receiver,
-                Mutex};
+use std::sync::mpsc::Receiver;
 
 use hex;
 
@@ -34,6 +34,7 @@ pub enum Update {
     BlockValid(BlockId),
     BlockInvalid(BlockId),
     BlockCommit(BlockId),
+    Shutdown,
 }
 
 #[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd)]
@@ -55,8 +56,8 @@ impl From<Vec<u8>> for BlockId {
         BlockId(v)
     }
 }
-impl ::std::fmt::Debug for BlockId {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for BlockId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
     }
 }
@@ -71,8 +72,8 @@ pub struct Block {
     pub payload: Vec<u8>,
     pub summary: Vec<u8>,
 }
-impl ::std::fmt::Debug for Block {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for Block {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "Block(block_num: {:?}, block_id: {:?}, previous_id: {:?}, signer_id: {:?}, payload: {}, summary: {})",
@@ -86,7 +87,7 @@ impl ::std::fmt::Debug for Block {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd)]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
@@ -105,8 +106,8 @@ impl From<Vec<u8>> for PeerId {
         PeerId(v)
     }
 }
-impl ::std::fmt::Debug for PeerId {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for PeerId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
     }
 }
@@ -149,49 +150,23 @@ pub struct PeerMessage {
 /// Finally, as an optimization, the consensus engine can send prioritized lists of blocks to the
 /// chain controller for checking instead of sending them one at a time, which allows the chain
 /// controller to intelligently work ahead while the consensus engine makes its decisions.
-pub trait Engine: Sync + Send {
+pub trait Engine {
     /// Called after the engine is initialized, when a connection to the validator has been
     /// established. Notifications from the validator are sent along `updates`. `service` is used
     /// to send requests to the validator.
     fn start(
-        &self,
+        &mut self,
         updates: Receiver<Update>,
         service: Box<Service>,
         chain_head: Block,
         peers: Vec<PeerInfo>,
     );
 
-    /// Called before the engine is dropped, to give the engine a chance to notify peers and
-    /// cleanup
-    fn stop(&self);
-
     /// Get the version of this engine
     fn version(&self) -> String;
 
     /// Get the name of the engine, typically the algorithm being implemented
     fn name(&self) -> String;
-}
-
-/// Utility class for signaling that a background thread should shutdown
-#[derive(Default)]
-pub struct Exit {
-    flag: Mutex<AtomicBool>,
-}
-
-impl Exit {
-    pub fn new() -> Self {
-        Exit {
-            flag: Mutex::new(AtomicBool::new(false)),
-        }
-    }
-
-    pub fn get(&self) -> bool {
-        self.flag.lock().unwrap().load(Ordering::Relaxed)
-    }
-
-    pub fn set(&self) {
-        self.flag.lock().unwrap().store(true, Ordering::Relaxed);
-    }
 }
 
 #[derive(Debug)]
@@ -206,7 +181,7 @@ pub enum Error {
     BlockNotReady,
 }
 
-impl ::std::error::Error for Error {
+impl error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
         match *self {
@@ -221,7 +196,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         use self::Error::*;
         match *self {
             EncodingError(_) => None,
@@ -236,8 +211,8 @@ impl ::std::error::Error for Error {
     }
 }
 
-impl ::std::fmt::Display for Error {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
         match *self {
             EncodingError(ref s) => write!(f, "EncodingError: {}", s),
@@ -259,27 +234,24 @@ pub mod tests {
     use std::default::Default;
     use std::sync::mpsc::{channel, RecvTimeoutError};
     use std::sync::{Arc, Mutex};
+    use std::thread;
+    use std::time::Duration;
 
     use consensus::service::tests::MockService;
 
     pub struct MockEngine {
         calls: Arc<Mutex<Vec<String>>>,
-        exit: Exit,
     }
 
     impl MockEngine {
         pub fn new() -> Self {
             MockEngine {
                 calls: Arc::new(Mutex::new(Vec::new())),
-                exit: Exit::new(),
             }
         }
 
         pub fn with(amv: Arc<Mutex<Vec<String>>>) -> Self {
-            MockEngine {
-                calls: amv,
-                exit: Exit::new(),
-            }
+            MockEngine { calls: amv }
         }
 
         pub fn calls(&self) -> Vec<String> {
@@ -292,7 +264,7 @@ pub mod tests {
 
     impl Engine for MockEngine {
         fn start(
-            &self,
+            &mut self,
             updates: Receiver<Update>,
             _service: Box<Service>,
             _chain_head: Block,
@@ -300,7 +272,7 @@ pub mod tests {
         ) {
             (*self.calls.lock().unwrap()).push("start".into());
             loop {
-                match updates.recv_timeout(::std::time::Duration::from_millis(100)) {
+                match updates.recv_timeout(Duration::from_millis(100)) {
                     Ok(update) => {
                         // We don't check for exit() here because we want to drain all the updates
                         // before we exit. In a real implementation, exit() should also be checked
@@ -327,6 +299,10 @@ pub mod tests {
                             Update::BlockCommit(_) => {
                                 (*self.calls.lock().unwrap()).push("BlockCommit".into())
                             }
+                            Update::Shutdown => {
+                                println!("shutdown");
+                                break;
+                            }
                         };
                     }
                     Err(RecvTimeoutError::Disconnected) => {
@@ -335,16 +311,9 @@ pub mod tests {
                     }
                     Err(RecvTimeoutError::Timeout) => {
                         println!("timeout");
-                        if self.exit.get() {
-                            break;
-                        }
                     }
                 }
             }
-        }
-        fn stop(&self) {
-            (*self.calls.lock().unwrap()).push("stop".into());
-            self.exit.set();
         }
         fn version(&self) -> String {
             "0".into()
@@ -356,8 +325,13 @@ pub mod tests {
 
     #[test]
     fn test_engine() {
-        let eng = Arc::new(MockEngine::new());
-        let eng_clone = eng.clone();
+        // Create the mock engine with this vec so we can refer to it later. Once we put the engine
+        // in a box, it is hard to get the vec back out.
+        let calls = Arc::new(Mutex::new(Vec::new()));
+
+        // We are going to run two threads to simulate the validator and the driver
+        let mut mock_engine = MockEngine::with(calls.clone());
+
         let (sender, receiver) = channel();
         sender
             .send(Update::PeerConnected(Default::default()))
@@ -376,25 +350,24 @@ pub mod tests {
         sender
             .send(Update::BlockCommit(Default::default()))
             .unwrap();
-        let handle = ::std::thread::spawn(move || {
+        let handle = thread::spawn(move || {
             let svc = Box::new(MockService {});
-            eng_clone.start(receiver, svc, Default::default(), Default::default());
+            mock_engine.start(receiver, svc, Default::default(), Default::default());
         });
-        eng.stop();
+        sender.send(Update::Shutdown).unwrap();
         handle.join().unwrap();
-        assert!(contains(&eng, "start"));
-        assert!(contains(&eng, "PeerConnected"));
-        assert!(contains(&eng, "PeerDisconnected"));
-        assert!(contains(&eng, "PeerMessage"));
-        assert!(contains(&eng, "BlockNew"));
-        assert!(contains(&eng, "BlockValid"));
-        assert!(contains(&eng, "BlockInvalid"));
-        assert!(contains(&eng, "BlockCommit"));
-        assert!(contains(&eng, "stop"));
+        assert!(contains(&calls, "start"));
+        assert!(contains(&calls, "PeerConnected"));
+        assert!(contains(&calls, "PeerDisconnected"));
+        assert!(contains(&calls, "PeerMessage"));
+        assert!(contains(&calls, "BlockNew"));
+        assert!(contains(&calls, "BlockValid"));
+        assert!(contains(&calls, "BlockInvalid"));
+        assert!(contains(&calls, "BlockCommit"));
     }
 
-    fn contains(eng: &Arc<MockEngine>, expected: &str) -> bool {
-        for call in eng.calls() {
+    fn contains(calls: &Arc<Mutex<Vec<String>>>, expected: &str) -> bool {
+        for call in &*(calls.lock().unwrap()) {
             if expected == call {
                 return true;
             }

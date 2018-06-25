@@ -33,7 +33,7 @@ use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
 use engine::DevmodeEngine;
-use sawtooth_sdk::consensus::{driver::Driver, zmq_driver::ZmqDriver};
+use sawtooth_sdk::consensus::zmq_driver::ZmqDriver;
 
 fn main() {
     let matches = clap_app!(intkey =>
@@ -76,9 +76,8 @@ fn main() {
         process::exit(1);
     });
 
-    let driver = ZmqDriver::new(Box::new(DevmodeEngine::new()));
-
-    driver.start(&endpoint).unwrap_or_else(|err| {
+    let (driver, _stop) = ZmqDriver::new();
+    driver.start(endpoint, DevmodeEngine::new()).unwrap_or_else(|err| {
         error!("{}", err);
         process::exit(1);
     });
