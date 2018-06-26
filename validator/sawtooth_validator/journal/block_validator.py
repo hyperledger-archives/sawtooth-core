@@ -404,6 +404,8 @@ class BlockValidator:
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "Block validation failed with unexpected error: %s", block)
+        else:
+            callback(block)
 
         try:
             blocks_now_ready = self._release_pending(block)
@@ -413,7 +415,6 @@ class BlockValidator:
                 "Submitting pending blocks failed with unexpected error: %s",
                 block)
 
-        callback(block)
 
 class BlockScheduler:
 
