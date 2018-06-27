@@ -43,7 +43,7 @@ class BattleshipTransaction:
         except ValueError:
             raise InvalidTransaction("Invalid payload serialization")
 
-        LOGGER.debug("payload recieved by battleship tp: %s", repr(payload))
+        LOGGER.debug("payload received by battleship tp: %s", repr(payload))
         self._signer_public_key = header.signer_public_key
         self._name = payload['Name'] if 'Name' in payload else None
         self._action = payload['Action'] if 'Action' in payload else None
@@ -357,9 +357,9 @@ def _get_state_data(game_address, context):
 
 
 def _store_state_data(addr, new_state, context):
-    LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s', new_state)
+    LOGGER.debug('Storing Updated State....\nUPDATED STATE:\n%s', new_state)
     addresses = context.set_state(
-        {addr, json.dumps(new_state).encode()}
+        {addr: json.dumps(new_state).encode()}
     )
 
     if len(addresses) < 1:
