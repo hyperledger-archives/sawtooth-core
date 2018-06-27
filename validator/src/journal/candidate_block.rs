@@ -21,7 +21,6 @@ use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
-use cpython::ToPyObject;
 
 use batch::Batch;
 use transaction::Transaction;
