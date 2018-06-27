@@ -362,7 +362,8 @@ class Validator(object):
             global_state_db, self.get_chain_head_state_root_hash,
             receipt_store, event_broadcaster, permission_verifier,
             component_thread_pool, client_thread_pool,
-            sig_pool, block_publisher)
+            sig_pool, block_publisher,
+            identity_signer.get_public_key().as_hex())
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher
