@@ -15,19 +15,19 @@
 
 # Description:
 #   Builds an image to be used when developing in Python. The default CMD is to
-#   run build_python.
+#   run build_validator.
 #
 #   The image is also used by unit and integration tests. Docker is used to
 #   interact with and orchestrate the creation of other docker containers.
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-python -t sawtooth-dev-python
+#   $ docker build . -f sawtooth-dev-validator -t sawtooth-dev-validator
 #
 # Run:
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core \
-#     -v /var/run/docker.sock:/var/run/docker.sock sawtooth-dev-python
+#     -v /var/run/docker.sock:/var/run/docker.sock sawtooth-dev-validator
 
 FROM ubuntu:xenial
 
