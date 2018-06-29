@@ -32,7 +32,6 @@ services:
         -c /project/sawtooth-core/cli/nose2.cfg
         -v
         -s /project/sawtooth-core/cli/tests
-        test_network
     environment:
         PYTHONPATH: "/project/sawtooth-core/signing:\
             /project/sawtooth-core/cli"
