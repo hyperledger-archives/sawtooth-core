@@ -28,8 +28,11 @@ RUN apt-get install -y -q --allow-downgrades \
     python3-protobuf
 
 RUN apt-get install -y -q --allow-downgrades \
+    python3-colorlog \
     python3-requests \
-    python3-toml
+    python3-toml \
+    python3-yaml \
+    python3-secp256k1
 
 RUN apt-get install -y -q \
     python3-cov-core \
