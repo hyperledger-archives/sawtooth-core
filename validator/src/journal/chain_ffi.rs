@@ -29,8 +29,6 @@ use std::os::raw::{c_char, c_void};
 use std::sync::mpsc::Sender;
 use std::thread;
 
-use batch::Batch;
-
 use protobuf::Message;
 
 use proto::transaction_receipt::TransactionReceipt;

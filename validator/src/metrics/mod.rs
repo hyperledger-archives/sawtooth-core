@@ -80,16 +80,6 @@ impl MetricsCollectorHandle {
         }
     }
 
-    pub fn timer<S: AsRef<str>>(
-        &self,
-        metric_name: S,
-        level: Option<Level>,
-        tags: Option<HashMap<String, String>>,
-    ) -> Timer {
-        Timer {
-            py_timer: self.create_metric("timer", metric_name, level, tags),
-        }
-    }
 
     fn create_metric<S: AsRef<str>>(
         &self,
@@ -150,41 +140,5 @@ impl Counter {
             .expect("Failed to call Counter.inc()");
     }
 
-    pub fn dec(&mut self) {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        self.py_counter
-            .call_method(py, "dec", NoArgs, None)
-            .expect("Failed to call Counter.dec()");
-    }
 }
 
-pub struct Timer {
-    py_timer: PyObject,
-}
-
-impl Timer {
-    pub fn time(&mut self) -> TimerHandle {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        TimerHandle {
-            py_timer_ctx: self.py_timer
-                .call_method(py, "time", NoArgs, None)
-                .expect("Failed to call Timer.time()"),
-        }
-    }
-}
-
-pub struct TimerHandle {
-    py_timer_ctx: PyObject,
-}
-
-impl Drop for TimerHandle {
-    fn drop(&mut self) {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        self.py_timer_ctx
-            .call_method(py, "stop", NoArgs, None)
-            .expect("Failed to call TimerContext.stop()");
-    }
-}
