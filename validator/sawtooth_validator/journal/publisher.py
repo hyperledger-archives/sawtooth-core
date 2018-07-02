@@ -202,15 +202,10 @@ class BlockPublisher(OwnedPointer):
         elif res == BlockPublisherErrorCode.BlockEmpty:
             raise BlockEmpty("The block is empty")
 
-    def batch_sender(self):
-        sender_ptr = ctypes.c_void_p()
-        self._call(
-            'batch_sender',
-            ctypes.byref(sender_ptr))
-        return IncomingBatchSender(sender_ptr)
-
     def start(self):
-        self._call('start')
+        sender_ptr = ctypes.c_void_p()
+        self._call('start', ctypes.byref(sender_ptr))
+        return IncomingBatchSender(sender_ptr)
 
     def stop(self):
         self._call('stop')

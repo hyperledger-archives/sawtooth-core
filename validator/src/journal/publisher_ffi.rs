@@ -189,18 +189,23 @@ pub extern "C" fn block_publisher_on_batch_received(
             .extract::<Batch>(py)
             .unwrap()
     };
-    unsafe {
-        (*(publisher as *mut BlockPublisher))
-            .publisher
-            .on_batch_received(batch)
+    let publisher = unsafe {
+        (*(publisher as *mut BlockPublisher)).clone()
     };
+    py.allow_threads(move ||
+        publisher.publisher.on_batch_received(batch)
+    );
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn block_publisher_start(publisher: *mut c_void) -> ErrorCode {
+pub extern "C" fn block_publisher_start(publisher: *mut c_void, incoming_batch_sender: *mut *const c_void) -> ErrorCode {
     check_null!(publisher);
-    unsafe { (*(publisher as *mut BlockPublisher)).start() };
+    let batch_tx = unsafe { (*(publisher as *mut BlockPublisher)).start() };
+    let batch_tx_ptr: *mut IncomingBatchSender = Box::into_raw(Box::new(batch_tx));
+    unsafe {
+        *incoming_batch_sender = batch_tx_ptr as *const c_void;
+    }
     ErrorCode::Success
 }
 
@@ -307,21 +312,6 @@ pub extern "C" fn block_publisher_summarize_block(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn block_publisher_batch_sender(
-    publisher: *mut c_void,
-    incoming_batch_sender: *mut *const c_void,
-) -> ErrorCode {
-    check_null!(publisher);
-    let batch_tx = unsafe { (*(publisher as *mut BlockPublisher)).batch_sender() };
-    let batch_tx_ptr: *mut IncomingBatchSender = Box::into_raw(Box::new(batch_tx));
-    unsafe {
-        *incoming_batch_sender = batch_tx_ptr as *const c_void;
-    }
-
-    ErrorCode::Success
-}
-
 // convert_on_chain_updated_args is used in tests
 pub fn convert_on_chain_updated_args(
     py: Python,
@@ -401,7 +391,7 @@ pub extern "C" fn block_publisher_has_batch(
     batch_id: *const c_char,
     has: *mut bool,
 ) -> ErrorCode {
-    check_null!(publisher);
+    check_null!(publisher, batch_id);
     let batch_id = match unsafe { CStr::from_ptr(batch_id).to_str() } {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidInput,

@@ -81,6 +81,7 @@ pub extern "C" fn incoming_batch_sender_has_batch(
     let batch_id = match unsafe { CStr::from_ptr(batch_id).to_str() } {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidInput,
+    };
     unsafe {
         *has = (*(sender_ptr as *mut IncomingBatchSender))
             .has_batch(batch_id)
