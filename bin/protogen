@@ -46,7 +46,7 @@ def main(args=None):
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
     protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
-    protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
+    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
 
     if "javascript" in args:
         protoc(proto_dir, "sdk/javascript", "protobuf", "javascript")
@@ -73,7 +73,7 @@ def main(args=None):
 
     # 6. Generate block info protos
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
-    protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
+    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
 
     # 7. Generate smallbank protos
     if "go" in args:

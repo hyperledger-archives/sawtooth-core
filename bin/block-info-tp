@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.join(
     'sdk', 'python'))
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families', 'block_info'))
+    'families', 'block_info', 'python'))
 
 from sawtooth_block_info.processor.main import main
 

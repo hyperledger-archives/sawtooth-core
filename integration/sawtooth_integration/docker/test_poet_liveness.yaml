@@ -115,7 +115,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
+        /project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   validator-1:
@@ -137,7 +137,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
+        /project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   validator-2:
@@ -159,7 +159,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
+        /project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   validator-3:
@@ -181,7 +181,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
+        /project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   validator-4:
@@ -203,7 +203,7 @@ services:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core:\
-        /project/sawtooth-core/families/block_info"
+        /project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   rest-api-0:
@@ -524,7 +524,7 @@ services:
   block-info-tp-0:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -532,13 +532,13 @@ services:
       - 4004
     command: block-info-tp -C tcp://validator-0:4004
     environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
+      PYTHONPATH: /project/sawtooth-core/families/block_info/python
     stop_signal: SIGKILL
 
   block-info-tp-1:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -546,13 +546,13 @@ services:
       - 4004
     command: block-info-tp -C tcp://validator-1:4004
     environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
+      PYTHONPATH: /project/sawtooth-core/families/block_info/python
     stop_signal: SIGKILL
 
   block-info-tp-2:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -560,13 +560,13 @@ services:
       - 4004
     command: block-info-tp -C tcp://validator-2:4004
     environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
+      PYTHONPATH: /project/sawtooth-core/families/block_info/python
     stop_signal: SIGKILL
 
   block-info-tp-3:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -574,13 +574,13 @@ services:
       - 4004
     command: block-info-tp -C tcp://validator-3:4004
     environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
+      PYTHONPATH: /project/sawtooth-core/families/block_info/python
     stop_signal: SIGKILL
 
   block-info-tp-4:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -588,5 +588,5 @@ services:
       - 4004
     command: block-info-tp -C tcp://validator-4:4004
     environment:
-      PYTHONPATH: /project/sawtooth-core/families/block_info
+      PYTHONPATH: /project/sawtooth-core/families/block_info/python
     stop_signal: SIGKILL
