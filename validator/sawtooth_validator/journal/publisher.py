@@ -83,6 +83,18 @@ class IncomingBatchSender(OwnedPointer):
 
         raise ValueError("An unknown error occurred: {}".format(res))
 
+    def has_batch(self, batch_id):
+        has = ctypes.c_bool(False)
+        c_batch_id = ctypes.c_char_p(batch_id.encode())
+
+        LIBRARY.call(
+            'incoming_batch_sender_has_batch',
+            self.pointer,
+            c_batch_id,
+            ctypes.byref(has))
+
+        return has
+
 
 class ChainHeadLockErrorCode(IntEnum):
     Success = 0
