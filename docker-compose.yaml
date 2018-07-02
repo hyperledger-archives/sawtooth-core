@@ -39,7 +39,7 @@ services:
   poet-engine:
     build:
       context: .
-      dockerfile: sdk/examples/poet_python/Dockerfile
+      dockerfile: consensus/poet/engine/Dockerfile
     image: poet-engine-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -49,7 +49,7 @@ services:
     command: |
       bash -c "
         bin/protogen
-        cd sdk/examples/poet_python
+        cd consensus/poet/engine
         python3 setup.py clean --all
         python3 setup.py build
         poet-engine -vv -C tcp://validator:5050 --component tcp://validator:4004

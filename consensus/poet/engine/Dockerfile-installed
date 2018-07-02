@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/examples/poet_python/Dockerfile-installed -t sawtooth-poet-engine-installed .
+# docker build -f consensus/poet/engine/Dockerfile-installed -t sawtooth-poet-engine-installed .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder
@@ -203,7 +203,7 @@ COPY . /project
 RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install \
  && /project/bin/protogen \
- && cd /project/sdk/examples/poet_python/ \
+ && cd /project/consensus/poet/engine/ \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \
  && python3 setup.py --command-packages=stdeb.command debianize \

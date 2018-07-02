@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/examples/poet_python/Dockerfile -t sawtooth-poet-engine-local .
+# docker build -f consensus/poet/engine/Dockerfile -t sawtooth-poet-engine-local .
 
 # -------------=== poet engine build ===-------------
 
@@ -50,6 +50,6 @@ WORKDIR /project/sawtooth-core
 
 CMD echo "\033[0;32m--- Building poet engine ---\n\033[0m" \
  && bin/protogen \
- && cd sdk/examples/poet_python \
+ && cd consensus/poet/engine \
  && python3 setup.py clean --all \
  && python3 setup.py build

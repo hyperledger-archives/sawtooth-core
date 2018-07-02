@@ -39,7 +39,7 @@ services:
   poet-engine:
     build:
       context: .
-      dockerfile: sdk/examples/poet_python/Dockerfile-installed
+      dockerfile: consensus/poet/engine/Dockerfile-installed
     image: sawtooth-poet-engine:${ISOLATION_ID}
     container_name: sawtooth-poet-engine-default
     depends_on:
