@@ -15,8 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject,
-              ToPyObject};
+use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use journal::block_validator::{BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
@@ -301,15 +300,18 @@ pub extern "C" fn chain_controller_submit_blocks_for_verification(
         py.allow_threads(move || {
             // A thread has to be spawned here, otherwise, any subsequent attempt to
             // re-acquire the GIL and import of python modules will fail.
-            let builder = thread::Builder::new().name("ChainController.submit_blocks_for_verification".into());
+            let builder = thread::Builder::new()
+                .name("ChainController.submit_blocks_for_verification".into());
             builder
-                .spawn(move || match controller.submit_blocks_for_verification(&blocks) {
-                    Ok(_) => ErrorCode::Success,
-                    Err(err) => {
-                        error!("Unable to call submit_blocks_for_verification: {:?}", err);
-                        ErrorCode::Unknown
-                    }
-                })
+                .spawn(
+                    move || match controller.submit_blocks_for_verification(&blocks) {
+                        Ok(_) => ErrorCode::Success,
+                        Err(err) => {
+                            error!("Unable to call submit_blocks_for_verification: {:?}", err);
+                            ErrorCode::Unknown
+                        }
+                    },
+                )
                 .unwrap()
                 .join()
                 .unwrap()
@@ -380,9 +382,7 @@ pub extern "C" fn chain_controller_chain_head(
             as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .light_clone();
 
-        let chain_head = py.allow_threads(move || {
-            controller.chain_head()
-        });
+        let chain_head = py.allow_threads(move || controller.chain_head());
 
         *block = chain_head.to_py_object(py).steal_ptr();
     }
@@ -412,13 +412,11 @@ pub extern "C" fn sender_send(sender: *const c_void, block: *mut py_ffi::PyObjec
 
     unsafe {
         let sender = (*(sender as *mut Sender<BlockWrapper>)).clone();
-        py.allow_threads(move || {
-            match sender.send(block) {
-                Ok(_) => ErrorCode::Success,
-                Err(err) => {
-                    error!("Unable to send validation result: {:?}", err);
-                    ErrorCode::Unknown
-                }
+        py.allow_threads(move || match sender.send(block) {
+            Ok(_) => ErrorCode::Success,
+            Err(err) => {
+                error!("Unable to send validation result: {:?}", err);
+                ErrorCode::Unknown
             }
         })
     }
