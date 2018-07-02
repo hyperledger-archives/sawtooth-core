@@ -15,12 +15,19 @@
  * ------------------------------------------------------------------------------
  */
 use py_ffi;
-use std::os::raw::c_void;
+use std::ffi::CStr;
+use std::os::raw::{c_char, c_void};
 
 use cpython::{PyObject, Python};
 
 use batch::Batch;
 use journal::publisher::IncomingBatchSender;
+
+macro_rules! check_null {
+    ($($arg:expr) , *) => {
+        $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
+    }
+}
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -61,6 +68,29 @@ pub extern "C" fn incoming_batch_sender_send(
     };
     Box::into_raw(sender);
     result
+}
+
+#[no_mangle]
+pub extern "C" fn incoming_batch_sender_has_batch(
+    sender_ptr: *mut c_void,
+    batch_id: *const c_char,
+    has: *mut bool,
+) -> ErrorCode {
+    check_null!(sender_ptr, batch_id);
+
+    let batch_id = match unsafe { CStr::from_ptr(batch_id).to_str() } {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInput,
+    unsafe {
+        *has = (*(sender_ptr as *mut IncomingBatchSender))
+            .has_batch(batch_id)
+            .unwrap_or_else(|e| {
+                warn!("Unable to check for batch {:?}", e);
+                false
+            });
+    }
+
+    ErrorCode::Success
 }
 
 #[no_mangle]
