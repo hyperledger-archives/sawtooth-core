@@ -242,6 +242,7 @@ class Validator(object):
             cache_keep_time=base_keep_time,
             cache_purge_frequency=30,
             requested_keep_time=300)
+        self._completer = completer
 
         block_sender = BroadcastBlockSender(completer, gossip)
         batch_sender = BroadcastBatchSender(completer, gossip)
@@ -303,8 +304,6 @@ class Validator(object):
             batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory)
 
-        block_publisher_batch_sender = block_publisher.batch_sender()
-
         block_validator = BlockValidator(
             block_cache=block_cache,
             state_view_factory=state_view_factory,
@@ -345,15 +344,16 @@ class Validator(object):
 
         responder = Responder(completer)
 
-        completer.set_on_batch_received(block_publisher_batch_sender.send)
         completer.set_on_block_received(chain_controller.queue_block)
         completer.set_chain_has_block(chain_controller.has_block)
+
+        self._incoming_batch_sender = None
 
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
-            chain_controller.has_block, block_publisher.has_batch,
+            chain_controller.has_block, self.has_batch,
             permission_verifier, block_publisher, consensus_notifier)
 
         component_handlers.add(
@@ -420,9 +420,10 @@ class Validator(object):
         self._network_service.start()
 
         self._gossip.start()
-        self._block_publisher.start()
+        self._incoming_batch_sender = self._block_publisher.start()
         self._chain_controller.start()
 
+        self._completer.set_on_batch_received(self._incoming_batch_sender.send)
         signal_event = threading.Event()
 
         signal.signal(signal.SIGTERM,
@@ -476,6 +477,16 @@ class Validator(object):
                     time.sleep(1)
 
         LOGGER.info("All threads have been stopped and joined")
+
+    def has_batch(self, batch_id):
+        if self._block_publisher.has_batch(batch_id):
+            return True
+
+        if self._incoming_batch_sender and \
+                self._incoming_batch_sender.has_batch(batch_id):
+            return True
+
+        return False
 
     def get_chain_head_state_root_hash(self):
         return self._chain_controller.chain_head.state_root_hash
