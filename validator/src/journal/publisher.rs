@@ -433,10 +433,6 @@ impl SyncBlockPublisher {
         state.candidate_block.is_some()
     }
 
-    fn can_build_block(&self, state: &BlockPublisherState) -> bool {
-        state.chain_head.is_some() && state.pending_batches.len() > 0
-    }
-
     pub fn on_batch_received(&self, batch: Batch) {
         let mut state = self.state.write().expect("Lock should not be poisoned");
         for observer in &self.batch_observers {
