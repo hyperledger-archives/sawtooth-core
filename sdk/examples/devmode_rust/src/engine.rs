@@ -256,6 +256,21 @@ impl Engine for DevmodeEngine {
                             {
                                 info!("Committing {:?}", block);
                                 service.commit_block(block_id);
+                            } else if block.block_num < chain_head.block_num {
+                                let mut chain_block = chain_head;
+                                loop {
+                                    chain_block = service.get_block(chain_block.previous_id);
+                                    if chain_block.block_num == block.block_num {
+                                        break;
+                                    }
+                                }
+                                if block.block_id > chain_block.block_id {
+                                    info!("Switching to new fork {:?}", block);
+                                    service.commit_block(block_id);
+                                } else {
+                                    info!("Ignoring fork {:?}", block);
+                                    service.ignore_block(block_id);
+                                }
                             } else {
                                 info!("Ignoring {:?}", block);
                                 service.ignore_block(block_id);
