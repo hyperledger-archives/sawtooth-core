@@ -28,6 +28,7 @@ xo-tp-python
 settings-tp
 identity-tp
 poet-validator-registry-tp
+devmode-rust
 "
 
 if [ -z $ISOLATION_ID ]

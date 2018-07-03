@@ -2,6 +2,7 @@
 name = "sawtooth-devmode-rust"
 version = "0.1.0"
 authors = ["Intel Corporation"]
+description = "Hyperledger Sawtooth DevMode Rust consensus engine"
 
 [[bin]]
 name = "devmode-rust"
@@ -13,3 +14,13 @@ log = "0.3.0"
 log4rs = "0.7.0"
 rand = "0.4.2"
 sawtooth_sdk = { path = "../../rust" }
+
+[package.metadata.deb]
+maintainer = "sawtooth"
+depends = "$auto"
+assets = [
+    ["packaging/systemd/sawtooth-devmode-rust.service", "/lib/systemd/system/sawtooth-devmode-rust.service", "640"],
+    ["packaging/systemd/sawtooth-devmode-rust", "/etc/default/sawtooth-devmode-rust", "640"],
+    ["target/release/devmode-rust", "/usr/bin/devmode-rust", "755"]
+]
+maintainer-scripts = "packaging/ubuntu"
