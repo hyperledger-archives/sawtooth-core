@@ -38,6 +38,8 @@ use std::time::Duration;
 
 const REGISTER_TIMEOUT: u64 = 300;
 const SERVICE_TIMEOUT: u64 = 300;
+const INITAL_RETRY_DELAY: Duration = Duration::from_millis(100);
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(3);
 
 /// Generates a random correlation id for use in Message
 fn generate_correlation_id() -> String {
@@ -178,7 +180,7 @@ pub fn register(
     // Keep trying to register until the response is something other
     // than NOT_READY.
 
-    let mut retry_delay = Duration::from_millis(100);
+    let mut retry_delay = INITAL_RETRY_DELAY;
     loop {
         match msg.get_message_type() {
             Message_MessageType::CONSENSUS_REGISTER_RESPONSE => {
@@ -200,7 +202,12 @@ pub fn register(
                     }
                     ConsensusRegisterResponse_Status::NOT_READY => {
                         thread::sleep(retry_delay);
-                        retry_delay = retry_delay * 2;
+                        if retry_delay < MAX_RETRY_DELAY {
+                            retry_delay = retry_delay * 2;
+                            if retry_delay > MAX_RETRY_DELAY {
+                                retry_delay = MAX_RETRY_DELAY;
+                            }
+                        }
                         msg = sender
                             .send(
                                 Message_MessageType::CONSENSUS_REGISTER_REQUEST,
