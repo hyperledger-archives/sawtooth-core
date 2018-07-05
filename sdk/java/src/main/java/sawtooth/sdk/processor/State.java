@@ -23,6 +23,8 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.TpReceiptAddDataRequest;
+import sawtooth.sdk.protobuf.TpReceiptAddDataResponse;
 import sawtooth.sdk.protobuf.TpStateEntry;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
 import sawtooth.sdk.protobuf.TpStateGetResponse;
@@ -145,4 +147,34 @@ public class State {
     return addressesThatWereSet;
   }
 
+  /**Add a blob to the execution result for this transaction.
+   *
+   * @param data - the byte[] data to add for transaction
+   * @throws InternalError something went wrong processing transaction
+   */
+  public void addTransactionReceipt(byte[] data)
+                    throws InternalError, InvalidTransactionException {
+    TpReceiptAddDataRequest setAddDataRequest = TpReceiptAddDataRequest
+                                                .newBuilder()
+                                                .setContextId(this.contextId)
+                                                .setData(ByteString.copyFrom(data))
+                                                .build();
+    Future future = stream.send(Message.MessageType.TP_RECEIPT_ADD_DATA_REQUEST,
+                    setAddDataRequest.toByteString());
+    TpReceiptAddDataResponse setAddDataResponse = null;
+    try {
+      setAddDataResponse = TpReceiptAddDataResponse
+                           .parseFrom(future.getResult(TIME_OUT));
+
+    } catch (InvalidProtocolBufferException ipbe) {
+      throw new InvalidTransactionException(ipbe.toString());
+    } catch (ValidatorConnectionError vce) {
+      throw new InternalError(vce.toString());
+    } catch (Exception e) {
+      throw new InternalError(e.toString());
+    }
+    if (setAddDataResponse.getStatus() == TpReceiptAddDataResponse.Status.ERROR) {
+      throw new InternalError("Failed to add receipt data " + data.toString());
+    }
+  }  
 }
