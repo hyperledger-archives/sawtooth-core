@@ -297,7 +297,7 @@ class Stream(object):
             message_type=message_type,
             correlation_id=_generate_id(),
             content=content)
-        future = Future(message.correlation_id)
+        future = Future(message.correlation_id, request_type=message_type)
         self._futures.put(future)
 
         self._send_recieve_thread.put_message(message)

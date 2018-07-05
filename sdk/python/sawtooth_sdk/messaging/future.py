@@ -17,6 +17,7 @@ from threading import Condition
 from threading import RLock
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
 
 
 class FutureResult(object):
@@ -42,10 +43,11 @@ class FutureError(object):
 
 
 class Future(object):
-    def __init__(self, correlation_id):
+    def __init__(self, correlation_id, request_type=None):
         self.correlation_id = correlation_id
         self._result = None
         self._condition = Condition()
+        self._request_type = request_type
 
     def done(self):
         return self._result is not None
@@ -54,7 +56,11 @@ class Future(object):
         with self._condition:
             if self._result is None:
                 if not self._condition.wait(timeout):
-                    raise FutureTimeoutError('Future timed out')
+                    message_type = validator_pb2.Message.MessageType.Name(
+                        self._request_type) if self._request_type else None
+                    raise FutureTimeoutError(
+                        'Future timed out waiting for response to {}'.format(
+                            message_type))
         return self._result
 
     def set_result(self, result):
