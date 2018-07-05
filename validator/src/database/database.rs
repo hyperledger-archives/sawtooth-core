@@ -24,6 +24,7 @@ pub enum DatabaseError {
     WriterError(String),
     CorruptionError(String),
     NotFoundError(String),
+    DuplicateEntry,
 }
 
 impl std::fmt::Display for DatabaseError {
@@ -34,6 +35,7 @@ impl std::fmt::Display for DatabaseError {
             DatabaseError::WriterError(ref msg) => write!(f, "WriterError: {}", msg),
             DatabaseError::CorruptionError(ref msg) => write!(f, "CorruptionError: {}", msg),
             DatabaseError::NotFoundError(ref msg) => write!(f, "NotFoundError: {}", msg),
+            DatabaseError::DuplicateEntry => write!(f, "DuplicateEntry"),
         }
     }
 }
@@ -46,6 +48,7 @@ impl std::error::Error for DatabaseError {
             DatabaseError::WriterError(ref msg) => msg,
             DatabaseError::CorruptionError(ref msg) => msg,
             DatabaseError::NotFoundError(ref msg) => msg,
+            DatabaseError::DuplicateEntry => "DuplicateEntry",
         }
     }
 
@@ -56,6 +59,7 @@ impl std::error::Error for DatabaseError {
             DatabaseError::WriterError(_) => None,
             DatabaseError::CorruptionError(_) => None,
             DatabaseError::NotFoundError(_) => None,
+            DatabaseError::DuplicateEntry => None,
         }
     }
 }
