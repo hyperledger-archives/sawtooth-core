@@ -80,7 +80,7 @@ class ZmqService(Service):
 
     # -- Block Creation --
 
-    def initialize_block(self, previous_id):
+    def initialize_block(self, previous_id=None):
         request = (
             consensus_pb2.ConsensusInitializeBlockRequest(
                 previous_id=previous_id)

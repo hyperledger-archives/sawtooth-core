@@ -18,6 +18,7 @@ import threading
 import random
 import string
 import unittest
+import queue
 
 import zmq
 
@@ -32,13 +33,20 @@ LOGGER = logging.getLogger(__name__)
 
 class MockEngine(Engine):
     def __init__(self):
-        self.updates = None
+        self.updates = []
+        self.exit = False
 
     def start(self, updates, service, chain_head, peers):
-        self.updates = updates
+        while not self.exit:
+            try:
+                update = updates.get(timeout=1)
+            except queue.Empty:
+                pass
+            else:
+                self.updates.append(update)
 
     def stop(self):
-        pass
+        self.exit = True
 
     def name(self):
         return 'test-name'
@@ -155,7 +163,7 @@ class TestDriver(unittest.TestCase):
             Message.CONSENSUS_NOTIFY_BLOCK_COMMIT)
 
         self.assertEqual(
-            [msg_type for (msg_type, data) in list(self.engine.updates.queue)],
+            [msg_type for (msg_type, data) in self.engine.updates],
             [
                 Message.CONSENSUS_NOTIFY_PEER_CONNECTED,
                 Message.CONSENSUS_NOTIFY_PEER_DISCONNECTED,

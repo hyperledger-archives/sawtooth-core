@@ -46,9 +46,12 @@ class ZmqDriver(Driver):
 
         self._updates = Queue()
 
-        engine_thread = Thread(
-            target=self._engine.start,
-            args=(
+        driver_thread = Thread(
+            target=self._driver_loop)
+        driver_thread.start()
+
+        try:
+            self._engine.start(
                 self._updates,
                 ZmqService(
                     stream=self._stream,
@@ -56,27 +59,36 @@ class ZmqDriver(Driver):
                     name=self._engine.name(),
                     version=self._engine.version()),
                 chain_head,
-                peers))
+                peers)
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Uncaught engine exception")
 
-        engine_thread.start()
+        self.stop()
+        driver_thread.join()
 
-        while True:
-            if self._exit:
-                self._engine.stop()
-                engine_thread.join()
-                break
+    def _driver_loop(self):
+        try:
+            future = self._stream.receive()
+            while True:
+                if self._exit:
+                    self._engine.stop()
+                    break
 
-            try:
-                message = self._stream.receive().result(10)
-            except concurrent.futures.TimeoutError:
-                continue
+                try:
+                    message = future.result(1)
+                    future = self._stream.receive()
+                except concurrent.futures.TimeoutError:
+                    continue
 
-            result = self._process(message)
+                result = self._process(message)
 
-            self._updates.put(result)
+                self._updates.put(result)
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Uncaught driver exception")
 
     def stop(self):
         self._exit = True
+        self._engine.stop()
         self._stream.close()
 
     def _register(self):
