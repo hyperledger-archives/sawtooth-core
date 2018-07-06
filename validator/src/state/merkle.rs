@@ -49,6 +49,8 @@ use state::StateReader;
 const TOKEN_SIZE: usize = 2;
 
 pub const CHANGE_LOG_INDEX: &str = "change_log";
+pub const DUPLICATE_LOG_INDEX: &str = "duplicate_log";
+pub const INDEXES: [&'static str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
 
 /// Merkle Database
 #[derive(Clone)]
@@ -94,16 +96,19 @@ impl MerkleDatabase {
         } else if change_log.get_successors().len() == 0 {
             // deleting the tip of a trie lineage
 
-            let mut deletion_candidates: HashSet<Vec<u8>> =
+            let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
                 MerkleDatabase::remove_duplicate_hashes(
                     &mut db_writer,
-                    &root_bytes,
                     change_log.take_additions(),
                 )?;
 
             for hash in deletion_candidates.iter() {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
+            }
+
+            for hash in duplicates.iter() {
+                decrement_ref_count(&mut db_writer, hash)?;
             }
 
             db_writer.index_delete(CHANGE_LOG_INDEX, &root_bytes)?;
@@ -127,16 +132,19 @@ impl MerkleDatabase {
             // deleting a parent
             let mut successor = change_log.take_successors().pop().unwrap();
 
-            let mut deletion_candidates: HashSet<Vec<u8>> =
+            let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
                 MerkleDatabase::remove_duplicate_hashes(
                     &mut db_writer,
-                    &root_bytes,
                     successor.take_deletions(),
                 )?;
 
             for hash in deletion_candidates.iter() {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
+            }
+
+            for hash in duplicates.iter() {
+                decrement_ref_count(&mut db_writer, hash)?;
             }
 
             db_writer.index_delete(CHANGE_LOG_INDEX, &root_bytes)?;
@@ -150,31 +158,18 @@ impl MerkleDatabase {
 
     fn remove_duplicate_hashes(
         db_writer: &mut LmdbDatabaseWriter,
-        root_bytes: &Vec<u8>,
         deletions: protobuf::RepeatedField<Vec<u8>>,
-    ) -> Result<HashSet<Vec<u8>>, StateDatabaseError> {
-        let mut deletion_candidates: HashSet<Vec<u8>> = deletions.into_iter().collect();
-        let mut cursor = db_writer.index_cursor(CHANGE_LOG_INDEX)?;
-
-        let mut change_log_entry = cursor.first();
-        loop {
-            match change_log_entry.as_ref() {
-                Some((root_hash_bytes, change_log_bytes)) if root_hash_bytes != root_bytes => {
-                    let alternate_change_log: ChangeLogEntry =
-                        protobuf::parse_from_bytes(&change_log_bytes)?;
-                    for key in alternate_change_log.get_additions() {
-                        deletion_candidates.remove(key);
-                    }
+    ) -> Result<(Vec<Vec<u8>>, Vec<Vec<u8>>), StateDatabaseError> {
+        let (deletion_candidates, decrements): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
+            deletions.into_iter().partition(|key| {
+                if let Ok(count) = get_ref_count(db_writer, &key) {
+                    count == 0
+                } else {
+                    false
                 }
-                // we found the same entry we're pruning
-                Some(_) => (),
-                None => break,
-            }
+            });
 
-            change_log_entry = cursor.next();
-        }
-
-        Ok(deletion_candidates)
+        Ok((deletion_candidates, decrements))
     }
 
     /// Returns the current merkle root for this MerkleDatabase
@@ -349,7 +344,13 @@ impl MerkleDatabase {
         let root_hash_bytes = ::hex::decode(&self.root_hash).expect("Improper hex");
 
         for &(ref key, ref value) in batch {
-            db_writer.put(::hex::encode(key).as_bytes(), &value)?;
+            match db_writer.put(::hex::encode(key).as_bytes(), &value) {
+                Ok(_) => continue,
+                Err(DatabaseError::DuplicateEntry) => {
+                    increment_ref_count(&mut db_writer, key);
+                }
+                Err(err) => return Err(StateDatabaseError::from(err)),
+            }
         }
 
         let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
@@ -528,7 +529,8 @@ fn initialize_db(db: &LmdbDatabase) -> Result<String, StateDatabaseError> {
 
     let mut db_writer = db.writer()?;
     let hex_hash = ::hex::encode(hash);
-    db_writer.put(hex_hash.as_bytes(), &packed)?;
+    // Ignore ref counts for the default, empty tree
+    db_writer.overwrite(hex_hash.as_bytes(), &packed)?;
     db_writer.commit()?;
 
     Ok(hex_hash)
@@ -557,6 +559,54 @@ fn write_change_log(
     change_log: &ChangeLogEntry,
 ) -> Result<(), StateDatabaseError> {
     Ok(db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?)
+}
+
+fn increment_ref_count(
+    db_writer: &mut LmdbDatabaseWriter,
+    key: &[u8],
+) -> Result<u64, StateDatabaseError> {
+    let ref_count = get_ref_count(db_writer, key)?;
+
+    db_writer.index_put(DUPLICATE_LOG_INDEX, key, &to_bytes(ref_count + 1))?;
+
+    Ok(ref_count)
+}
+
+fn decrement_ref_count(
+    db_writer: &mut LmdbDatabaseWriter,
+    key: &[u8],
+) -> Result<u64, StateDatabaseError> {
+    let count = get_ref_count(db_writer, key)?;
+    Ok(if count == 1 {
+        db_writer.index_delete(DUPLICATE_LOG_INDEX, key)?;
+        0
+    } else {
+        db_writer.index_put(DUPLICATE_LOG_INDEX, key, &to_bytes(count - 1))?;
+        count - 1
+    })
+}
+
+fn get_ref_count(
+    db_writer: &mut LmdbDatabaseWriter,
+    key: &[u8],
+) -> Result<u64, StateDatabaseError> {
+    Ok(
+        if let Some(ref_count) = db_writer.index_get(DUPLICATE_LOG_INDEX, key)? {
+            from_bytes(ref_count)
+        } else {
+            0
+        },
+    )
+}
+
+fn to_bytes(num: u64) -> [u8; 8] {
+    unsafe { ::std::mem::transmute(num.to_le()) }
+}
+
+fn from_bytes(bytes: Vec<u8>) -> u64 {
+    let mut num_bytes = [0u8; 8];
+    num_bytes.copy_from_slice(&bytes);
+    u64::from_le(unsafe { ::std::mem::transmute(num_bytes) })
 }
 
 /// This delete ignores any MDB_NOTFOUND errors
@@ -1194,7 +1244,7 @@ mod tests {
         run_test(|merkle_path| {
             let db = make_lmdb(&merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
-            let mut updates: HashMap<String, Vec<u8>> = vec![
+            let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
@@ -1208,7 +1258,7 @@ mod tests {
 
             // create the middle root
             merkle_db.set_merkle_root(parent_root.clone()).unwrap();
-            let mut updates: HashMap<String, Vec<u8>> = vec![
+            let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
             ].into_iter()
@@ -1226,8 +1276,8 @@ mod tests {
                 .set("ab0000", "0001".as_bytes())
                 .expect("Set failed to work");
 
-            merkle_db.set_merkle_root(successor_root_last);
-            let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
+            merkle_db.set_merkle_root(successor_root_last).unwrap();
+            let parent_change_log = expect_change_log(&db, &parent_root_bytes);
             assert_eq!(
                 parent_change_log
                     .get_successors()
@@ -1252,7 +1302,7 @@ mod tests {
         run_test(|merkle_path| {
             let db = make_lmdb(&merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
-            let mut updates: HashMap<String, Vec<u8>> = vec![
+            let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
@@ -1265,7 +1315,7 @@ mod tests {
 
             // create the middle root
             merkle_db.set_merkle_root(parent_root.clone()).unwrap();
-            let mut updates: HashMap<String, Vec<u8>> = vec![
+            let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
             ].into_iter()
@@ -1286,8 +1336,8 @@ mod tests {
                 ::hex::decode(successor_root_last.clone()).expect("Proper hex");
 
             // set back to the parent root
-            merkle_db.set_merkle_root(parent_root);
-            let mut last_change_log = expect_change_log(&db, &successor_root_bytes);
+            merkle_db.set_merkle_root(parent_root).unwrap();
+            let last_change_log = expect_change_log(&db, &successor_root_bytes);
             assert_eq!(
                 last_change_log.get_additions().len() - 1,
                 MerkleDatabase::prune(&db, &successor_root_last)
@@ -1400,10 +1450,13 @@ mod tests {
     }
 
     fn make_lmdb(merkle_path: &str) -> LmdbDatabase {
-        let ctx = LmdbContext::new(Path::new(merkle_path), 1, Some(120 * 1024 * 1024))
-            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        let ctx = LmdbContext::new(
+            Path::new(merkle_path),
+            INDEXES.len(),
+            Some(120 * 1024 * 1024),
+        ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap();
-        LmdbDatabase::new(ctx, &[CHANGE_LOG_INDEX])
+        LmdbDatabase::new(ctx, &INDEXES)
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap()
     }

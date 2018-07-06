@@ -48,7 +48,7 @@ class MerkleDatabase(ffi.OwnedPointer):
 
     @staticmethod
     def create_index_configuration():
-        return ['change_log']
+        return ['change_log', 'duplicate_log']
 
     def __iter__(self):
         return self.leaves()

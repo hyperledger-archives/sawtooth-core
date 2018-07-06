@@ -36,7 +36,9 @@ impl LmdbContext {
         indexes: usize,
         size: Option<usize>,
     ) -> Result<Self, DatabaseError> {
-        let flags = lmdb::open::MAPASYNC | lmdb::open::WRITEMAP | lmdb::open::NORDAHEAD
+        let flags = lmdb::open::MAPASYNC
+            | lmdb::open::WRITEMAP
+            | lmdb::open::NORDAHEAD
             | lmdb::open::NOSUBDIR;
 
         let filepath_str = filepath
@@ -234,7 +236,19 @@ pub struct LmdbDatabaseWriter<'a> {
 }
 
 impl<'a> LmdbDatabaseWriter<'a> {
+    /// Writes the given key/value pair. If the key/value pair already exists,
+    /// it will return a DatabaseError::DuplicateEntry.
     pub fn put(&mut self, key: &[u8], value: &[u8]) -> Result<(), DatabaseError> {
+        self.txn
+            .access()
+            .put(&self.db.main, key, value, lmdb::put::NOOVERWRITE)
+            .map_err(|err| match err {
+                lmdb::error::Error::Code(lmdb::error::KEYEXIST) => DatabaseError::DuplicateEntry,
+                _ => DatabaseError::WriterError(format!("{}", err)),
+            })
+    }
+
+    pub fn overwrite(&mut self, key: &[u8], value: &[u8]) -> Result<(), DatabaseError> {
         self.txn
             .access()
             .put(&self.db.main, key, value, lmdb::put::Flags::empty())
