@@ -26,8 +26,8 @@ from sawtooth_integration.tests.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
-WAIT = 120
-ASSERT_CONSENSUS_TIMEOUT = 90
+WAIT = 240
+ASSERT_CONSENSUS_TIMEOUT = 180
 
 
 class TestDynamicNetwork(unittest.TestCase):
