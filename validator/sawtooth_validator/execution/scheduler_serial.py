@@ -404,8 +404,8 @@ class SerialScheduler(Scheduler):
                     context_ids=[self._previous_context_id],
                     persist=False,
                     clean_up=True)
-                self._cancelled = True
-                self._condition.notify_all()
+            self._cancelled = True
+            self._condition.notify_all()
 
     def is_cancelled(self):
         with self._condition:
