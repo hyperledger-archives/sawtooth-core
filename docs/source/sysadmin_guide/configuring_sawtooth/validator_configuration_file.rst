@@ -90,7 +90,7 @@ The ``validator.toml`` configuration file has the following options:
 
   .. code-block:: none
 
-    seeds = ["tcp://127.0.0.1:8801"]
+    seeds = ["tcp://validator-host1:8800"]
 
 - ``peers`` = ["`URL`"]
 
@@ -98,7 +98,7 @@ The ``validator.toml`` configuration file has the following options:
 
   .. code-block:: none
 
-    peers = ["tcp://127.0.0.1:8801"]
+    peers = ["tcp://validator-host1:8800"]
 
 - ``scheduler`` = '`type`'
 

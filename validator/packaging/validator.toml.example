@@ -43,12 +43,12 @@ endpoint = "tcp://127.0.0.1:8800"
 
 # Uri(s) to connect to in order to initially connect to the validator network,
 # in the format tcp://hostname:port. This is not needed in static peering mode
-# and defaults to None.
-seeds = ["tcp://127.0.0.1:8801"]
+# and defaults to None. Replace host1 with the seed's hostname or IP address.
+# seeds = ["tcp://host1:8800"]
 
 # A list of peers to attempt to connect to in the format tcp://hostname:port.
-# It defaults to None.
-peers = ["tcp://127.0.0.1:8801"]
+# It defaults to None. Replace host1 with the peer's hostname or IP address.
+# peers = ["tcp://host1:8800"]
 
 # The type of scheduler to use. The choices are 'serial' or 'parallel'.
 scheduler = 'serial'
