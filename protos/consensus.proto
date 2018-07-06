@@ -81,8 +81,11 @@ message ConsensusRegisterResponse {
   }
 
   Status status = 1;
+
+  // Startup Info
   ConsensusBlock chain_head = 2;
   repeated ConsensusPeerInfo peers = 3;
+  ConsensusPeerInfo local_peer_info = 4;
 }
 
 // --== Notifications ==--

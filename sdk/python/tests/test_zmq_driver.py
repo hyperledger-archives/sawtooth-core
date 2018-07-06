@@ -36,7 +36,7 @@ class MockEngine(Engine):
         self.updates = []
         self.exit = False
 
-    def start(self, updates, service, chain_head, peers):
+    def start(self, updates, service, startup_state):
         while not self.exit:
             try:
                 update = updates.get(timeout=1)

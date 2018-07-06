@@ -91,7 +91,7 @@ class PoetEngine(Engine):
     def _check_publish_block(self):
         return True
 
-    def start(self, updates, service, chain_head, peers):
+    def start(self, updates, service, startup_state):
         self._service = service
         self._chain_head = chain_head
 
