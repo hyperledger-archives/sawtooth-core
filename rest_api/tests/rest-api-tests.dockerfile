@@ -35,7 +35,8 @@ RUN apt-get install -y -q --allow-downgrades \
     python3-yaml \
     python3-zmq
 
-RUN apt-get install -y -q \
+RUN apt-get update \
+    && apt-get install -y -q \
     python3-cov-core \
     python3-nose2 \
     python3-pip

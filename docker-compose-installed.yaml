@@ -152,7 +152,7 @@ services:
   block-info-tp:
     build:
       context: .
-      dockerfile: families/block_info/Dockerfile-installed
+      dockerfile: families/block_info/python/Dockerfile-installed
     image: sawtooth-block-info-tp:${ISOLATION_ID}
     container_name: sawtooth-block-info-tp-default
 
