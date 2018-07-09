@@ -38,7 +38,8 @@ FROM ubuntu:xenial
 COPY --from=sawtooth-meta-builder /project/ci/sawtooth*.deb /tmp
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
  && dpkg -i /tmp/sawtooth*.deb || true \
  && apt-get -f -y install \
