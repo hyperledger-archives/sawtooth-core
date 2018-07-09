@@ -428,7 +428,7 @@ impl CandidateBlock {
             .call_method(
                 py,
                 "set_state_hash",
-                (execution_results.ending_state_hash.unwrap(),),
+                (execution_results.ending_state_hash,),
                 None,
             )
             .expect("BlockBuilder has no method 'set_state_hash'");
