@@ -18,6 +18,7 @@ import json
 from base64 import b64encode, b64decode
 import hashlib
 import time
+import random
 import yaml
 import requests
 
@@ -105,7 +106,7 @@ class BattleshipClient:
             dependencies=[],
             payload_sha512=self._sha512(payload),
             batcher_public_key=self.signer.get_public_key().as_hex(),
-            nonce=time.time().hex().encode()
+            nonce=hex(random.randint(0, 2**64))
         ).SerializeToString()
 
         signature = self._signer.sign(header)

@@ -97,7 +97,7 @@ def create_intkey_transaction(verb, name, value, deps, signer):
         dependencies=deps,
         payload_sha512=payload.sha512(),
         batcher_public_key=signer.get_public_key().as_hex(),
-        nonce=time.time().hex().encode())
+        nonce=hex(random.randint(0, 2**64)))
 
     header_bytes = header.SerializeToString()
 
