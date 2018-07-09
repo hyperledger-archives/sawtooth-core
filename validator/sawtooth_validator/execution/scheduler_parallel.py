@@ -990,7 +990,11 @@ class ParallelScheduler(Scheduler):
                 if not self._txn_is_in_valid_batch(txn_id) and \
                         self._can_fail_fast(txn_id):
                     self._txn_results[txn_id] = \
-                        TxnExecutionResult(False, None, None)
+                        TxnExecutionResult(
+                            signature=txn_id,
+                            is_valid=False,
+                            context_id=None,
+                            state_hash=None)
                     no_longer_available.append(txn_id)
                     continue
 
