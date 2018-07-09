@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import json
+import re
 import aiohttp
 from aiohttp import web
 
@@ -144,8 +145,31 @@ class StateDeltaSubscriberHandler:
         LOGGER.debug('Sending initial most recent event to new subscriber')
 
         addr_prefixes = subscription_message.get('address_prefixes', [])
+        addr_regexp = subscription_message.get('address_regexp', None)
+
+        if addr_prefixes and addr_regexp:
+            await web_sock.send_str(json.dumps({
+                'error': 'Invalid input with both addr_prefixes and '
+                'addr_regexp: "{}"'.format(subscription_message)
+            }))
+            return
+
+        if addr_regexp:
+            try:
+                regexp = re.compile(addr_regexp)
+            except re.sre_constants.error:
+                await web_sock.send_str(json.dumps({
+                    'error': 'Invalid regexp input: "{}"'.format(
+                        subscription_message)
+                }))
+                return
+
+            matching_pat = {'address_regexp': regexp}
+        else:
+            matching_pat = {'address_prefixes': addr_prefixes}
+
         with await self._subscriber_lock:
-            self._subscribers.append((web_sock, addr_prefixes))
+            self._subscribers.append((web_sock, matching_pat))
 
         event = self._latest_state_delta_event
         if event is not None:
@@ -154,7 +178,7 @@ class StateDeltaSubscriberHandler:
                 'block_num': event.block_num,
                 'previous_block_id': event.previous_block_id,
                 'state_changes': self._client_deltas(
-                    event.state_changes, addr_prefixes)
+                    event.state_changes, matching_pat)
             }))
 
     async def _handle_unsubscribe(self, web_sock):
@@ -257,7 +281,7 @@ class StateDeltaSubscriberHandler:
             'block_num': event.block_num,
             'previous_block_id': event.previous_block_id,
             'state_changes': self._client_deltas(
-                event.state_changes, addr_prefixes)
+                event.state_changes, {'address_prefixes': addr_prefixes})
         }))
 
     async def _get_block_deltas(self, block_id):
@@ -333,9 +357,9 @@ class StateDeltaSubscriberHandler:
 
                 LOGGER.debug('Updating %s subscribers', len(self._subscribers))
 
-                for (web_sock, addr_prefixes) in self._subscribers:
+                for (web_sock, matching_pat) in self._subscribers:
                     base_event['state_changes'] = self._client_deltas(
-                        state_delta_event.state_changes, addr_prefixes)
+                        state_delta_event.state_changes, matching_pat)
                     try:
                         await web_sock.send_str(json.dumps(base_event))
                     except asyncio.CancelledError:
@@ -344,19 +368,23 @@ class StateDeltaSubscriberHandler:
                 self._latest_state_delta_event = state_delta_event
 
     @staticmethod
-    def _client_deltas(state_changes, addr_prefixes):
+    def _client_deltas(state_changes, matching_pat):
         return [_message_to_dict(change)
                 for change in state_changes
-                if StateDeltaSubscriberHandler._matches_prefixes(
-                    change, addr_prefixes)]
+                if StateDeltaSubscriberHandler._matches_pattern(
+                    change, matching_pat)]
 
     @staticmethod
-    def _matches_prefixes(state_change, addr_prefixes):
-        if not addr_prefixes:
-            return True
+    def _matches_pattern(state_change, matching_pat):
+        if 'address_prefixes' in matching_pat:
+            if not matching_pat['address_prefixes']:
+                return True
 
-        for prefix in addr_prefixes:
-            if state_change.address.startswith(prefix):
+            for prefix in matching_pat['address_prefixes']:
+                if state_change.address.startswith(prefix):
+                    return True
+        elif 'address_regexp' in matching_pat:
+            if matching_pat['address_regexp'].match(state_change.address):
                 return True
 
         return False
