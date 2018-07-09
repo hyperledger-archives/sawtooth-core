@@ -15,7 +15,6 @@
 
 import logging
 import queue
-import time
 
 import json
 
@@ -113,38 +112,30 @@ class PoetEngine(Engine):
             return None
 
     def _finalize_block(self):
-        summary = None
-        while summary is None:
-            summary = self._summarize_block()
+        summary = self._summarize_block()
 
-            if summary is None:
-                LOGGER.debug('Block not ready to be summarized')
-                time.sleep(1)
-                continue
-            else:
-                LOGGER.info('Block summary: %s', summary.hex())
-                break
+        if summary is None:
+            LOGGER.debug('Block not ready to be summarized')
+            return None
 
         consensus = self._oracle.finalize_block(summary)
 
         if consensus is None:
             return None
 
-        while True:
-            try:
-                block_id = self._service.finalize_block(consensus)
-                LOGGER.info(
-                    'Finalized %s with %s',
-                    block_id.hex(),
-                    json.loads(consensus.decode()))
-                return block_id
-            except exceptions.BlockNotReady:
-                LOGGER.debug('Block not ready to be finalized')
-                time.sleep(1)
-                continue
-            except exceptions.InvalidState:
-                LOGGER.warning('block cannot be finalized')
-                return None
+        try:
+            block_id = self._service.finalize_block(consensus)
+            LOGGER.info(
+                'Finalized %s with %s',
+                block_id.hex(),
+                json.loads(consensus.decode()))
+            return block_id
+        except exceptions.BlockNotReady:
+            LOGGER.debug('Block not ready to be finalized')
+            return None
+        except exceptions.InvalidState:
+            LOGGER.warning('block cannot be finalized')
+            return None
 
     def _check_publish_block(self):
         # Publishing is based solely on wait time, so just give it None.
