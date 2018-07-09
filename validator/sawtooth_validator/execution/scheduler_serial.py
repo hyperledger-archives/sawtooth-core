@@ -200,7 +200,7 @@ class SerialScheduler(Scheduler):
         for txn in batch.transactions:
             if txn.header_signature not in self._txn_results:
                 self._txn_results[txn.header_signature] = TxnExecutionResult(
-                    txn.header_signature, is_valid=False)
+                    signature=txn.header_signature, is_valid=False)
 
     def _get_batch_result(self, txn_id):
         batch_id = self._txn_to_batch[txn_id]
