@@ -58,6 +58,8 @@ pub struct CandidateBlock {
     settings_view: cpython::PyObject,
 
     summary: Option<Vec<u8>>,
+    /// Batches remaining after the summary has been computed
+    remaining_batches: Vec<Batch>,
 
     pending_batches: Vec<Batch>,
     pending_batch_ids: HashSet<String>,
@@ -87,6 +89,7 @@ impl CandidateBlock {
             identity_signer,
             settings_view,
             summary: None,
+            remaining_batches: vec![],
             pending_batches: vec![],
             pending_batch_ids: HashSet::new(),
             injected_batch_ids: HashSet::new(),
@@ -446,6 +449,7 @@ impl CandidateBlock {
         let mut bytes = vec![0; hasher.output_bytes()];
         hasher.result(&mut bytes);
         self.summary = Some(bytes);
+        self.remaining_batches = pending_batches;
 
         Ok(self.summary.clone())
     }
@@ -503,7 +507,7 @@ impl CandidateBlock {
         if let Some(last_batch) = self.last_batch().cloned() {
             Ok(FinalizeBlockResult {
                 block,
-                remaining_batches: self.pending_batches.clone(),
+                remaining_batches: self.remaining_batches.clone(),
                 last_batch,
                 injected_batch_ids: self.injected_batch_ids
                     .clone()
