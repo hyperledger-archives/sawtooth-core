@@ -7,7 +7,8 @@ Sawtooth network, including performing initial connectivity, peer discovery,
 and message handling. Upon startup, validator instances begin listening on a
 specified interface and port for incoming connections. Upon connection and
 peering, validators exchange messages with each other based on the rules of a
-gossip or epidemic [#f1]_ protocol.
+`gossip or epidemic protocol <http://disi.unitn.it/~montreso/ds/papers/montresor17.pdf>`_
+(also see `Gossip protocol on Wikipedia <https://en.wikipedia.org/wiki/Gossip_protocol>`_).
 
 A primary design goal is to keep the network layer as self-contained as
 possible. For example, the network layer should not need knowledge of the
@@ -23,7 +24,9 @@ The choice of 0MQ provides considerable flexibility in both available
 connectivity patterns and the underlying capabilities of the transport layer
 (IPv4, IPv6, etc.)
 
-We have adopted the 0MQ Asynchronous Client/Server Pattern [#f2]_ which consists
+We have adopted the
+`0MQ asynchronous client/server pattern <http://zguide.zeromq.org/php:chapter3#toc24>`_,
+which consists
 of a 0MQ ROUTER socket on the server side which listens on a provided
 endpoint, with a number of connected 0MQ DEALER sockets as the connected
 clients. The 0MQ guide describes the features of this pattern as follows:
@@ -194,8 +197,10 @@ from the application layer.
 Network Layer Security
 ======================
 
-0MQ includes a TLS [#f3]_ like certificate exchange mechanism and protocol
-encryption capability which is transparent to the socket implementation.
+0MQ includes a
+`TLS-like <https://github.com/zeromq/pyzmq/blob/master/examples/security/ironhouse.py>`_
+certificate exchange mechanism and protocol
+encryption capability that is transparent to the socket implementation.
 Support for socket level encryption is currently implemented with
 server keys being read from the validator.toml config file. For each client,
 ephemeral certificates are generated on connect. If the server key pair is not
@@ -403,12 +408,6 @@ Authorization Violation
       // The Role the requester did not have access to
       RoleType violation = 1;
     }
-
-.. rubric:: Footnotes
-
-.. [#f1] http://web.mit.edu/devavrat/www/GossipBook.pdf
-.. [#f2] http://zguide.zeromq.org/php:chapter3#toc19
-.. [#f3] https://github.com/zeromq/pyzmq/blob/master/examples/security/ironhouse.py
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
