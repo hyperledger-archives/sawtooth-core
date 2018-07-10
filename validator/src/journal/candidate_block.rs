@@ -337,6 +337,10 @@ impl CandidateBlock {
     }
 
     pub fn summarize(&mut self, force: bool) -> Result<Option<Vec<u8>>, CandidateBlockError> {
+        if let Some(ref summary) = self.summary {
+            return Ok(Some(summary.clone()));
+        }
+
         if !(force || !self.pending_batches.is_empty()) {
             return Err(CandidateBlockError::BlockEmpty);
         }
