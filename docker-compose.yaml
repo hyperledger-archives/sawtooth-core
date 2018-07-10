@@ -43,7 +43,7 @@ services:
     image: poet-engine-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
-    container_name: poet-engine-local
+    container_name: sawtooth-poet-engine-local
     depends_on:
       - validator
     command: |
