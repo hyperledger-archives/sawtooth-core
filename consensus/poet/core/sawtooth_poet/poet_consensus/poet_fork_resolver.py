@@ -21,13 +21,13 @@ from sawtooth_poet.poet_consensus.consensus_state_store \
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
 from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
+from sawtooth_poet.journal.block_wrapper import BlockWrapper
+from sawtooth_poet.journal.consensus.consensus \
+    import ForkResolverInterface
 
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
 
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.consensus.consensus \
-    import ForkResolverInterface
 
 LOGGER = logging.getLogger(__name__)
 

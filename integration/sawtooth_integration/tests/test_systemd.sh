@@ -18,6 +18,7 @@
 # without immediately crashing given the default arguments
 
 services="
+poet-engine
 smallbank-tp-go
 xo-tp-go
 intkey-tp-go

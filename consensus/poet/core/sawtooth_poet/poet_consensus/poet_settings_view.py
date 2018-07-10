@@ -16,7 +16,7 @@
 import math
 import logging
 
-from sawtooth_validator.state.settings_view import SettingsView
+from sawtooth_poet.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 

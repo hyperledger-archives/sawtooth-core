@@ -33,7 +33,7 @@ setup(
         'sawtooth-poet-common',
         'sawtooth-poet-core',
         'sawtooth-signing',
-        'sawtooth-validator',
+        'sawtooth-sdk',
         'toml',
     ],
     entry_points={

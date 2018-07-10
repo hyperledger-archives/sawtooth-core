@@ -628,11 +628,10 @@ class ConsensusState(object):
         """
         # Figure out the block in which the current validator information
         # was committed.
-        block = \
-            block_cache.block_store.get_block_by_transaction_id(
+        try:
+            block = block_cache.block_store.get_block_by_transaction_id(
                 validator_info.transaction_id)
-
-        if not block:
+        except ValueError:
             LOGGER.warning(
                 'Validator %s (ID=%s...%s): Signup txn %s not found in block.',
                 validator_info.name,
@@ -793,9 +792,21 @@ class ConsensusState(object):
 
         # Figure out the block in which the current validator information
         # was committed.
-        commit_block = \
-            block_store.get_block_by_transaction_id(
+        try:
+            commit_block = \
+                block_store.get_block_by_transaction_id(
+                    validator_info.transaction_id)
+        except ValueError:
+            LOGGER.info(
+                'Validator %s (ID=%s...%s): trying to claim block '
+                'becore sign up is complete: must wait for txn %s '
+                'to commit',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
                 validator_info.transaction_id)
+            return False
+
         blocks_claimed_since_registration = \
             block_number - commit_block.block_num - 1
 

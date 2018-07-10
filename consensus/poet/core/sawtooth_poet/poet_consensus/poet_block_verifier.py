@@ -15,8 +15,8 @@
 
 import logging
 
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.consensus.consensus \
+from sawtooth_poet.journal.block_wrapper import BlockWrapper
+from sawtooth_poet.journal.consensus.consensus \
     import BlockVerifierInterface
 
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState

@@ -23,7 +23,7 @@ from collections import namedtuple
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
-from sawtooth_validator.database.lmdb_nolock_database \
+from sawtooth_poet.database.lmdb_nolock_database \
     import LMDBNoLockDatabase
 
 LOGGER = logging.getLogger(__name__)

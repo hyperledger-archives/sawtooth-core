@@ -17,8 +17,7 @@ import logging
 import hashlib
 import base64
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
+from sawtooth_poet_simulator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import json2dict
 

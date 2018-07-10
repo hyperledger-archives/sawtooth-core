@@ -28,7 +28,7 @@ import sawtooth_poet.poet_consensus.wait_timer as wait_timer
 
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_poet.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from test_consensus.utils import create_random_public_key_hash
 

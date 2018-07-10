@@ -30,7 +30,7 @@ services:
         -s /project/sawtooth-core/consensus/poet/simulator/tests
     environment:
         PYTHONPATH: "\
-          /project/sawtooth-core/validator:\
+          /project/sawtooth-core/sdk/python:\
           /project/sawtooth-core/signing:\
           /project/sawtooth-core/consensus/poet/common:\
           /project/sawtooth-core/consensus/poet/core:\

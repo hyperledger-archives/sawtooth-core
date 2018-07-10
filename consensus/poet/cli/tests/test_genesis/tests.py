@@ -24,8 +24,8 @@ from unittest.mock import patch
 from sawtooth_signing import create_context
 
 from sawtooth_poet_cli.main import main
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb
-import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
+import sawtooth_sdk.protobuf.transaction_pb2 as txn_pb
+import sawtooth_sdk.protobuf.batch_pb2 as batch_pb
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
 

@@ -35,10 +35,9 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
 from sawtooth_poet_common import sgx_structs
 
+from sawtooth_poet_simulator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import json2dict
 from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 
