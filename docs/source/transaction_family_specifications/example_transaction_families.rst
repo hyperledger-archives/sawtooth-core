@@ -4,8 +4,7 @@ your own transaction family.
 
 * The :doc:`/transaction_family_specifications/blockinfo_transaction_family`
   provides a way to store information about a configurable number of historic
-  blocks. BlockInfo is written in Python.
-  The family name is ``block_info``;
+  blocks. The family name is ``block_info``;
   the associated transaction processor is ``block-info-tp``.
 
 * The :doc:`/transaction_family_specifications/identity_transaction_family`
@@ -57,4 +56,3 @@ your own transaction family.
   the associated transaction processors are ``xo-tp-go``,
   ``xo-tp-javascript``, and ``xo-tp-python``.
   The :doc:`xo command </cli/xo>` provides an example CLI client.
-

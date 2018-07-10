@@ -524,7 +524,7 @@ services:
   block-info-tp-0:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -538,7 +538,7 @@ services:
   block-info-tp-1:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -552,7 +552,7 @@ services:
   block-info-tp-2:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -566,7 +566,7 @@ services:
   block-info-tp-3:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -580,7 +580,7 @@ services:
   block-info-tp-4:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

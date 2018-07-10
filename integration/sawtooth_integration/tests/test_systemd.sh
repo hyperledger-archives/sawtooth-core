@@ -26,7 +26,6 @@ rest-api
 intkey-tp-python
 xo-tp-python
 settings-tp
-identity-tp
 poet-validator-registry-tp
 "
 

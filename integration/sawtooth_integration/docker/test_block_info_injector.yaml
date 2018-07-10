@@ -56,7 +56,7 @@ services:
   block-info-tp:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile
       args:
         - http_proxy
         - https_proxy

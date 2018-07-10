@@ -20,12 +20,12 @@ services:
   block-info-tp:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/python/Dockerfile
+      dockerfile: ./families/block_info/Dockerfile-installed
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
+    image: sawtooth-block-info2-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

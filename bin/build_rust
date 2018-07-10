@@ -63,9 +63,9 @@ cd $top_dir/sdk/examples/xo_rust
 cargo build --release && cp ./target/release/xo_rust $top_dir/sdk/examples/xo_rust/bin/xo_rust
 
 echo -e "\033[0;32m--- Building block-info-tp-rust ---\n\033[0m"
-rm -rf $top_dir/families/block_info/rust/sawtooth_block_info/bin/
-mkdir -p $top_dir/families/block_info/rust/sawtooth_block_info/bin/
-cd $top_dir/families/block_info/rust/sawtooth_block_info/
-cargo build --release && cp ./target/release/block_info $top_dir/families/block_info/rust/sawtooth_block_info/bin/block_info
+rm -rf $top_dir/families/block_info/sawtooth_block_info/bin/
+mkdir -p $top_dir/families/block_info/sawtooth_block_info/bin/
+cd $top_dir/families/block_info/sawtooth_block_info/
+cargo build --release && cp ./target/release/block_info $top_dir/families/block_info/sawtooth_block_info/bin/block_info
 
 # echo -e "\033[0;32m--- Building noop-tp-rust ---\n\033[0m"

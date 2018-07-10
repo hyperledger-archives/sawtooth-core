@@ -93,8 +93,6 @@ build_python() {
 
     build_python_pkg "families/identity"
 
-    build_python_pkg "families/block_info/python"
-
     build_python_pkg "rest_api"
 
     build_python_pkg "sdk/examples/intkey_python"
