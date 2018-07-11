@@ -166,18 +166,11 @@ class TransactionExecutorThread(object):
             self._context_manager.delete_contexts(
                 context_id_list=[req.context_id])
 
-            self._scheduler.set_transaction_execution_result(
+            self._fail_transaction(
                 txn_signature=req.signature,
-                is_valid=False,
                 context_id=req.context_id,
                 error_message=response.message,
                 error_data=response.extended_data)
-
-            for observer in self._invalid_observers:
-                observer.notify_txn_invalid(
-                    req.signature,
-                    response.message,
-                    response.extended_data)
 
     def execute_thread(self):
         try:
@@ -235,10 +228,7 @@ class TransactionExecutorThread(object):
                              processor_type.name,
                              processor_type.version)
 
-                self._scheduler.set_transaction_execution_result(
-                    txn_signature=txn.header_signature,
-                    is_valid=False,
-                    context_id=None)
+                self._fail_transaction(txn.header_signature)
                 continue
 
             if processor_type in required_transaction_processors:
@@ -276,10 +266,7 @@ class TransactionExecutorThread(object):
                                  prefix)
 
                 if bad_prefixes:
-                    self._scheduler.set_transaction_execution_result(
-                        txn_signature=txn.header_signature,
-                        is_valid=False,
-                        context_id=None)
+                    self._fail_transaction(txn.header_signature)
                     continue
 
             try:
@@ -332,6 +319,22 @@ class TransactionExecutorThread(object):
 
         self._send_and_process_result(
             content, processor.connection_id, signature)
+
+    def _fail_transaction(self, txn_signature,
+                          context_id=None, error_message=None,
+                          error_data=None):
+        self._scheduler.set_transaction_execution_result(
+            txn_signature=txn_signature,
+            is_valid=False,
+            context_id=context_id,
+            error_message=error_message,
+            error_data=error_data)
+
+        for observer in self._invalid_observers:
+            observer.notify_txn_invalid(
+                txn_signature,
+                error_message,
+                error_data)
 
     def _send_and_process_result(self, content, connection_id, signature):
         fut = self._service.send(
