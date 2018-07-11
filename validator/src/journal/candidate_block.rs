@@ -361,7 +361,7 @@ impl CandidateBlock {
             .map(|(batch_id, _)| batch_id.clone())
             .collect();
 
-        let valid_batch_ids: Vec<String> = execution_results
+        let valid_batch_ids: HashSet<String> = execution_results
             .batch_results
             .into_iter()
             .filter(|(_, txns)| match txns {
@@ -379,6 +379,11 @@ impl CandidateBlock {
 
         let mut bad_batches = vec![];
         let mut pending_batches = vec![];
+
+        if self.injected_batch_ids == valid_batch_ids {
+            // There only injected batches in this block
+            return Ok(None);
+        }
 
         for batch in self.pending_batches.clone() {
             let header_signature = &batch.header_signature.clone();
