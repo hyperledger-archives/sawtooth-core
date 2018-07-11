@@ -15,9 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
-use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
+use journal::block_validator::{BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
@@ -28,8 +28,6 @@ use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::sync::mpsc::Sender;
 use std::thread;
-
-use batch::Batch;
 
 use protobuf::Message;
 
@@ -60,6 +58,7 @@ pub extern "C" fn chain_controller_new(
     block_validator: *mut py_ffi::PyObject,
     state_database: *const c_void,
     chain_head_lock: *const c_void,
+    consensus_notifier: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
     data_directory: *const c_char,
@@ -71,6 +70,7 @@ pub extern "C" fn chain_controller_new(
         block_validator,
         state_database,
         chain_head_lock,
+        consensus_notifier,
         observers,
         data_directory
     );
@@ -91,6 +91,7 @@ pub extern "C" fn chain_controller_new(
     let py_observers = unsafe { PyObject::from_borrowed_ptr(py, observers) };
     let chain_head_lock_ref =
         unsafe { (chain_head_lock as *const ChainHeadLock).as_ref().unwrap() };
+    let py_consensus_notifier = unsafe { PyObject::from_borrowed_ptr(py, consensus_notifier) };
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -109,9 +110,10 @@ pub extern "C" fn chain_controller_new(
     let chain_controller = ChainController::new(
         PyBlockCache::new(py_block_cache),
         PyBlockValidator::new(py_block_validator),
-        PyBlockStore::new(py_block_store_writer),
+        Box::new(PyBlockStore::new(py_block_store_writer)),
         Box::new(PyBlockStore::new(py_block_store_reader)),
         chain_head_lock_ref.clone(),
+        Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
         data_dir.into(),
         state_pruning_block_depth,
         observer_wrappers,
@@ -130,9 +132,7 @@ pub extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorC
     check_null!(chain_controller);
 
     unsafe {
-        Box::from_raw(
-            chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>,
-        )
+        Box::from_raw(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)
     };
     ErrorCode::Success
 }
@@ -142,8 +142,7 @@ pub extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> Error
     check_null!(chain_controller);
 
     unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
-            .start();
+        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)).start();
     }
 
     ErrorCode::Success
@@ -154,8 +153,7 @@ pub extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorC
     check_null!(chain_controller);
 
     unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
-            .stop();
+        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)).stop();
     }
     ErrorCode::Success
 }
@@ -176,13 +174,57 @@ pub extern "C" fn chain_controller_has_block(
     };
 
     unsafe {
-        *result = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+        *result = (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .has_block(block_id);
     }
 
     ErrorCode::Success
 }
+
+macro_rules! chain_controller_block_ffi {
+    ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+        #[no_mangle]
+        pub extern "C" fn $ffi_fn_name(
+            chain_controller: *mut c_void,
+            block: *mut py_ffi::PyObject,
+        ) -> ErrorCode {
+            check_null!(chain_controller, block);
+
+            let gil_guard = Python::acquire_gil();
+            let py = gil_guard.python();
+
+            let mut $block: BlockWrapper = unsafe {
+                match PyObject::from_borrowed_ptr(py, block).extract(py) {
+                    Ok(val) => val,
+                    Err(py_err) => {
+                        pylogger::exception(
+                            py,
+                            "chain_controller_queue_block: unable to get block",
+                            py_err,
+                        );
+                        return ErrorCode::InvalidPythonObject;
+                    }
+                }
+            };
+
+            unsafe {
+                let controller = (*(chain_controller
+                    as *mut ChainController<PyBlockCache, PyBlockValidator>))
+                    .light_clone();
+
+                py.allow_threads(move || {
+                    controller.$cc_fn_name($($block_args)*);
+                });
+            }
+
+            ErrorCode::Success
+        }
+    }
+}
+
+chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
+chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &mut block);
+chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
 
 #[no_mangle]
 pub extern "C" fn chain_controller_queue_block(
@@ -209,7 +251,7 @@ pub extern "C" fn chain_controller_queue_block(
     };
     unsafe {
         let controller = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .light_clone();
 
         py.allow_threads(move || {
@@ -225,6 +267,56 @@ pub extern "C" fn chain_controller_queue_block(
     }
 
     ErrorCode::Success
+}
+
+#[no_mangle]
+pub extern "C" fn chain_controller_submit_blocks_for_verification(
+    chain_controller: *mut c_void,
+    blocks: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(chain_controller, blocks);
+
+    let gil_guard = Python::acquire_gil();
+    let py = gil_guard.python();
+
+    let blocks: Vec<BlockWrapper> = unsafe {
+        match PyObject::from_borrowed_ptr(py, blocks).extract(py) {
+            Ok(val) => val,
+            Err(py_err) => {
+                pylogger::exception(
+                    py,
+                    "chain_controller_on_block_received: unable to get block",
+                    py_err,
+                );
+                return ErrorCode::InvalidPythonObject;
+            }
+        }
+    };
+    unsafe {
+        let controller = (*(chain_controller
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
+            .light_clone();
+
+        py.allow_threads(move || {
+            // A thread has to be spawned here, otherwise, any subsequent attempt to
+            // re-acquire the GIL and import of python modules will fail.
+            let builder = thread::Builder::new()
+                .name("ChainController.submit_blocks_for_verification".into());
+            builder
+                .spawn(
+                    move || match controller.submit_blocks_for_verification(&blocks) {
+                        Ok(_) => ErrorCode::Success,
+                        Err(err) => {
+                            error!("Unable to call submit_blocks_for_verification: {:?}", err);
+                            ErrorCode::Unknown
+                        }
+                    },
+                )
+                .unwrap()
+                .join()
+                .unwrap()
+        })
+    }
 }
 
 /// This is only exposed for the current python tests, it should be removed
@@ -254,7 +346,7 @@ pub extern "C" fn chain_controller_on_block_received(
     };
     unsafe {
         let mut controller = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
             .light_clone();
 
         py.allow_threads(move || {
@@ -283,12 +375,14 @@ pub extern "C" fn chain_controller_chain_head(
 ) -> ErrorCode {
     check_null!(chain_controller);
     unsafe {
-        let chain_head = (*(chain_controller
-            as *mut ChainController<PyBlockCache, PyBlockValidator, PyBlockStore>))
-            .chain_head();
-
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
+
+        let controller = (*(chain_controller
+            as *mut ChainController<PyBlockCache, PyBlockValidator>))
+            .light_clone();
+
+        let chain_head = py.allow_threads(move || controller.chain_head());
 
         *block = chain_head.to_py_object(py).steal_ptr();
     }
@@ -299,34 +393,32 @@ pub extern "C" fn chain_controller_chain_head(
 pub extern "C" fn sender_drop(sender: *const c_void) -> ErrorCode {
     check_null!(sender);
 
-    unsafe { Box::from_raw(sender as *mut Sender<(bool, BlockValidationResult)>) };
+    unsafe { Box::from_raw(sender as *mut Sender<BlockWrapper>) };
 
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn sender_send(
-    sender: *const c_void,
-    result_tuple: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(sender, result_tuple);
+pub extern "C" fn sender_send(sender: *const c_void, block: *mut py_ffi::PyObject) -> ErrorCode {
+    check_null!(sender, block);
 
     let gil_guard = Python::acquire_gil();
     let py = gil_guard.python();
 
-    let py_result_tuple = unsafe { PyObject::from_borrowed_ptr(py, result_tuple) };
-    let (can_commit, result): (bool, BlockValidationResult) = py_result_tuple
+    let py_block_wrapper = unsafe { PyObject::from_borrowed_ptr(py, block) };
+    let block: BlockWrapper = py_block_wrapper
         .extract(py)
-        .expect("Unable to extract result tuple");
+        .expect("Unable to extract block");
 
     unsafe {
-        match (*(sender as *mut Sender<(bool, BlockValidationResult)>)).send((can_commit, result)) {
+        let sender = (*(sender as *mut Sender<BlockWrapper>)).clone();
+        py.allow_threads(move || match sender.send(block) {
             Ok(_) => ErrorCode::Success,
             Err(err) => {
                 error!("Unable to send validation result: {:?}", err);
                 ErrorCode::Unknown
             }
-        }
+        })
     }
 }
 
@@ -422,13 +514,15 @@ impl PyBlockValidator {
             py_callback_maker,
         }
     }
+}
 
-    fn query_block_status(&self, fn_name: &str, block_id: &str) -> bool {
+impl BlockValidator for PyBlockValidator {
+    fn has_block(&self, block_id: &str) -> bool {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
         match self.py_block_validator
-            .call_method(py, fn_name, (block_id,), None)
+            .call_method(py, "has_block", (block_id,), None)
         {
             Err(_) => {
                 // Presumably a KeyError, so no
@@ -436,16 +530,6 @@ impl PyBlockValidator {
             }
             Ok(py_bool) => py_bool.extract(py).expect("Unable to extract boolean"),
         }
-    }
-}
-
-impl BlockValidator for PyBlockValidator {
-    fn in_process(&self, block_id: &str) -> bool {
-        self.query_block_status("in_process", block_id)
-    }
-
-    fn in_pending(&self, block_id: &str) -> bool {
-        self.query_block_status("in_pending", block_id)
     }
 
     fn validate_block(&self, block: BlockWrapper) -> Result<(), ValidationError> {
@@ -463,7 +547,7 @@ impl BlockValidator for PyBlockValidator {
     fn submit_blocks_for_verification(
         &self,
         blocks: &[BlockWrapper],
-        response_sender: Sender<(bool, BlockValidationResult)>,
+        response_sender: Sender<BlockWrapper>,
     ) {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
@@ -606,6 +690,103 @@ impl ChainObserver for PyChainObserver {
     }
 }
 
+struct PyConsensusNotifier {
+    py_consensus_notifier: PyObject,
+}
+
+impl PyConsensusNotifier {
+    fn new(py_consensus_notifier: PyObject) -> Self {
+        PyConsensusNotifier {
+            py_consensus_notifier,
+        }
+    }
+}
+
+impl Clone for PyConsensusNotifier {
+    fn clone(&self) -> Self {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        PyConsensusNotifier {
+            py_consensus_notifier: self.py_consensus_notifier.clone_ref(py),
+        }
+    }
+}
+
+impl ConsensusNotifier for PyConsensusNotifier {
+    fn notify_block_new(&self, block: &BlockWrapper) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_new", (block,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_new",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_valid(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_valid", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_valid",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_invalid(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_invalid", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_invalid",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+
+    fn notify_block_commit(&self, block_id: &str) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_consensus_notifier
+            .call_method(py, "notify_block_commit", (block_id,), None)
+            .map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_notifier.notify_block_commit",
+                    py_err,
+                );
+                ()
+            })
+            .unwrap_or(())
+    }
+}
+
 impl ToPyObject for TransactionReceipt {
     type ObjectType = PyObject;
 
@@ -630,20 +811,5 @@ impl ToPyObject for TransactionReceipt {
             .expect("Unable to ParseFromString");
 
         py_txn_receipt
-    }
-}
-
-impl<'source> FromPyObject<'source> for BlockValidationResult {
-    fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        Ok(BlockValidationResult {
-            chain_head: obj.getattr(py, "chain_head")?.extract(py)?,
-            block: obj.getattr(py, "block")?.extract(py)?,
-            transaction_count: obj.getattr(py, "transaction_count")?.extract(py)?,
-            new_chain: obj.getattr(py, "new_chain")?.extract(py)?,
-            current_chain: obj.getattr(py, "current_chain")?.extract(py)?,
-
-            committed_batches: obj.getattr(py, "committed_batches")?.extract(py)?,
-            uncommitted_batches: obj.getattr(py, "uncommitted_batches")?.extract(py)?,
-        })
     }
 }

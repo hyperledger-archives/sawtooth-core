@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
+from sawtooth_validator.consensus.proxy import UnknownBlock
 
 
 class FinalizeBlockResult:
@@ -259,19 +260,12 @@ class TestProxy(unittest.TestCase):
         self.assertEqual(summary, b"summary")
 
     def test_finalize_block(self):
-        self._mock_block_publisher.finalize_block.return_value =\
-            FinalizeBlockResult(
-                block=None,
-                remaining_batches=None,
-                last_batch=None,
-                injected_batches=None)
-        self._mock_block_publisher.publish_block.return_value = "00"
+        self._mock_block_publisher.finalize_block.return_value = "00"
 
         data = bytes([0x56])
         self._proxy.finalize_block(data)
         self._mock_block_publisher.finalize_block.assert_called_with(
             consensus=data)
-        self._mock_block_publisher.publish_block.assert_called_with(None, None)
 
     def test_cancel_block(self):
         self._proxy.cancel_block()
@@ -283,9 +277,9 @@ class TestProxy(unittest.TestCase):
         self._mock_block_cache["56"] = "block0"
         self._mock_block_cache["78"] = "block1"
         self._proxy.check_blocks(block_ids)
-        self._mock_chain_controller\
-            .submit_blocks_for_verification\
-            .assert_called_with(["block0", "block1"])
+
+        with self.assertRaises(UnknownBlock):
+            self._proxy.check_blocks([bytes([0x00])])
 
     def test_commit_block(self):
         self._mock_block_cache["34"] = "a block"
@@ -367,11 +361,14 @@ class TestProxy(unittest.TestCase):
     def test_state_get(self):
         self._mock_block_cache[b'block'.hex()] = MockBlock()
 
+        address_1 = '1' * 70
+        address_2 = '2' * 70
+
         self.assertEqual(
-            self._proxy.state_get(b'block', ['address-1', 'address-2']),
+            self._proxy.state_get(b'block', [address_1, address_2]),
             [
-                ('address-1', b'mock-address-1'),
-                ('address-2', b'mock-address-2'),
+                (address_1, 'mock-{}'.format(address_1).encode()),
+                (address_2, 'mock-{}'.format(address_2).encode()),
             ])
 
 

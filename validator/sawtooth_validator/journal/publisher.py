@@ -21,8 +21,13 @@ import logging
 
 from enum import IntEnum
 
+from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY, LIBRARY
 from sawtooth_validator.ffi import OwnedPointer
+
+from sawtooth_validator.consensus.handlers import BlockEmpty
+from sawtooth_validator.consensus.handlers import BlockInProgress
+from sawtooth_validator.consensus.handlers import BlockNotInitialized
 
 LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +82,18 @@ class IncomingBatchSender(OwnedPointer):
         else:
             raise ValueError("An unknown error occurred: {}".format(res))
 
+    def has_batch(self, batch_id):
+        has = ctypes.c_bool(False)
+        c_batch_id = ctypes.c_char_p(batch_id.encode())
+
+        LIBRARY.call(
+            'incoming_batch_sender_has_batch',
+            self.pointer,
+            c_batch_id,
+            ctypes.byref(has))
+
+        return has
+
 
 class ChainHeadLockErrorCode(IntEnum):
     Success = 0
@@ -89,61 +106,14 @@ class ChainHeadLock(OwnedPointer):
         self._ptr = chain_head_lock_ptr
         self._guard = None
 
-    def acquire(self):
-        guard_ptr = ctypes.c_void_p()
-        res = LIBRARY.call(
-            "chain_head_lock_acquire",
-            self._ptr,
-            ctypes.byref(guard_ptr))
-
-        if res == ChainHeadLockErrorCode.Success:
-            self._guard = ChainHeadGuard(guard_ptr)
-            return self._guard
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
-    def release(self):
-        res = LIBRARY.call(
-            "chain_head_guard_drop",
-            self._guard.pointer)
-
-        if res == ChainHeadLockErrorCode.Success:
-            return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
-
-class ChainHeadGuard:
-    def __init__(self, guard_ptr):
-        self.pointer = guard_ptr
-
-    def notify_on_chain_updated(self,
-                                chain_head,
-                                committed_batches=None,
-                                uncommitted_batches=None):
-        res = LIBRARY.call(
-            "chain_head_guard_on_chain_updated",
-            self.pointer,
-            ctypes.py_object(chain_head),
-            ctypes.py_object(committed_batches),
-            ctypes.py_object(uncommitted_batches))
-
-        if res == ChainHeadLockErrorCode.Success:
-            return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
-            raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
-
 
 class BlockPublisherErrorCode(IntEnum):
     Success = 0
     NullPointerProvided = 0x01
     InvalidInput = 0x02
+    BlockInProgress = 0x03
+    BlockNotInitialized = 0x04
+    BlockEmpty = 0x05
 
 
 class BlockPublisher(OwnedPointer):
@@ -164,7 +134,6 @@ class BlockPublisher(OwnedPointer):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 check_publish_block_frequency,
                  batch_observers,
                  batch_injector_factory=None):
         """
@@ -204,7 +173,6 @@ class BlockPublisher(OwnedPointer):
             ctypes.py_object(data_dir),
             ctypes.py_object(config_dir),
             ctypes.py_object(permission_verifier),
-            ctypes.py_object(check_publish_block_frequency * 1000),
             ctypes.py_object(batch_observers),
             ctypes.py_object(batch_injector_factory),
             ctypes.byref(self.pointer)))
@@ -226,16 +194,17 @@ class BlockPublisher(OwnedPointer):
             raise TypeError("Provided null pointer(s)")
         elif res == BlockPublisherErrorCode.InvalidInput:
             raise ValueError("Input was not valid ")
-
-    def batch_sender(self):
-        sender_ptr = ctypes.c_void_p()
-        self._call(
-            'batch_sender',
-            ctypes.byref(sender_ptr))
-        return IncomingBatchSender(sender_ptr)
+        elif res == BlockPublisherErrorCode.BlockInProgress:
+            raise BlockInProgress("A block is already in progress")
+        elif res == BlockPublisherErrorCode.BlockNotInitialized:
+            raise BlockNotInitialized("A block is not initialized")
+        elif res == BlockPublisherErrorCode.BlockEmpty:
+            raise BlockEmpty("The block is empty")
 
     def start(self):
-        self._call('start')
+        sender_ptr = ctypes.c_void_p()
+        self._call('start', ctypes.byref(sender_ptr))
+        return IncomingBatchSender(sender_ptr)
 
     def stop(self):
         self._call('stop')
@@ -252,12 +221,6 @@ class BlockPublisher(OwnedPointer):
             ctypes.byref(c_limit))
 
         return (c_length.value, c_limit.value)
-
-    def on_check_publish_block(self, force=False):
-
-        self._py_call(
-            'on_check_publish_block',
-            ctypes.c_bool(force))
 
     def on_batch_received(self, batch):
         self._py_call(
@@ -307,3 +270,28 @@ class BlockPublisher(OwnedPointer):
             ctypes.byref(has))
 
         return has
+
+    def initialize_block(self, block):
+        self._py_call('initialize_block', ctypes.py_object(block))
+
+    def summarize_block(self, force=False):
+        (c_result, c_result_len) = ffi.prepare_byte_result()
+        self._call(
+            'summarize_block',
+            ctypes.c_bool(force),
+            ctypes.byref(c_result), ctypes.byref(c_result_len))
+
+        return ffi.from_c_bytes(c_result, c_result_len)
+
+    def finalize_block(self, consensus=None, force=False):
+        (c_result, c_result_len) = ffi.prepare_byte_result()
+        self._call(
+            'finalize_block',
+            consensus, len(consensus),
+            ctypes.c_bool(force),
+            ctypes.byref(c_result), ctypes.byref(c_result_len))
+
+        return ffi.from_c_bytes(c_result, c_result_len)
+
+    def cancel_block(self):
+        self._call("cancel_block")

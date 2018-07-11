@@ -77,8 +77,20 @@ services:
         sawadm genesis config-genesis.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -vv \
             --bind component:tcp://eth0:4004 \
+            --bind consensus:tcp://eth0:5005 \
             --bind network:tcp://eth0:8800 \
     \""
+    stop_signal: SIGKILL
+
+  devmode:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator:5005 -v
     stop_signal: SIGKILL
 
   rest-api:

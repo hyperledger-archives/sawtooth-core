@@ -65,6 +65,9 @@ class BlockCache(MutableMapping):
         return self._block_store
 
     def __getitem__(self, block_id):
+        if not block_id:
+            raise ValueError("None or empty block_id is an invalid identifier")
+
         with self._lock:
             try:
                 value = self._cache[block_id]

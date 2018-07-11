@@ -16,22 +16,7 @@
  */
 use std::sync::mpsc::Sender;
 
-use batch::Batch;
 use journal::block_wrapper::BlockWrapper;
-
-/// Holds the results of Block Validation.
-pub struct BlockValidationResult {
-    pub chain_head: BlockWrapper,
-    pub block: BlockWrapper,
-
-    pub transaction_count: usize,
-
-    pub new_chain: Vec<BlockWrapper>,
-    pub current_chain: Vec<BlockWrapper>,
-
-    pub committed_batches: Vec<Batch>,
-    pub uncommitted_batches: Vec<Batch>,
-}
 
 #[derive(Debug)]
 pub enum ValidationError {
@@ -39,13 +24,13 @@ pub enum ValidationError {
 }
 
 pub trait BlockValidator: Send + Sync {
-    fn in_process(&self, block_id: &str) -> bool;
-    fn in_pending(&self, block_id: &str) -> bool;
+    fn has_block(&self, block_id: &str) -> bool;
+
     fn validate_block(&self, block: BlockWrapper) -> Result<(), ValidationError>;
 
     fn submit_blocks_for_verification(
         &self,
         blocks: &[BlockWrapper],
-        response_sender: Sender<(bool, BlockValidationResult)>,
+        response_sender: Sender<BlockWrapper>,
     );
 }
