@@ -70,8 +70,8 @@ class ConsensusProxy:
         return self._block_publisher.summarize_block()
 
     def finalize_block(self, consensus_data):
-        return self._block_publisher.finalize_block(
-            consensus=consensus_data)
+        return bytes.fromhex(self._block_publisher.finalize_block(
+            consensus=consensus_data))
 
     def cancel_block(self):
         self._block_publisher.cancel_block()
