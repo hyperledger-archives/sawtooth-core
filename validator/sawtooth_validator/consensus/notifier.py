@@ -61,6 +61,7 @@ class ConsensusNotifier:
 
     def notify_block_new(self, block):
         """A new block was received and passed initial consensus validation"""
+        LOGGER.critical("NEW BLOCK %s, %s", block.block_num, block.identifier)
         summary = hashlib.sha256()
         for batch in block.batches:
             summary.update(batch.header_signature.encode())

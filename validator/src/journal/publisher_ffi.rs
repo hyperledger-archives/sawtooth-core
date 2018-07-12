@@ -16,14 +16,16 @@
  */
 use py_ffi;
 use std::ffi::CStr;
+use std::mem;
 use std::os::raw::{c_char, c_void};
-use std::time::Duration;
+use std::slice;
 
 use cpython::{PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use journal::block_wrapper::BlockWrapper;
-use journal::publisher::{BlockPublisher, IncomingBatchSender};
+use journal::publisher::{BlockPublisher, FinalizeBlockError, IncomingBatchSender,
+                         InitializeBlockError};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -31,6 +33,10 @@ pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,
     InvalidInput = 0x02,
+    BlockInProgress = 0x03,
+    BlockNotInitialized = 0x04,
+    BlockEmpty = 0x05,
+    BlockNotInProgress = 0x06,
 }
 
 macro_rules! check_null {
@@ -52,7 +58,6 @@ pub extern "C" fn block_publisher_new(
     data_dir_ptr: *mut py_ffi::PyObject,
     config_dir_ptr: *mut py_ffi::PyObject,
     permission_verifier_ptr: *mut py_ffi::PyObject,
-    check_publish_block_frequency_ptr: *mut py_ffi::PyObject,
     batch_observers_ptr: *mut py_ffi::PyObject,
     batch_injector_factory_ptr: *mut py_ffi::PyObject,
     block_publisher_ptr: *mut *const c_void,
@@ -69,7 +74,6 @@ pub extern "C" fn block_publisher_new(
         data_dir_ptr,
         config_dir_ptr,
         permission_verifier_ptr,
-        check_publish_block_frequency_ptr,
         batch_observers_ptr,
         batch_injector_factory_ptr
     );
@@ -87,8 +91,6 @@ pub extern "C" fn block_publisher_new(
     let data_dir = unsafe { PyObject::from_borrowed_ptr(py, data_dir_ptr) };
     let config_dir = unsafe { PyObject::from_borrowed_ptr(py, config_dir_ptr) };
     let permission_verifier = unsafe { PyObject::from_borrowed_ptr(py, permission_verifier_ptr) };
-    let check_publish_block_frequency =
-        unsafe { PyObject::from_borrowed_ptr(py, check_publish_block_frequency_ptr) };
     let batch_observers = unsafe { PyObject::from_borrowed_ptr(py, batch_observers_ptr) };
     let batch_injector_factory =
         unsafe { PyObject::from_borrowed_ptr(py, batch_injector_factory_ptr) };
@@ -100,8 +102,6 @@ pub extern "C" fn block_publisher_new(
             .extract(py)
             .expect("Got chain head that wasn't a BlockWrapper")
     };
-    let check_publish_block_frequency: Duration =
-        Duration::from_millis(check_publish_block_frequency.extract(py).unwrap());
     let batch_observers: Vec<PyObject> = batch_observers
         .extract::<PyList>(py)
         .unwrap()
@@ -118,10 +118,6 @@ pub extern "C" fn block_publisher_new(
             None,
         )
         .expect("Unable to create BatchPublisher");
-
-    let consensus_factory_mod = py.import("sawtooth_validator.journal.consensus.consensus_factory")
-        .expect("Unable to import 'sawtooth_validator.journal.consensus.consensus_factory'");
-    let consensus_factory = consensus_factory_mod.get(py, "ConsensusFactory").unwrap();
 
     let block_wrapper_mod = py.import("sawtooth_validator.journal.block_wrapper")
         .expect("Unable to import 'sawtooth_validator.journal.block_wrapper'");
@@ -157,10 +153,8 @@ pub extern "C" fn block_publisher_new(
         data_dir,
         config_dir,
         permission_verifier,
-        check_publish_block_frequency,
         batch_observers,
         batch_injector_factory,
-        consensus_factory,
         block_wrapper_class,
         block_header_class,
         block_builder_class,
@@ -181,21 +175,6 @@ pub extern "C" fn block_publisher_drop(publisher: *mut c_void) -> ErrorCode {
     ErrorCode::Success
 }
 
-// block_publisher_on_check_publish_block is used in tests
-#[no_mangle]
-pub extern "C" fn block_publisher_on_check_publish_block(
-    publisher: *mut c_void,
-    force: bool,
-) -> ErrorCode {
-    check_null!(publisher);
-    unsafe {
-        (*(publisher as *mut BlockPublisher))
-            .publisher
-            .on_check_publish_block(force)
-    };
-    ErrorCode::Success
-}
-
 // block_publisher_on_batch_received is used in tests
 #[no_mangle]
 pub extern "C" fn block_publisher_on_batch_received(
@@ -210,18 +189,22 @@ pub extern "C" fn block_publisher_on_batch_received(
             .extract::<Batch>(py)
             .unwrap()
     };
-    unsafe {
-        (*(publisher as *mut BlockPublisher))
-            .publisher
-            .on_batch_received(batch)
-    };
+    let publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
+    py.allow_threads(move || publisher.publisher.on_batch_received(batch));
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn block_publisher_start(publisher: *mut c_void) -> ErrorCode {
+pub extern "C" fn block_publisher_start(
+    publisher: *mut c_void,
+    incoming_batch_sender: *mut *const c_void,
+) -> ErrorCode {
     check_null!(publisher);
-    unsafe { (*(publisher as *mut BlockPublisher)).start() };
+    let batch_tx = unsafe { (*(publisher as *mut BlockPublisher)).start() };
+    let batch_tx_ptr: *mut IncomingBatchSender = Box::into_raw(Box::new(batch_tx));
+    unsafe {
+        *incoming_batch_sender = batch_tx_ptr as *const c_void;
+    }
     ErrorCode::Success
 }
 
@@ -262,18 +245,71 @@ pub extern "C" fn block_publisher_pending_batch_info(
 }
 
 #[no_mangle]
-pub extern "C" fn block_publisher_batch_sender(
+pub extern "C" fn block_publisher_initialize_block(
     publisher: *mut c_void,
-    incoming_batch_sender: *mut *const c_void,
+    previous_block: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let block = unsafe {
+        PyObject::from_borrowed_ptr(py, previous_block)
+            .extract::<BlockWrapper>(py)
+            .unwrap()
+    };
+
+    let publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
+    py.allow_threads(move || match publisher.initialize_block(block) {
+        Err(InitializeBlockError::BlockInProgress) => ErrorCode::BlockInProgress,
+        Ok(_) => ErrorCode::Success,
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_finalize_block(
+    publisher: *mut c_void,
+    consensus: *const u8,
+    consensus_len: usize,
+    force: bool,
+    result: *mut *const u8,
+    result_len: *mut usize,
+) -> ErrorCode {
+    check_null!(publisher, consensus);
+    let consensus = unsafe { slice::from_raw_parts(consensus, consensus_len).to_vec() };
+    match unsafe { (*(publisher as *mut BlockPublisher)).finalize_block(consensus, force) } {
+        Err(FinalizeBlockError::BlockNotInitialized) => ErrorCode::BlockNotInitialized,
+        Err(FinalizeBlockError::BlockEmpty) => ErrorCode::BlockEmpty,
+        Ok(block_id) => unsafe {
+            *result = block_id.as_ptr();
+            *result_len = block_id.as_bytes().len();
+
+            mem::forget(block_id);
+
+            ErrorCode::Success
+        },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_summarize_block(
+    publisher: *mut c_void,
+    force: bool,
+    result: *mut *const u8,
+    result_len: *mut usize,
 ) -> ErrorCode {
     check_null!(publisher);
-    let batch_tx = unsafe { (*(publisher as *mut BlockPublisher)).batch_sender() };
-    let batch_tx_ptr: *mut IncomingBatchSender = Box::into_raw(Box::new(batch_tx));
-    unsafe {
-        *incoming_batch_sender = batch_tx_ptr as *const c_void;
-    }
 
-    ErrorCode::Success
+    match unsafe { (*(publisher as *mut BlockPublisher)).summarize_block(force) } {
+        Err(FinalizeBlockError::BlockEmpty) => ErrorCode::BlockEmpty,
+        Err(FinalizeBlockError::BlockNotInitialized) => ErrorCode::BlockNotInitialized,
+        Ok(consensus) => unsafe {
+            *result = consensus.as_ptr();
+            *result_len = consensus.as_slice().len();
+
+            mem::forget(result);
+
+            ErrorCode::Success
+        },
+    }
 }
 
 // convert_on_chain_updated_args is used in tests
@@ -282,7 +318,7 @@ pub fn convert_on_chain_updated_args(
     chain_head_ptr: *mut py_ffi::PyObject,
     committed_batches_ptr: *mut py_ffi::PyObject,
     uncommitted_batches_ptr: *mut py_ffi::PyObject,
-) -> (Option<BlockWrapper>, Vec<Batch>, Vec<Batch>) {
+) -> (BlockWrapper, Vec<Batch>, Vec<Batch>) {
     let chain_head = unsafe { PyObject::from_borrowed_ptr(py, chain_head_ptr) };
     let py_committed_batches = unsafe { PyObject::from_borrowed_ptr(py, committed_batches_ptr) };
     let committed_batches: Vec<Batch> = if py_committed_batches == Python::None(py) {
@@ -307,15 +343,9 @@ pub fn convert_on_chain_updated_args(
             .map(|pyobj| pyobj.extract::<Batch>(py).unwrap())
             .collect()
     };
-    let chain_head = if chain_head == Python::None(py) {
-        None
-    } else {
-        Some(
-            chain_head
-                .extract(py)
-                .expect("Got a new chain head that wasn't a BlockWrapper"),
-        )
-    };
+    let chain_head = chain_head
+        .extract(py)
+        .expect("Got a new chain head that wasn't a BlockWrapper");
 
     (chain_head, committed_batches, uncommitted_batches)
 }
@@ -335,9 +365,9 @@ pub extern "C" fn block_publisher_on_chain_updated(
         uncommitted_batches_ptr
     );
 
+    let gil = Python::acquire_gil();
+    let py = gil.python();
     let (chain_head, committed_batches, uncommitted_batches) = {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
         convert_on_chain_updated_args(
             py,
             chain_head_ptr,
@@ -346,11 +376,14 @@ pub extern "C" fn block_publisher_on_chain_updated(
         )
     };
 
-    unsafe {
-        (*(publisher as *mut BlockPublisher))
-            .publisher
-            .on_chain_updated_internal(chain_head, committed_batches, uncommitted_batches);
-    };
+    let mut publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
+    py.allow_threads(move || {
+        publisher.publisher.on_chain_updated_internal(
+            chain_head,
+            committed_batches,
+            uncommitted_batches,
+        )
+    });
 
     ErrorCode::Success
 }
@@ -361,7 +394,7 @@ pub extern "C" fn block_publisher_has_batch(
     batch_id: *const c_char,
     has: *mut bool,
 ) -> ErrorCode {
-    check_null!(publisher);
+    check_null!(publisher, batch_id);
     let batch_id = match unsafe { CStr::from_ptr(batch_id).to_str() } {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidInput,
@@ -370,4 +403,16 @@ pub extern "C" fn block_publisher_has_batch(
         *has = (*(publisher as *mut BlockPublisher)).has_batch(batch_id);
     }
     ErrorCode::Success
+}
+
+#[no_mangle]
+pub extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) -> ErrorCode {
+    check_null!(publisher);
+
+    unsafe {
+        match (*(publisher as *mut BlockPublisher)).cancel_block() {
+            Ok(_) => ErrorCode::Success,
+            Err(_) => ErrorCode::BlockNotInProgress,
+        }
+    }
 }

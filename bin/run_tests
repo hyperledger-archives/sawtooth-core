@@ -132,6 +132,7 @@ main() {
                     test_poet_cli
                     test_poet_common
                     test_poet_core
+                    test_poet_engine
                     test_poet_simulator
                     test_poet_families
                     test_ias
@@ -226,6 +227,11 @@ test_poet_common() {
 test_poet_core() {
     run_docker_test ./consensus/poet/core/tests/unit_poet_core.yaml
     copy_coverage .coverage.poet_core
+}
+
+test_poet_engine() {
+    run_docker_test ./consensus/poet/engine/tests/unit_poet_engine.yaml
+    copy_coverage .coverage.poet_engine
 }
 
 test_poet_simulator() {
@@ -339,12 +345,12 @@ test_rust_sdk() {
 test_integration() {
     run_docker_test test_dynamic_network --timeout 600
     copy_coverage .coverage.test_dynamic_network
-    run_docker_test test_basic_auth_proxy
-    copy_coverage .coverage.test_basic_auth_proxy
-    run_docker_test test_transactor_permissioning
-    copy_coverage .coverage.test_transactor_permissioning
-    run_docker_test test_poet_liveness
-    copy_coverage .coverage.test_poet_liveness
+    # run_docker_test test_basic_auth_proxy
+    # copy_coverage .coverage.test_basic_auth_proxy
+    # run_docker_test test_transactor_permissioning
+    # copy_coverage .coverage.test_transactor_permissioning
+    # run_docker_test test_poet_liveness
+    # copy_coverage .coverage.test_poet_liveness
 }
 
 test_deployment() {

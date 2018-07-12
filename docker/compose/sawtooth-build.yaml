@@ -24,122 +24,122 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  adm:
-    build:
-      context: ../../
-      dockerfile: ./adm/Dockerfile
-    image: sawtooth-adm-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  smallbank-rust-tp:
-    build:
-      context: ../../
-      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
-    image: smallbank-rust-tp-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  smallbank-workload:
-    build:
-      context: ../../
-      dockerfile: ./perf/smallbank_workload/Dockerfile
-    image: smallbank-workload-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  intkey-tp-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
-    image: sawtooth-intkey-tp-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  xo-tp-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/xo_rust/Dockerfile
-    image: sawtooth-xo-tp-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  signing:
-    build:
-      context: ../../
-      dockerfile: ./signing/Dockerfile
-    image: sawtooth-signing-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  cli:
-    build:
-      context: ../../
-      dockerfile: ./cli/Dockerfile
-    image: sawtooth-cli-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  python-sdk:
-    build:
-      context: ../../
-      dockerfile: ./sdk/python/Dockerfile
-    image: sawtooth-python-sdk-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  rest-api:
-    build:
-      context: ../../
-      dockerfile: ./rest_api/Dockerfile
-    image: sawtooth-rest-api-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-cli:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/cli/Dockerfile
-    image: sawtooth-poet-cli-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-common:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/common/Dockerfile
-    image: sawtooth-poet-common-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-core:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/core/Dockerfile
-    image: sawtooth-poet-core-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-families:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/families/Dockerfile
-    image: sawtooth-poet-families-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-simulator:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/simulator/Dockerfile
-    image: sawtooth-poet-simulator-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  devmode-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-    image: sawtooth-devmode-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
+  # adm:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./adm/Dockerfile
+  #   image: sawtooth-adm-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # smallbank-rust-tp:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+  #   image: smallbank-rust-tp-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # smallbank-workload:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./perf/smallbank_workload/Dockerfile
+  #   image: smallbank-workload-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # intkey-tp-rust:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+  #   image: sawtooth-intkey-tp-rust-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # xo-tp-rust:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./sdk/examples/xo_rust/Dockerfile
+  #   image: sawtooth-xo-tp-rust-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # signing:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./signing/Dockerfile
+  #   image: sawtooth-signing-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # cli:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./cli/Dockerfile
+  #   image: sawtooth-cli-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # python-sdk:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./sdk/python/Dockerfile
+  #   image: sawtooth-python-sdk-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # rest-api:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./rest_api/Dockerfile
+  #   image: sawtooth-rest-api-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # poet-cli:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./consensus/poet/cli/Dockerfile
+  #   image: sawtooth-poet-cli-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # poet-common:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./consensus/poet/common/Dockerfile
+  #   image: sawtooth-poet-common-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # poet-core:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./consensus/poet/core/Dockerfile
+  #   image: sawtooth-poet-core-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # poet-families:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./consensus/poet/families/Dockerfile
+  #   image: sawtooth-poet-families-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # poet-simulator:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./consensus/poet/simulator/Dockerfile
+  #   image: sawtooth-poet-simulator-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core
+  #
+  # devmode-rust:
+  #   build:
+  #     context: ../../
+  #     dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+  #   image: sawtooth-devmode-rust-local:${ISOLATION_ID}
+  #   volumes:
+  #     - ../../:/project/sawtooth-core

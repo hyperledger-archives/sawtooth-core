@@ -431,6 +431,18 @@ pub extern "C" fn merkle_db_update(
 
                 ErrorCode::Success
             }
+            Err(StateDatabaseError::NotFound(addr)) => {
+                error!(
+                    "Address {}, in {}, was not found.",
+                    addr,
+                    if update_map.contains_key(&addr) {
+                        "updates"
+                    } else {
+                        "deletions"
+                    }
+                );
+                ErrorCode::NotFound
+            }
             Err(StateDatabaseError::DatabaseError(err)) => {
                 error!("A Database Error occurred: {}", err);
                 ErrorCode::DatabaseError

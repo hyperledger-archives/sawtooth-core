@@ -107,6 +107,7 @@ def start_node(num,
                poet_kwargs):
     rest_api = start_rest_api(num)
     processors = start_processors(num, processor_func)
+    engine = start_engine(num)
     validator = start_validator(num,
                                 peering_func,
                                 scheduler_func,
@@ -116,7 +117,7 @@ def start_node(num,
 
     wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)])
 
-    return [rest_api] + processors + [validator]
+    return [rest_api] + processors + [engine] + [validator]
 
 
 def stop_node(process_list):
@@ -161,7 +162,7 @@ def validator_cmds(num,
         os.path.join(sawtooth_home, 'keys', 'validator'))
 
     validator = ' '.join([
-        'sawtooth-validator -v',
+        'sawtooth-validator -vv',
         '--scheduler {}'.format(scheduler_func(num)),
         '--endpoint {}'.format(endpoint(num)),
         '--bind component:{}'.format(bind_component(num)),
@@ -318,8 +319,20 @@ def start_processors(num, processor_func):
     ]
 
 
-# rest_api
+# consensus engine
 
+def engine_cmd(num):
+    return 'poet-engine --connect {s} {v}'.format(
+        s=engine_connection_address(num),
+        v='-vv'
+    )
+
+
+def start_engine(num):
+    return start_process(engine_cmd(num))
+
+
+# rest_api
 def rest_api_cmd(num):
     return 'sawtooth-rest-api --connect {s} --bind 127.0.0.1:{p}'.format(
         s=connection_address(num),
@@ -339,6 +352,10 @@ def endpoint(num):
 
 def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
+
+
+def engine_connection_address(num):
+    return 'tcp://127.0.0.1:{}'.format(5050 + num)
 
 
 def http_address(num):

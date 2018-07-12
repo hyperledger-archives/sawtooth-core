@@ -347,7 +347,7 @@ impl MerkleDatabase {
             match db_writer.put(::hex::encode(key).as_bytes(), &value) {
                 Ok(_) => continue,
                 Err(DatabaseError::DuplicateEntry) => {
-                    increment_ref_count(&mut db_writer, key);
+                    increment_ref_count(&mut db_writer, key)?;
                 }
                 Err(err) => return Err(StateDatabaseError::from(err)),
             }
