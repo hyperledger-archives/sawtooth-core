@@ -31,11 +31,15 @@ pub trait BlockStore {
     fn delete(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
+
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a>;
 }
 
 #[derive(Default)]
 pub struct InMemoryBlockStore {
     block_by_block_id: HashMap<String, Block>,
+    chain_head_num: u64,
+    chain_head_id: String,
 }
 
 impl InMemoryBlockStore {
@@ -78,10 +82,22 @@ impl BlockStore for InMemoryBlockStore {
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError> {
         blocks.into_iter().for_each(|block| {
+            if block.block_num > self.chain_head_num {
+                self.chain_head_id = block.header_signature.clone();
+                self.chain_head_num = block.block_num;
+            }
+
             self.block_by_block_id
                 .insert(block.header_signature.clone(), block);
         });
         Ok(())
+    }
+
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a> {
+        Box::new(InMemoryIter {
+            blockstore: self,
+            head: &self.chain_head_id,
+        })
     }
 }
 
@@ -113,6 +129,23 @@ impl<'a> Iterator for InMemoryGetBlockIterator<'a> {
             None => None,
         };
         self.index += 1;
+        block
+    }
+}
+
+struct InMemoryIter<'a> {
+    blockstore: &'a InMemoryBlockStore,
+    head: &'a str,
+}
+
+impl<'a> Iterator for InMemoryIter<'a> {
+    type Item = &'a Block;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let block = self.blockstore.get_block_by_block_id(self.head);
+        if let Some(b) = block {
+            self.head = &b.previous_block_id;
+        }
         block
     }
 }
