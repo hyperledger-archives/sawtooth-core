@@ -234,8 +234,7 @@ class _SendReceive(object):
                 if elapsed < 2 * self._heartbeat_interval:
                     LOGGER.debug("No response from %s in %s seconds"
                                  " - beginning heartbeat pings.",
-                                 self._identity_to_connection_id(
-                                     zmq_identity),
+                                 self._identity_to_connection_id(zmq_identity),
                                  elapsed)
                 message = validator_pb2.Message(
                     correlation_id=_generate_id(),
