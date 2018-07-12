@@ -48,9 +48,6 @@ def main(args=None):
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
     protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
 
-    if "javascript" in args:
-        protoc(proto_dir, "sdk/javascript", "protobuf", "javascript")
-
     if "go" in args:
         protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
@@ -87,8 +84,6 @@ def protoc(src_dir, base_dir, pkg, language="python"):
         protoc_python(src_dir, base_dir, pkg)
     elif language == "go":
         protoc_go(src_dir, base_dir, pkg)
-    elif language == "javascript":
-        protoc_javascript(src_dir, base_dir, pkg)
 
 
 def protoc_python(src_dir, base_dir, pkg):
@@ -129,22 +124,6 @@ def protoc_python(src_dir, base_dir, pkg):
             "-I=%s" % tmp_dir,
             "--python_out=%s" % JOIN(TOP_DIR, base_dir),
         ] + glob("%s/*.proto" % tmp_pkg_dir))
-
-
-def protoc_javascript(src_dir, base_dir, pkg):
-    pkg_dir = JOIN(TOP_DIR, base_dir, pkg)
-    os.makedirs(pkg_dir, exist_ok=True)
-
-    with open(JOIN(pkg_dir, 'protobuf_bundle.json'), 'w') as out:
-        p = subprocess.Popen(
-            ['node', 'compile_protobuf.js'],
-            cwd=JOIN(TOP_DIR, base_dir),
-            stdout=out)
-        ret_code = p.wait()
-        out.flush()
-
-    if ret_code != 0:
-        raise AssertionError('Unable to compile protobuf messages for JS!')
 
 
 def protoc_go(src_dir, base_dir, pkg):

@@ -23,7 +23,7 @@ ALLSPHINXOPTS   = -W -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) 
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
-.PHONY: help clean templates html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest coverage gettext cli python go javascript
+.PHONY: help clean templates html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest coverage gettext cli python go
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -75,12 +75,6 @@ go:
 	godoc -html sawtooth_sdk/processor > $(GOSDKDIR)/processor.html
 	godoc -html sawtooth_sdk/signing > $(GOSDKDIR)/signing.html
 
-JAVASCRIPTSDKDIR := $(HTMLDIR)/javascript_sdk
-javascript:
-	mkdir -p $(JAVASCRIPTSDKDIR)/
-	jsdoc $(SAWTOOTH)/sdk/javascript/processor/ -d $(JAVASCRIPTSDKDIR)/processor/
-	jsdoc $(SAWTOOTH)/sdk/javascript/signing -d $(JAVASCRIPTSDKDIR)/signing/
-
 RUSTSDKDIR := $(HTMLDIR)/rust_sdk
 rust:
 	mkdir -p $(RUSTSDKDIR)/
@@ -88,7 +82,7 @@ rust:
 	rm $(SAWTOOTH)/sdk/rust/target/doc/.lock
 	cp -r $(SAWTOOTH)/sdk/rust/target/doc/ $(RUSTSDKDIR)/doc
 
-html: templates cli python go javascript rust
+html: templates cli python go rust
 	@mkdir -p source/_static
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(HTMLDIR)
 	@echo

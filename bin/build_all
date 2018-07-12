@@ -27,7 +27,6 @@ ALL_TARGETS="
         ext
         go
         java
-        javascript
         poet_sgx
         rust
         python
@@ -158,9 +157,6 @@ main() {
                 java)
                     build_java
                     ;;
-                javascript)
-                    build_javascript
-                    ;;
                 poet_sgx)
                     build_poet_sgx
                     ;;
@@ -284,13 +280,6 @@ then
         docker_run sawtooth-dev-java
     }
 
-    build_javascript() {
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
-        docker_run sawtooth-dev-javascript
-    }
-
     build_python() {
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_build $top_dir/docker/sawtooth-dev-validator docker/ sawtooth-dev-validator
@@ -372,13 +361,6 @@ then
         docker_run sawtooth-dev-java
     }
 
-    build_javascript() {
-        warn "Installed javascript images not implemented, building mounted instead"
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
-        docker_run sawtooth-dev-javascript
-    }
     build_python() {
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir

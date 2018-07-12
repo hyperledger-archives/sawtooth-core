@@ -40,7 +40,7 @@ to connect with the validator and the handler class.
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: a simplified xo_javascript/index.js
+    :caption: a simplified sawtooth-sdk-javascript/examples/xo/index.js
 
     const { TransactionProcessor } = require('sawtooth-sdk/processor')
     const XOHandler = require('./xo_handler')
@@ -133,7 +133,7 @@ helper functions.
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_handler.js XOHandler class
+    :caption: sawtooth-sdk-javascript/examples/xo/handler.js XOHandler class
 
     class XOHandler extends TransactionHandler {
       constructor () {
@@ -328,7 +328,7 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_handler.js apply overview
+    :caption: sawtooth-sdk-javascript/examples/xo/handler.js apply overview
 
 
     apply (transactionProcessRequest, context) {
@@ -472,7 +472,7 @@ The ``create`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_handler.js apply 'create'
+    :caption: sawtooth-sdk-javascript/examples/xo/handler.js apply 'create'
 
     if (payload.action === 'create') {
       return xoState.getGame(payload.name)
@@ -579,7 +579,7 @@ The ``delete`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_handler.js apply 'delete'
+    :caption: sawtooth-sdk-javascript/examples/xo/handler.js apply 'delete'
 
     if (payload.action === 'delete') {
       return xoState.getGame(payload.name)
@@ -663,7 +663,7 @@ The ``take`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: none
-    :caption: xo_javascript/xo_handler.js apply 'take'
+    :caption: sawtooth-sdk-javascript/examples/xo/handler.js apply 'take'
 
     if (payload.action === 'take') {
       return xoState.getGame(payload.name)
@@ -969,7 +969,7 @@ where
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_payload.js
+    :caption: sawtooth-sdk-javascript/examples/xo/payload.js
 
     class XoPayload {
         constructor (name, action, space) {
@@ -1233,7 +1233,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_state.js
+    :caption: sawtooth-sdk-javascript/examples/xo/state.js
 
     class XoState {
         constructor (context) {
