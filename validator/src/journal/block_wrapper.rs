@@ -20,6 +20,8 @@ use block::Block;
 use scheduler::TxnExecutionResult;
 use std::fmt;
 
+use cpython::{self, ObjectProtocol, PyClone, PyObject};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BlockStatus {
     Unknown = 0,
@@ -34,45 +36,133 @@ impl Default for BlockStatus {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug)]
 pub struct BlockWrapper {
-    pub block: Block,
-    pub status: BlockStatus,
-    pub execution_results: Vec<TxnExecutionResult>,
-    pub num_transactions: usize,
+    pub(super) py_block_wrapper: PyObject,
+}
+
+impl Clone for BlockWrapper {
+    fn clone(&self) -> Self {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        BlockWrapper {
+            py_block_wrapper: self.py_block_wrapper.clone_ref(py),
+        }
+    }
 }
 
 impl BlockWrapper {
-    pub fn new(block: Block) -> Self {
-        BlockWrapper {
-            block,
-            ..BlockWrapper::default()
-        }
+    pub fn header_signature(&self) -> String {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        self.py_block_wrapper
+            .getattr(py, "header_signature")
+            .expect("Failed to get BlockWrapper.header_signature")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.header_signature")
     }
 
-    pub fn header_signature(&self) -> &str {
-        &self.block.header_signature
-    }
-
-    pub fn previous_block_id(&self) -> &str {
-        &self.block.previous_block_id
+    pub fn previous_block_id(&self) -> String {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "previous_block_id")
+            .expect("Failed to get BlockWrapper.previous_block_id")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.previous_block_id")
     }
 
     pub fn block_num(&self) -> u64 {
-        self.block.block_num
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "block_num")
+            .expect("Failed to get BlockWrapper.block_num")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.block_num")
     }
 
-    pub fn batches(&self) -> &[Batch] {
-        &self.block.batches
+    pub fn batches(&self) -> Vec<Batch> {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "batches")
+            .expect("Failed to get BlockWrapper.batches")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.batches")
     }
 
-    pub fn state_root_hash(&self) -> &str {
-        &self.block.state_root_hash
+    pub fn state_root_hash(&self) -> String {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "state_root_hash")
+            .expect("Failed to get BlockWrapper.state_root_hash")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.state_root_hash")
+    }
+
+    pub fn block(&self) -> Block {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "block")
+            .expect("Failed to get BlockWrapper.block")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.block")
+    }
+
+    pub fn status(&self) -> BlockStatus {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "status")
+            .expect("Failed to get BlockWrapper.status")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.status")
+    }
+
+    pub fn execution_results(&self) -> Vec<TxnExecutionResult> {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "execution_results")
+            .expect("Failed to get BlockWrapper.execution_results")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.execution_results")
+    }
+
+    pub fn num_transactions(&self) -> usize {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .getattr(py, "num_transactions")
+            .expect("Failed to get BlockWrapper.num_transactions")
+            .extract(py)
+            .expect("Failed to extract BlockWrapper.num_transactions")
+    }
+
+    pub fn set_status(&mut self, status: BlockStatus) {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .setattr(py, "status", status)
+            .expect("Failed to set BlockWrapper.status")
+    }
+
+    pub fn set_num_transactions(&mut self, num: usize) {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+        self.py_block_wrapper
+            .setattr(py, "num_transactions", num)
+            .expect("Failed to set BlockWrapper.num_transactions")
     }
 }
 
 impl fmt::Display for BlockWrapper {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.block)
+        write!(f, "{}", self.block())
     }
 }

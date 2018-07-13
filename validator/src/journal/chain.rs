@@ -193,7 +193,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
             let chain_id = self.chain_id_manager.get_block_chain_id()?;
             if chain_id
                 .as_ref()
-                .map(|block_id| block_id != block.header_signature())
+                .map(|block_id| block_id != &block.header_signature())
                 .unwrap_or(false)
             {
                 warn!(
@@ -206,7 +206,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
 
                 if chain_id.is_none() {
                     self.chain_id_manager
-                        .save_block_chain_id(block.header_signature())?;
+                        .save_block_chain_id(&block.header_signature())?;
                 }
 
                 self.chain_writer.update_chain(&[block.clone()], &[])?;
@@ -251,7 +251,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
             &mut result.current_chain,
         )?;
 
-        result.transaction_count = result.new_chain.iter().map(|b| b.num_transactions).sum();
+        result.transaction_count = result.new_chain.iter().map(|b| b.num_transactions()).sum();
 
         info!(
             "Comparing current chain head '{}' against new block '{}'",
@@ -290,8 +290,10 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
 
             fork_diff.push(block.clone());
 
-            block =
-                self.get_from_cache_strict(block.previous_block_id(), "Failed to build fork diff")?;
+            block = self.get_from_cache_strict(
+                &block.previous_block_id(),
+                "Failed to build fork diff",
+            )?;
         }
     }
 
@@ -331,7 +333,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
                 loop {
                     match new_chain.pop() {
                         Some(mut block) => {
-                            block.status = BlockStatus::Invalid;
+                            block.set_status(BlockStatus::Invalid);
                             // need to put it back in the cache
                             self.block_cache.put(block);
                         }
@@ -347,13 +349,13 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
 
             new_chain.push(new);
             new = self.get_from_cache_strict(
-                new_chain.last().unwrap().previous_block_id(),
+                &new_chain.last().unwrap().previous_block_id(),
                 "Failed to extend new chain",
             )?;
 
             cur_chain.push(current);
             current = self.block_cache
-                .get(cur_chain.last().unwrap().previous_block_id())
+                .get(&cur_chain.last().unwrap().previous_block_id())
                 .expect("Could not find current chain predecessor in block cache");
         }
 
@@ -481,7 +483,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .write()
             .expect("No lock holder should have poisoned the lock");
 
-        if state.has_block(block.header_signature()) {
+        if state.has_block(&block.header_signature()) {
             return Ok(());
         }
 
@@ -527,7 +529,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .write()
             .expect("No lock holder should have poisoned the lock");
 
-        block.status = BlockStatus::Invalid;
+        block.set_status(BlockStatus::Invalid);
 
         state.block_cache.put(block.clone());
     }
@@ -573,17 +575,27 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
 
                 state.chain_head = Some(block.clone());
 
+                let new_roots: Vec<String> = result
+                    .new_chain
+                    .iter()
+                    .map(|block| block.state_root_hash())
+                    .collect();
+                let current_roots: Vec<(u64, String)> = result
+                    .current_chain
+                    .iter()
+                    .map(|block| (block.block_num(), block.state_root_hash()))
+                    .collect();
                 state.state_pruning_manager.update_queue(
-                    &result
-                        .new_chain
+                    new_roots
                         .iter()
-                        .map(|block| block.state_root_hash())
-                        .collect::<Vec<_>>(),
-                    &result
-                        .current_chain
+                        .map(|root| root.as_str())
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                    current_roots
                         .iter()
-                        .map(|block| (block.block_num(), block.state_root_hash()))
-                        .collect::<Vec<_>>(),
+                        .map(|(num, root)| (*num, root.as_str()))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
                 );
 
                 state
@@ -626,7 +638,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
 
                 for block in result.new_chain.iter().rev() {
                     let receipts: Vec<TransactionReceipt> = block
-                        .execution_results
+                        .execution_results()
                         .iter()
                         .map(TransactionReceipt::from)
                         .collect();
@@ -655,7 +667,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                     match state.chain_reader.get_block_by_block_num(prune_at) {
                         Ok(Some(block)) => state
                             .state_pruning_manager
-                            .add_to_queue(block.block_num(), block.state_root_hash()),
+                            .add_to_queue(block.block_num(), &block.state_root_hash()),
                         Ok(None) => warn!("No block at block height {}; ignoring...", prune_at),
                         Err(err) => {
                             error!("Unable to fetch block at height {}: {:?}", prune_at, err)
@@ -672,7 +684,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         }
 
         self.consensus_notifier
-            .notify_block_commit(block.header_signature());
+            .notify_block_commit(&block.header_signature());
 
         Ok(())
     }

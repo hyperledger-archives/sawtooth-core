@@ -157,7 +157,7 @@ impl SyncBlockPublisher {
         uncommitted_batches: Vec<Batch>,
     ) {
         info!("Now building on top of block, {}", chain_head);
-        let batches_len = chain_head.block.batches.len();
+        let batches_len = chain_head.block().batches.len();
         state.chain_head = Some(chain_head);
         let mut previous_block_id = None;
         if self.is_building_block(state) {
@@ -238,7 +238,7 @@ impl SyncBlockPublisher {
                     "get_setting",
                     (
                         "sawtooth.publisher.max_batches_per_block",
-                        previous_block.block.state_root_hash.clone(),
+                        previous_block.block().state_root_hash.clone(),
                     ),
                     Some(&kwargs),
                 )
@@ -248,17 +248,17 @@ impl SyncBlockPublisher {
 
             let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
-            let batch_injectors = self.load_injectors(py, &previous_block.block.header_signature);
+            let batch_injectors = self.load_injectors(py, &previous_block.block().header_signature);
 
             let kwargs = PyDict::new(py);
             kwargs
-                .set_item(py, "block_num", previous_block.block.block_num + 1)
+                .set_item(py, "block_num", previous_block.block().block_num + 1)
                 .unwrap();
             kwargs
                 .set_item(
                     py,
                     "previous_block_id",
-                    &previous_block.block.header_signature,
+                    &previous_block.block().header_signature,
                 )
                 .unwrap();
             kwargs
@@ -274,7 +274,7 @@ impl SyncBlockPublisher {
 
             let scheduler = state
                 .transaction_executor
-                .create_scheduler(&previous_block.block.state_root_hash)
+                .create_scheduler(&previous_block.block().state_root_hash)
                 .expect("Failed to create new scheduler");
 
             let block_store = self.block_cache

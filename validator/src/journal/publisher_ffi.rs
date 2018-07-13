@@ -24,8 +24,9 @@ use cpython::{PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use journal::block_wrapper::BlockWrapper;
-use journal::publisher::{BlockPublisher, FinalizeBlockError, IncomingBatchSender,
-                         InitializeBlockError};
+use journal::publisher::{
+    BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
+};
 
 #[repr(u32)]
 #[derive(Debug)]
