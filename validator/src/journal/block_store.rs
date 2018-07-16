@@ -28,7 +28,7 @@ pub enum BlockStoreError {
 pub trait BlockStore {
     fn get<'a>(&'a self, block_ids: Vec<String>) -> Box<Iterator<Item = &'a Block> + 'a>;
 
-    fn delete(&mut self, block_ids: Vec<String>) -> Result<(), BlockStoreError>;
+    fn delete(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 }
@@ -55,17 +55,25 @@ impl BlockStore for InMemoryBlockStore {
         Box::new(iterator)
     }
 
-    fn delete(&mut self, block_ids: Vec<String>) -> Result<(), BlockStoreError> {
+    fn delete(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, BlockStoreError> {
         if block_ids
             .iter()
             .any(|block_id| !self.block_by_block_id.contains_key(block_id))
         {
             return Err(BlockStoreError::UnknownBlock);
         }
-        block_ids.iter().for_each(|block_id| {
-            self.block_by_block_id.remove(block_id);
+        let blocks = block_ids.iter().map(|block_id| {
+            let block = self.block_by_block_id
+                .remove(block_id)
+                .expect("Block removed during middle of delete operation");
+            if block.block_num <= self.chain_head_num {
+                self.chain_head_id = block.previous_block_id.clone();
+                self.chain_head_num = block.block_num - 1;
+            }
+            block
         });
-        Ok(())
+
+        Ok(blocks.collect())
     }
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError> {
