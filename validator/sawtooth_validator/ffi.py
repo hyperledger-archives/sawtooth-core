@@ -73,12 +73,18 @@ def prepare_byte_result():
     return (ctypes.POINTER(ctypes.c_uint8)(), ctypes.c_size_t(0))
 
 
-def from_c_bytes(c_data, c_data_len):
+def from_c_bytes(c_data, c_data_len, reclaim=True):
     """Takes a byte pointer and a length and converts it into a python bytes
-    value.
+    value. The bytes are reclaimed using Rust FFI code if reclaim is True.
     """
     # pylint: disable=invalid-slice-index
-    return bytes(c_data[:c_data_len.value])
+    py_bytes = bytes(c_data[:c_data_len.value])
+    if reclaim:
+        LIBRARY.call(
+            "ffi_reclaim_bytes",
+            ctypes.byref(c_data),
+            ctypes.byref(c_data_len))
+    return py_bytes
 
 
 class OwnedPointer(metaclass=ABCMeta):

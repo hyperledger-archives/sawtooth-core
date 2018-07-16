@@ -15,35 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate python3_sys as py_ffi;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
+#[no_mangle]
+pub extern "C" fn ffi_reclaim_bytes(
+    bytes: *mut *const u8,
+    bytes_len: *mut usize,
+) -> isize {
+    unsafe { ::std::slice::from_raw_parts(
+        (*bytes) as *mut u8,
+        *bytes_len,
+    ) };
 
-// exported modules
-pub mod database;
-pub mod execution;
-pub mod journal;
-mod metrics;
-pub mod proto;
-pub mod pylogger;
-pub mod scheduler;
-pub mod state;
-
-pub mod batch;
-mod batch_ffi;
-pub mod block;
-mod block_ffi;
-pub mod transaction;
-
-pub mod ffi;
+    0
+}
