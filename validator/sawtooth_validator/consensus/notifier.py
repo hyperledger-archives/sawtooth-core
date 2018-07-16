@@ -41,7 +41,7 @@ class ConsensusNotifier:
         self._notify(
             validator_pb2.Message.CONSENSUS_NOTIFY_PEER_CONNECTED,
             consensus_pb2.ConsensusNotifyPeerConnected(
-                consensus_pb2.ConsensusPeerInfo(
+                peer_info=consensus_pb2.ConsensusPeerInfo(
                     peer_id=bytes.fromhex(peer_id))))
 
     def notify_peer_disconnected(self, peer_id):
