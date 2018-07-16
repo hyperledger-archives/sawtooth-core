@@ -21,7 +21,7 @@ Transaction, and TransactionHeader:
 Transaction Data Structure
 ==========================
 
-Transactions are serialized using Protocol Buffers.  They consists of two
+Transactions are serialized using Protocol Buffers.  They consist of two
 message types:
 
 .. literalinclude:: ../../../protos/transaction.proto
