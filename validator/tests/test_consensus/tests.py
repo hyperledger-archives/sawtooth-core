@@ -4,6 +4,7 @@ from unittest.mock import Mock
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
+from sawtooth_validator.consensus.proxy import StartupInfo
 
 
 class FinalizeBlockResult:
@@ -26,7 +27,11 @@ class TestHandlers(unittest.TestCase):
         mock_chain_head.signer_public_key = "abcd"
         mock_chain_head.block_num = 12
         mock_chain_head.consensus = b"deadbeef"
-        self.mock_proxy.register.return_value = mock_chain_head, []
+        mock_startup_info = StartupInfo(
+            chain_head=mock_chain_head,
+            peers=['dead', 'beef'],
+            local_peer_info=b'abc')
+        self.mock_proxy.register.return_value = mock_startup_info
         handler = handlers.ConsensusRegisterHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
@@ -35,6 +40,9 @@ class TestHandlers(unittest.TestCase):
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
+        self.assertEqual(response.chain_head.block_id, bytes.fromhex("dead"))
+        self.assertEqual(response.peers[0].peer_id, bytes.fromhex("dead"))
+        self.assertEqual(response.local_peer_info.peer_id, b'abc')
         self.mock_proxy.register.assert_called_with()
 
     def test_consensus_send_to_handler(self):
