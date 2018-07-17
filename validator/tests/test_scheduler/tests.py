@@ -26,7 +26,7 @@ import time
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
+from sawtooth_validator.protobuf import transaction_pb2
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError

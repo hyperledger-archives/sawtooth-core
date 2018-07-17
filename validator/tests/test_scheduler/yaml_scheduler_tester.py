@@ -32,8 +32,8 @@ from sawtooth_validator.execution.scheduler import BatchExecutionResult
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 
-import sawtooth_validator.protobuf.batch_pb2 as batch_pb2
-import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import transaction_pb2
 
 
 LOGGER = logging.getLogger(__name__)

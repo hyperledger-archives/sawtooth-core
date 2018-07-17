@@ -28,7 +28,7 @@ from google.protobuf.message import DecodeError
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
 import sawtooth_rest_api.exceptions as errors
-import sawtooth_rest_api.error_handlers as error_handlers
+from sawtooth_rest_api import error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.messaging import SendBackoffTimeoutError
 from sawtooth_rest_api.protobuf import client_transaction_pb2

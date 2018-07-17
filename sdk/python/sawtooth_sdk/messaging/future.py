@@ -17,7 +17,7 @@ from threading import Condition
 from threading import RLock
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
-import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
+from sawtooth_sdk.protobuf import validator_pb2
 
 
 class FutureResult:

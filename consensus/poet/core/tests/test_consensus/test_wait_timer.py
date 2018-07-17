@@ -24,7 +24,7 @@ import sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator \
     as poet_enclave
 
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
-import sawtooth_poet.poet_consensus.wait_timer as wait_timer
+from sawtooth_poet.poet_consensus import wait_timer
 
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 

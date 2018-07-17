@@ -24,7 +24,7 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.parent_parsers import base_http_parser
 from sawtooth_cli.parent_parsers import base_list_parser
 from sawtooth_cli.parent_parsers import base_show_parser
-import sawtooth_cli.protobuf.batch_pb2 as batch_pb2
+from sawtooth_cli.protobuf import batch_pb2
 
 
 def add_batch_parser(subparsers, parent_parser):
