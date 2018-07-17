@@ -63,7 +63,7 @@ class TestNetworkCompare(unittest.TestCase):
         # How many checks should happen
         expected_checks = sum(map(
             lambda ci: sum(map(
-                lambda bi: 0 if (bi == '' or bi == '0') else 1, ci[1]
+                lambda bi: 0 if bi in ('', '0') else 1, ci[1]
             )),
             chains_info))
 

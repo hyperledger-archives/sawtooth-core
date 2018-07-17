@@ -424,8 +424,10 @@ class BlockValidator:
         must be at the same height, or this will always fail.
         """
         while cur_blkw.identifier != new_blkw.identifier:
-            if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
-                    or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
+            if NULL_BLOCK_IDENTIFIER in (
+                cur_blkw.previous_block_id,
+                new_blkw.previous_block_id,
+            ):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid

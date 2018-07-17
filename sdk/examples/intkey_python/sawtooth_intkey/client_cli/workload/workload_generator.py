@@ -211,7 +211,7 @@ class WorkloadGenerator:
                 result.status_code, result.json()
             result.raise_for_status()
 
-            if code == 200 or code == 201 or code == 202:
+            if code in (200, 201, 202):
                 return json_result['data'][0]['status']
 
             if 'error' in json_result:

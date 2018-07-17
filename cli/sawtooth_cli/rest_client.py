@@ -158,7 +158,7 @@ class RestClient:
             headers=headers,
             method='POST')
 
-        if code == 200 or code == 201 or code == 202:
+        if code in (200, 201, 202):
             return json_result
 
         raise CliException("({}): {}".format(code, json_result))
