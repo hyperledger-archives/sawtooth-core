@@ -188,7 +188,7 @@ class BlockInfoTransactionHandler(TransactionHandler):
                         deletes))
 
         if sets:
-            addresses = set([k for k, _ in sets])
+            addresses = set(k for k, _ in sets)
             addresses_set = set(context.set_state(
                 {k: v for k, v in sets}))
             if addresses != addresses_set:
