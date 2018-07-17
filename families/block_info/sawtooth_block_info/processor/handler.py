@@ -193,5 +193,3 @@ class BlockInfoTransactionHandler(TransactionHandler):
                 {k: v for k, v in sets}))
             if addresses != addresses_set:
                 raise InternalError("Failed to set addresses.")
-
-        return None
