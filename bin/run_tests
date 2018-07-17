@@ -25,6 +25,7 @@ MODULE_LIST="
     settings
     identity
     block_info
+    battleship
     validator
     python_sdk
     rust_sdk
@@ -163,6 +164,9 @@ main() {
                 block_info)
                     test_block_info
                     ;;
+                battleship)
+                    test_battleship
+                    ;;
                 validator)
                     test_validator
                     ;;
@@ -257,6 +261,13 @@ test_block_info() {
   copy_coverage .coverage.block_info
   run_docker_test test_block_info_injector
   copy_coverage .coverage.block_info_injector
+}
+
+test_battleship() {
+  run_docker_test ./families/battleship/battleship_python/tests/test_tp_battleship.yaml
+  copy_coverage .coverage.battleship_python
+  run_docker_test ./families/battleship/battleship_rust/test_tp_battleship.yaml
+#  copy_coverage .coverage.battleship_rust
 }
 
 test_validator() {

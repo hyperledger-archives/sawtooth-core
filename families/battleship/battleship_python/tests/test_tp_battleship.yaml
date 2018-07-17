@@ -19,9 +19,9 @@ services:
 
   battleship-tp:
     build:
-      context: ../../..
-      dockerfile: ./families/battleship/Dockerfile
-    image: sawtooth-battleship-tp$INSTALL_TYPE:$ISOLATION_ID
+      context: ../../../..
+      dockerfile: ./families/battleship/battleship_python/Dockerfile
+    image: sawtooth-battleship-tp-python$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -31,23 +31,23 @@ services:
 
   test-tp-battleship:
     build:
-      context: ../../..
-      dockerfile: ./families/battleship/tests/battleship-tests.dockerfile
+      context: ../../../..
+      dockerfile: ./families/battleship/battleship_python/tests/battleship-tests.dockerfile
     image: battleship-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /project/sawtooth-core/families/battleship/nose2.cfg
+        -c /project/sawtooth-core/families/battleship/battleship_python/nose2.cfg
         -v
-        -s /project/sawtooth-core/families/battleship/tests
+        -s /project/sawtooth-core/families/battleship/battleship_python/tests
         test_tp_battleship
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/sawtooth-core/families/battleship:\
-            /project/sawtooth-core/families/battleship/tests:\
+        PYTHONPATH: "/project/sawtooth-core/families/battleship/battleship_python:\
+            /project/sawtooth-core/families/battleship/battleship_python/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

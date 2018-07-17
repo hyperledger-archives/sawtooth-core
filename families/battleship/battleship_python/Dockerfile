@@ -39,8 +39,21 @@ RUN apt-get install -y -q --allow-downgrades \
     python3-yaml \
     python3-zmq
 
+RUN apt install -y -q --allow-downgrades \
+    pkg-config \
+    python3-dev \
+    libffi-dev \
+    autoconf \
+    libtool
+
 RUN mkdir -p /var/log/sawtooth
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
 WORKDIR /project/sawtooth-core
+COPY . /project/sawtooth-core
+
+RUN bin/protogen && \
+    cd signing && python3 setup.py install && \
+    cd ../sdk/python && python3 setup.py install && \
+    cd ../../families/battleship/battleship_python && python3 setup.py install

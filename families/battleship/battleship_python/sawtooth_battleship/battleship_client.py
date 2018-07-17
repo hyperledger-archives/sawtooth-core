@@ -104,7 +104,7 @@ class BattleshipClient:
             outputs=[address],
             dependencies=[],
             payload_sha512=self._sha512(payload),
-            batcher_public_key=self.signer.get_public_key().as_hex(),
+            batcher_public_key=self._signer.get_public_key().as_hex(),
             nonce=time.time().hex().encode()
         ).SerializeToString()
 
