@@ -201,7 +201,7 @@ class _SendReceive:
                     yield from self._do_dealer_heartbeat()
                 yield from asyncio.sleep(self._heartbeat_interval,
                                          loop=self._event_loop)
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -326,7 +326,7 @@ class _SendReceive:
                     my_future.timer_stop()
                     self._futures.remove(message.correlation_id)
 
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -355,7 +355,7 @@ class _SendReceive:
                 self._get_queue_size_gauge(self.connection).set_value(
                     self._dispatcher_queue.qsize())
 
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -574,7 +574,7 @@ class _SendReceive:
             try:
                 yield from self._monitor_sock.recv_multipart()
                 self._check_connections()
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
