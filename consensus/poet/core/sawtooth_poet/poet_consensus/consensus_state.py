@@ -714,14 +714,15 @@ class ConsensusState(object):
                     validator_state.key_block_claim_count,
                     key_block_claim_limit)
                 return True
-            else:
-                LOGGER.debug(
-                    'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
-                    validator_info.name,
-                    validator_info.id[:8],
-                    validator_info.id[-8:],
-                    validator_state.key_block_claim_count,
-                    key_block_claim_limit)
+
+            LOGGER.debug(
+                'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                validator_state.key_block_claim_count,
+                key_block_claim_limit)
+
         else:
             LOGGER.debug(
                 'Validator %s (ID=%s...%s): Claimed 0 block(s) out of %d',

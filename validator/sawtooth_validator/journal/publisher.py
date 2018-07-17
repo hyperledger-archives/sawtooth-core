@@ -68,14 +68,15 @@ class IncomingBatchSender(OwnedPointer):
 
         if res == IncomingBatchSenderErrorCode.Success:
             return
-        elif res == IncomingBatchSenderErrorCode.NullPointerProvided:
+
+        if res == IncomingBatchSenderErrorCode.NullPointerProvided:
             raise TypeError("Provided null pointer(s)")
-        elif res == IncomingBatchSenderErrorCode.InvalidInput:
+        if res == IncomingBatchSenderErrorCode.InvalidInput:
             raise ValueError("Input was not valid ")
-        elif res == IncomingBatchSenderErrorCode.Disconnected:
+        if res == IncomingBatchSenderErrorCode.Disconnected:
             raise Disconnected()
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
+
+        raise ValueError("An unknown error occurred: {}".format(res))
 
 
 class ChainHeadLockErrorCode(IntEnum):
@@ -99,10 +100,10 @@ class ChainHeadLock(OwnedPointer):
         if res == ChainHeadLockErrorCode.Success:
             self._guard = ChainHeadGuard(guard_ptr)
             return self._guard
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
+        if res == ChainHeadLockErrorCode.NullPointerProvided:
             raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
+
+        raise ValueError("An unknown error occurred: {}".format(res))
 
     def release(self):
         res = LIBRARY.call(
@@ -111,10 +112,10 @@ class ChainHeadLock(OwnedPointer):
 
         if res == ChainHeadLockErrorCode.Success:
             return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
+        if res == ChainHeadLockErrorCode.NullPointerProvided:
             raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
+
+        raise ValueError("An unknown error occurred: {}".format(res))
 
 
 class ChainHeadGuard:
@@ -134,10 +135,10 @@ class ChainHeadGuard:
 
         if res == ChainHeadLockErrorCode.Success:
             return
-        elif res == ChainHeadLockErrorCode.NullPointerProvided:
+        if res == ChainHeadLockErrorCode.NullPointerProvided:
             raise TypeError("Provided null pointer(s)")
-        else:
-            raise ValueError("An unknown error occurred: {}".format(res))
+
+        raise ValueError("An unknown error occurred: {}".format(res))
 
 
 class BlockPublisherErrorCode(IntEnum):
@@ -222,9 +223,9 @@ class BlockPublisher(OwnedPointer):
     def _to_exception(res):
         if res == BlockPublisherErrorCode.Success:
             return
-        elif res == BlockPublisherErrorCode.NullPointerProvided:
+        if res == BlockPublisherErrorCode.NullPointerProvided:
             raise TypeError("Provided null pointer(s)")
-        elif res == BlockPublisherErrorCode.InvalidInput:
+        if res == BlockPublisherErrorCode.InvalidInput:
             raise ValueError("Input was not valid ")
 
     def batch_sender(self):

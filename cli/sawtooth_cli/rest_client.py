@@ -112,13 +112,13 @@ class RestClient(object):
 
         if code == 200:
             return json_result
-        elif code == 404:
+        if code == 404:
             raise CliException(
                 '{}: There is no resource with the identifier "{}"'.format(
                     self._base_url, path.split('/')[-1]))
-        else:
-            raise CliException(
-                "{}: {} {}".format(self._base_url, code, json_result))
+
+        raise CliException(
+            "{}: {} {}".format(self._base_url, code, json_result))
 
     def _get_data(self, path, **queries):
         url = self._base_url + path
@@ -160,8 +160,8 @@ class RestClient(object):
 
         if code == 200 or code == 201 or code == 202:
             return json_result
-        else:
-            raise CliException("({}): {}".format(code, json_result))
+
+        raise CliException("({}): {}".format(code, json_result))
 
     def _submit_request(self, url, params=None, data=None, headers=None,
                         method="GET"):

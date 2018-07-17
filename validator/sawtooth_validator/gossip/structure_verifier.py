@@ -61,7 +61,7 @@ def is_valid_batch(batch):
         LOGGER.debug("Batch has extra transactions. Dropping batch: %s",
                      batch.header_signature)
         return False
-    elif len(batch.transactions) < len(header.transaction_ids):
+    if len(batch.transactions) < len(header.transaction_ids):
         LOGGER.debug("Batch lacks transactions. Dropping batch: %s",
                      batch.header_signature)
         return False
@@ -87,7 +87,7 @@ class GossipHandlerStructureVerifier(Handler):
                 return HandlerResult(status=HandlerStatus.DROP)
 
             return HandlerResult(status=HandlerStatus.PASS)
-        elif tag == network_pb2.GossipMessage.BATCH:
+        if tag == network_pb2.GossipMessage.BATCH:
             if not is_valid_batch(obj):
                 LOGGER.debug("batch structure is invalid: %s",
                              obj.header_signature)

@@ -124,16 +124,17 @@ def _exec(library, name, *args):
     res = library.call(name, *args)
     if res == ErrorCode.Success:
         return
-    elif res == ErrorCode.NullPointerProvided:
+
+    if res == ErrorCode.NullPointerProvided:
         raise ValueError("Provided null pointer(s)")
-    elif res == ErrorCode.InvalidDataDir:
+    if res == ErrorCode.InvalidDataDir:
         raise ValueError("Invalid data dir")
-    elif res == ErrorCode.InvalidPythonObject:
+    if res == ErrorCode.InvalidPythonObject:
         raise ValueError("Invalid python object submitted")
-    elif res == ErrorCode.InvalidBlockId:
+    if res == ErrorCode.InvalidBlockId:
         raise ValueError("Invalid block id provided.")
-    else:
-        raise TypeError("Unknown error occurred: {}".format(res.error))
+
+    raise TypeError("Unknown error occurred: {}".format(res.error))
 
 
 class ErrorCode(IntEnum):

@@ -183,33 +183,32 @@ class Completer(object):
                 del self._requested[block.header_signature]
             return block
 
-        else:
-            batch_id_list = [x.header_signature for x in block.batches]
-            # Check to see if batchs are in the correct order.
-            if batch_id_list == list(block.header.batch_ids):
-                if block.header_signature in self._requested:
-                    del self._requested[block.header_signature]
-                return block
-            # Check to see if the block has all batch_ids and they can be put
-            # in the correct order
-            elif sorted(batch_id_list) == sorted(list(block.header.batch_ids)):
-                batches = self._finalize_batch_list(block, temp_batches)
-                # Clear batches from block
-                del block.batches[:]
-                # reset batches with full list batches
-                if batches is not None:
-                    block.batches.extend(batches)
-                else:
-                    return None
-
-                if block.header_signature in self._requested:
-                    del self._requested[block.header_signature]
-
-                return block
+        batch_id_list = [x.header_signature for x in block.batches]
+        # Check to see if batchs are in the correct order.
+        if batch_id_list == list(block.header.batch_ids):
+            if block.header_signature in self._requested:
+                del self._requested[block.header_signature]
+            return block
+        # Check to see if the block has all batch_ids and they can be put
+        # in the correct order
+        if sorted(batch_id_list) == sorted(list(block.header.batch_ids)):
+            batches = self._finalize_batch_list(block, temp_batches)
+            # Clear batches from block
+            del block.batches[:]
+            # reset batches with full list batches
+            if batches is not None:
+                block.batches.extend(batches)
             else:
-                LOGGER.debug("Block.header.batch_ids does not match set of "
-                             "batches in block.batches Dropping %s", block)
                 return None
+
+            if block.header_signature in self._requested:
+                del self._requested[block.header_signature]
+
+            return block
+
+        LOGGER.debug("Block.header.batch_ids does not match set of "
+                     "batches in block.batches Dropping %s", block)
+        return None
 
     def _finalize_batch_list(self, block, temp_batches):
         batches = []
@@ -345,12 +344,11 @@ class Completer(object):
             if batch_id in self.batch_cache:
                 return self.batch_cache[batch_id]
 
-            else:
-                block_store = self.block_cache.block_store
-                try:
-                    return block_store.get_batch(batch_id)
-                except ValueError:
-                    return None
+            block_store = self.block_cache.block_store
+            try:
+                return block_store.get_batch(batch_id)
+            except ValueError:
+                return None
 
     def get_batch_by_transaction(self, transaction_id):
         with self.lock:
@@ -358,12 +356,11 @@ class Completer(object):
                 batch_id = self._seen_txns[transaction_id]
                 return self.get_batch(batch_id)
 
-            else:
-                block_store = self.block_cache.block_store
-                try:
-                    return block_store.get_batch_by_transaction(transaction_id)
-                except ValueError:
-                    return None
+            block_store = self.block_cache.block_store
+            try:
+                return block_store.get_batch_by_transaction(transaction_id)
+            except ValueError:
+                return None
 
 
 class CompleterBatchListBroadcastHandler(Handler):

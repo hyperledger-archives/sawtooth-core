@@ -71,10 +71,11 @@ class ConnectHandler(Handler):
         hostname = result.hostname
         if hostname is None:
             return False
-        else:
-            for interface in interfaces:
-                if interface == hostname:
-                    return False
+
+        for interface in interfaces:
+            if interface == hostname:
+                return False
+
         return True
 
     def handle(self, connection_id, message_content):

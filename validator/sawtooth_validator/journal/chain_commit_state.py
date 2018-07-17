@@ -213,7 +213,7 @@ class _CommitCache(object):
     def __contains__(self, identifier):
         if identifier in self._committed:
             return True
-        elif identifier in self._uncommitted:
+        if identifier in self._uncommitted:
             return False
         return self.block_store_check(identifier)
 

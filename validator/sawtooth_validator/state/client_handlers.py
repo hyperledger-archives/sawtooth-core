@@ -198,9 +198,9 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
     def _get_chain_head(self):
         if self._block_store.chain_head:
             return self._block_store.chain_head
-        else:
-            LOGGER.debug('Unable to get chain head from block store')
-            raise _ResponseFailed(self._status.NOT_READY)
+
+        LOGGER.debug('Unable to get chain head from block store')
+        raise _ResponseFailed(self._status.NOT_READY)
 
     def _set_root(self, request):
         """Sets the root of the merkle tree, returning any head id used.

@@ -297,7 +297,7 @@ class BlockValidator(object):
     def validate_block(self, blkw, chain_head=None):
         if blkw.status == BlockStatus.Valid:
             return
-        elif blkw.status == BlockStatus.Invalid:
+        if blkw.status == BlockStatus.Invalid:
             raise BlockValidationFailure(
                 'Block {} is already invalid'.format(blkw))
 

@@ -86,12 +86,12 @@ class RestClient:
 
         if code == 200:
             return json_result
-        elif code == 404:
+        if code == 404:
             raise Exception(
                 'There is no resource with the identifier "{}"'.format(
                     path.split('/')[-1]))
-        else:
-            raise Exception("({}): {}".format(code, json_result))
+
+        raise Exception("({}): {}".format(code, json_result))
 
     def _post(self, path, data, **queries):
         if isinstance(data, bytes):
@@ -110,8 +110,8 @@ class RestClient:
 
         if code == 200 or code == 201 or code == 202:
             return json_result
-        else:
-            raise Exception("({}): {}".format(code, json_result))
+
+        raise Exception("({}): {}".format(code, json_result))
 
     def _submit_request(self, url, params=None, data=None,
                         headers=None, method="GET"):

@@ -213,14 +213,14 @@ class WorkloadGenerator(object):
 
             if code == 200 or code == 201 or code == 202:
                 return json_result['data'][0]['status']
-            else:
-                if 'error' in json_result:
-                    message = json_result['error']['message']
-                else:
-                    message = json_result
 
-                LOGGER.debug("(%s): %s", code, message)
-                return "UNKNOWN"
+            if 'error' in json_result:
+                message = json_result['error']['message']
+            else:
+                message = json_result
+
+            LOGGER.debug("(%s): %s", code, message)
+            return "UNKNOWN"
 
         except json.decoder.JSONDecodeError as e:
             LOGGER.warning('Unable to retrieve status: %s', str(e))

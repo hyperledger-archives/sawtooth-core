@@ -225,8 +225,8 @@ def _get_auth_info(auth_user, auth_password):
         auth_string = "{}:{}".format(auth_user, auth_password)
         b64_string = b64encode(auth_string.encode()).decode()
         return b64_string
-    else:
-        return None
+
+    return None
 
 
 def add_workload_parser(subparsers, parent_parser):

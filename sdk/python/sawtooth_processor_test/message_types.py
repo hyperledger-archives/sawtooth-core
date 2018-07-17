@@ -57,9 +57,9 @@ class UnknownMessageTypeException(Exception):
 def to_protobuf_class(message_type):
     if message_type in _TYPE_TO_PROTO:
         return _TYPE_TO_PROTO[message_type]
-    else:
-        raise UnknownMessageTypeException(
-            "Unknown message type: {}".format(message_type))
+
+    raise UnknownMessageTypeException(
+        "Unknown message type: {}".format(message_type))
 
 
 def to_message_type(proto):
@@ -67,6 +67,6 @@ def to_message_type(proto):
 
     if proto_class in _PROTO_TO_TYPE:
         return _PROTO_TO_TYPE[proto_class]
-    else:
-        raise UnknownMessageTypeException(
-            "Unknown protobuf class: {}".format(proto_class))
+
+    raise UnknownMessageTypeException(
+        "Unknown protobuf class: {}".format(proto_class))
