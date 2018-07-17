@@ -25,14 +25,14 @@ use proto::transaction_receipt::StateChange;
 use scheduler::TxnExecutionResult;
 
 #[derive(Clone)]
-pub struct BatchResult {
+pub struct PyBatchExecutionResult {
     pub state_hash: Option<String>,
 }
 
-/// TransactionResult is a Rust struct that mirrors
+/// PyTxnExecutionResult is a Rust struct that mirrors
 /// what is passed from a Python Scheduler's get_transaction_execution_results
 /// method.
-pub struct TransactionResult {
+pub struct PyTxnExecutionResult {
     pub signature: String,
     pub is_valid: bool,
     pub state_hash: Option<String>,
@@ -43,17 +43,17 @@ pub struct TransactionResult {
     pub error_data: Vec<u8>,
 }
 
-impl<'source> FromPyObject<'source> for BatchResult {
+impl<'source> FromPyObject<'source> for PyBatchExecutionResult {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         let state_hash = obj.getattr(py, "state_hash").unwrap();
 
         let sh: Option<String> = state_hash.extract(py)?;
 
-        Ok(BatchResult { state_hash: sh })
+        Ok(PyBatchExecutionResult { state_hash: sh })
     }
 }
 
-impl<'source> FromPyObject<'source> for TransactionResult {
+impl<'source> FromPyObject<'source> for PyTxnExecutionResult {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         Ok(try_pyobj_to_transaction_result(py, obj)?)
     }
@@ -67,8 +67,8 @@ impl<'source> FromPyObject<'source> for TxnExecutionResult {
     }
 }
 
-impl From<TransactionResult> for TxnExecutionResult {
-    fn from(other: TransactionResult) -> Self {
+impl From<PyTxnExecutionResult> for TxnExecutionResult {
+    fn from(other: PyTxnExecutionResult) -> Self {
         TxnExecutionResult {
             signature: other.signature,
             is_valid: other.is_valid,
@@ -84,7 +84,7 @@ impl From<TransactionResult> for TxnExecutionResult {
 fn try_pyobj_to_transaction_result(
     py: cpython::Python,
     pyobj: &cpython::PyObject,
-) -> Result<TransactionResult, cpython::PyErr> {
+) -> Result<PyTxnExecutionResult, cpython::PyErr> {
     let signature = pyobj.getattr(py, "signature")?.extract(py)?;
     let is_valid = pyobj.getattr(py, "is_valid")?.extract(py)?;
     let beginning_state_hash = pyobj.getattr(py, "state_hash")?.extract(py)?;
@@ -94,7 +94,7 @@ fn try_pyobj_to_transaction_result(
     let error_message = pyobj.getattr(py, "error_message")?.extract(py)?;
     let error_data = pyobj.getattr(py, "error_data")?.extract(py)?;
 
-    Ok(TransactionResult {
+    Ok(PyTxnExecutionResult {
         signature,
         is_valid,
         state_hash: beginning_state_hash,

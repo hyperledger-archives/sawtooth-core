@@ -25,7 +25,7 @@ use batch::Batch;
 
 use protobuf::ProtobufError;
 
-use scheduler::{BatchResult, TransactionResult};
+use scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
 use scheduler::{ExecutionResults, Scheduler, SchedulerError};
 
 impl From<ProtobufError> for SchedulerError {
@@ -42,7 +42,7 @@ impl From<cpython::PyErr> for SchedulerError {
     }
 }
 
-type CombinedOptionalBatchResult = Vec<(Vec<TransactionResult>, Option<BatchResult>, String)>;
+type CombinedOptionalBatchResult = Vec<(Vec<PyTxnExecutionResult>, Option<PyBatchExecutionResult>, String)>;
 
 pub struct PyScheduler {
     py_scheduler: cpython::PyObject,
@@ -124,13 +124,13 @@ impl Scheduler for PyScheduler {
                 .map(|id| {
                     let gil = cpython::Python::acquire_gil();
                     let py = gil.python();
-                    let batch_result: Option<BatchResult> = self.py_scheduler
+                    let batch_result: Option<PyBatchExecutionResult> = self.py_scheduler
                         .call_method(py, "get_batch_execution_result", (id,), None)
                         .expect("No method get_batch_execution_result on python scheduler")
                         .extract(py)?;
 
                     if batch_result.is_some() {
-                        let txn_results: Vec<TransactionResult> = self.py_scheduler
+                        let txn_results: Vec<PyTxnExecutionResult> = self.py_scheduler
                             .call_method(py, "get_transaction_execution_results", (id,), None)
                             .expect(
                                 "No method get_transaction_execution_results on python scheduler",
@@ -176,7 +176,7 @@ impl Scheduler for PyScheduler {
                         Some(
                             val.0
                                 .into_iter()
-                                .map(|v: TransactionResult| v.into())
+                                .map(|v: PyTxnExecutionResult| v.into())
                                 .collect(),
                         ),
                     ),
