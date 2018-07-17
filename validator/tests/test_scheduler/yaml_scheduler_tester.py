@@ -94,7 +94,7 @@ def create_batch(transactions, signer):
     return batch
 
 
-class SchedulerTester(object):
+class SchedulerTester:
     """ The canonical form of the yaml is:
       -  <------------------------------------------ batch start
         state_hash: string. Optional. No default.
@@ -641,7 +641,7 @@ class SchedulerTester(object):
         self._batches = batches
 
 
-class TransactionExecutionContext(object):
+class TransactionExecutionContext:
     """The state for a particular transaction built up serially based
     on the Yaml file.
     """

@@ -338,7 +338,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             raise _ResponseFailed(self._status.INVALID_ADDRESS)
 
 
-class _Pager(object):
+class _Pager:
     """A static class containing methods to paginate lists of resources.
 
     Contains a paginate method, as well as two helpers to fetch index of a
@@ -429,7 +429,7 @@ class _Pager(object):
             return resources[index].address
 
 
-class _Sorter(object):
+class _Sorter:
     """A static class containing a method to sort lists of resources based on
     ClientSortControls sent with the request.
     """
@@ -483,7 +483,7 @@ class _Sorter(object):
 
         return handlers
 
-    class _ValueHandler(object):
+    class _ValueHandler:
         """Handles fetching proper compare values for one ClientSortControls.
 
         Args:

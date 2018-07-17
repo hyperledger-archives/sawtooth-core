@@ -26,7 +26,7 @@ def _make_xo_address(name):
         hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
 
 
-class Game(object):
+class Game:
     def __init__(self, name, board, state, player1, player2):
         self.name = name
         self.board = board
@@ -35,7 +35,7 @@ class Game(object):
         self.player2 = player2
 
 
-class XoState(object):
+class XoState:
 
     TIMEOUT = 3
 

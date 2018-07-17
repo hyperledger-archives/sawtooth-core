@@ -37,7 +37,7 @@ class BlockStatus(Enum):
     # we do not have it.
 
 
-class BlockWrapper(object):
+class BlockWrapper:
     """
     Utility class to make accessing block members more convenient.
     This also add storage of the weight and status used by the Journal

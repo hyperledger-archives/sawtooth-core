@@ -17,7 +17,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
-class Scheduler(object, metaclass=ABCMeta):
+class Scheduler(metaclass=ABCMeta):
     """Abstract class for scheduling transaction execution.
 
     Implementations of this class are expected to be thread-safe.
@@ -208,7 +208,7 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class SchedulerIterator(object):
+class SchedulerIterator:
     def __init__(self, scheduler, condition, start_index=0):
         self._scheduler = scheduler
         self._condition = condition
@@ -242,7 +242,7 @@ class SchedulerIterator(object):
                 self._condition.wait()
 
 
-class BatchExecutionResult(object):
+class BatchExecutionResult:
     """The resulting execution data from running the batch's transactions
     through the executor.
 
@@ -306,7 +306,7 @@ class TxnExecutionResult:
         self.error_data = error_data
 
 
-class TxnInformation(object):
+class TxnInformation:
     """Information about a transaction from the
      scheduler to the executor.
     Attributes:

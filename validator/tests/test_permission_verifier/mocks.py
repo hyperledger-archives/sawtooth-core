@@ -17,7 +17,7 @@ from sawtooth_validator.protobuf.identity_pb2 import Policy
 from sawtooth_validator.protobuf.identity_pb2 import Role
 
 
-class MockIdentityViewFactory(object):
+class MockIdentityViewFactory:
     def __init__(self):
         self.roles = {}
         self.policies = {}
@@ -45,7 +45,7 @@ class MockIdentityViewFactory(object):
         self.policies[name] = policy
 
 
-class MockIdentityView(object):
+class MockIdentityView:
     def __init__(self, roles, policies):
         self.roles = roles
         self.policies = policies

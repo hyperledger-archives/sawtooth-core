@@ -28,7 +28,7 @@ class AuthorizationException(Exception):
             "Not authorized to read/write to {}".format(address))
 
 
-class ExecutionContext(object):
+class ExecutionContext:
     """A thread-safe data structure holding address-_ContextFuture pairs and
     the addresses that can be written to and read from.
     """
@@ -369,7 +369,7 @@ class ExecutionContext(object):
             return self._execution_events.copy()
 
 
-class _ContextFuture(object):
+class _ContextFuture:
     """Controls access to bytes set in the _result variable. The booleans
      that are flipped in set_result, based on whether the value is being set
      from the merkle tree or a direct set on the context manager are needed

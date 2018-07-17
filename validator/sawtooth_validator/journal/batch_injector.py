@@ -19,7 +19,7 @@ import importlib
 from sawtooth_validator.state.settings_view import SettingsView
 
 
-class BatchInjectorFactory(object, metaclass=abc.ABCMeta):
+class BatchInjectorFactory(metaclass=abc.ABCMeta):
     """The interface to implement for constructing batch injectors"""
 
     @abc.abstractmethod
@@ -33,7 +33,7 @@ class BatchInjectorFactory(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-class BatchInjector(object, metaclass=abc.ABCMeta):
+class BatchInjector(metaclass=abc.ABCMeta):
     """The interface to implement for injecting batches during block
     publishing."""
 

@@ -23,7 +23,7 @@ from sawtooth_validator.ffi import CommonErrorCode
 from sawtooth_validator.ffi import OwnedPointer
 
 
-class ChainObserver(object, metaclass=ABCMeta):
+class ChainObserver(metaclass=ABCMeta):
     @abstractmethod
     def chain_update(self, block, receipts):
         """This method is called by the ChainController on block boundaries.

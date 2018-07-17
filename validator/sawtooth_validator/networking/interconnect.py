@@ -88,7 +88,7 @@ def get_enum_name(enum_value):
 _STARTUP_COMPLETE_SENTINEL = 1
 
 
-class _SendReceive(object):
+class _SendReceive:
     def __init__(self, connection, address, futures, connections,
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
@@ -630,7 +630,7 @@ class _SendReceive(object):
         asyncio.ensure_future(self._stop(), loop=self._event_loop)
 
 
-class Interconnect(object):
+class Interconnect:
     def __init__(self,
                  endpoint,
                  dispatcher,
@@ -1244,7 +1244,7 @@ class Interconnect(object):
             LOGGER.debug("Connection disconnected: %s", connection_id)
 
 
-class OutboundConnection(object):
+class OutboundConnection:
     def __init__(self,
                  connections,
                  endpoint,

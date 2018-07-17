@@ -42,7 +42,7 @@ class SquashException(Exception):
 _SHUTDOWN_SENTINEL = -1
 
 
-class ContextManager(object):
+class ContextManager:
 
     def __init__(self, database):
         """
@@ -532,7 +532,7 @@ class _ContextWriter(InstrumentedThread):
                 self._contexts[c_id].set_from_tree(inflated_value_map)
 
 
-class _ThreadsafeContexts(object):
+class _ThreadsafeContexts:
     def __init__(self):
         self._lock = Lock()
         self._data = dict()

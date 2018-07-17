@@ -18,7 +18,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-class WaitTimer(object):
+class WaitTimer:
     """Wait timers represent a random duration incorporated into a wait
     certificate.
 

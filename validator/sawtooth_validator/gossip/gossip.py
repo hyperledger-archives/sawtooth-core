@@ -75,7 +75,7 @@ TIME_TO_LIVE = 3
 NETWORK_PROTOCOL_VERSION = 1
 
 
-class Gossip(object):
+class Gossip:
     def __init__(self, network,
                  settings_cache,
                  current_chain_head_func,

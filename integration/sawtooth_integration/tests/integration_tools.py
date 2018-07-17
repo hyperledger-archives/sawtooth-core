@@ -219,7 +219,7 @@ def wait_for_rest_apis(endpoints):
             status_code=200)
 
 
-class SetSawtoothHome(object):
+class SetSawtoothHome:
     def __init__(self, sawtooth_home):
         self._sawtooth_home = sawtooth_home
 

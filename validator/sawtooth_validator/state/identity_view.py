@@ -72,7 +72,7 @@ def _create_from_bytes(data, protobuf_klass):
     return protobuf_instance
 
 
-class IdentityView(object):
+class IdentityView:
     def __init__(self, state_view):
         """Creates an IdentityView from a StateView that is passed in.
 
@@ -173,7 +173,7 @@ class IdentityView(object):
         return sorted(policies, key=lambda p: p.name)
 
 
-class IdentityViewFactory(object):
+class IdentityViewFactory:
     def __init__(self, state_view_factory):
         """Creates a factory for producing IdentityViews based on the passed
         in StateViewFactory.

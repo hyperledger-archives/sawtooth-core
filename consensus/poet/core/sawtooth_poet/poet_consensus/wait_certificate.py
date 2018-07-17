@@ -34,7 +34,7 @@ def _is_close(value_a, value_b, rel_tol=1e-09, abs_tol=0.0):
         max(rel_tol * max(abs(value_a), abs(value_b)), abs_tol)
 
 
-class WaitCertificate(object):
+class WaitCertificate:
     """Represents wait certificates, which include a random wait timer.
 
     Attributes:

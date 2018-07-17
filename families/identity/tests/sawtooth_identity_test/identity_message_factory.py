@@ -33,7 +33,7 @@ _ROLE_PREFIX = '01'
 LOGGER = logging.getLogger(__name__)
 
 
-class IdentityMessageFactory(object):
+class IdentityMessageFactory:
     def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_identity",

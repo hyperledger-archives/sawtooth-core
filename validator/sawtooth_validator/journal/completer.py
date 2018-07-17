@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
-class Completer(object):
+class Completer:
     """
     The Completer is responsible for making sure blocks are formally
     complete before they are delivered to the chain controller. A formally

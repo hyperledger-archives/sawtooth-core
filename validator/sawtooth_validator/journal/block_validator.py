@@ -107,7 +107,7 @@ def look_ahead(iterable):
     yield last, False
 
 
-class BlockValidator(object):
+class BlockValidator:
     """
     Responsible for validating a block, handles both chain extensions and fork
     will determine if the new block should be the head of the chain and return

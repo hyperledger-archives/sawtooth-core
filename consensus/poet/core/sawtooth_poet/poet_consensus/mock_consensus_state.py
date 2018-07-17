@@ -15,7 +15,7 @@
 from unittest import mock
 
 
-class MockConsensusState(object):
+class MockConsensusState:
     """Simulates a Consensus State with
        the following parameters initially set to False
     """

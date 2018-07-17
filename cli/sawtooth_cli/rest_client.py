@@ -24,7 +24,7 @@ from google.protobuf.message import Message as BaseMessage
 from sawtooth_cli.exceptions import CliException
 
 
-class RestClient(object):
+class RestClient:
     def __init__(self, base_url=None, user=None):
         self._base_url = base_url or 'http://localhost:8008'
 

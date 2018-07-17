@@ -15,7 +15,7 @@
 import time
 
 
-class TimeOut(object):
+class TimeOut:
     def __init__(self, wait):
         self.wait_time = wait
         self.expire_time = time.time() + wait

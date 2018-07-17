@@ -255,7 +255,7 @@ class _SendReceiveThread(Thread):
                 first_time = False
 
 
-class Stream(object):
+class Stream:
     def __init__(self, url):
         self._url = url
         self._futures = FutureCollection()

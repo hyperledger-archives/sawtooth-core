@@ -28,7 +28,7 @@ class TimedCache(MutableMapping):
         keep_time (float): How long in seconds to hold a value for
         purge_frequency (float): How often to look for old values to purge
     """
-    class CachedValue(object):
+    class CachedValue:
         def __init__(self, value):
             self.value = value
             self.timestamp = time.time()  # the time this State was created,

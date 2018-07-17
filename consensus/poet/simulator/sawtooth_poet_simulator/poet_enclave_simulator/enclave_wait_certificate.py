@@ -25,7 +25,7 @@ from sawtooth_poet_simulator.poet_enclave_simulator.utils import json2dict
 LOGGER = logging.getLogger(__name__)
 
 
-class EnclaveWaitCertificate(object):
+class EnclaveWaitCertificate:
     """Represents an enclave-internal representation of a wait certificate
 
     Attributes:

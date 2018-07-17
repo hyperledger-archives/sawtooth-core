@@ -81,7 +81,7 @@ def from_c_bytes(c_data, c_data_len):
     return bytes(c_data[:c_data_len.value])
 
 
-class OwnedPointer(object, metaclass=ABCMeta):
+class OwnedPointer(metaclass=ABCMeta):
     """An owned pointer will call drop when this pointer is garbage collected.
     """
     def __init__(self, drop_ffi_call_fn, initialized_ptr=None):
@@ -122,7 +122,7 @@ class OwnedPointer(object, metaclass=ABCMeta):
         return RefPointer(self.pointer)
 
 
-class RefPointer(object):
+class RefPointer:
     """A reference to a pointer.
 
     This pointer does not manage any deallocation of the underlying memory.

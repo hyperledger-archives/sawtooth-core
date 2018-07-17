@@ -19,7 +19,7 @@ from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 
-class Context(object):
+class Context:
     """
     Context provides an interface for getting, setting, and deleting
     validator state. All validator interactions by a handler should be

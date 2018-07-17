@@ -37,7 +37,7 @@ from sawtooth_validator.protobuf import block_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-class GenesisController(object):
+class GenesisController:
     def __init__(self,
                  context_manager,
                  transaction_executor,
@@ -224,7 +224,7 @@ class GenesisController(object):
         """
         state_view = self._state_view_factory.create_view(state_hash)
         try:
-            class BatchPublisher(object):
+            class BatchPublisher:
                 def send(self, transactions):
                     # Consensus implementations are expected to have handling
                     # in place for genesis operation. This should includes

@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 CACHE_KEEP_TIME = 300
 
 
-class Responder(object):
+class Responder:
     def __init__(self,
                  completer,
                  cache_keep_time=300,

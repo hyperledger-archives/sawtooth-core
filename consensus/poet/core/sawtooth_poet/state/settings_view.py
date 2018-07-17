@@ -34,7 +34,7 @@ def _short_hash(byte_str):
 _EMPTY_PART = _short_hash(b'')
 
 
-class SettingsView(object):
+class SettingsView:
     """
     A SettingsView provides access to on-chain configuration settings.
 
@@ -145,7 +145,7 @@ class SettingsView(object):
         return CONFIG_STATE_NAMESPACE + ''.join(addr_parts)
 
 
-class SettingsViewFactory(object):
+class SettingsViewFactory:
     """Creates SettingsView instances.
     """
 

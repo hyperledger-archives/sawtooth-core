@@ -42,7 +42,7 @@ from sawtooth_sdk.protobuf.validator_pb2 import Message
 LOGGER = logging.getLogger(__name__)
 
 
-class TransactionProcessor(object):
+class TransactionProcessor:
     """TransactionProcessor is a generic class for communicating with a
     validator and routing transaction processing requests to a registered
     handler. It uses ZMQ and channels to handle requests concurrently.

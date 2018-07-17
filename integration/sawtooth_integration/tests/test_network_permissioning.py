@@ -318,7 +318,7 @@ def show_blocks(block_list):
     LOGGER.warning(output)
 
 
-class Client(object):
+class Client:
     def __init__(self, rest_endpoint):
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
@@ -360,7 +360,7 @@ class Client(object):
                 for item in self._rest.block_list()['data']]
 
 
-class Admin(object):
+class Admin:
 
     def __init__(self, rest_endpoint):
         context = create_context('secp256k1')

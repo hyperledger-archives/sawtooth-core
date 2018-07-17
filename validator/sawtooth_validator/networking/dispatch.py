@@ -426,7 +426,7 @@ class _PreprocessorManager:
         return self._executor.submit(wrapped, message_content)
 
 
-class _HandlerManager(object):
+class _HandlerManager:
     def __init__(self, executor, handler):
         """
         :param executor: concurrent.futures.Executor
@@ -446,7 +446,7 @@ class _HandlerManager(object):
         return self._executor.submit(wrapped, connection_id, message)
 
 
-class _ManagerCollection(object):
+class _ManagerCollection:
     """Wraps a list of _HandlerManagers and
     keeps track of which handler_manager is next
     """
@@ -461,7 +461,7 @@ class _ManagerCollection(object):
         return result
 
 
-class HandlerResult(object):
+class HandlerResult:
     def __init__(self, status, message_out=None, message_type=None):
         """
         :param status HandlerStatus: the status of the handler's processing
@@ -494,7 +494,7 @@ class PreprocessorResult(HandlerResult):
         super().__init__(status, message_out, message_type)
 
 
-class Handler(object, metaclass=abc.ABCMeta):
+class Handler(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def handle(self, connection_id, message_content):
         """

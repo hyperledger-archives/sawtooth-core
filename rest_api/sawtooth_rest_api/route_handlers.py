@@ -82,7 +82,7 @@ class TimerWrapper():
         return self._noop
 
 
-class RouteHandler(object):
+class RouteHandler:
     """Contains a number of aiohttp handlers for endpoints in the Rest Api.
 
     Each handler takes an aiohttp Request object, and uses the data in

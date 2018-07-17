@@ -17,7 +17,7 @@ from collections import deque
 from threading import Lock
 
 
-class LruCache(object):
+class LruCache:
     """
     A simple thread-safe lru cache.
     """

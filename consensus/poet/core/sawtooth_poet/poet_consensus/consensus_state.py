@@ -51,7 +51,7 @@ total_block_claim_count (int): The total number of the blocks that the
 """
 
 
-class ConsensusState(object):
+class ConsensusState:
     """Represents the consensus state at a particular point in time (i.e.,
     when the block that this consensus state corresponds to was committed to
     the block chain).

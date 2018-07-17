@@ -22,7 +22,7 @@ import time
 LOGGER = logging.getLogger(__name__)
 
 
-class FutureResult(object):
+class FutureResult:
     def __init__(self, message_type, content, connection_id=None):
         self.message_type = message_type
         self.content = content
@@ -33,7 +33,7 @@ class FutureTimeoutError(Exception):
     pass
 
 
-class Future(object):
+class Future:
     def __init__(self, correlation_id, request=None, callback=None,
                  timer_ctx=None):
         self.correlation_id = correlation_id
@@ -94,7 +94,7 @@ class FutureCollectionKeyError(Exception):
     pass
 
 
-class FutureCollection(object):
+class FutureCollection:
     def __init__(self, resolving_threadpool=None):
         self._futures = {}
         self._lock = RLock()

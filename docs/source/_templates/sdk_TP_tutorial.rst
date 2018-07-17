@@ -1148,7 +1148,7 @@ where
 .. code-block:: python
     :caption: sawtooth_xo/processor/xo_payload.py
 
-    class XoPayload(object):
+    class XoPayload:
 
         def __init__(self, payload):
             try:
@@ -1631,7 +1631,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
     XO_NAMESPACE = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
 
 
-    class Game(object):
+    class Game:
         def __init__(self, name, board, state, player1, player2):
             self.name = name
             self.board = board
@@ -1640,7 +1640,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
             self.player2 = player2
 
 
-    class XoState(object):
+    class XoState:
 
         TIMEOUT = 3
 

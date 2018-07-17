@@ -16,7 +16,7 @@
 import abc
 
 
-class Workload(object, metaclass=abc.ABCMeta):
+class Workload(metaclass=abc.ABCMeta):
     """
        This is meant to be an abstract base class for all workloads.
        As such, it doesn't do anything useful besides

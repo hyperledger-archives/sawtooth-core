@@ -16,7 +16,7 @@
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
 
-class XoPayload(object):
+class XoPayload:
 
     def __init__(self, payload):
         try:

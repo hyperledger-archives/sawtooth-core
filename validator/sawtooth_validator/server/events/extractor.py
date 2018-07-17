@@ -17,7 +17,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
-class EventExtractor(object, metaclass=ABCMeta):
+class EventExtractor(metaclass=ABCMeta):
     """Construct all the events of interest by taking the union of all
     subscriptions. One extractor should be created for each input source that
     events can be extracted from. This input source should be passed to the

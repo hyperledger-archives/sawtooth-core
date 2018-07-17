@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
-class WorkloadGenerator(object):
+class WorkloadGenerator:
     """
     This is the object that manages the workload sent to the validators and
     keeps track of submitted and committed batches. To run, it must first have

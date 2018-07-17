@@ -184,7 +184,7 @@ class ChainCommitState:
             raise MissingDependency(dep)
 
 
-class _CommitCache(object):
+class _CommitCache:
     """Tracks the commit status of a set of identifiers and these identifiers
     are either explicitly committed, or explicitly uncommitted. If they fall in
     to neither of these cases then the fallback is to look in the BlockStore to

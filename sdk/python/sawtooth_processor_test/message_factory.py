@@ -59,7 +59,7 @@ def _signer():
         context.new_random_private_key())
 
 
-class MessageFactory(object):
+class MessageFactory:
     def __init__(self, family_name, family_version, namespace, signer=None):
         self.family_name = family_name
         self.family_version = family_version

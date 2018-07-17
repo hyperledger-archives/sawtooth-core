@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 
-class MockSettingsViewFactory(object):
+class MockSettingsViewFactory:
     def __init__(self):
         self.settings = {}
 
@@ -25,7 +25,7 @@ class MockSettingsViewFactory(object):
         self.settings[key] = setting
 
 
-class MockSettingsView(object):
+class MockSettingsView:
     def __init__(self, settings):
         self.settings = settings
 

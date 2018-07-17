@@ -18,7 +18,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-class SignupInfo(object):
+class SignupInfo:
     """Encapsulates authorization data for network enrollment policies
 
     Attributes:

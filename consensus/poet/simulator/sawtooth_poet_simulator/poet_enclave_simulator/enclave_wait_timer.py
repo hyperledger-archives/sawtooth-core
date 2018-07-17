@@ -22,7 +22,7 @@ from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 LOGGER = logging.getLogger(__name__)
 
 
-class EnclaveWaitTimer(object):
+class EnclaveWaitTimer:
     """Represents an enclave-internal representation of a wait timer
 
     Attributes:

@@ -23,7 +23,7 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-class SettingsMessageFactory(object):
+class SettingsMessageFactory:
     def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_settings",
