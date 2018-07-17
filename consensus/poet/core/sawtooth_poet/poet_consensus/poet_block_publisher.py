@@ -18,6 +18,7 @@ import logging
 import hashlib
 import time
 import json
+import random
 
 try:
     import sawtooth_sdk.protobuf.transaction_pb2 as txn_pb
@@ -177,7 +178,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 dependencies=[],
                 payload_sha512=hashlib.sha512(serialized).hexdigest(),
                 batcher_public_key=block_header.signer_public_key,
-                nonce=time.time().hex().encode()).SerializeToString()
+                nonce=hex(random.randint(0, 2**64))).SerializeToString()
 
         signature = self._batch_publisher.identity_signer.sign(header)
 

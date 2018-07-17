@@ -19,7 +19,6 @@ import hashlib
 import logging
 import binascii
 import random
-import time
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
@@ -31,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 class NoopPayload(object):
     def __init__(self):
         self.nonce = binascii.b2a_hex(random.getrandbits(
-            8 * 8).to_bytes(8, hbyteorder='little'))
+            8 * 8).to_bytes(8, byteorder='little'))
         self._sha512 = None
 
     def sha512(self):
@@ -52,7 +51,7 @@ def create_noop_transaction(signer):
         dependencies=[],
         payload_sha512=payload.sha512(),
         batcher_public_key=signer.get_public_key().as_hex(),
-        nonce=time.time().hex().encode())
+        nonce=hex(random.randint(0, 2**64)))
 
     header_bytes = header.SerializeToString()
 

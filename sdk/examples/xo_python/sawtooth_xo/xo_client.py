@@ -17,6 +17,7 @@ import hashlib
 import base64
 from base64 import b64encode
 import time
+import random
 import requests
 import yaml
 
@@ -205,7 +206,7 @@ class XoClient:
             dependencies=[],
             payload_sha512=_sha512(payload),
             batcher_public_key=self._signer.get_public_key().as_hex(),
-            nonce=time.time().hex().encode()
+            nonce=hex(random.randint(0, 2**64))
         ).SerializeToString()
 
         signature = self._signer.sign(header)

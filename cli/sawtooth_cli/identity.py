@@ -21,6 +21,7 @@ import json
 import os
 import sys
 import time
+import random
 import yaml
 
 from sawtooth_cli.exceptions import CliException
@@ -489,7 +490,7 @@ def _create_policy_txn(signer, policy_name, rules):
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex(),
-        nonce=time.time().hex().encode())
+        nonce=hex(random.randint(0, 2**64)))
 
     header_bytes = header.SerializeToString()
 
@@ -519,7 +520,7 @@ def _create_role_txn(signer, role_name, policy_name):
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex(),
-        nonce=time.time().hex().encode())
+        nonce=hex(random.randint(0, 2**64)))
 
     header_bytes = header.SerializeToString()
 
