@@ -255,7 +255,7 @@ class ReferenceChainCursor(database.Cursor):
 
         self._lmdb_txn = None
 
-        if len(reference_chain) < 1:
+        if not reference_chain:
             raise ValueError(
                 "Must be at least one lmdb database in the reference chain")
 

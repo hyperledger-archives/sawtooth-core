@@ -286,7 +286,7 @@ class ConsensusState(object):
 
         if not isinstance(
                 validator_state.poet_public_key, str) \
-                or len(validator_state.poet_public_key) < 1:
+                or not validator_state.poet_public_key:
             raise \
                 ValueError(
                     'poet_public_key ({}) is invalid'.format(
