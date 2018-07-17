@@ -53,7 +53,7 @@ pub struct Entry {
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_new(
+pub unsafe extern "C" fn merkle_db_new(
     database: *const c_void,
     merkle_db: *mut *const c_void,
 ) -> ErrorCode {
@@ -61,7 +61,7 @@ pub extern "C" fn merkle_db_new(
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_new_with_root(
+pub unsafe extern "C" fn merkle_db_new_with_root(
     database: *const c_void,
     root: *const c_char,
     merkle_db: *mut *const c_void,
@@ -70,17 +70,15 @@ pub extern "C" fn merkle_db_new_with_root(
         return ErrorCode::NullPointerProvided;
     }
 
-    let state_root = unsafe {
-        match CStr::from_ptr(root).to_str() {
-            Ok(s) => Some(s),
-            Err(_) => return ErrorCode::InvalidHashString,
-        }
+    let state_root = match CStr::from_ptr(root).to_str() {
+        Ok(s) => Some(s),
+        Err(_) => return ErrorCode::InvalidHashString,
     };
 
     make_merkle_db(database, state_root, merkle_db)
 }
 
-fn make_merkle_db(
+unsafe fn make_merkle_db(
     database: *const c_void,
     root: Option<&str>,
     merkle_db: *mut *const c_void,
@@ -89,12 +87,10 @@ fn make_merkle_db(
         return ErrorCode::NullPointerProvided;
     }
 
-    let db_ref = unsafe { (database as *const LmdbDatabase).as_ref().unwrap() };
+    let db_ref = (database as *const LmdbDatabase).as_ref().unwrap();
     match MerkleDatabase::new(db_ref.clone(), root) {
         Ok(new_merkle_tree) => {
-            unsafe {
-                *merkle_db = Box::into_raw(Box::new(new_merkle_tree)) as *const c_void;
-            }
+            *merkle_db = Box::into_raw(Box::new(new_merkle_tree)) as *const c_void;
             ErrorCode::Success
         }
         Err(StateDatabaseError::DatabaseError(err)) => {
@@ -110,17 +106,17 @@ fn make_merkle_db(
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    unsafe { Box::from_raw(merkle_db as *mut MerkleDatabase) };
+    Box::from_raw(merkle_db as *mut MerkleDatabase);
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_get_merkle_root(
+pub unsafe extern "C" fn merkle_db_get_merkle_root(
     merkle_db: *mut c_void,
     merkle_root: *mut *const u8,
     merkle_root_len: *mut usize,
@@ -129,19 +125,17 @@ pub extern "C" fn merkle_db_get_merkle_root(
         return ErrorCode::NullPointerProvided;
     }
 
-    unsafe {
-        let state_root = (*(merkle_db as *mut MerkleDatabase)).get_merkle_root();
-        *merkle_root = state_root.as_ptr();
-        *merkle_root_len = state_root.as_bytes().len();
+    let state_root = (*(merkle_db as *mut MerkleDatabase)).get_merkle_root();
+    *merkle_root = state_root.as_ptr();
+    *merkle_root_len = state_root.as_bytes().len();
 
-        mem::forget(state_root);
+    mem::forget(state_root);
 
-        ErrorCode::Success
-    }
+    ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_set_merkle_root(
+pub unsafe extern "C" fn merkle_db_set_merkle_root(
     merkle_db: *mut c_void,
     root: *const c_char,
 ) -> ErrorCode {
@@ -152,14 +146,12 @@ pub extern "C" fn merkle_db_set_merkle_root(
         return ErrorCode::NullPointerProvided;
     }
 
-    let state_root = unsafe {
-        match CStr::from_ptr(root).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidHashString,
-        }
+    let state_root = match CStr::from_ptr(root).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    match unsafe { (*(merkle_db as *mut MerkleDatabase)).set_merkle_root(state_root) } {
+    match (*(merkle_db as *mut MerkleDatabase)).set_merkle_root(state_root) {
         Ok(()) => ErrorCode::Success,
         Err(StateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
@@ -176,7 +168,10 @@ pub extern "C" fn merkle_db_set_merkle_root(
 #[no_mangle]
 /// Returns ErrorCode.Success if the address is contained, error otherwise.
 /// Most likely, this error is ErrorCode.NotFound
-pub extern "C" fn merkle_db_contains(merkle_db: *mut c_void, address: *const c_char) -> ErrorCode {
+pub unsafe extern "C" fn merkle_db_contains(
+    merkle_db: *mut c_void,
+    address: *const c_char,
+) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
     }
@@ -184,32 +179,28 @@ pub extern "C" fn merkle_db_contains(merkle_db: *mut c_void, address: *const c_c
         return ErrorCode::NullPointerProvided;
     }
 
-    let address_str = unsafe {
-        match CStr::from_ptr(address).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidAddress,
-        }
+    let address_str = match CStr::from_ptr(address).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    unsafe {
-        match (*(merkle_db as *mut MerkleDatabase)).contains(address_str) {
-            Ok(true) => ErrorCode::Success,
-            Ok(false) => ErrorCode::NotFound,
-            Err(StateDatabaseError::DatabaseError(err)) => {
-                error!("A Database Error occurred: {}", err);
-                ErrorCode::DatabaseError
-            }
-            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-            Err(err) => {
-                error!("Unknown Error!: {:?}", err);
-                ErrorCode::Unknown
-            }
+    match (*(merkle_db as *mut MerkleDatabase)).contains(address_str) {
+        Ok(true) => ErrorCode::Success,
+        Ok(false) => ErrorCode::NotFound,
+        Err(StateDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_get(
+pub unsafe extern "C" fn merkle_db_get(
     merkle_db: *mut c_void,
     address: *const c_char,
     bytes: *mut *const u8,
@@ -222,41 +213,37 @@ pub extern "C" fn merkle_db_get(
         return ErrorCode::NullPointerProvided;
     }
 
-    let address_str = unsafe {
-        match CStr::from_ptr(address).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidAddress,
-        }
+    let address_str = match CStr::from_ptr(address).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    unsafe {
-        match (*(merkle_db as *mut MerkleDatabase)).get(address_str) {
-            Ok(Some(data_vec)) => {
-                let data = data_vec.into_boxed_slice();
-                *bytes_len = data.len();
-                *bytes = data.as_ptr();
+    match (*(merkle_db as *mut MerkleDatabase)).get(address_str) {
+        Ok(Some(data_vec)) => {
+            let data = data_vec.into_boxed_slice();
+            *bytes_len = data.len();
+            *bytes = data.as_ptr();
 
-                // It will be up to the callee to cleanup this memory
-                mem::forget(data);
+            // It will be up to the callee to cleanup this memory
+            mem::forget(data);
 
-                ErrorCode::Success
-            }
-            Ok(None) => ErrorCode::NotFound,
-            Err(StateDatabaseError::DatabaseError(err)) => {
-                error!("A Database Error occurred: {}", err);
-                ErrorCode::DatabaseError
-            }
-            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-            Err(err) => {
-                error!("Unknown Error!: {:?}", err);
-                ErrorCode::Unknown
-            }
+            ErrorCode::Success
+        }
+        Ok(None) => ErrorCode::NotFound,
+        Err(StateDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_set(
+pub unsafe extern "C" fn merkle_db_set(
     merkle_db: *mut c_void,
     address: *const c_char,
     data: *const u8,
@@ -275,39 +262,35 @@ pub extern "C" fn merkle_db_set(
         return ErrorCode::NullPointerProvided;
     }
 
-    let address_str = unsafe {
-        match CStr::from_ptr(address).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidHashString,
-        }
+    let address_str = match CStr::from_ptr(address).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    let data = unsafe { slice::from_raw_parts(data, data_len) };
+    let data = slice::from_raw_parts(data, data_len);
 
-    unsafe {
-        match (*(merkle_db as *mut MerkleDatabase)).set(address_str, data) {
-            Ok(state_root) => {
-                *merkle_root = state_root.as_ptr();
-                *merkle_root_len = state_root.as_bytes().len();
+    match (*(merkle_db as *mut MerkleDatabase)).set(address_str, data) {
+        Ok(state_root) => {
+            *merkle_root = state_root.as_ptr();
+            *merkle_root_len = state_root.as_bytes().len();
 
-                mem::forget(state_root);
+            mem::forget(state_root);
 
-                ErrorCode::Success
-            }
-            Err(StateDatabaseError::DatabaseError(err)) => {
-                error!("A Database Error occurred: {}", err);
-                ErrorCode::DatabaseError
-            }
-            Err(err) => {
-                error!("Unknown Error!: {:?}", err);
-                ErrorCode::Unknown
-            }
+            ErrorCode::Success
+        }
+        Err(StateDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_delete(
+pub unsafe extern "C" fn merkle_db_delete(
     merkle_db: *mut c_void,
     address: *const c_char,
     merkle_root: *mut *const u8,
@@ -320,38 +303,34 @@ pub extern "C" fn merkle_db_delete(
         return ErrorCode::NullPointerProvided;
     }
 
-    let address_str = unsafe {
-        match CStr::from_ptr(address).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidHashString,
-        }
+    let address_str = match CStr::from_ptr(address).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    unsafe {
-        match (*(merkle_db as *mut MerkleDatabase)).delete(address_str) {
-            Ok(state_root) => {
-                *merkle_root = state_root.as_ptr();
-                *merkle_root_len = state_root.as_bytes().len();
+    match (*(merkle_db as *mut MerkleDatabase)).delete(address_str) {
+        Ok(state_root) => {
+            *merkle_root = state_root.as_ptr();
+            *merkle_root_len = state_root.as_bytes().len();
 
-                mem::forget(state_root);
+            mem::forget(state_root);
 
-                ErrorCode::Success
-            }
-            Err(StateDatabaseError::DatabaseError(err)) => {
-                error!("A Database Error occurred: {}", err);
-                ErrorCode::DatabaseError
-            }
-            Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-            Err(err) => {
-                error!("Unknown Error!: {:?}", err);
-                ErrorCode::Unknown
-            }
+            ErrorCode::Success
+        }
+        Err(StateDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_update(
+pub unsafe extern "C" fn merkle_db_update(
     merkle_db: *mut c_void,
     updates: *const *const c_void,
     updates_len: usize,
@@ -375,9 +354,9 @@ pub extern "C" fn merkle_db_update(
 
     let update_map: HashMap<String, Vec<u8>> = {
         let update_vec: Result<Vec<(String, Vec<u8>)>, ErrorCode> = if updates_len > 0 {
-            unsafe { slice::from_raw_parts(updates, updates_len) }
+            slice::from_raw_parts(updates, updates_len)
                 .iter()
-                .map(|ptr| unsafe {
+                .map(|ptr| {
                     let entry = *ptr as *const Entry;
                     let address = match CStr::from_ptr((*entry).address).to_str() {
                         Ok(s) => String::from(s),
@@ -401,10 +380,11 @@ pub extern "C" fn merkle_db_update(
     };
 
     let deletes: Result<Vec<String>, ErrorCode> = if deletes_len > 0 {
-        unsafe { slice::from_raw_parts(deletes, deletes_len) }
+        slice::from_raw_parts(deletes, deletes_len)
             .iter()
             .map(|c_str| {
-                unsafe { CStr::from_ptr(*c_str).to_str() }
+                CStr::from_ptr(*c_str)
+                    .to_str()
                     .map(String::from)
                     .map_err(|_| ErrorCode::InvalidAddress)
             })
@@ -417,34 +397,32 @@ pub extern "C" fn merkle_db_update(
         return deletes.unwrap_err();
     }
 
-    unsafe {
-        match (*(merkle_db as *mut MerkleDatabase)).update(
-            &update_map,
-            &deletes.unwrap(),
-            virtual_write,
-        ) {
-            Ok(state_root) => {
-                *merkle_root = state_root.as_ptr();
-                *merkle_root_len = state_root.as_bytes().len();
+    match (*(merkle_db as *mut MerkleDatabase)).update(
+        &update_map,
+        &deletes.unwrap(),
+        virtual_write,
+    ) {
+        Ok(state_root) => {
+            *merkle_root = state_root.as_ptr();
+            *merkle_root_len = state_root.as_bytes().len();
 
-                mem::forget(state_root);
+            mem::forget(state_root);
 
-                ErrorCode::Success
-            }
-            Err(StateDatabaseError::DatabaseError(err)) => {
-                error!("A Database Error occurred: {}", err);
-                ErrorCode::DatabaseError
-            }
-            Err(err) => {
-                error!("Unknown Error!: {:?}", err);
-                ErrorCode::Unknown
-            }
+            ErrorCode::Success
+        }
+        Err(StateDatabaseError::DatabaseError(err)) => {
+            error!("A Database Error occurred: {}", err);
+            ErrorCode::DatabaseError
+        }
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_prune(
+pub unsafe extern "C" fn merkle_db_prune(
     state_database: *mut c_void,
     root: *const c_char,
     result: *mut bool,
@@ -456,20 +434,16 @@ pub extern "C" fn merkle_db_prune(
         return ErrorCode::NullPointerProvided;
     }
 
-    let state_root = unsafe {
-        match CStr::from_ptr(root).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidHashString,
-        }
+    let state_root = match CStr::from_ptr(root).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    let db_ref = unsafe { (state_database as *const LmdbDatabase).as_ref().unwrap() };
+    let db_ref = (state_database as *const LmdbDatabase).as_ref().unwrap();
 
     match MerkleDatabase::prune(db_ref, &state_root) {
         Ok(results) => {
-            unsafe {
-                *result = !results.is_empty();
-            }
+            *result = !results.is_empty();
             ErrorCode::Success
         }
         Err(StateDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
@@ -492,7 +466,7 @@ pub extern "C" fn merkle_db_prune(
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_leaf_iterator_new(
+pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
     merkle_db: *mut c_void,
     prefix: *const c_char,
     iterator: *mut *const c_void,
@@ -505,18 +479,14 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
         return ErrorCode::NullPointerProvided;
     }
 
-    let prefix = unsafe {
-        match CStr::from_ptr(prefix).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidAddress,
-        }
+    let prefix = match CStr::from_ptr(prefix).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    match unsafe { (*(merkle_db as *mut MerkleDatabase)).leaves(Some(prefix)) } {
+    match (*(merkle_db as *mut MerkleDatabase)).leaves(Some(prefix)) {
         Ok(leaf_iterator) => {
-            unsafe {
-                *iterator = Box::into_raw(leaf_iterator) as *const c_void;
-            }
+            *iterator = Box::into_raw(leaf_iterator) as *const c_void;
 
             ErrorCode::Success
         }
@@ -533,17 +503,17 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     if iterator.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    unsafe { Box::from_raw(iterator as *mut MerkleLeafIterator) };
+    Box::from_raw(iterator as *mut MerkleLeafIterator);
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn merkle_db_leaf_iterator_next(
+pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
     iterator: *mut c_void,
     address: *mut *const u8,
     address_len: *mut usize,
@@ -554,8 +524,8 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
         return ErrorCode::NullPointerProvided;
     }
 
-    match unsafe { (*(iterator as *mut MerkleLeafIterator)).next() } {
-        Some(Ok((entry_addr, entry_bytes))) => unsafe {
+    match (*(iterator as *mut MerkleLeafIterator)).next() {
+        Some(Ok((entry_addr, entry_bytes))) => {
             let address_bytes = entry_addr.into_bytes().into_boxed_slice();
             *address_len = address_bytes.len();
             *address = address_bytes.as_ptr();
@@ -568,7 +538,7 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
             mem::forget(data);
 
             ErrorCode::Success
-        },
+        }
         None => ErrorCode::StopIteration,
         Some(Err(StateDatabaseError::DatabaseError(err))) => {
             error!("A Database Error occurred: {}", err);
