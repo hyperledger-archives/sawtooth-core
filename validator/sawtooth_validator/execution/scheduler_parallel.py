@@ -1151,8 +1151,8 @@ class ParallelScheduler(Scheduler):
                     contexts,
                     persist=False,
                     clean_up=True)
-                self._cancelled = True
-                self._condition.notify_all()
+            self._cancelled = True
+            self._condition.notify_all()
 
     def is_cancelled(self):
         with self._condition:
