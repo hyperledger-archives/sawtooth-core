@@ -384,7 +384,11 @@ pub extern "C" fn chain_controller_chain_head(
 
         let chain_head = py.allow_threads(move || controller.chain_head());
 
-        *block = chain_head.to_py_object(py).steal_ptr();
+        // This is relying on the BlockWrapper being backed by a PyObject and `into_py_object()`
+        // not incrementing the reference count on the PyObject when passing up to Python. If these
+        // changes are invalidated, memory leaks may occur to BlockWrappers with incorrect
+        // reference counts never being cleaned up.
+        *block = chain_head.into_py_object(py).as_ptr();
     }
     ErrorCode::Success
 }

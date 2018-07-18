@@ -93,6 +93,10 @@ impl ToPyObject for BlockWrapper {
     fn to_py_object(&self, py: Python) -> PyObject {
         self.py_block_wrapper.clone_ref(py)
     }
+
+    fn into_py_object(self, py: Python) -> PyObject {
+        self.py_block_wrapper
+    }
 }
 
 impl<'source> FromPyObject<'source> for BlockWrapper {
