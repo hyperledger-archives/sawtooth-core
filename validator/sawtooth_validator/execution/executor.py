@@ -43,7 +43,7 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
-class TransactionExecutorThread(object):
+class TransactionExecutorThread:
     """A thread of execution controlled by the TransactionExecutor.
     Provides the functionality that the journal can process on several
     schedulers at once.
@@ -375,7 +375,7 @@ class TransactionExecutorThread(object):
         self._scheduler.cancel()
 
 
-class TransactionExecutor(object):
+class TransactionExecutor:
     def __init__(self,
                  service,
                  context_manager,

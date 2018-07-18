@@ -22,7 +22,7 @@ from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
 LOGGER = logging.getLogger(__name__)
 
 
-class PoetEnclaveFactory(object):
+class PoetEnclaveFactory:
     """PoetEnclaveFactory provides a mechanism for abstracting the loading of
     a PoET enclave module.
     """

@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 
-class MockStateView(object):
+class MockStateView:
     """Simulates a StateView by wrapping a dictionary of address/bytes pairs.
     """
 

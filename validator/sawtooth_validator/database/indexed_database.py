@@ -112,12 +112,12 @@ class IndexedDatabase(database.Database):
     def count(self, index=None):
         if index is None:
             return len(self)
-        else:
-            if index is not None and index not in self._indexes:
-                raise ValueError('Index {} does not exist'.format(index))
 
-            with self._lmdb.begin(db=self._indexes[index][0]) as txn:
-                return txn.stat()['entries']
+        if index is not None and index not in self._indexes:
+            raise ValueError('Index {} does not exist'.format(index))
+
+        with self._lmdb.begin(db=self._indexes[index][0]) as txn:
+            return txn.stat()['entries']
 
     def contains_key(self, key, index=None):
         if index is not None and index not in self._indexes:
@@ -255,7 +255,7 @@ class ReferenceChainCursor(database.Cursor):
 
         self._lmdb_txn = None
 
-        if len(reference_chain) < 1:
+        if not reference_chain:
             raise ValueError(
                 "Must be at least one lmdb database in the reference chain")
 

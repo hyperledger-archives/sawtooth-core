@@ -24,7 +24,7 @@ from threading import Condition
 import zmq
 import zmq.asyncio
 
-import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
+from sawtooth_sdk.protobuf import validator_pb2
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
 from sawtooth_sdk.messaging.future import Future
@@ -255,7 +255,7 @@ class _SendReceiveThread(Thread):
                 first_time = False
 
 
-class Stream(object):
+class Stream:
     def __init__(self, url):
         self._url = url
         self._futures = FutureCollection()

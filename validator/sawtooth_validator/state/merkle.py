@@ -187,26 +187,26 @@ def _libexec(name, *args):
     res = ffi.LIBRARY.call(name, *args)
     if res == ErrorCode.Success:
         return
-    elif res == ErrorCode.NullPointerProvided:
+    if res == ErrorCode.NullPointerProvided:
         raise TypeError("Provided null pointer(s)")
-    elif res == ErrorCode.NotFound:
+    if res == ErrorCode.NotFound:
         raise KeyError("Value was not found")
-    elif res == ErrorCode.DatabaseError:
+    if res == ErrorCode.DatabaseError:
         raise ValueError("A Database Error occurred")
-    elif res == ErrorCode.InvalidHashString:
+    if res == ErrorCode.InvalidHashString:
         raise KeyError(
             "merkle root was not a valid hash")
-    elif res == ErrorCode.InvalidAddress:
+    if res == ErrorCode.InvalidAddress:
         raise KeyError(
             "Address was not valid ")
-    elif res == ErrorCode.InvalidChangeLogIndex:
+    if res == ErrorCode.InvalidChangeLogIndex:
         raise ValueError("The Change Log index is in an invalid state")
-    elif res == ErrorCode.StopIteration:
+    if res == ErrorCode.StopIteration:
         raise StopIteration()
-    elif res == ErrorCode.Unknown:
+    if res == ErrorCode.Unknown:
         raise ValueError("An unknown error occurred")
-    else:
-        raise ValueError("An unknown error occurred: {}".format(res))
+
+    raise ValueError("An unknown error occurred: {}".format(res))
 
 
 class _LeafIterator:

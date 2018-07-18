@@ -889,7 +889,7 @@ class TestBlockValidator(unittest.TestCase):
             config_dir=None,
             permission_verifier=self.permission_verifier)
 
-    class BlockValidationHandler(object):
+    class BlockValidationHandler:
         def __init__(self):
             self.commit_new_block = None
             self.result = None

@@ -76,7 +76,7 @@ class EventFilterFactory:
                 "Unknown filter type: {}".format(filter_type))
 
 
-class EventFilter(object, metaclass=ABCMeta):
+class EventFilter(metaclass=ABCMeta):
     """Represents a subset of events within an event type."""
 
     def __init__(self, key, match_string):

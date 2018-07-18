@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
-class WorkloadGenerator(object):
+class WorkloadGenerator:
     """
     This is the object that manages the workload sent to the validators and
     keeps track of submitted and committed batches. To run, it must first have
@@ -211,16 +211,16 @@ class WorkloadGenerator(object):
                 result.status_code, result.json()
             result.raise_for_status()
 
-            if code == 200 or code == 201 or code == 202:
+            if code in (200, 201, 202):
                 return json_result['data'][0]['status']
-            else:
-                if 'error' in json_result:
-                    message = json_result['error']['message']
-                else:
-                    message = json_result
 
-                LOGGER.debug("(%s): %s", code, message)
-                return "UNKNOWN"
+            if 'error' in json_result:
+                message = json_result['error']['message']
+            else:
+                message = json_result
+
+            LOGGER.debug("(%s): %s", code, message)
+            return "UNKNOWN"
 
         except json.decoder.JSONDecodeError as e:
             LOGGER.warning('Unable to retrieve status: %s', str(e))

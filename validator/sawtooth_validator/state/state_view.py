@@ -17,7 +17,7 @@ from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
-class StateViewFactory(object):
+class StateViewFactory:
     """The StateViewFactory produces StateViews for a particular merkle root.
 
     This factory produces read-only views of a merkle tree. For a given
@@ -53,7 +53,7 @@ class StateViewFactory(object):
         return StateView(merkle_db)
 
 
-class StateView(object):
+class StateView:
     """The StateView provides read-only access to a particular merkle tree
     root.
 

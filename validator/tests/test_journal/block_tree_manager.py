@@ -85,7 +85,7 @@ def _setting_entry(key, value):
     ).SerializeToString()
 
 
-class BlockTreeManager(object):
+class BlockTreeManager:
     def __str__(self):
         return str(self.block_cache)
 

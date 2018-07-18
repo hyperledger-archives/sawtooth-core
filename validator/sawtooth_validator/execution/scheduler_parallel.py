@@ -414,7 +414,7 @@ class PredecessorTree:
         return predecessors
 
 
-class PredecessorChain(object):
+class PredecessorChain:
 
     def __init__(self):
         self._predecessors_by_id = dict()

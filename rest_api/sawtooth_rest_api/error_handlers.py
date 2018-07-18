@@ -22,7 +22,7 @@ from sawtooth_rest_api.protobuf import client_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
 
-class _ErrorTrap(object):
+class _ErrorTrap:
     """Provides an interface for route handlers to communicate specific
     response statuses they are interested in throwing an error on. Child
     classes should not define any methods, instead defining two class

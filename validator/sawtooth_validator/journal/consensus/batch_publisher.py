@@ -17,7 +17,7 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 
 
-class BatchPublisher(object):
+class BatchPublisher:
     """ Utility class to help BlockPublisher provide transaction publishing
     services to the consensus implementations.
     """

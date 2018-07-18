@@ -184,7 +184,7 @@ class ChainCommitState:
             raise MissingDependency(dep)
 
 
-class _CommitCache(object):
+class _CommitCache:
     """Tracks the commit status of a set of identifiers and these identifiers
     are either explicitly committed, or explicitly uncommitted. If they fall in
     to neither of these cases then the fallback is to look in the BlockStore to
@@ -213,7 +213,7 @@ class _CommitCache(object):
     def __contains__(self, identifier):
         if identifier in self._committed:
             return True
-        elif identifier in self._uncommitted:
+        if identifier in self._uncommitted:
             return False
         return self.block_store_check(identifier)
 

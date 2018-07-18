@@ -137,7 +137,7 @@ class GossipMessageSignatureVerifier(Handler):
             self._seen_cache[obj.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
-        elif tag == GossipMessage.BATCH:
+        if tag == GossipMessage.BATCH:
             if obj.header_signature in self._seen_cache:
                 self._batch_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)

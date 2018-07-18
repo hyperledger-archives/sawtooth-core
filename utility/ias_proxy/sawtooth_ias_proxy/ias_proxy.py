@@ -145,7 +145,7 @@ class Handler(BaseHTTPRequestHandler):
             self._respond(404)
 
 
-class IasProxyServer(object):
+class IasProxyServer:
     """
     IAS Proxy Server.
     """

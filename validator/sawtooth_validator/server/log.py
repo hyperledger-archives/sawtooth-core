@@ -21,7 +21,7 @@ import os
 from colorlog import ColoredFormatter
 
 
-class LogWriter(object):
+class LogWriter:
     def __init__(self, logger, level):
         self.logger = logger
         self.level = level

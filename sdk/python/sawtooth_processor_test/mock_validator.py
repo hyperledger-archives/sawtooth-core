@@ -48,7 +48,7 @@ class UnexpectedMessageException(Exception):
         self.received = received
 
 
-class MockValidator(object):
+class MockValidator:
     def __init__(self):
         self._comparators = {}
 

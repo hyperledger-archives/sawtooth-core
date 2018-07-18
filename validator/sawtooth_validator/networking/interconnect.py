@@ -88,7 +88,7 @@ def get_enum_name(enum_value):
 _STARTUP_COMPLETE_SENTINEL = 1
 
 
-class _SendReceive(object):
+class _SendReceive:
     def __init__(self, connection, address, futures, connections,
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
@@ -201,7 +201,7 @@ class _SendReceive(object):
                     yield from self._do_dealer_heartbeat()
                 yield from asyncio.sleep(self._heartbeat_interval,
                                          loop=self._event_loop)
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -326,7 +326,7 @@ class _SendReceive(object):
                     my_future.timer_stop()
                     self._futures.remove(message.correlation_id)
 
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -355,7 +355,7 @@ class _SendReceive(object):
                 self._get_queue_size_gauge(self.connection).set_value(
                     self._dispatcher_queue.qsize())
 
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -574,7 +574,7 @@ class _SendReceive(object):
             try:
                 yield from self._monitor_sock.recv_multipart()
                 self._check_connections()
-            except CancelledError:
+            except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
                 # The raise is required to stop this component.
@@ -630,7 +630,7 @@ class _SendReceive(object):
         asyncio.ensure_future(self._stop(), loop=self._event_loop)
 
 
-class Interconnect(object):
+class Interconnect:
     def __init__(self,
                  endpoint,
                  dispatcher,
@@ -1244,7 +1244,7 @@ class Interconnect(object):
             LOGGER.debug("Connection disconnected: %s", connection_id)
 
 
-class OutboundConnection(object):
+class OutboundConnection:
     def __init__(self,
                  connections,
                  endpoint,

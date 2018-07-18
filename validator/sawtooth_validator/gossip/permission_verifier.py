@@ -34,7 +34,7 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
-class PermissionVerifier(object):
+class PermissionVerifier:
     def __init__(self, permissions, current_root_func, identity_cache):
         # Off-chain permissions to be enforced
         self._permissions = permissions

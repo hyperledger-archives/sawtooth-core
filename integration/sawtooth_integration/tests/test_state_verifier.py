@@ -88,7 +88,7 @@ INTKEY_ADDRESS_PREFIX = hashlib.sha512(
     'intkey'.encode('utf-8')).hexdigest()[0:6]
 
 
-class IntKeyPayload(object):
+class IntKeyPayload:
     def __init__(self, verb, name, value):
         self._verb = verb
         self._name = name

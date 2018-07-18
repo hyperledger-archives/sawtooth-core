@@ -39,7 +39,7 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
 from sawtooth_sdk.protobuf.setting_pb2 import Setting
 
 
-class ValidatorRegistryMessageFactory(object):
+class ValidatorRegistryMessageFactory:
     # The basename and enclave measurement values we will put into the enclave
     # quote in the attestation verification report.
     __VALID_BASENAME__ = \

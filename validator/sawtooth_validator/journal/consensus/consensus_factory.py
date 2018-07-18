@@ -19,7 +19,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.state.settings_view import SettingsView
 
 
-class ConsensusFactory(object):
+class ConsensusFactory:
     """ConsensusFactory returns consensus modules by short name.
     """
 

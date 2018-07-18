@@ -51,7 +51,7 @@ total_block_claim_count (int): The total number of the blocks that the
 """
 
 
-class ConsensusState(object):
+class ConsensusState:
     """Represents the consensus state at a particular point in time (i.e.,
     when the block that this consensus state corresponds to was committed to
     the block chain).
@@ -286,7 +286,7 @@ class ConsensusState(object):
 
         if not isinstance(
                 validator_state.poet_public_key, str) \
-                or len(validator_state.poet_public_key) < 1:
+                or not validator_state.poet_public_key:
             raise \
                 ValueError(
                     'poet_public_key ({}) is invalid'.format(
@@ -714,14 +714,15 @@ class ConsensusState(object):
                     validator_state.key_block_claim_count,
                     key_block_claim_limit)
                 return True
-            else:
-                LOGGER.debug(
-                    'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
-                    validator_info.name,
-                    validator_info.id[:8],
-                    validator_info.id[-8:],
-                    validator_state.key_block_claim_count,
-                    key_block_claim_limit)
+
+            LOGGER.debug(
+                'Validator %s (ID=%s...%s): Claimed %d block(s) out of %d',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                validator_state.key_block_claim_count,
+                key_block_claim_limit)
+
         else:
             LOGGER.debug(
                 'Validator %s (ID=%s...%s): Claimed 0 block(s) out of %d',

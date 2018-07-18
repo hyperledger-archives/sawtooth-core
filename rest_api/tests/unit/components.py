@@ -42,7 +42,7 @@ from sawtooth_rest_api.protobuf.validator_pb2 import Message
 TEST_TIMEOUT = 5
 
 
-class MockConnection(object):
+class MockConnection:
     """Replaces a route handler's connection to allow tests to preset the
     response to send back as well as run asserts on the protobufs sent
     to the connection.
@@ -116,8 +116,8 @@ class MockConnection(object):
     def _reset_response(self):
         self._response = []
 
-    class _MockFuture(object):
-        class Response(object):
+    class _MockFuture:
+        class Response:
             def __init__(self, content):
                 # message_type must be set, but is not important
                 self.message_type = 0
@@ -377,7 +377,7 @@ class BaseApiTest(AioHTTPTestCase):
             self.assertEqual(expected_id, txn['header']['nonce'])
 
 
-class Mocks(object):
+class Mocks:
     """A static class with methods that return lists of mock Protobuf objects.
     """
     @staticmethod

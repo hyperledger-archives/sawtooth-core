@@ -20,7 +20,7 @@ from sawtooth_validator.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-class ChainIdManager(object):
+class ChainIdManager:
     """
     The ChainIdManager is in charge of of keeping track of the block-chain-id
     stored in the data_dir.

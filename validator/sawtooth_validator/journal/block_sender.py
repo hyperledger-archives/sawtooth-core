@@ -18,7 +18,7 @@ import abc
 from sawtooth_validator.protobuf.block_pb2 import Block
 
 
-class BlockSender(object, metaclass=abc.ABCMeta):
+class BlockSender(metaclass=abc.ABCMeta):
     """Implementations should take classes like completer,
     and network, and implement a send method that gets called on
     block publish.

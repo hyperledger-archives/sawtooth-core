@@ -67,7 +67,7 @@ from sawtooth_validator.server import consensus_handlers
 LOGGER = logging.getLogger(__name__)
 
 
-class Validator(object):
+class Validator:
     def __init__(self,
                  bind_network,
                  bind_component,

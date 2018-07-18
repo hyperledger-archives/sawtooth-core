@@ -70,12 +70,12 @@ class SettingsTransactionHandler(TransactionHandler):
         if settings_payload.action == SettingsPayload.PROPOSE:
             return self._apply_proposal(
                 auth_keys, public_key, settings_payload.data, context)
-        elif settings_payload.action == SettingsPayload.VOTE:
+        if settings_payload.action == SettingsPayload.VOTE:
             return self._apply_vote(public_key, settings_payload.data,
                                     auth_keys, context)
-        else:
-            raise InvalidTransaction(
-                "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
+
+        raise InvalidTransaction(
+            "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
     def _apply_proposal(self, auth_keys, public_key,
                         setting_proposal_data, context):

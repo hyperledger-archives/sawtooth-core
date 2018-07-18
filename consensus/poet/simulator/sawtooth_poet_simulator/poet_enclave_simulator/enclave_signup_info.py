@@ -20,7 +20,7 @@ from sawtooth_poet_simulator.poet_enclave_simulator.utils import dict2json
 LOGGER = logging.getLogger(__name__)
 
 
-class EnclaveSignupInfo(object):
+class EnclaveSignupInfo:
     """Represents an enclave-internal representation of the encapsulation of
     the authorization data for network enrollment policies
 

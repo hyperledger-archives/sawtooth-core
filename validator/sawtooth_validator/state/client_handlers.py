@@ -198,9 +198,9 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
     def _get_chain_head(self):
         if self._block_store.chain_head:
             return self._block_store.chain_head
-        else:
-            LOGGER.debug('Unable to get chain head from block store')
-            raise _ResponseFailed(self._status.NOT_READY)
+
+        LOGGER.debug('Unable to get chain head from block store')
+        raise _ResponseFailed(self._status.NOT_READY)
 
     def _set_root(self, request):
         """Sets the root of the merkle tree, returning any head id used.
@@ -338,7 +338,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             raise _ResponseFailed(self._status.INVALID_ADDRESS)
 
 
-class _Pager(object):
+class _Pager:
     """A static class containing methods to paginate lists of resources.
 
     Contains a paginate method, as well as two helpers to fetch index of a
@@ -429,7 +429,7 @@ class _Pager(object):
             return resources[index].address
 
 
-class _Sorter(object):
+class _Sorter:
     """A static class containing a method to sort lists of resources based on
     ClientSortControls sent with the request.
     """
@@ -483,7 +483,7 @@ class _Sorter(object):
 
         return handlers
 
-    class _ValueHandler(object):
+    class _ValueHandler:
         """Handles fetching proper compare values for one ClientSortControls.
 
         Args:

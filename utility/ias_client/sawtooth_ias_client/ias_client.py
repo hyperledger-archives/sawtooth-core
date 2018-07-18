@@ -25,7 +25,7 @@ import requests
 LOGGER = logging.getLogger(__name__)
 
 
-class IasClient(object):
+class IasClient:
     """
     Provide rest api helper functions for communicating with IAS.
     """

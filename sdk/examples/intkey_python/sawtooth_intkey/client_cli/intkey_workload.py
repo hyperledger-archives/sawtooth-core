@@ -52,7 +52,7 @@ def post_batches(url, batches, auth_info=None):
         result = requests.post(url + "/batches", data, headers=headers)
         result.raise_for_status()
         code, json_result = (result.status_code, result.json())
-        if not (code == 200 or code == 201 or code == 202):
+        if code not in (200, 201, 202):
             LOGGER.warning("(%s): %s", code, json_result)
         return (code, json_result)
     except requests.exceptions.HTTPError as e:
@@ -225,8 +225,8 @@ def _get_auth_info(auth_user, auth_password):
         auth_string = "{}:{}".format(auth_user, auth_password)
         b64_string = b64encode(auth_string.encode()).decode()
         return b64_string
-    else:
-        return None
+
+    return None
 
 
 def add_workload_parser(subparsers, parent_parser):

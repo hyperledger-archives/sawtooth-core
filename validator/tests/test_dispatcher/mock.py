@@ -44,7 +44,7 @@ class MockHandler2(dispatch.Handler):
             message_type=validator_pb2.Message.DEFAULT)
 
 
-class MockSendMessage(object):
+class MockSendMessage:
     def __init__(self, connections):
         self.message_ids = []
         self.identities = []

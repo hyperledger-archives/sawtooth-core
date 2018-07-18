@@ -17,16 +17,16 @@ from threading import Condition
 from threading import RLock
 
 from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
-import sawtooth_sdk.protobuf.validator_pb2 as validator_pb2
+from sawtooth_sdk.protobuf import validator_pb2
 
 
-class FutureResult(object):
+class FutureResult:
     def __init__(self, message_type, content):
         self.message_type = message_type
         self.content = content
 
 
-class FutureError(object):
+class FutureError:
     """Used when resolving a future, to
     set the FutureResult to an error result.
     Specifically this raises ValidatorConnectionError
@@ -42,7 +42,7 @@ class FutureError(object):
         raise ValidatorConnectionError()
 
 
-class Future(object):
+class Future:
     def __init__(self, correlation_id, request_type=None):
         self.correlation_id = correlation_id
         self._result = None
@@ -77,7 +77,7 @@ class FutureTimeoutError(Exception):
     pass
 
 
-class FutureCollection(object):
+class FutureCollection:
     def __init__(self):
         self._futures = {}
         self._lock = RLock()

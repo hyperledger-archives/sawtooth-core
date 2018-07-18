@@ -946,7 +946,7 @@ class TestPoetBlockPublisher(TestCase):
                 block_header=mock_block.header))
 
 
-class _MockPoetKeyStateStore(object):
+class _MockPoetKeyStateStore:
     def __init__(self, active_key):
         self._active_key = active_key
         self._keys = {}

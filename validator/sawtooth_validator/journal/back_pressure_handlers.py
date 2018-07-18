@@ -65,13 +65,13 @@ class ClientBatchSubmitBackpressureHandler(Handler):
                 message_out=response,
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE
             )
-        else:
-            if self._applying_backpressure:
-                self._applying_backpressure = False
-                self._batches_rejected_gauge.set_value(0)
-                LOGGER.info(
-                    'Ending back pressure on client submitted batches: '
-                    'current depth: %s, limit: %s',
-                    pending, limit)
+
+        if self._applying_backpressure:
+            self._applying_backpressure = False
+            self._batches_rejected_gauge.set_value(0)
+            LOGGER.info(
+                'Ending back pressure on client submitted batches: '
+                'current depth: %s, limit: %s',
+                pending, limit)
 
         return HandlerResult(status=HandlerStatus.PASS)

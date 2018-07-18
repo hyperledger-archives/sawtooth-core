@@ -301,7 +301,7 @@ TRANSACTION_ENCODER = {
 }
 
 
-class Transactor(object):
+class Transactor:
     def __init__(self, name, rest_endpoint):
         """
         Args:

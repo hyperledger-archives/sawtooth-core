@@ -27,8 +27,8 @@ import cbor
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
-import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
+from sawtooth_sdk.protobuf import batch_pb2
+from sawtooth_sdk.protobuf import transaction_pb2
 
 from sawtooth_intkey.processor.handler import make_intkey_address
 
@@ -36,7 +36,7 @@ from sawtooth_intkey.processor.handler import make_intkey_address
 LOGGER = logging.getLogger(__name__)
 
 
-class IntKeyPayload(object):
+class IntKeyPayload:
     def __init__(self, verb, name, value):
         self._verb = verb
         self._name = name

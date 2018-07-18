@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-class MockSettingsViewFactory(object):
+class MockSettingsViewFactory:
     def __init__(self):
         self.settings = {}
 
@@ -24,7 +24,7 @@ class MockSettingsViewFactory(object):
         self.settings[setting] = value
 
 
-class MockSettingsView(object):
+class MockSettingsView:
     def __init__(self, settings):
         self.settings = settings
 

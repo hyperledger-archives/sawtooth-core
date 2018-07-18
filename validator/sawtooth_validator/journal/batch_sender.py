@@ -16,7 +16,7 @@
 import abc
 
 
-class BatchSender(object, metaclass=abc.ABCMeta):
+class BatchSender(metaclass=abc.ABCMeta):
     """Implementations should take classes like completer,
     and network, and implement a send method that gets called when a batch
     needs to get sent to the network.

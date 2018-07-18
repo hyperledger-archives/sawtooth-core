@@ -36,18 +36,18 @@ class NativeLmdbDatabase(OwnedPointer):
             ctypes.byref(self.pointer))
         if res == ErrorCode.Success:
             return
-        elif res == ErrorCode.NullPointerProvided:
+        if res == ErrorCode.NullPointerProvided:
             raise TypeError("Path cannot be null")
-        elif res == ErrorCode.InvalidFilePath:
+        if res == ErrorCode.InvalidFilePath:
             raise TypeError("Invalid file path {}".format(path))
-        elif res == ErrorCode.InvalidIndexString:
+        if res == ErrorCode.InvalidIndexString:
             raise TypeError("Invalid index string {}".format(indexes))
-        elif res == ErrorCode.InitializeContextError:
+        if res == ErrorCode.InitializeContextError:
             raise TypeError("Unable to initialize LMDB Context")
-        elif res == ErrorCode.InitializeDatabaseError:
+        if res == ErrorCode.InitializeDatabaseError:
             raise TypeError("Unable to initialize LMDB Database")
-        else:
-            raise TypeError("Unknown error occurred: {}".format(res.error))
+
+        raise TypeError("Unknown error occurred: {}".format(res.error))
 
 
 class ErrorCode(IntEnum):

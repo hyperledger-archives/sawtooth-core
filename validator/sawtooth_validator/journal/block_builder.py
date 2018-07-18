@@ -16,7 +16,7 @@
 from sawtooth_validator.protobuf.block_pb2 import Block
 
 
-class BlockBuilder(object):
+class BlockBuilder:
     """
     Utility class to assemble new blocks. Used by the block publisher.
     """

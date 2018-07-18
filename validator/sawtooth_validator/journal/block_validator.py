@@ -107,7 +107,7 @@ def look_ahead(iterable):
     yield last, False
 
 
-class BlockValidator(object):
+class BlockValidator:
     """
     Responsible for validating a block, handles both chain extensions and fork
     will determine if the new block should be the head of the chain and return
@@ -297,7 +297,7 @@ class BlockValidator(object):
     def validate_block(self, blkw, chain_head=None):
         if blkw.status == BlockStatus.Valid:
             return
-        elif blkw.status == BlockStatus.Invalid:
+        if blkw.status == BlockStatus.Invalid:
             raise BlockValidationFailure(
                 'Block {} is already invalid'.format(blkw))
 
@@ -424,8 +424,10 @@ class BlockValidator(object):
         must be at the same height, or this will always fail.
         """
         while cur_blkw.identifier != new_blkw.identifier:
-            if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
-                    or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
+            if NULL_BLOCK_IDENTIFIER in (
+                cur_blkw.previous_block_id,
+                new_blkw.previous_block_id,
+            ):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid

@@ -201,7 +201,7 @@ class _Sender:
                 await self._socket.send_multipart(
                     [message.SerializeToString()])
                 break
-            except asyncio.CancelledError:
+            except asyncio.CancelledError:  # pylint: disable=try-except-raise
                 raise
             except zmq.error.Again as e:
                 await backoff.do_backoff(err_msg=repr(e))

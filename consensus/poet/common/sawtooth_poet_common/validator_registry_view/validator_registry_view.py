@@ -20,7 +20,7 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
 _NAMESPACE = hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]
 
 
-class ValidatorRegistryView(object):
+class ValidatorRegistryView:
     """
     A ValidatorRegistryView provides access to the on-chain validator info.
 

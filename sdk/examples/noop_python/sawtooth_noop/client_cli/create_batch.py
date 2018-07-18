@@ -27,7 +27,7 @@ import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-class NoopPayload(object):
+class NoopPayload:
     def __init__(self):
         self.nonce = binascii.b2a_hex(random.getrandbits(
             8 * 8).to_bytes(8, byteorder='little'))

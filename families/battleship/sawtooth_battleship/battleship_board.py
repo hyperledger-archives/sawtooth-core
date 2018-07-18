@@ -26,7 +26,7 @@ from sawtooth_battleship.battleship_exceptions import BoardLayoutException
 LOGGER = logging.getLogger(__name__)
 
 
-class BoardLayout(object):
+class BoardLayout:
     def __init__(self, size):
         self.ship_positions = []
         self.size = size
@@ -159,7 +159,7 @@ class BoardLayout(object):
         return layout
 
 
-class ShipPosition(object):
+class ShipPosition:
     """Represents a ship and it's placement on the board.
 
     Attributes:

@@ -28,7 +28,7 @@ from sawtooth_validator.exceptions import WaitCancelledException
 LOGGER = logging.getLogger(__name__)
 
 
-class ProcessorManager(object):
+class ProcessorManager:
     """Contains all of the registered (added via __setitem__)
     transaction processors in a _processors (dict) where the keys
     are ProcessorTypes and the values are ProcessorIterators.
@@ -193,7 +193,7 @@ class ProcessorManager(object):
             self._condition.notify_all()
 
 
-class Processor(object):
+class Processor:
     def __init__(self, connection_id, namespaces, max_occupancy):
         self._lock = RLock()
         self.connection_id = connection_id
@@ -221,7 +221,7 @@ class Processor(object):
             return self._current_occupancy < self._max_occupancy
 
 
-class ProcessorType(object):
+class ProcessorType:
     def __init__(self, name, version):
         self.name = name
         self.version = version
@@ -236,7 +236,7 @@ class ProcessorType(object):
         return self.name == other.name and self.version == other.version
 
 
-class ProcessorIterator(object, metaclass=ABCMeta):
+class ProcessorIterator(metaclass=ABCMeta):
     """Subclasses of this class implement the particular
     processor choosing scheme. e.g. RoundRobin, etc.
     Implementations should be threadsafe between __next__

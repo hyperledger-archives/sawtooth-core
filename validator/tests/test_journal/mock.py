@@ -49,7 +49,7 @@ class SynchronousExecutor(Executor):
             self.process_next()
 
 
-class MockNetwork(object):
+class MockNetwork:
     def __init__(self):
         self.messages = []
 
@@ -170,7 +170,7 @@ class MockScheduler(Scheduler):
         return False
 
 
-class MockTransactionExecutor(object):
+class MockTransactionExecutor:
     def __init__(self, batch_execution_result=True):
         self.messages = []
         self.batch_execution_result = batch_execution_result
@@ -198,7 +198,7 @@ class MockBatchSender(BatchSender):
         self.new_batch = batch
 
 
-class MockStateViewFactory(object):
+class MockStateViewFactory:
     """The StateViewFactory produces StateViews for a particular merkle root.
 
     This factory produces read-only views of a merkle tree. For a given
@@ -225,7 +225,7 @@ class MockStateViewFactory(object):
         return MockStateView(self._database)
 
 
-class MockStateView(object):
+class MockStateView:
     """The StateView provides read-only access to a particular merkle tree
     root.
 
@@ -268,7 +268,7 @@ class MockStateView(object):
         return []
 
 
-class MockChainIdManager(object):
+class MockChainIdManager:
     """Mock for the ChainIdManager, which provides the value of the
     block-chain-id stored in the data_dir.
     """
@@ -295,7 +295,7 @@ def CreateSetting(key, value):
     return addr, setting.SerializeToString()
 
 
-class MockPermissionVerifier(object):
+class MockPermissionVerifier:
     def is_batch_signer_authorized(self, batch, state_root=None,
                                    from_state=False):
         return True

@@ -53,7 +53,7 @@ LOGGER = logging.getLogger(__name__)
 TIMER_TIMEOUT_PERIOD = 30.0
 
 
-class _PoetEnclaveSimulator(object):
+class _PoetEnclaveSimulator:
     # A lock to protect threaded access
     _lock = threading.Lock()
 

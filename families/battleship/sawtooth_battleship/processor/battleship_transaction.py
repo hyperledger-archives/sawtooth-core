@@ -362,5 +362,5 @@ def _store_state_data(addr, new_state, context):
         {addr, json.dumps(new_state).encode()}
     )
 
-    if len(addresses) < 1:
+    if not addresses:
         raise InternalError("State Error")

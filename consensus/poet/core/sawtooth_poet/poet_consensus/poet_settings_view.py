@@ -21,7 +21,7 @@ from sawtooth_poet.state.settings_view import SettingsView
 LOGGER = logging.getLogger(__name__)
 
 
-class PoetSettingsView(object):
+class PoetSettingsView:
     """A class to wrap the retrieval of PoET configuration settings from the
     configuration view.  For values that are not in the current state view
     or that are invalid, default values are returned.

@@ -16,7 +16,7 @@
 import importlib
 
 
-class PoetEnclaveModuleWrapper(object):
+class PoetEnclaveModuleWrapper:
     """A convenience wrapper class around the PoET enclave module.  It takes
     care of automatically initializing and shutting down the enclave.  Use it
     like this:
