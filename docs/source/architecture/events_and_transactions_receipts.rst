@@ -82,7 +82,7 @@ SIMPLE_ANY
 
   it will pass the following filter:
 
-      SimpleAnyFilter(key="address", match_string"abc")
+      SimpleAnyFilter(key="address", match_string="abc")
 
   Because it matches one of the two attributes with the key "address".
 
@@ -373,6 +373,10 @@ can request a transaction receipt for a given transaction id.
       }
       Status status = 1;
       repeated TransactionReceipt receipts = 2;
+
+To request a transaction receipt from the REST API, pass the transaction ID in the form
+``http://rest-api:8008/receipts/?id=TRANSACTION-ID`` where ``TRANSACTION-ID`` is your 128-character transaction ID.  Use ``localhost:8008`` if the Validator is running on Ubuntu instead of Docker.
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
