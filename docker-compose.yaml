@@ -36,26 +36,6 @@ services:
       "
     stop_signal: SIGKILL
 
-  poet-engine:
-    build:
-      context: .
-      dockerfile: consensus/poet/engine/Dockerfile
-    image: poet-engine-local:${ISOLATION_ID}
-    volumes:
-      - ./:/project/sawtooth-core
-    container_name: sawtooth-poet-engine-local
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        bin/protogen
-        cd consensus/poet/engine
-        python3 setup.py clean --all
-        python3 setup.py build
-        poet-engine -vv -C tcp://validator:5050 --component tcp://validator:4004
-      "
-    stop_signal: SIGKILL
-
   intkey-tp-python:
     build:
       context: .
