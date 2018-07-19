@@ -507,7 +507,7 @@ impl BlockManager {
     }
 }
 
-struct GetBlockIterator {
+pub struct GetBlockIterator {
     state: Arc<RwLock<BlockManagerState>>,
     block_ids: Vec<String>,
     index: usize,
@@ -550,7 +550,7 @@ impl Iterator for GetBlockIterator {
     }
 }
 
-struct BranchIterator {
+pub struct BranchIterator {
     state: Arc<RwLock<BlockManagerState>>,
     next_block_id: String,
     blockstore: Option<String>,
@@ -608,7 +608,7 @@ impl Iterator for BranchIterator {
     }
 }
 
-struct BranchDiffIterator {
+pub struct BranchDiffIterator {
     state: Arc<RwLock<BlockManagerState>>,
 
     left_block: Option<Block>,
