@@ -41,7 +41,6 @@ This usage information is also available on the command line by using the
    cli/sawadm.rst
    cli/sawnet.rst
    cli/sawset.rst
-   cli/poet.rst
    cli/identity-tp.rst
    cli/intkey.rst
    cli/settings-tp.rst
