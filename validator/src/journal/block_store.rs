@@ -149,3 +149,50 @@ impl<'a> Iterator for InMemoryIter<'a> {
         block
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use block::Block;
+    use journal::NULL_BLOCK_IDENTIFIER;
+
+    fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
+        Block {
+            header_signature: header_signature.into(),
+            previous_block_id: previous_block_id.into(),
+            block_num,
+            batches: vec![],
+            state_root_hash: "".into(),
+            consensus: vec![],
+            batch_ids: vec![],
+            signer_public_key: "".into(),
+            header_bytes: vec![],
+        }
+    }
+
+    #[test]
+    fn test_block_store() {
+        let mut store = InMemoryBlockStore::new();
+
+        let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
+        let block_b = create_block("B", 2, "A");
+        let block_c = create_block("C", 3, "B");
+
+        store
+            .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
+            .unwrap();
+        assert_eq!(store.get(vec!["A".into()]).next().unwrap(), &block_a);
+
+        {
+            let mut iterator = store.iter();
+
+            assert_eq!(iterator.next().unwrap(), &block_c);
+            assert_eq!(iterator.next().unwrap(), &block_b);
+            assert_eq!(iterator.next().unwrap(), &block_a);
+            assert_eq!(iterator.next(), None);
+        }
+
+        assert_eq!(store.delete(vec!["C".into()]).unwrap(), vec![block_c]);
+    }
+
+}
