@@ -70,26 +70,27 @@ class ConsensusProxy:
         return self._block_publisher.summarize_block()
 
     def finalize_block(self, consensus_data):
-        result = self._block_publisher.finalize_block(
-            consensus=consensus_data)
-        return bytes.fromhex(
-            self._block_publisher.publish_block(
-                result.block, result.injected_batches))
+        return bytes.fromhex(self._block_publisher.finalize_block(
+            consensus=consensus_data))
 
     def cancel_block(self):
         self._block_publisher.cancel_block()
 
-    # Using chain controller
     def check_blocks(self, block_ids):
+        for block_id in block_ids:
+            if block_id.hex() not in self._block_cache:
+                raise UnknownBlock(block_id.hex())
+
+    def get_block_statuses(self, block_ids):
+        """Returns a list of tuples of (block id, BlockStatus) pairs.
+        """
         try:
-            blocks = [
-                self._block_cache[block_id.hex()]
+            return [
+                (block_id.hex(), self._block_cache[block_id.hex()].status)
                 for block_id in block_ids
             ]
         except KeyError as key_error:
             raise UnknownBlock(key_error.args[0])
-
-        self._chain_controller.submit_blocks_for_verification(blocks)
 
     def commit_block(self, block_id):
         try:
@@ -133,7 +134,17 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_settings_view(
                 self._settings_view_factory)
 
-        return _map_with_none(settings_view.get_setting, settings)
+        result = []
+        for setting in settings:
+            try:
+                value = settings_view.get_setting(setting)
+            except KeyError:
+                # if the key is missing, leave it out of the response
+                continue
+
+            result.append((setting, value))
+
+        return result
 
     def state_get(self, block_id, addresses):
         '''Returns a list of address/data pairs (str, bytes)'''
@@ -141,7 +152,27 @@ class ConsensusProxy:
             self._get_blocks([block_id])[0].get_state_view(
                 self._state_view_factory)
 
-        return _map_with_none(state_view.get, addresses)
+        result = []
+
+        for address in addresses:
+            # a fully specified address
+            if len(address) == 70:
+                try:
+                    value = state_view.get(address)
+                except KeyError:
+                    # if the key is missing, leave it out of the response
+                    continue
+
+                result.append((address, value))
+                continue
+
+            # an address prefix
+            leaves = state_view.leaves(address)
+
+            for leaf in leaves:
+                result.append(leaf)
+
+        return result
 
     def _get_blocks(self, block_ids):
         try:
@@ -151,17 +182,3 @@ class ConsensusProxy:
             ]
         except KeyError:
             raise UnknownBlock()
-
-
-def _map_with_none(function, keys):
-    result = []
-
-    for key in keys:
-        try:
-            value = function(key)
-        except KeyError:
-            value = None
-
-        result.append((key, value))
-
-    return result

@@ -64,6 +64,7 @@ def add(
         client_thread_pool,
         sig_pool,
         block_publisher,
+        public_key,
 ):
 
     # -- Transaction Processor -- #
@@ -121,6 +122,7 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         ClientBatchSubmitBackpressureHandler(
+            public_key,
             block_publisher.pending_batch_info),
         client_thread_pool)
 

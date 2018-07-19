@@ -16,7 +16,8 @@
  */
 
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, PythonObject, ToPyObject};
+
 use journal::block_wrapper::BlockStatus;
 use journal::block_wrapper::BlockWrapper;
 
@@ -35,15 +36,41 @@ use proto::transaction::Transaction as ProtoTxn;
 use proto::transaction::TransactionHeader;
 use pylogger;
 
-impl ToPyObject for BlockStatus {
-    type ObjectType = cpython::PyLong;
+lazy_static! {
+    static ref PY_BLOCK_WRAPPER: PyObject = Python::acquire_gil()
+        .python()
+        .import("sawtooth_validator.journal.block_wrapper")
+        .expect("Unable to import block_wrapper")
+        .get(Python::acquire_gil().python(), "BlockWrapper")
+        .expect("Unable to get BlockWrapper");
+}
 
-    fn to_py_object(&self, py: Python) -> cpython::PyLong {
+lazy_static! {
+    static ref PY_BLOCK_STATUS: PyObject = Python::acquire_gil()
+        .python()
+        .import("sawtooth_validator.journal.block_wrapper")
+        .expect("Unable to import block_wrapper")
+        .get(Python::acquire_gil().python(), "BlockStatus")
+        .expect("Unable to get BlockStatus");
+}
+
+impl ToPyObject for BlockStatus {
+    type ObjectType = cpython::PyObject;
+
+    fn to_py_object(&self, py: Python) -> cpython::PyObject {
         match self {
-            &BlockStatus::Unknown => 0i32.to_py_object(py),
-            &BlockStatus::Invalid => 1i32.to_py_object(py),
-            &BlockStatus::Valid => 2i32.to_py_object(py),
-            &BlockStatus::Missing => 3i32.to_py_object(py),
+            &BlockStatus::Unknown => PY_BLOCK_STATUS
+                .getattr(py, "Unknown")
+                .expect("No BlockStatus.Unknown"),
+            &BlockStatus::Invalid => PY_BLOCK_STATUS
+                .getattr(py, "Invalid")
+                .expect("No BlockStatus.Invalid"),
+            &BlockStatus::Valid => PY_BLOCK_STATUS
+                .getattr(py, "Valid")
+                .expect("No BlockStatus.Valid"),
+            &BlockStatus::Missing => PY_BLOCK_STATUS
+                .getattr(py, "Missing")
+                .expect("No BlockStatus.Missing"),
         }
     }
 }
@@ -64,116 +91,18 @@ impl ToPyObject for BlockWrapper {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> PyObject {
-        let block_wrapper_mod = py.import("sawtooth_validator.journal.block_wrapper")
-            .expect("Unable to import block_wrapper");
-        let py_block_wrapper = block_wrapper_mod
-            .get(py, "BlockWrapper")
-            .expect("Unable to get BlockWrapper");
-        let block_protobuf_mod = py.import("sawtooth_validator.protobuf.block_pb2")
-            .expect("Unable to import block_pb2");
-        let py_block = block_protobuf_mod
-            .get(py, "Block")
-            .expect("Unable to get Block");
+        self.py_block_wrapper.clone_ref(py)
+    }
 
-        let mut proto_block = ProtoBlock::new();
-        let self_block = self.block.clone();
-        proto_block.set_header(self_block.header_bytes.clone());
-        proto_block.set_header_signature(self_block.header_signature.clone());
-
-        let proto_batches = self_block
-            .batches
-            .iter()
-            .map(|batch| {
-                let mut proto_batch = ProtoBatch::new();
-                proto_batch.set_header(batch.header_bytes.clone());
-                proto_batch.set_header_signature(batch.header_signature.clone());
-
-                let proto_txns = batch
-                    .transactions
-                    .iter()
-                    .map(|txn| {
-                        let mut proto_txn = ProtoTxn::new();
-                        proto_txn.set_header(txn.header_bytes.clone());
-                        proto_txn.set_header_signature(txn.header_signature.clone());
-                        proto_txn.set_payload(txn.payload.clone());
-                        proto_txn
-                    })
-                    .collect::<Vec<_>>();
-
-                proto_batch.set_transactions(protobuf::RepeatedField::from_vec(proto_txns));
-
-                proto_batch
-            })
-            .collect::<Vec<_>>();
-
-        proto_block.set_batches(protobuf::RepeatedField::from_vec(proto_batches));
-
-        let block = py_block
-            .call(py, cpython::NoArgs, None)
-            .expect("Unable to instantiate Block");
-        block
-            .call_method(
-                py,
-                "ParseFromString",
-                (cpython::PyBytes::new(py, &proto_block.write_to_bytes().unwrap()).into_object(),),
-                None,
-            )
-            .expect("Unable to ParseFromString");
-
-        let wrapper = py_block_wrapper
-            .call_method(py, "wrap", (block, 0, self.status.clone()), None)
-            .expect("Unable to call BlockWrapper.wrap");
-
-        wrapper
-            .setattr(py, "num_transactions", self.num_transactions)
-            .expect("Unable to set BlockWrapper.num_transactions");
-
-        wrapper
+    fn into_py_object(self, py: Python) -> PyObject {
+        self.py_block_wrapper
     }
 }
 
 impl<'source> FromPyObject<'source> for BlockWrapper {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        let py_block = obj.getattr(py, "block")
-            .expect("Unable to get block from BlockWrapper");
-
-        let bytes: Vec<u8> = py_block
-            .call_method(py, "SerializeToString", cpython::NoArgs, None)?
-            .extract(py)?;
-
-        let mut proto_block: ProtoBlock = protobuf::parse_from_bytes(&bytes)
-            .expect("Unable to parse protobuf bytes from python protobuf object");
-
-        let mut block_header: BlockHeader = protobuf::parse_from_bytes(proto_block.get_header())
-            .expect("Unable to parse protobuf bytes from python protobuf object");
-        let block = Block {
-            header_signature: proto_block.take_header_signature(),
-            header_bytes: proto_block.take_header(),
-            state_root_hash: block_header.take_state_root_hash(),
-            consensus: block_header.take_consensus(),
-            batch_ids: block_header.take_batch_ids().into_vec(),
-            signer_public_key: block_header.take_signer_public_key(),
-            previous_block_id: block_header.take_previous_block_id(),
-            block_num: block_header.get_block_num(),
-
-            batches: proto_block
-                .take_batches()
-                .iter_mut()
-                .map(proto_batch_to_batch)
-                .collect(),
-        };
-
         Ok(BlockWrapper {
-            block,
-            execution_results: obj.getattr(py, "execution_results")?.extract(py)?,
-            num_transactions: obj.getattr(py, "num_transactions")?.extract(py)?,
-            status: match obj.getattr(py, "status")?.extract(py) {
-                Ok(x) => x,
-                Err(err) => {
-                    pylogger::exception(py, "Unable to read status", err);
-                    BlockStatus::Unknown
-                }
-            },
+            py_block_wrapper: obj.clone_ref(py),
         })
     }
 }
@@ -229,15 +158,14 @@ mod tests {
         let py = gil_guard.python();
 
         let block_wrapper = BlockWrapper {
-            block: Block::default(),
-            status: BlockStatus::Valid,
-            ..BlockWrapper::default()
+            py_block_wrapper: PY_BLOCK_WRAPPER
+                .call(py, (Block::default(), 0, BlockStatus::Valid), None)
+                .unwrap(),
         };
 
         let py_block_wrapper = block_wrapper.to_py_object(py);
         let round_trip_obj: BlockWrapper = py_block_wrapper.extract(py).unwrap();
 
-        assert_eq!(BlockStatus::Valid, round_trip_obj.status);
+        assert_eq!(BlockStatus::Valid, round_trip_obj.status());
     }
-
 }

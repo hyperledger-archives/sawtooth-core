@@ -33,7 +33,7 @@ pub struct ChainHeadGuard<'a> {
 impl<'a> ChainHeadGuard<'a> {
     pub fn notify_on_chain_updated(
         &mut self,
-        chain_head: Option<BlockWrapper>,
+        chain_head: BlockWrapper,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {

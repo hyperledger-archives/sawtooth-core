@@ -282,8 +282,8 @@ class TxnExecutionResult:
     """
 
     def __init__(self, signature, is_valid, context_id=None, state_hash=None,
-                 state_changes=None, events=None, data=None, error_message="",
-                 error_data=b""):
+                 state_changes=None, events=None, data=None,
+                 error_message=None, error_data=None):
 
         if is_valid and context_id is None:
             raise ValueError(
@@ -302,8 +302,8 @@ class TxnExecutionResult:
         self.state_changes = state_changes if state_changes is not None else []
         self.events = events if events is not None else []
         self.data = data if data is not None else []
-        self.error_message = error_message
-        self.error_data = error_data
+        self.error_message = error_message if error_message is not None else ''
+        self.error_data = error_data if error_data is not None else b''
 
 
 class TxnInformation:

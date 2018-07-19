@@ -25,7 +25,7 @@ use batch::Batch;
 
 use protobuf::ProtobufError;
 
-use scheduler::{BatchResult, TransactionResult};
+use scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
 use scheduler::{ExecutionResults, Scheduler, SchedulerError};
 
 impl From<ProtobufError> for SchedulerError {
@@ -42,7 +42,7 @@ impl From<cpython::PyErr> for SchedulerError {
     }
 }
 
-type CombinedOptionalBatchResult = Vec<(Vec<TransactionResult>, Option<BatchResult>, String)>;
+type CombinedOptionalBatchResult = Vec<(Vec<PyTxnExecutionResult>, Option<PyBatchExecutionResult>, String)>;
 
 pub struct PyScheduler {
     py_scheduler: cpython::PyObject,
@@ -119,38 +119,30 @@ impl Scheduler for PyScheduler {
 
     fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError> {
         if self.is_complete(block)? {
-            let r: PyResult<CombinedOptionalBatchResult> = self.batch_ids
+            let results = self.batch_ids
                 .iter()
                 .map(|id| {
                     let gil = cpython::Python::acquire_gil();
                     let py = gil.python();
-                    let batch_result: cpython::PyObject = self.py_scheduler
+                    let batch_result: Option<PyBatchExecutionResult> = self.py_scheduler
                         .call_method(py, "get_batch_execution_result", (id,), None)
-                        .expect("No method get_batch_execution_result on python scheduler");
+                        .expect("No method get_batch_execution_result on python scheduler")
+                        .extract(py)?;
 
-                    if batch_result != cpython::Python::None(py) {
-                        let result = batch_result
-                            .extract::<BatchResult>(py)
-                            .expect("Failed to extract BatchResult");
-
-                        let txn_results: Vec<TransactionResult> = self.py_scheduler
+                    if batch_result.is_some() {
+                        let txn_results: Vec<PyTxnExecutionResult> = self.py_scheduler
                             .call_method(py, "get_transaction_execution_results", (id,), None)
                             .expect(
                                 "No method get_transaction_execution_results on python scheduler",
                             )
-                            .extract::<cpython::PyList>(py)?
-                            .iter(py)
-                            .map(|r| r.extract::<TransactionResult>(py))
-                            .collect::<Result<Vec<TransactionResult>, cpython::PyErr>>()?;
+                            .extract(py)?;
 
-                        Ok((txn_results, Some(result), id.to_owned()))
+                        Ok((txn_results, batch_result, id.to_owned()))
                     } else {
                         Ok((vec![], None, id.to_owned()))
                     }
                 })
-                .collect();
-
-            let results = r?;
+                .collect::<PyResult<CombinedOptionalBatchResult>>()?;
 
             let beginning_state_hash = results
                 .first()
@@ -165,13 +157,13 @@ impl Scheduler for PyScheduler {
                 .find(|batch_result| {
                     batch_result
                         .clone()
-                        .expect("Failed to unwrap batch result")
+                        .expect("Failed to unwrap batch result to check state hash")
                         .state_hash
                         .is_some()
                 })
                 .map(|batch_result| {
                     batch_result
-                        .expect("Failed to unwrap batch result")
+                        .expect("Failed to unwrap batch result to get state hash")
                         .state_hash
                 })
                 .unwrap_or(None);
@@ -184,7 +176,7 @@ impl Scheduler for PyScheduler {
                         Some(
                             val.0
                                 .into_iter()
-                                .map(|v: TransactionResult| v.into())
+                                .map(|v: PyTxnExecutionResult| v.into())
                                 .collect(),
                         ),
                     ),

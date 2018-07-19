@@ -45,3 +45,5 @@ mod batch_ffi;
 pub mod block;
 mod block_ffi;
 pub mod transaction;
+
+pub mod ffi;

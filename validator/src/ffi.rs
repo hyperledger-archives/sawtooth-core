@@ -14,23 +14,16 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use std::sync::mpsc::Sender;
 
-use journal::block_wrapper::BlockWrapper;
+#[no_mangle]
+pub extern "C" fn ffi_reclaim_bytes(
+    bytes: *mut *const u8,
+    bytes_len: *mut usize,
+) -> isize {
+    unsafe { ::std::slice::from_raw_parts(
+        (*bytes) as *mut u8,
+        *bytes_len,
+    ) };
 
-#[derive(Debug)]
-pub enum ValidationError {
-    BlockValidationFailure(String),
-}
-
-pub trait BlockValidator: Send + Sync {
-    fn has_block(&self, block_id: &str) -> bool;
-
-    fn validate_block(&self, block: BlockWrapper) -> Result<(), ValidationError>;
-
-    fn submit_blocks_for_verification(
-        &self,
-        blocks: &[BlockWrapper],
-        response_sender: Sender<BlockWrapper>,
-    );
+    0
 }

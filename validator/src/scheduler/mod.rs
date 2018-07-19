@@ -46,8 +46,6 @@ pub trait Scheduler: Sync + Send {
     fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError>;
 }
 
-pub use self::execution_result_ffi::{BatchResult, TransactionResult};
-
 pub struct ExecutionResults {
     pub beginning_state_hash: Option<String>,
     pub ending_state_hash: Option<String>,
