@@ -37,7 +37,7 @@ TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
-    # 1. Generate and distribute top-level protos
+    # Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
 
     protoc(proto_dir, "sdk/python", "sawtooth_sdk/protobuf")
@@ -51,28 +51,21 @@ def main(args=None):
     if "go" in args:
         protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
-    # 2. Generate config protos
+    # Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/settings/protos")
     protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
-    # 3. Generate PoET protos
-    proto_dir = \
-        JOIN(
-            TOP_DIR,
-            "consensus/poet/families/sawtooth_validator_registry/protos")
-    protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
-
-    # 5. Generate identity protos
+    # Generate identity protos
     proto_dir = JOIN(TOP_DIR, "families/identity/protos")
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
-    # 6. Generate block info protos
+    # Generate block info protos
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
     protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
 
-    # 7. Generate smallbank protos
+    # Generate smallbank protos
     if "go" in args:
         proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
         protoc(proto_dir, "families/smallbank",
