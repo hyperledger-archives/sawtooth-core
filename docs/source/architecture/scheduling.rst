@@ -66,6 +66,8 @@ When the pending queue changes significantly, such as when the chain head has
 been updated by the Chain Controller, the Block Publisher cancels the current
 scheduler and creates a new scheduler.
 
+.. _txn-sched-executor-label:
+
 Executor
 --------
 

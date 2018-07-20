@@ -163,6 +163,8 @@ command from your host system:
    user@host$ docker-compose -f sawtooth-default-poet.yaml down
 
 
+.. _proc-multi-ubuntu-label:
+
 Ubuntu: Add a Node to the Single-Node Environment
 =================================================
 
