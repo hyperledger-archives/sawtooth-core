@@ -13,10 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 [package]
-name = "smallbank_workload"
+name = "sawtooth-smallbank-workload"
 version = "0.1.0"
 build = "build.rs"
-authors = ["sawtooth"]
+authors = ["Intel Corporation"]
 
 [dependencies]
 sawtooth_sdk = { path = "../../sdk/rust" }

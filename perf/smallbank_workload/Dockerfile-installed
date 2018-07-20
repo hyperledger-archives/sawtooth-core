@@ -46,8 +46,8 @@ RUN /root/.cargo/bin/cargo deb
 # -------------=== smallbank workload docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=smallbank-workload-builder /project/perf/smallbank_workload/target/debian/smallbank_workload*.deb /tmp
+COPY --from=smallbank-workload-builder /project/perf/smallbank_workload/target/debian/sawtooth-smallbank-workload*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/smallbank_workload*.deb || true \
+ && dpkg -i /tmp/sawtooth-smallbank-workload*.deb || true \
  && apt-get -f -y install
