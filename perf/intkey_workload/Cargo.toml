@@ -1,6 +1,7 @@
 [package]
-name = "intkey_workload"
+name = "sawtooth-intkey-workload"
 version = "0.1.0"
+authors = ["Intel Corporation"]
 
 [[bin]]
 name = "intkey-workload"
