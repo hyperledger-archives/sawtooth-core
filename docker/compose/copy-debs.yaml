@@ -277,6 +277,15 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
+  intkey-workload:
+    image: sawtooth-intkey-workload:${ISOLATION_ID}
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
+
   devmode-rust:
     image: sawtooth-devmode-rust:${ISOLATION_ID}
     volumes:
