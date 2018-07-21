@@ -1,0 +1,21 @@
+[package]
+name = "intkey_cli_rs"
+version = "0.1.0"
+authors = ["cbailey555 <cbailey555*at*protonmail.ch>"]
+
+[dependencies]
+clap = "2.31.2"
+sawtooth_sdk = { path = "/<path_to_your_copy_of>/sawtooth-core/sdk/rust/" }
+serde = "1.0.59"
+serde_derive = "1.0.59"
+serde_cbor = "0.8.2"
+serde_json = "1.0.19"
+rust-crypto = "0.2.36"
+protobuf = "2.0.0"
+base64 = "0.9.1"
+failure = "0.1.1"
+failure_derive = "0.1.1"
+users = "0.7.0"
+hyper = "0.11"
+tokio-core = "0.1"
+futures = "0.1"
