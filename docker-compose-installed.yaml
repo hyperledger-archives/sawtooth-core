@@ -257,6 +257,13 @@ services:
     image: sawtooth-smallbank-workload:${ISOLATION_ID}
     container_name: sawtooth-smallbank-workload
 
+  intkey-workload:
+    build:
+      context: .
+      dockerfile: perf/intkey_workload/Dockerfile-installed
+    image: sawtooth-intkey-workload:${ISOLATION_ID}
+    container_name: sawtooth-intkey-workload
+
   devmode-rust:
     build:
       context: .
