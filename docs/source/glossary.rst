@@ -59,8 +59,8 @@ This glossary defines general Sawtooth terms and concepts.
     see :doc:`transaction_family_specifications/integerkey_transaction_family`.
 
   Journal
-    Sawtooth core component that is responsible for maintaining and extending
-    the blockchain for the validator. For more information, see
+    Group of Sawtooth core processes that are responsible for maintaining and
+    extending the blockchain for the validator. For more information, see
     :doc:`architecture/journal`.
 
   Merkle-Radix tree
