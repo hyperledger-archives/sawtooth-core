@@ -854,6 +854,8 @@ struct QueueLimit {
     avg: RollingAverage,
 }
 
+const QUEUE_MULTIPLIER: usize = 10;
+
 impl QueueLimit {
     pub fn new(sample_size: usize, initial_value: usize) -> QueueLimit {
         QueueLimit {
@@ -882,9 +884,10 @@ impl QueueLimit {
     }
 
     pub fn get(&self) -> usize {
-        // Limit the number of items to 2 times the publishing average.  This
-        // allows the queue to grow geometrically, if the queue is drained.
-        2 * self.avg.value()
+        // Limit the number of items to QUEUE_MULTIPLIER times the publishing
+        // average.  This allows the queue to grow geometrically, if the queue
+        // is drained.
+        QUEUE_MULTIPLIER * self.avg.value()
     }
 }
 
