@@ -162,34 +162,24 @@ These dependencies include the protocol buffers definitions (under the ``protos`
 directory) for the target languages and a set of docker images with
 the required build and runtime dependencies installed.
 
-To build all the dependencies for all Sawtooth components, run this command:
+To build all the dependencies for running the full test-suite, run:
 
   ```bash
-    $ bin/build_all
+    $ docker-compose -f docker/compose/sawtooth-build.yaml up
   ```
 
-By default, this command builds all the components for all modules and SDKs in
-the repository. This is a very slow process. We recommended that you build only
-the language dependencies that you need for your development purposes.
-
-The minimum requirement for running the Sawtooth validator is the Python build:
+To build the requirements to run a validator network, run this command:
 
   ```bash
-    $ bin/build_all -l python
+    $ docker-compose build
   ```
 
-**Tip:** If you see `Host not found` errors in the output of `build_all`, see
+This will build docker images suitable for running a validator, rest api,
+settings transaction processor, intkey and xo python transaction processors,
+and a client to interact with the network.
+
+**Tip:** If you see `Host not found` errors in the output, see
 "Docker DNS (Optional)", above.
-
-To get details on all the options for the `build_all` script, run:
-
-  ```bash
-    $ bin/build_all -h
-  ```
-
-If you are working on the core validator, only the Python language is
-required. If you are working on a particular language SDK, you must
-build the language for that SDK as well.
 
 **Note:** This build environment uses Docker to virtualize the build and
 to execute the code in the development directory. This allows you to
@@ -197,11 +187,20 @@ build and test the changes made to the local source without installing local
 dependencies on your machine.
 
 If you wish to configure your development machine to do compilation
-directly on the host without Docker virtualization, see the dockerfiles in the
-`sawtooth-core/docker` directory. For example, the file
-`sawtooth-core/docker/sawtooth-dev-python`
-describes the configuration and components needed to build
-and run the Python components on a system.
+directly on the host without Docker virtualization, see the `Dockerfile` in
+any component directory. For example, the file
+`sawtooth-core/validator/Dockerfile` describes the configuration and components
+needed to build and run the validator on a system.
+
+Also provided is a docker-compose file which builds a full set of images
+with Sawtooth installed, and only the run-time dependencies installed.
+
+  ```bash
+    $ docker-compose -f docker-compose-installed.yaml build
+  ```
+
+These installed images also generate .deb artifacts during build. They can be found
+in the `/tmp` dir in any of the images.
 
 Step Five: Start a Validator Node
 -------------
@@ -209,10 +208,11 @@ Step Five: Start a Validator Node
 To run a full validator node from the local source:
 
 ```bash
-  $ docker-compose -f docker/compose/sawtooth-local.yaml up
+  $ docker-compose up
 ```
 
 This command starts a validator with the following components attached to it:
+
   - REST API (available on host port 8008)
   - IntKey transaction processor (Python implementation)
   - Settings transaction processor
@@ -222,20 +222,21 @@ This command starts a validator with the following components attached to it:
 From another console window, you can access the shell with this command:
 
 ```bash
-  $ docker-compose -f docker/compose/sawtooth-local.yaml exec client bash
+  $ docker-compose exec client bash
 ```
 
 This command uses Docker Compose and the development Docker images. These
 images have the runtime dependencies installed, but run Sawtooth
 from the source in your workspace. You can inspect
-`docker/compose/sawtooth-local.yaml` to see how the various components are
+`docker-compose.yaml` to see how the various components are
 launched and connected.
 
 Step Six: Run Automated Tests
 -------------
 
 **Note:** The automated tests rely on Docker to ensure reproducibility.
-You must have Docker images that were built with the `build_all` command,
+You must have Docker images that were built with the
+`docker-compose -f docker/compose/sawtooth-build.yaml up` command
 as described above.
 
 To run the automated tests for Python components, while excluding
