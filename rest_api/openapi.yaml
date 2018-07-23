@@ -200,6 +200,10 @@ paths:
         to a particular head block. Using the `address` filter parameter will
         narrow the list to any entries that have an address beginning with the
         characters specified.
+
+        Note that the partial address in `address` parameter should have even 
+        number of hecadeximal characters (i.e., complete bytes).
+        
       parameters:
         - $ref: "#/parameters/head"
         - name: address
@@ -236,6 +240,10 @@ paths:
       - $ref: "#/parameters/address"
     get:
       summary: Fetches a particular leaf from the current state
+      description: >
+        Takes full 70-character address and fetches a particular leaf.
+        For partial address (i.e., group of leaves) use `/state` above. 
+
       parameters:
         - $ref: "#/parameters/head"
       responses:
