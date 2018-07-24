@@ -183,21 +183,24 @@ creating blocks, committing blocks, and networking between peers and other nodes
 on the network.
 
 
-Genesis Operation
-=================
+The Genesis Process
+===================
 
-`Genesis operation` is the process of creating a genesis block (the root of a
-blockchain). A genesis block is required to bootstrap a new Sawtooth validator
-network with on-chain settings such as the desired consensus algorithm, any
-deployment-specific configuration settings, and any application-specific
-transactions that are needed at genesis time.
+The process of creating a :term:`genesis block` is different from the standard
+block-creation process that is described in the
+:doc:`previous Journal sections <journal>`.
+
+A genesis block (the root of a blockchain) is required to bootstrap a new
+Sawtooth validator network with on-chain settings such as the desired consensus
+algorithm, any deployment-specific configuration settings, and any
+application-specific transactions that are needed at genesis time.
 
 The genesis block contains a list of batches that the validator will process
 when starting with an empty blockchain. This allows applications (also called
 transaction families) to include their own batches without needing to know
 the details of the genesis process.
 
-Genesis operation has the following general steps:
+The genesis process has the following general steps:
 
 1. Create a genesis batch of initial blockchain transactions
 #. Create a genesis block from the genesis batch
@@ -296,7 +299,7 @@ produce a genesis block.
 Genesis Block Processing
 ------------------------
 
-To complete the genesis operation process and commit the genesis block, all
+To complete the genesis process and commit the genesis block, all
 necessary transaction processors must be running.
 
 If any transactions in the genesis block set or change settings, Sawtooth
