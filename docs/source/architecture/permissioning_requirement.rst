@@ -1,33 +1,38 @@
-**************************
-Permissioning Requirements
-**************************
+********************
+Permissioning Design
+********************
 
-The following is a detailed list of permissioning requirements, capabilities,
-and user stories that aid in the explanation and discussion of the
-permissioning design for Hyperledger Sawtooth.
+Sawtooth includes the ability to control validator and transactor
+permissions. This chapter describes permissioning in Hyperledger Sawtooth by
+providing a detailed list of the requirements, capabilities, and user stories
+that help to understand permissioning design.
 
-The following permission groups are presented in this document:
+Sawtooth divides permissioning into two general groups:
 
-  - Transactor key permissioning, which controls acceptance of transactions and
-    batches based on signing keys.
-  - Validator key permissioning, which controls which nodes are allowed to
+  - `Transactor key permissioning` controls who can submit transactions and
+    batches, based on signing keys.
+  - `Validator key permissioning` controls which nodes are allowed to
     establish connections to the validator network.
 
-The permissioning types are further broken down into capability requirements.
-Each requirement is made up of a short description, the network scenario the
-requirement supports, and associated user stories. User stories are short
-statements about a requirement or capability that an actor desires. These short
-descriptions illustrate the need for specific permission requirements.
+This chapter summarizes the types of validator networks, then lists the
+capability requirements for these permissioning groups. Each requirement has
+a short description, the network scenario the requirement supports, and
+associated `user stories`. User stories are short statements about a requirement
+or capability that an actor desires. These short descriptions illustrate the
+need for specific permission requirements.
 
-The design requirements for permissioning include both local validator
-configuration and network-wide on-chain permissioning. Local configuration is
-needed so that a validator can limit who is allowed to submit batches and
-transactions directly to that validator. This is useful, for example, if a
-company is running its own validator and wishes to only allow members of that
-company to submit transactions. On-chain configuration is required so that the
-whole of the network can enforce consistent permissioning rules. For example,
-in validator key permissioning, all the validators on the network will reject
-the same node from peering, ensuring that only known nodes can join the network.
+The design of Sawtooth permissioning includes both local validator configuration
+and network-wide on-chain permissioning.
+
+- Local configuration allows a validator to limit who is allowed to submit
+  batches and transactions directly to that validator. This is useful, for
+  example, if a company is running its own validator and wishes to allow only
+  members of that company to submit transactions.
+
+- On-chain configuration allows a Sawtooth network to enforce consistent
+  permissioning rules. For example, in validator key permissioning, all the
+  validators on the network will reject the same node from peering, ensuring
+  that only known nodes can join the network.
 
 Definitions
 ===========
@@ -108,38 +113,33 @@ Sysadmin
 Validator Network Scenarios
 ===========================
 
-The following example network scenarios are used to illustrate when each
-capability requirement would be useful.
+Sawtooth is designed to support public, consortium, and private networks.
+The following network scenarios are used in the discussion of capability
+requirements to illustrate when each requirement would be useful.
 
-Public Network
---------------
+- Public network:
+  In a public network, all connections are allowed and all transactors are
+  allowed to sign batches and transactions.
 
-In a public network, all connections will be allowed and all transactors are
-allowed to sign batches and transactions.
+- Consortium network:
+  In a consortium network, only specific validators are allowed to join the
+  validator network and participate in consensus. However, the network allows
+  any client, transaction processor, or event subscriber to connect to a
+  validator and accept batches and transactions signed by all transactors.
 
-In order for a public Sawtooth network to function correctly, an incentive
-system would also need to be designed and implemented. Such a system is beyond
-the scope of this design and so it is omitted.
+- Private Network:
+  In a private network, only specific validators are allowed to join the
+  validator network and participate in consensus. The validators in the network
+  accept only connections from specific clients. The validators also control
+  whether the client is allowed to submit batches and query specific address
+  prefixes in state. Only specific transaction processors and event subscribers
+  are allowed to connect to the local validator. Batches and transactions that
+  are received by the validator can only be signed by permitted transactors.
+  Transactors can also be restricted to only sending transactions for certain
+  transaction families.
 
-Consortium Network
-------------------
-
-In a consortium network, only specific validators will be allowed to join the
-validator network and participate in consensus. The network will still allow
-any client, transaction processor, or state delta subscriber to connect to a
-validator and accept batches and transactions signed by all transactors.
-
-Private Network
----------------
-
-In a private network, only specific validators will be allowed to join the
-validator network and participate in consensus. The validators in the network
-will only accept connections from specific clients and will control if the
-client is allowed to submit batches and query specific address prefixes in
-state. Only specific transaction processors and state delta subscribers will be
-allowed to connect to the local validator. Batches and transactions received by
-the validator can only be signed by permitted transactors. Transactors may also
-be restricted to only sending transactions for certain transaction families.
+The following table summaries the capability requirements for each network
+scenario.
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | Capabilities                                           |
@@ -171,23 +171,28 @@ be restricted to only sending transactions for certain transaction families.
 Transactor Key Permissioning
 ============================
 
-The following stories are related to permissioning performed on the basis of a
-transactor's public signing key. This includes both batch signers and
-transaction signers. The validator will check local configuration and network
-configuration when receiving a batch from a client and only batch signers
-permitted in the intersection of the two configurations will be allowed. When
-the validator receives a batch from a peer, only the network configuration will
-be checked. This is required to prevent network forks.
+Transactor key permissioning is performed on the basis of a transactor's public
+signing key. This includes both batch signers and transaction signers.
 
-
+When the validator receives a batch from a client, it checks both the local
+configuration and network configuration.  Only the batch signers that are
+permitted in the intersection of the two configurations will be allowed.
+
+When the validator receives a batch from a peer validator, only the network
+configuration is checked. This behavior is required to prevent network forks.
+
+The following tables describe the design of each capability for transactor
+key permissioning.
+
 Allow all batch signers to submit batches
+-----------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - YES                                         |
 |                    | - Consortium - YES                                     |
 |                    | - Private - NO                                         |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to be configured to allow   |
+| Description        | The validator can be configured to allow               |
 |                    | all batches to be submitted, regardless of who the     |
 |                    | batch signer is. In other words, if a client is        |
 |                    | connected to the validator and that client is allowed  |
@@ -196,47 +201,49 @@ Allow all batch signers to submit batches
 |                    | These batches will still be rejected if they fail      |
 |                    | signature verification.                                |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A sysadmin must be able to configure a local         |
+| User Stories       | - A sysadmin can configure a local                     |
 |                    |   validator to accept batches signed by any batch      |
 |                    |   signer.                                              |
-|                    | - A network operator must be able to configure the     |
+|                    | - A network operator can configure the                 |
 |                    |   validator network to accept batches signed by any    |
 |                    |   batch signer.                                        |
 +--------------------+--------------------------------------------------------+
 
 Allow only specific batch signers to submit batches
+---------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - NO                                      |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to be configured to only    |
+| Description        | The validator can be configured to only                |
 |                    | allow certain batch signers to submit batches. If the  |
 |                    | validator receives a batch that was signed by a batch  |
 |                    | signer whose public key is not allowed, that batch     |
-|                    | should be dropped. Batches should also be checked      |
+|                    | is dropped. Batches are also checked                   |
 |                    | before block validation. If the validator network      |
-|                    | permits a given batch signer, the validator must accept|
+|                    | permits a given batch signer, the validator accepts    |
 |                    | batches signed by that batch signer from peers,        |
 |                    | regardless of its local configuration.                 |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A sysadmin must be able to configure a local         |
+| User Stories       | - A sysadmin can configure a local                     |
 |                    |   validator to accept batches signed only by predefined|
 |                    |   batch signers.                                       |
-|                    | - A network operator must be able to configure the     |
+|                    | - A network operator can configure the                 |
 |                    |   whole validator network to only accept batches from  |
 |                    |   specific batch signers.                              |
 +--------------------+--------------------------------------------------------+
 
 Allow all transaction signers to submit transactions
+----------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - YES                                         |
 |                    | - Consortium - YES                                     |
 |                    | - Private - NO                                         |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to be configured to allow   |
+| Description        | The validator can be configured to allow               |
 |                    | all transactions to be submitted, regardless of who the|
 |                    | transaction signer is. In other words, if a client is  |
 |                    | connected to the validator and the client is allowed to|
@@ -245,142 +252,152 @@ Allow all transaction signers to submit transactions
 |                    | the transactions. These transactions will still be     |
 |                    | rejected if they fail signature verification.          |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A sysadmin must be able to configure a local         |
+| User Stories       | - A sysadmin can configure a local                     |
 |                    |   validator to accept transactions signed by any       |
 |                    |   transaction signer.                                  |
-|                    | - A network operator must be able to configure the     |
+|                    | - A network operator can configure the                 |
 |                    |   whole validator network to accept transactions signed|
 |                    |   by any batch signer.                                 |
 +--------------------+--------------------------------------------------------+
 
 Allow only specific transaction signers to submit transactions
+--------------------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - NO                                      |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to be configured to only    |
+| Description        | The validator can be configured to only                |
 |                    | allow certain transaction signers to submit            |
 |                    | transactions. In other words, if the validator receives|
 |                    | a transaction that was signed by a transaction signer  |
 |                    | whose public key is not allowed, that transaction      |
 |                    | should be dropped. Transactions should also be checked |
 |                    | during block validation. If the validator network      |
-|                    | permits a given transaction signer, the validator must |
-|                    | accept transaction signed by that transaction signer   |
+|                    | permits a given transaction signer, the validator will |
+|                    | accept transactions signed by that transaction signer  |
 |                    | from peers, regardless of its local configuration.     |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A sysadmin must be able to configure a local         |
+| User Stories       | - A sysadmin can configure a local                     |
 |                    |   validator to accept transactions signed only by      |
 |                    |   predefined transaction signers.                      |
-|                    | - A network operator must be able to configure the     |
+|                    | - A network operator can configure the                 |
 |                    |   whole validator network to accept batches only from  |
 |                    |   specific transaction signers.                        |
 +--------------------+--------------------------------------------------------+
 
 Restrict the type of transactions transactors can sign
+------------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - NO                                      |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to restrict the transaction |
+| Description        | The validator can restrict the transaction             |
 |                    | signers that are allowed to sign transactions for a    |
-|                    | specific transaction family. This permissioning would  |
-|                    | be separate from any public key permissioning enforced |
+|                    | specific transaction family. This permissioning is     |
+|                    | separate from any public key permissioning enforced    |
 |                    | by the transaction family logic.                       |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A network operator must be able to configure the     |
+| User Stories       | - A network operator can configure the                 |
 |                    |   whole validator network to only accept transactions  |
 |                    |   that were signed by allowed transaction signers for a|
 |                    |   specific transaction family.                         |
 +--------------------+--------------------------------------------------------+
 
 Support policy-based transactor permissioning
+---------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - YES                                     |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator must be able to enforce transactor       |
+| Description        | The validator can enforce transactor                   |
 |                    | permissions based on defined policies.                 |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A sysadmin must be able to configure a local         |
-|                    |   validator to only accept transactions and batches    |
+| User Stories       | - A sysadmin can configure a local                     |
+|                    |   validator to accept only transactions and batches    |
 |                    |   that are signed by transactors that are allowed by   |
 |                    |   predefined locally stored policies.                  |
-|                    | - A network operator must be able to configure the     |
-|                    |   whole validator network to only accept transactions  |
+|                    | - A network operator can configure the                 |
+|                    |   whole validator network to accept only transactions  |
 |                    |   and batches that are signed by transactor that are   |
 |                    |   allowed by defined policies.                         |
 +--------------------+--------------------------------------------------------+
 
 Validator Key Permissioning
 ===========================
-The following stories are related to permissioning performed on the basis of a
-node’s public signing key.
+
+Validator key permissioning is performed on the basis of a validator node’s
+public signing key.
+
+The following tables describe the design of each capability for validator
+key permissioning.
 
 Allow all nodes to join the validator network
+---------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - YES                                         |
 |                    | - Consortium - NO                                      |
 |                    | - Private - NO                                         |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network must be able to be configured to |
+| Description        | The validator network can be configured to             |
 |                    | allow all validator nodes to join the network. This    |
 |                    | means that every validator on the network should accept|
-|                    | the node as a peer regardless of what its public key   |
-|                    | is. The validator nodes will also be able to           |
+|                    | the node as a peer, regardless of its public key.      |
+|                    | The validator nodes are also able to                   |
 |                    | participate in consensus and communicate over the      |
-|                    | gossip protocol. The node will still need to go through|
+|                    | gossip protocol. The node must still go through        |
 |                    | the authorization procedure defined by the validator   |
 |                    | the node is trying to connect to. If, for any reason,  |
 |                    | the node fails the authorization procedure, it will be |
 |                    | rejected.                                              |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A network operator must be able to configure the     |
+| User Stories       | - A network operator can configure the                 |
 |                    |   validator network to accept all nodes that wish to   |
 |                    |   connect, regardless of the node’s public key.        |
 +--------------------+--------------------------------------------------------+
 
 Allow only specific nodes to join the validator network
+-------------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - YES                                     |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network must be able to be configured to |
+| Description        | The validator network can be configured to             |
 |                    | only allow nodes to join the network if the node's     |
 |                    | public key is permitted. In other words, if a validator|
 |                    | receives a connection request from a node, and the     |
 |                    | validator does not recognize the node’s public key, the|
-|                    | connection should be rejected.                         |
+|                    | connection is rejected.                                |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A network operator must be able to configure the     |
+| User Stories       | - A network operator can configure the                 |
 |                    |   validator network to only accept connections from    |
 |                    |   nodes with specific public keys.                     |
 +--------------------+--------------------------------------------------------+
 
 Allow only specific nodes to participate in consensus
+-----------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
 | Network Scenario   | - Public - NO                                          |
 |                    | - Consortium - YES                                     |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network must be able to be configured to |
+| Description        | The validator network can be configured to             |
 |                    | only allow specific nodes to participate in consensus. |
 |                    | This is separate from any restrictions enforced by the |
 |                    | consensus algorithm. The nodes that are not allowed to |
 |                    | participate in consensus can still validate blocks but |
 |                    | are not allowed to publish blocks.                     |
 +--------------------+--------------------------------------------------------+
-| User Stories       | - A network operator must be able to configure the     |
+| User Stories       | - A network operator can configure the                 |
 |                    |   validator network to only allow certain nodes to     |
 |                    |   participate in consensus.                            |
 +--------------------+--------------------------------------------------------+
