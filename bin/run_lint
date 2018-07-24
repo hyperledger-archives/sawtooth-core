@@ -218,12 +218,5 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint families/battleship "$SINCE" || retval=1
 
-# block info
-PYTHONPATH=$top_dir/families/block_info/python
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint families/block_info/python "$SINCE" || retval=1
 
 exit $retval

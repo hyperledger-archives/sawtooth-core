@@ -1,6 +1,5 @@
-#!/bin/bash
 #
-# Copyright 2018 Bitwise IO, Inc.
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -----------------------------------------------------------------------------
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/block_info/rust/sawtooth_block_info/bin/block_info
+# ------------------------------------------------------------------------------
 
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build block_info first with 'build_all'"
-fi
+#
+# Sawtooth -- Block Info Transaction Processor Configuration
+#
+
+# The url to connect to a running Validator
+# connect = "tcp://localhost:4004"

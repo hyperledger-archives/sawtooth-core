@@ -36,7 +36,7 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
 
 WORKDIR /project/sawtooth-core/
 
-CMD cd families/block_info/rust \
+CMD cd families/block_info/sawtooth_block_info \
  && echo "\033[0;32m--- Building block-info ---\n\033[0m" \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \

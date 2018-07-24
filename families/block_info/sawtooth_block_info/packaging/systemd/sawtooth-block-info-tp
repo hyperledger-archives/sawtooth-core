@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/block_info/sawtooth_block_info/bin/block_info
-
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build block_info first with 'build_all'"
-fi
+#SAWTOOTH_BLOCK_INFO_TP_ARGS=-v -C tcp://localhost:4004

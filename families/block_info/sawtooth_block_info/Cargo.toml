@@ -20,6 +20,21 @@ version = "1.0.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
 
+[package.metadata.deb]
+depends = "$auto"
+assets = [
+    ["packaging/systemd/sawtooth-block-info-tp.service",
+    "/lib/systemd/system/sawtooth-block-info-tp.service", "644"],
+    ["../../../bin/block-info-tp-deb", "/usr/bin/block-info-tp", "755"],
+    ["packaging/systemd/sawtooth-block-info-tp", "/etc/default/sawtooth-block-info-tp", "644"],
+    ["target/release/block_info", "/usr/bin/block_info", "755"],
+]
+maintainer-scripts = "packaging/ubuntu"
+conf-files = [
+    "/lib/systemd/system/sawtooth-block-info-tp.service",
+    "/etc/default/sawtooth-block-info-tp"
+]
+
 [dependencies]
 clap = "2"
 protobuf = "2.0"
@@ -31,10 +46,9 @@ rust_crypto = {git = "https://github.com/agunde406/rust-crypto", branch="wasm_sh
 sabre-sdk = {git = "https://github.com/hyperledger/sawtooth-sabre"}
 
 [target.'cfg(unix)'.dependencies]
-sawtooth_sdk = { path = "../../../sdk/rust" }
+sawtooth-sdk = { path = "../../../sdk/rust" }
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 log = "0.3"
 log4rs = "0.7"
 
