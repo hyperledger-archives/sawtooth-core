@@ -68,7 +68,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
-    pylint \
+    pylint==1.9.3 \
     bandit \
     coverage --upgrade
 
