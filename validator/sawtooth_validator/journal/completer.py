@@ -90,12 +90,15 @@ class Completer:
         # Tracks the length of the completer's _seen_txns
         self._seen_txns_length = COLLECTOR.gauge(
             'seen_txns_length', instance=self)
+        self._seen_txns_length.set_value(0)
         # Tracks the length of the completer's _incomplete_blocks
         self._incomplete_blocks_length = COLLECTOR.gauge(
             'incomplete_blocks_length', instance=self)
+        self._incomplete_blocks_length.set_value(0)
         # Tracks the length of the completer's _incomplete_batches
         self._incomplete_batches_length = COLLECTOR.gauge(
             'incomplete_batches_length', instance=self)
+        self._incomplete_batches_length.set_value(0)
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
