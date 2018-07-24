@@ -20,7 +20,11 @@ import subprocess
 
 from setuptools import setup, find_packages
 
-data_files = []
+conf_dir = "/etc/sawtooth"
+
+data_files = [
+    (conf_dir, ['packaging/xo.toml.example'])
+]
 
 if os.path.exists("/etc/default"):
     data_files.append(
