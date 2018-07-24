@@ -192,6 +192,8 @@ test_identity() {
 test_block_info() {
   run_docker_test ./families/block_info/tests/test_tp_block_info.yaml
   copy_coverage .coverage.block_info
+  run_docker_test ./families/block_info/tests/test_tp_block_info_rust.yaml
+  copy_coverage .coverage.block_info_rust
   run_docker_test test_block_info_injector
   copy_coverage .coverage.block_info_injector
 }

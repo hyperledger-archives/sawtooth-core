@@ -29,6 +29,10 @@
 /cli/**/__pycache__/
 
 /families/**/__pycache__/
+/families/block_info/rust/sawtooth_block_info/bin
+/families/block_info/rust/sawtooth_block_info/src/block_info.rs
+/families/block_info/rust/sawtooth_block_info/target
+/families/block_info/rust/sawtooth_block_info/Cargo.lock
 /families/block_info/python/sawtooth_block_info/protobuf
 /families/identity/sawtooth_identity/protobuf
 /families/settings/sawtooth_settings/target/

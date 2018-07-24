@@ -1,0 +1,43 @@
+#
+# Copyright 2018 Bitwise IO, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+[package]
+name = "block_info"
+version = "1.0.0"
+authors = ["Bitwise IO"]
+build = "build.rs"
+
+[dependencies]
+clap = "2"
+protobuf = "2.0"
+cfg-if = "0.1"
+hex = "0.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+rust_crypto = {git = "https://github.com/agunde406/rust-crypto", branch="wasm_sha2"}
+sabre-sdk = {git = "https://github.com/hyperledger/sawtooth-sabre"}
+
+[target.'cfg(unix)'.dependencies]
+sawtooth_sdk = { path = "../../../sdk/rust" }
+rust-crypto = "0.2"
+rustc-serialize = "0.3"
+zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
+log = "0.3"
+log4rs = "0.7"
+
+[build-dependencies]
+protoc-rust = "2.0"
+glob = "0.2"
