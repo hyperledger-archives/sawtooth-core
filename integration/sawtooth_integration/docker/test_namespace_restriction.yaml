@@ -74,11 +74,7 @@ services:
   block-info-tp:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
+      dockerfile: ./families/block_info/python/Dockerfile
     image: sawtooth-block-info-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -138,7 +134,7 @@ services:
             --bind consensus:tcp://eth0:5005 \
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/families/block_info"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info/python"
     stop_signal: SIGKILL
 
   devmode:
@@ -201,6 +197,6 @@ services:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/sdk/examples/xo_python:\
-        /project/sawtooth-core/families/block_info:\
+        /project/sawtooth-core/families/block_info/python:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"

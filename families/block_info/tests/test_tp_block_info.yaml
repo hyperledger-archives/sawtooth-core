@@ -20,7 +20,7 @@ services:
   block-info-tp:
     build:
       context: ../../..
-      dockerfile: ./families/block_info/Dockerfile
+      dockerfile: ./families/block_info/python/Dockerfile
       args:
         - http_proxy
         - https_proxy
@@ -54,7 +54,7 @@ services:
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/sawtooth-core/families/block_info:\
+        PYTHONPATH: "/project/sawtooth-core/families/block_info/python:\
             /project/sawtooth-core/families/block_info/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\

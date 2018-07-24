@@ -159,3 +159,11 @@ services:
     image: sawtooth-devmode-engine-rust-local:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
+
+  block-info-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/block_info/python/Dockerfile
+    image: block-info-tp-local:${ISOLATION_ID}
+    volumes:
+        - ../../:/project/sawtooth-core

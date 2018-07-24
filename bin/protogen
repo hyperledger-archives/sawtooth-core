@@ -46,7 +46,7 @@ def main(args=None):
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
     protoc(proto_dir, "families/settings/tests", "sawtooth_settings_test/protobuf")
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
-    protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
+    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
 
     # Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/settings/protos")
@@ -60,7 +60,7 @@ def main(args=None):
 
     # Generate block info protos
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
-    protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
+    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
 
 
 def protoc(src_dir, base_dir, pkg, language="python"):

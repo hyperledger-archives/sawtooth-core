@@ -30,7 +30,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(
     name='sawtooth-block-info',
     version=subprocess.check_output(
-        ['../../bin/get_version']).decode('utf-8').strip(),
+        ['../../../bin/get_version']).decode('utf-8').strip(),
     description='Sawtooth Block Info Transaction Processor',
     author='Hyperledger Sawtooth',
     url='https://github.com/hyperledger/sawtooth-core',

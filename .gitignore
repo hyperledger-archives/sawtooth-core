@@ -29,7 +29,7 @@
 /cli/**/__pycache__/
 
 /families/**/__pycache__/
-/families/block_info/sawtooth_block_info/protobuf
+/families/block_info/python/sawtooth_block_info/protobuf
 /families/identity/sawtooth_identity/protobuf
 /families/settings/sawtooth_settings/target/
 /families/settings/sawtooth_settings/bin/
