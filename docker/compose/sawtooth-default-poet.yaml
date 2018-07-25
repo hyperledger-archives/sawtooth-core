@@ -166,7 +166,6 @@ services:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default-0
     expose:
-      - 4004
       - 8008
     command: |
       bash -c "
@@ -180,7 +179,6 @@ services:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default-1
     expose:
-      - 4004
       - 8008
     command: |
       bash -c "
@@ -194,7 +192,6 @@ services:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default-2
     expose:
-      - 4004
       - 8008
     command: |
       bash -c "
@@ -208,7 +205,6 @@ services:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default-3
     expose:
-      - 4004
       - 8008
     command: |
       bash -c "
@@ -222,7 +218,6 @@ services:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default-4
     expose:
-      - 4004
       - 8008
     command: |
       bash -c "
