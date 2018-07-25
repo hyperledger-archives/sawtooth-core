@@ -16,7 +16,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use block::Block;
 use journal::block_store::{BlockStore, BlockStoreError};
@@ -38,168 +37,29 @@ impl From<BlockStoreError> for BlockManagerError {
     }
 }
 
-/// Anchors hold reference count information for blocks that are just on the inside edge
-/// of a blockstore. This includes the head block in a blockstore.
-#[derive(Default)]
-struct Anchors {
-    anchors_by_blockstore_name: HashMap<String, HashSet<String>>,
-
-    anchors_by_block_id: HashMap<String, Anchor>,
-}
-
-impl Anchors {
-    fn add_anchor(
-        &mut self,
-        block_id: &str,
-        blockstore_name: &str,
-        block_num: u64,
-        external_ref_count: u64,
-        internal_ref_count: u64,
-    ) {
-        let anchor = Anchor {
-            blockstore_name: blockstore_name.into(),
-            external_ref_count,
-            internal_ref_count,
-            block_id: block_id.into(),
-            block_num,
-        };
-        self.anchors_by_block_id.insert(block_id.into(), anchor);
-
-        if self.anchors_by_blockstore_name
-            .get_mut(blockstore_name)
-            .map(|ref mut anchors| anchors.insert(block_id.into()))
-            .is_none()
-        {
-            let mut set = HashSet::new();
-            set.insert(block_id.into());
-
-            self.anchors_by_blockstore_name
-                .insert(blockstore_name.into(), set);
-        }
-    }
-
-    fn get_blockstore_name(&self, block_id: &str) -> Option<&str> {
-        self.anchors_by_block_id
-            .get(block_id)
-            .map(|anchor| anchor.blockstore_name.as_str())
-    }
-
-    fn convert(&mut self, blocks: Vec<Block>) -> Vec<RefBlock> {
-        blocks
-            .into_iter()
-            .map(|block| {
-                let anchor = self.anchors_by_block_id
-                    .remove(block.header_signature.as_str())
-                    .unwrap();
-                let anchors = self.anchors_by_blockstore_name
-                    .get_mut(anchor.blockstore_name.as_str())
-                    .expect("Anchors in anchor_by_block_id and anchors_by_blockstore_name lost integrity");
-                anchors.remove(block.header_signature.as_str());
-                RefBlock::new(block, anchor.external_ref_count, anchor.internal_ref_count)
-            })
-            .collect()
-    }
-
-    fn iter_by_blockstore<'a>(
-        &'a self,
-        blockstore_name: &str,
-    ) -> Box<Iterator<Item = &Anchor> + 'a> {
-        let anchors_by_block_id = &self.anchors_by_block_id;
-
-        match self.anchors_by_blockstore_name.get(blockstore_name) {
-            Some(anchors) => {
-                let iter = anchors
-                    .iter()
-                    .map(move |block_id| anchors_by_block_id.get(block_id).unwrap());
-                Box::new(iter)
-            }
-            None => Box::new(::std::iter::empty()),
-        }
-    }
-
-    fn contains(&self, block_id: &str) -> bool {
-        self.anchors_by_block_id.contains_key(block_id)
-    }
-
-    fn increase_internal_ref_count(&mut self, block_id: &str) {
-        if let Some(anchor) = self.anchors_by_block_id.get_mut(block_id) {
-            anchor.internal_ref_count += 1;
-        }
-    }
-
-    fn decrease_internal_ref_count(&mut self, block_id: &str) {
-        if let Some(anchor) = self.anchors_by_block_id.get_mut(block_id) {
-            match anchor.internal_ref_count.checked_sub(1) {
-                Some(ref_count) => anchor.internal_ref_count = ref_count,
-                None => panic!("The internal ref-count on an anchor dropped below 0"),
-            }
-        }
-    }
-
-    fn get_internal_ref_count(&self, block_id: &str) -> Option<u64> {
-        self.anchors_by_block_id
-            .get(block_id)
-            .map(|anchor| anchor.internal_ref_count)
-    }
-
-    fn increase_external_ref_count(&mut self, block_id: &str) {
-        if let Some(anchor) = self.anchors_by_block_id.get_mut(block_id) {
-            anchor.external_ref_count += 1;
-        }
-    }
-
-    fn decrease_external_ref_count(&mut self, block_id: &str) {
-        if let Some(anchor) = self.anchors_by_block_id.get_mut(block_id) {
-            match anchor.external_ref_count.checked_sub(1) {
-                Some(ref_count) => anchor.external_ref_count = ref_count,
-                None => panic!("The external ref-count on an anchor dropped below 0"),
-            }
-        }
-    }
-
-    fn get_external_ref_count(&self, block_id: &str) -> Option<u64> {
-        self.anchors_by_block_id
-            .get(block_id)
-            .map(|anchor| anchor.external_ref_count)
-    }
-}
-
-struct Anchor {
-    pub blockstore_name: String,
-    pub external_ref_count: u64,
-    pub internal_ref_count: u64,
-    pub block_num: u64,
+struct RefCount {
     pub block_id: String,
-}
-
-struct RefBlock {
-    pub block: Block,
+    pub previous_block_id: String,
     pub external_ref_count: u64,
     pub internal_ref_count: u64,
 }
 
-impl RefBlock {
-    fn new_reffed_block(block: Block) -> Self {
-        RefBlock {
-            block,
+impl RefCount {
+    fn new_reffed_block(block_id: String, previous_id: String) -> Self {
+        RefCount {
+            block_id,
+            previous_block_id: previous_id,
             external_ref_count: 0,
             internal_ref_count: 1,
         }
     }
 
-    fn new_unreffed_block(block: Block) -> Self {
-        RefBlock {
-            block,
+    fn new_unreffed_block(block_id: String, previous_id: String) -> Self {
+        RefCount {
+            block_id,
+            previous_block_id: previous_id,
             external_ref_count: 1,
             internal_ref_count: 0,
-        }
-    }
-
-    fn new(block: Block, external_ref_count: u64, internal_ref_count: u64) -> Self {
-        RefBlock {
-            block,
-            external_ref_count,
-            internal_ref_count,
         }
     }
 
