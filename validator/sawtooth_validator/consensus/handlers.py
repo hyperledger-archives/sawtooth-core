@@ -101,7 +101,7 @@ class ConsensusServiceHandler(Handler):
 
 
 class ConsensusRegisterHandler(ConsensusServiceHandler):
-    def __init__(self, proxy):
+    def __init__(self, proxy, consensus_notifier):
         super().__init__(
             consensus_pb2.ConsensusRegisterRequest,
             validator_pb2.Message.CONSENSUS_REGISTER_REQUEST,
@@ -109,6 +109,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
             validator_pb2.Message.CONSENSUS_REGISTER_RESPONSE)
 
         self._proxy = proxy
+        self._consensus_notifier = consensus_notifier
 
     def handle_request(self, request, response):
         startup_info = self._proxy.register()
@@ -135,6 +136,9 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         ])
 
         response.local_peer_info.peer_id = local_peer_info
+
+        self._consensus_notifier.add_registered_engine(request.name,
+                                                       request.version)
 
         LOGGER.info(
             "Consensus engine registered: %s %s",

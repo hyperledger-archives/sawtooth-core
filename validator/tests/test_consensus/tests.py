@@ -19,6 +19,7 @@ class TestHandlers(unittest.TestCase):
 
     def setUp(self):
         self.mock_proxy = Mock()
+        self.mock_consensus_notifier = Mock()
 
     def test_consensus_register_handler(self):
         mock_chain_head = Mock()
@@ -32,7 +33,8 @@ class TestHandlers(unittest.TestCase):
             peers=['dead', 'beef'],
             local_peer_info=b'abc')
         self.mock_proxy.register.return_value = mock_startup_info
-        handler = handlers.ConsensusRegisterHandler(self.mock_proxy)
+        handler = handlers.ConsensusRegisterHandler(
+            self.mock_proxy, self.mock_consensus_notifier)
         request_class = handler.request_class
         request = request_class()
         request.name = "test"
