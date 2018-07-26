@@ -5,8 +5,8 @@ Table of Contents
 .. toctree::
 
    introduction.rst
-   architecture.rst
    app_developers_guide.rst
+   architecture.rst
    transaction_family_specifications.rst
    sysadmin_guide.rst
    api_references.rst
