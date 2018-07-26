@@ -926,12 +926,12 @@ mod tests {
 
         let mut branch_diff_iter = block_manager.branch_diff("C", "B");
 
-        assert_eq!(branch_diff_iter.next(), Some(c));
+        assert_eq!(branch_diff_iter.next(), Some(c.clone()));
         assert_eq!(branch_diff_iter.next(), None);
 
         let mut branch_diff_iter2 = block_manager.branch_diff("B", "E");
 
-        assert_eq!(branch_diff_iter2.next(), Some(b));
+        assert_eq!(branch_diff_iter2.next(), Some(b.clone()));
         assert_eq!(branch_diff_iter2.next(), None);
 
         let mut branch_diff_iter3 = block_manager.branch_diff("C", "E");
@@ -940,9 +940,22 @@ mod tests {
 
         let mut branch_diff_iter4 = block_manager.branch_diff("E", "C");
 
-        assert_eq!(branch_diff_iter4.next(), Some(e));
-        assert_eq!(branch_diff_iter4.next(), Some(d));
+        assert_eq!(branch_diff_iter4.next(), Some(e.clone()));
+        assert_eq!(branch_diff_iter4.next(), Some(d.clone()));
         assert_eq!(branch_diff_iter4.next(), None);
+
+        // Test that it will appropriately return the complete tree when
+        // the exclude is unknown
+        let mut branch_diff_iter5 = block_manager.branch_diff("E", "X");
+        assert_eq!(branch_diff_iter5.next(), Some(e.clone()));
+        assert_eq!(branch_diff_iter5.next(), Some(d.clone()));
+        assert_eq!(branch_diff_iter5.next(), Some(c.clone()));
+        assert_eq!(branch_diff_iter5.next(), Some(a.clone()));
+        assert_eq!(branch_diff_iter5.next(), None);
+
+        // Test that it will return None when the tip specified is unknown
+        let mut branch_diff_iter6 = block_manager.branch_diff("X", "E");
+        assert_eq!(branch_diff_iter6.next(), None);
     }
 
     #[test]
