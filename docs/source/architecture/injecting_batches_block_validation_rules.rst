@@ -2,28 +2,28 @@
 Injecting Batches and On-Chain Block Validation Rules
 *****************************************************
 
-Injecting transactions into blocks by the validator is required to support a
-variety of use cases such as:
+The validator can inject transactions into blocks. This functionality supports a
+variety of use cases, such as:
 
 - Setting information in state for use by transaction processors that cannot
   reasonably be provided with every transaction. For example, setting the block
   number or timestamp.
 - Automatically submitting transactions in response to a particular state. For
-  example, submitting bond quote matching transactions.
+  example, submitting bond-quote-matching transactions.
 - Testing automation. For example, programming the compute time of test
   transactions to increase after a certain number of batches.
 
-Imposing a set of rules on the relationships between transactions, or
-inter-transaction validation, is also required for some use cases.
-Two examples of inter-transaction validation would be:
+Sawtooth allows the validator to impose a set of rules on the relationships
+between transactions, or inter-transaction validation. This is also required for
+some use cases.  Two examples of inter-transaction validation are:
 
-- Only N of transaction type X may be included in a block.
-- Transaction type X may only occur at position Y in a block.
+- Only N of transaction type X can be included in a block.
+- Transaction type X can only occur at position Y in a block.
 
 BatchInjector Interface
 =======================
 
-The BatchInjector class supports injecting transactions into blocks:
+The ``BatchInjector`` class supports injecting transactions into blocks:
 
 .. code-block:: python
 
@@ -46,7 +46,8 @@ The BatchInjector class supports injecting transactions into blocks:
     // the end of the block must be returned.
     block_end(string previous_block_id, list<Batch> batches) -> list<Batch>
 
-The Journal will call each of the methods at the appropriate times for all
+The BlockPublisher (part of the :doc:`journal <../architecture/journal>`)
+will call each of the methods at the appropriate times for all
 included BatchInjectors, thus injecting batches into the new block.
 
 On-Chain Configuration
@@ -54,25 +55,25 @@ On-Chain Configuration
 
 The set of BatchInjectors to load is configured with an on-chain setting; this
 is similar to configuring the consensus module loaded by the validator.
-The sawtooth.validator.batch_injectors setting key stores a comma-separated list
-of batch injectors to load.  This list is parsed by the validator at the
+The ``sawtooth.validator.batch_injectors`` setting key stores a comma-separated
+list of batch injectors to load.  This list is parsed by the validator at the
 beginning of block publishing for each block and the appropriate injectors are
 loaded.
 
-This setting is controlled using the existing Settings Transaction Family. Take
-care when when updating this setting, because an incorrect value may cause
+This setting is controlled using the existing
+:doc:`Settings transaction family <../transaction_family_specifications/settings_transaction_family>`.
+Take care when when updating this setting, because an incorrect value may cause
 transaction families to behave incorrectly.
 
 On-Chain Validation Rules
 =========================
 
 An on-chain setting holds a set of validation rules that are enforced for
-each block. On-chain validation rules will be stored as a string in the setting
-key sawtooth.validator.block_validation_rules. Rules will be enforced by the
+each block. On-chain validation rules are stored as a string in the setting
+key ``sawtooth.validator.block_validation_rules``. Rules are enforced by the
 block validator.
 
-A simple syntax will be used for specifying validations rules as defined by
-the following.
+Validation rules use the following simple syntax:
 
 - A validation rule consists of a name followed by a colon and a comma-separated
   list of arguments: ``rulename:arg,arg,...,arg``
@@ -92,7 +93,8 @@ NofX
 
 XatY
   A transaction of type X must be in the block at position Y. The first argument
-  is interpreted as the name of a transaction family. The second argument must
+  is interpreted as the name of a transaction family (``family_name``).
+  The second argument must
   be interpretable as an integer and defines the index of the transaction in
   the block that must be checked. Negative numbers can be used and count
   backwards from the last transaction in the block. The first transaction in the
@@ -115,7 +117,7 @@ The BlockInfoInjector inserts a BlockInfo transaction at the beginning of every
 block. The transaction updates state with information about the block that was
 just committed as well as a timestamp. For more information, see the
 :doc:`BlockInfo Transaction Family
-<../transaction_family_specifications/blockinfo_transaction_family>`
+<../transaction_family_specifications/blockinfo_transaction_family>`.
 
 
 The following validation rules are added to the set of on-chain validation rules
