@@ -119,6 +119,9 @@ class _BlockIterator:
                    self._c_iter_ptr,
                    ctypes.byref(block))
 
+        if block.value is None:
+            raise StopIteration()
+
         return block.value
 
 

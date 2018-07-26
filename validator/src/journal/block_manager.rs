@@ -367,7 +367,7 @@ impl BlockManager {
         state.put(branch)
     }
 
-    pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Block>> {
+    pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
@@ -524,29 +524,30 @@ impl GetBlockIterator {
 }
 
 impl Iterator for GetBlockIterator {
-    type Item = Block;
+    type Item = Option<Block>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let block = match self.block_ids.get(self.index) {
-            Some(ref block_id) => {
-                let state = self.state
-                    .read()
-                    .expect("No lock holder has poisoned the lock");
-                match state.get_block_from_main_cache_or_blockstore_name(block_id) {
-                    BlockLocation::MainCache(block) => Some(block.clone()),
-                    BlockLocation::InStore(blockstore_name) => state
-                        .get_block_from_blockstore((*block_id).clone(), blockstore_name)
-                        .expect("An anchor pointed to a blockstore that does not exist")
-                        .cloned(),
-                    BlockLocation::Unknown => state
-                        .get_block_from_any_blockstore((*block_id).clone())
-                        .cloned(),
-                }
-            }
-            None => None,
+        if self.index >= self.block_ids.len() {
+            return None;
+        }
+
+        let block_id = &self.block_ids[self.index];
+        let state = self.state
+            .read()
+            .expect("No lock holder has poisoned the lock");
+        let block: Option<&Block> = match state.get_block_from_main_cache_or_blockstore_name(&block_id) {
+            BlockLocation::MainCache(block) => Some(block),
+
+            BlockLocation::InStore(blockstore_name) => state
+                .get_block_from_blockstore(block_id.to_string(), blockstore_name)
+                .expect("An anchor pointed to a blockstore that does not exist"),
+
+            BlockLocation::Unknown => state.get_block_from_any_blockstore(block_id.to_string()),
         };
+
         self.index += 1;
-        block
+
+        Some(block.cloned())
     }
 }
 
@@ -873,10 +874,17 @@ mod tests {
 
         let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
 
-        assert_eq!(get_block_iter.next(), Some(a));
-        assert_eq!(get_block_iter.next(), Some(c));
+        assert_eq!(get_block_iter.next(), Some(Some(a.clone())));
+        assert_eq!(get_block_iter.next(), Some(Some(c.clone())));
+        assert_eq!(get_block_iter.next(), Some(None));
         assert_eq!(get_block_iter.next(), None);
-        assert_eq!(get_block_iter.next(), None);
+
+        // Should only return the items that are found.
+        let mut get_block_with_unknowns = block_manager.get(&["A", "X", "C"]);
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(a.clone())));
+        assert_eq!(get_block_with_unknowns.next(), Some(None));
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(c.clone())));
+        assert_eq!(get_block_with_unknowns.next(), None);
     }
 
     #[test]
