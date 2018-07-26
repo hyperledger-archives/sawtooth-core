@@ -20,11 +20,12 @@ details of the network in order to send and receive messages.
 Services
 ========
 
-The choice of 0MQ provides considerable flexibility in both available
+The choice of `0MQ <http://zeromq.org>`_ provides considerable
+flexibility in both the available
 connectivity patterns and the underlying capabilities of the transport layer
 (IPv4, IPv6, etc.)
 
-We have adopted the
+Sawtooth has adopted the
 `0MQ asynchronous client/server pattern <http://zguide.zeromq.org/php:chapter3#toc24>`_,
 which consists
 of a 0MQ ROUTER socket on the server side which listens on a provided
@@ -50,37 +51,42 @@ clients. The 0MQ guide describes the features of this pattern as follows:
 States
 ======
 
-We define three states related to the connection between any two validator
-nodes:
+Sawtooth defines three states related to the connection between any two
+validator nodes:
 
 - Unconnected
 - Connected - A connection is a required prerequisite for peering.
 - Peered - A bidirectional relationship that forms the base case for
-  application level message passing (gossip).
+  application-level message passing (gossip).
 
 
 Wire Protocol
 =============
-We have standardized on protobuf serialization for any structured messages that
-need to be passed over the network. All payloads to or from the application
+Sawtooth has standardized on protobuf serialization for any structured messages
+that need to be passed over the network. All payloads to or from the application
 layer are treated as opaque.
+
+Message Types
+-------------
+
+This protocol includes the following types of messages:
 
 CONNECT
 
 Connect is the mechanism for initiating the connection to the remote node.
-Connect performs a basic 0MQ DEALER->ROUTER connection to the remote node and
+Connect performs a basic 0MQ DEALER-to-ROUTER connection to the remote node and
 exchanges identity information for the purpose of supporting a two-way
 conversation. Connections sit atop 0MQ sockets and allow the DEALER/ROUTER
 conversation.
 
 PING
 
-Ping messages allow for keep alive between ROUTER and DEALER sockets.
+Ping messages allow for keep-alive between ROUTER and DEALER sockets.
 
 PEER
 
 Peer requests establish a bidirectional peering relationship between the two
-nodes. A Peer request can be rejected by the remote node. If a peer request is
+nodes. A peer request can be rejected by the remote node. If a peer request is
 rejected, the expectation is that a node attempts to connect with other
 nodes in the network via some strategy until the peering minimum connectivity
 threshold for that node is reached. If possible, the bi-directional
@@ -89,21 +95,41 @@ DEALER and ROUTER.
 
 GET_PEERS
 
-Returns a list of peers of a given node. This can be performed in a basic
-Connected state and does not require peering to have occurred. The intent is to
+A get_peers message returns a list of peers of a given node. This can be
+performed in a basic connected state; it does not require peering to have
+occurred. The intent is to
 allow a node attempting to reach its minimum connectivity peering threshold to
-build a view of active candidate peers via a neighbor of neighbors approach.
+build a view of active candidate peers via a neighbor-of-neighbors approach.
+
+UNPEER
+
+An unpeer message breaks the peering relationship between nodes. This may
+occur in several scenarios, such as a node leaving the network. (Nodes may
+also silently leave the network, in which case their departure will be
+detected by the failure of the ping/keep-alive message.) An unpeer request
+does not necessarily imply a disconnect.
+
+DISCONNECT
+
+A disconnect message breaks the wire protocol connection to the remote node
+and informs the ROUTER end to clean up the connection.
+
+Transmission Methods
+--------------------
+
+Transmission methods include the following:
 
 BROADCAST(MSG)
 
-Transmits an application message to the network following a 'gossipy' pattern.
+Broadcast transmits an application message to the network following a
+"gossipy" pattern.
 This does not guarantee 100% delivery of the message to the whole network, but
 based on the gossip parameters, nearly complete delivery is likely. A node
 only accepts messages for broadcast/forwarding from peers.
 
 SEND(NODE, MSG)
 
-Attempts to send a message to a particular node over the bidirectional 0MQ
+Send attempts to send a message to a particular node over the bidirectional 0MQ
 connection. Delivery is not guaranteed. If a node has reason to believe that
 delivery to the destination node is impossible, it can return an error response.
 A node only accepts a message for sending from peer nodes.
@@ -118,24 +144,12 @@ layer reports that the request can’t be satisfied, the message will be
 forwarded to peers per the rules of a standard broadcast message. A node
 only accepts request messages from peer nodes.
 
-UNPEER
-
-Breaks the peering relationship between nodes. This may occur in several
-scenarios, for example a node leaving the network (nodes may also silently
-leave the network, in which case their departure will be detected by the
-failure of the ping/keepalive). An unpeer request does not necessarily imply a
-disconnect.
-
-DISCONNECT
-
-Breaks the wire protocol connection to the remote node. Informs the ROUTER end
-to clean up the connection.
 
 Peer Discovery
 ==============
 
-A bidirectional peering via a neighbor of neighbors approach gives reliable
-connectivity (messages delivered to all nodes >99% of the time based on random
+A bidirectional peering via a neighbor-of-neighbors approach gives reliable
+connectivity (messages delivered to all nodes > 99% of the time based on random
 construction of the network).
 
 Peer connections are established by collecting a suitable population of
@@ -162,15 +176,6 @@ peering attempts if its number of peers is equal to or greater than the maximum
 connectivity. Even if maximum peer connections is reached, a network service
 should still accept and respond to a reasonable number of connections (for the
 purposes of other node topology build outs, etc.)
-
-Related Components
-==================
-.. figure:: ../images/related_components.*
-   :width: 75%
-   :align: center
-   :alt: Related Components Diagram.
-
-|
 
 Message Delivery
 ================
@@ -201,15 +206,17 @@ Network Layer Security
 `TLS-like <https://github.com/zeromq/pyzmq/blob/master/examples/security/ironhouse.py>`_
 certificate exchange mechanism and protocol
 encryption capability that is transparent to the socket implementation.
-Support for socket level encryption is currently implemented with
-server keys being read from the validator.toml config file. For each client,
+Support for socket-level encryption is currently implemented with server keys,
+which are read from the ``validator.toml`` configuration file. For each client,
 ephemeral certificates are generated on connect. If the server key pair is not
 configured, network communications between validators will not be authenticated
 or encrypted.
 
 Network Permissioning
 =====================
-One of the permissioning requirements is that the validator network be able to
+The Sawtooth
+:doc:`permissioning design <../architecture/permissioning_requirement>`
+allows the validator network to
 limit the nodes that are able to connect to it. The permissioning rules
 determine the roles a connection is able to play on the network. The roles
 control the types of messages that can be sent and received over a given
@@ -224,7 +231,7 @@ Identity namespace. Each requester will be identified by the public key derived
 from their identity signing key. Permission verifiers examine incoming
 messages against the policy and the current configuration and either permit,
 drop, or respond with an error. In certain cases, the connection will be
-forcibly closed -- for example: if a node is not allowed to connect to the
+forcibly closed -- for example, if a node is not allowed to connect to the
 validator network.
 
 The following describes the procedure for establishing a new connection with
@@ -232,19 +239,20 @@ the validator. The procedure supports implementing different authorization
 types that require the requester to prove their identity. If a requester
 deviates from the procedure in any way, the requester will be rejected and the
 connection will be closed. The same is true if the requester sends multiple
-ConnectionRequests or multiple of any authorization-type message. Certain low
-level messages, such as Ping, can be used before the procedure is complete, but
-are rate limited. If too many of the low level messages are received or
-they are received too close together, the connection may be considered
-malicious and rejected.
+``ConnectionRequest`` messages or a multiple of any authorization-type message.
+Certain low-level messages, such as ping,
+can be used before the procedure is complete, but
+these messages are rate-limited. If too many low-level messages are received or
+if they are received too close together, the connection may be considered
+malicious, so it will be rejected.
 
-The validator receiving a new connection receives a ConnectionRequest.
-The validator responds with a ConnectionResponse message. The
-ConnectionResponse message contains a list of RoleEntry messages and an
-AuthorizationType. Role entries are the accepted type of connections that are
-supported on the endpoint that the ConnectionRequest was sent to.
-AuthorizationType describes the procedure required to gain access to that role.
-Trust is the simplest authorization type and must be implemented by all
+The validator receiving a new connection receives a ``ConnectionRequest``.
+The validator responds with a ``ConnectionResponse`` message. The
+``ConnectionResponse`` message contains a list of ``RoleEntry`` messages and an
+``AuthorizationType``. Role entries are the accepted type of connections that
+are supported on the endpoint that the ``ConnectionRequest`` was sent to.
+``AuthorizationType`` describes the procedure required to gain access to that
+role.  Trust is the simplest authorization type and must be implemented by all
 requesters at a minimum. If the requester cannot comply with the given
 authorization type for that role entry, it is unable to gain access to that
 role.
@@ -290,24 +298,22 @@ role.
     Status status = 2;
   }
 
-In the future, RoleType will include other roles such as CLIENT, STATE_DELTA,
-and TP.
-
 .. _Authorization_Types:
 
 Authorization Types
 -------------------
-Presented here are the two authorization types that will be implemented
-initially: Trust and Challenge.
+Sawtooth implements two authorization types: trust and challenge.
 
-Trust
-  The simplest authorization type is Trust. If Trust authorization is
-  enabled, the validator will trust the connection and approve any roles
-  requested that are available on that endpoint. If the requester wishes to gain
-  access to every role it has permission to access, it can request access to the
-  role ALL, and the validator will respond with all available roles. However, if
-  a role that is not available is requested, the requester is rejected and the
-  connection will be closed.
+Trust Authorization
++++++++++++++++++++
+
+Trust is the simplest authorization type. If trust authorization is
+enabled, the validator will trust the connection and approve any roles
+requested that are available on that endpoint. If the requester wishes to gain
+access to every role it has permission to access, it can request access to the
+role ``ALL``, and the validator will respond with all available roles.
+However, if a role that is not available is requested, the requester is
+rejected and the connection will be closed.
 
   .. code-block:: protobuf
 
@@ -322,17 +328,18 @@ Trust
       repeated RoleType roles = 1;
     }
 
-  Message flow for Trust Authorization:
+This diagram shows the message flow for trust authorization.
 
   .. image:: ../images/trust_authorization.*
      :width: 80%
      :align: center
      :alt: Trust Authorization Flow
 
-Challenge
-  If the connection wants to take on a role that requires a challenge to be
-  signed, it will request the challenge by sending the following to the
-  validator it wishes to connect to.
+Challenge Authorization
++++++++++++++++++++++++
+If the connection wants to take on a role that requires a challenge to be
+signed, it will request the challenge by sending the following message to the
+validator that it wishes to connect to.
 
   .. code-block:: protobuf
 
@@ -340,7 +347,7 @@ Challenge
       // Empty message sent to request a payload to sign
     }
 
-  The validator will send back a random payload that must be signed.
+The validator will send back a random payload that must be signed.
 
   .. code-block:: protobuf
 
@@ -349,8 +356,8 @@ Challenge
       bytes payload = 1;
     }
 
-  The requester then signs the payload message and returns a response that
-  includes the following:
+The requester then signs the payload message and returns a response that
+includes the following:
 
   .. code-block:: protobuf
 
@@ -365,9 +372,9 @@ Challenge
       repeated RoleType roles = 4;
     }
 
-  The requester may also request ALL. The validator will respond with a
-  status that says whether the challenge was accepted and the roles that the
-  connection is allowed take on.
+The requester may also request ``ALL``. The validator will respond with a
+status that says whether the challenge was accepted and the roles that the
+connection is allowed take on.
 
   .. code-block:: protobuf
 
@@ -376,31 +383,33 @@ Challenge
       repeated RoleType roles = 1;
     }
 
-  Message flow for Challenge Authorization:
+The following diagram shows the message flow for challenge authorization:
 
   .. image:: ../images/challenge_authorization.*
      :width: 80%
      :align: center
      :alt: Challenge Authorization Flow
 
-  When the validator receives an AuthorizationChallengeSubmit message, it
-  verifies the public key against the signature. If the public key is verified,
-  the requested roles is checked against the stored roles to see if the
-  public key is included in the policy. If the node’s response is accepted, the
-  node’s public key is stored and the requester may start sending messages
-  for the approved roles.
+When the validator receives an ``AuthorizationChallengeSubmit`` message, it
+verifies the public key against the signature. If the public key is verified,
+the requested roles is checked against the stored roles to see if the
+public key is included in the policy. If the node’s response is accepted, the
+node’s public key is stored and the requester may start sending messages
+for the approved roles.
 
-  If the requester wanted a role that is either not available on the endpoint
-  or the requester does not have access to one of the roles requested, the
-  challenge will be rejected and the connection is closed. At that point
-  the requester will need to restart the connection process.
+If the requester wanted a role that is either not available on the endpoint
+or the requester does not have access to one of the roles requested, the
+challenge will be rejected and the connection is closed. At that point
+the requester will need to restart the connection process.
 
 Authorization Violation
-  If at any time a requester tries to send a message that is against its
-  allowed permission, the validator responds with an AuthorizationViolation
-  message and the connection is closed. If that requester wishes to rejoin
-  the network, it will need to go back through the connection and authorization
-  process described above.
+-----------------------
+
+If, at any time, a requester tries to send a message that is against its
+allowed permission, the validator responds with an ``AuthorizationViolation``
+message and the connection is closed. If that requester wishes to rejoin
+the network, it will need to go back through the connection and authorization
+process described above.
 
   .. code-block:: protobuf
 
