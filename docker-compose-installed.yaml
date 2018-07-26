@@ -36,16 +36,6 @@ services:
       - validator
     entrypoint: intkey-tp-python -vv -C tcp://validator:4004
 
-  poet-engine:
-    build:
-      context: .
-      dockerfile: consensus/poet/engine/Dockerfile-installed
-    image: sawtooth-poet-engine:${ISOLATION_ID}
-    container_name: sawtooth-poet-engine-default
-    depends_on:
-      - validator
-    entrypoint: poet-engine -vv -C tcp://validator:5050 --component tcp://validator:4004
-
   xo-tp-python:
     build:
       context: .
@@ -117,48 +107,6 @@ services:
     image: sawtooth-cli:${ISOLATION_ID}
     container_name: sawtooth-cli-default
 
-  poet-cli:
-    build:
-      context: .
-      dockerfile: consensus/poet/cli/Dockerfile-installed
-    image: sawtooth-poet-cli:${ISOLATION_ID}
-    container_name: sawtooth-poet-cli-default
-
-  poet-common:
-    build:
-      context: .
-      dockerfile: consensus/poet/common/Dockerfile-installed
-    image: sawtooth-poet-common:${ISOLATION_ID}
-    container_name: sawtooth-poet-common-default
-
-  poet-core:
-    build:
-      context: .
-      dockerfile: consensus/poet/core/Dockerfile-installed
-    image: sawtooth-poet-core:${ISOLATION_ID}
-    container_name: sawtooth-poet-core-default
-
-  poet-families:
-    build:
-      context: .
-      dockerfile: consensus/poet/families/Dockerfile-installed
-    image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
-    container_name: sawtooth-poet-families-default
-
-  poet-sgx:
-    build:
-      context: .
-      dockerfile: consensus/poet/sgx/Dockerfile-installed
-    image: sawtooth-poet-sgx:${ISOLATION_ID}
-    container_name: sawtooth-poet-sgx-default
-
-  poet-simulator:
-    build:
-      context: .
-      dockerfile: consensus/poet/simulator/Dockerfile-installed
-    image: sawtooth-poet-simulator:${ISOLATION_ID}
-    container_name: sawtooth-poet-simulator-default
-
   block-info-tp:
     build:
       context: .
@@ -214,20 +162,6 @@ services:
       dockerfile: signing/Dockerfile-installed
     image: sawtooth-signing:${ISOLATION_ID}
     container_name: sawtooth-signing-default
-
-  ias_client:
-    build:
-      context: .
-      dockerfile: utility/ias_client/Dockerfile-installed
-    image: sawtooth-ias-client:${ISOLATION_ID}
-    container_name: sawtooth-ias-client-default
-
-  ias_proxy:
-    build:
-      context: .
-      dockerfile: utility/ias_proxy/Dockerfile-installed
-    image: sawtooth-ias-proxy:${ISOLATION_ID}
-    container_name: sawtooth-ias-proxy-default
 
   intkey-tests:
     build:

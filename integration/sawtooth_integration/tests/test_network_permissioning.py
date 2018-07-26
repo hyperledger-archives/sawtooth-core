@@ -93,7 +93,8 @@ class TestNetworkPermissioning(unittest.TestCase):
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 0),
                 bind=[
                     "network:tcp://127.0.0.1:{}".format(8800 + 0),
-                    "component:tcp://127.0.0.1:{}".format(4004 + 0)
+                    "component:tcp://127.0.0.1:{}".format(4004 + 0),
+                    "consensus:tcp://127.0.0.1:{}".format(5050 + 0)
                 ],
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 1)],
                 peering="dynamic",
@@ -114,7 +115,8 @@ class TestNetworkPermissioning(unittest.TestCase):
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 1),
                 bind=[
                     "network:tcp://127.0.0.1:{}".format(8800 + 1),
-                    "component:tcp://127.0.0.1:{}".format(4004 + 1)
+                    "component:tcp://127.0.0.1:{}".format(4004 + 1),
+                    "consensus:tcp://127.0.0.1:{}".format(5050 + 1)
                 ],
                 peering="dynamic",
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 0)],
@@ -212,7 +214,8 @@ class TestNetworkPermissioning(unittest.TestCase):
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 2),
                 bind=[
                     "network:tcp://127.0.0.1:{}".format(8800 + 2),
-                    "component:tcp://127.0.0.1:{}".format(4004 + 2)
+                    "component:tcp://127.0.0.1:{}".format(4004 + 2),
+                    "consensus:tcp://127.0.0.1:{}".format(5050 + 2)
                 ],
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 3)],
                 peering="dynamic",
@@ -233,7 +236,8 @@ class TestNetworkPermissioning(unittest.TestCase):
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 3),
                 bind=[
                     "network:tcp://127.0.0.1:{}".format(8800 + 3),
-                    "component:tcp://127.0.0.1:{}".format(4004 + 3)
+                    "component:tcp://127.0.0.1:{}".format(4004 + 3),
+                    "consensus:tcp://127.0.0.1:{}".format(5050 + 3)
                 ],
                 peering="dynamic",
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 2)],
@@ -301,12 +305,11 @@ def write_validator_config(sawtooth_home, **kwargs):
 def start_validator(num, sawtooth_home):
     return NodeController.start_node(
         num,
-        NodeController.intkey_config_identity_registry,
+        NodeController.intkey_config_identity,
         NodeController.everyone_peers_with_everyone,
         NodeController.even_parallel_odd_serial,
         sawtooth_home,
-        NodeController.simple_validator_cmds,
-        {})
+        NodeController.simple_validator_cmds)
 
 
 def show_blocks(block_list):
@@ -542,50 +545,6 @@ def validator_genesis_init(sawtooth_home_genesis,
             sawtooth_home_genesis, 'data', 'config-genesis.batch')
     ], check=True)
 
-    with open(
-        '/project/sawtooth-core/consensus/poet/simulator/packaging/'
-            'simulator_rk_pub.pem') as fd:
-        public_key_pem = fd.read().strip('\n')
-
-    # Use the poet CLI to get the enclave measurement so that we can put the
-    # value in the settings config for the validator registry transaction
-    # processor
-    result = \
-        subprocess.run(
-            ['poet', 'enclave', 'measurement'],
-            stdout=subprocess.PIPE)
-    enclave_measurement = result.stdout.decode('utf-8').strip('\n')
-
-    # Use the poet CLI to get the enclave basename so that we can put the
-    # value in the settings config for the validator registry transaction
-    # processor
-    result = \
-        subprocess.run(
-            ['poet', 'enclave', 'basename'],
-            stdout=subprocess.PIPE)
-    enclave_basename = result.stdout.decode('utf-8').strip('\n')
-
-    subprocess.run([
-        'sawset', 'proposal', 'create',
-        '-k', priv,
-        'sawtooth.identity.allowed_keys={},{}'.format(
-            identity_pub_key, priv_key),
-        'sawtooth.consensus.algorithm=poet',
-        'sawtooth.poet.report_public_key_pem={}'.format(public_key_pem),
-        'sawtooth.poet.valid_enclave_measurements={}'.format(
-            enclave_measurement),
-        'sawtooth.poet.valid_enclave_basenames={}'.format(enclave_basename),
-        'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
-        'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
-        'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
-        '-o', os.path.join(sawtooth_home_genesis, 'data', 'config.batch')
-    ], check=True)
-
-    subprocess.run(['poet', 'registration', 'create',
-                    '-k', priv,
-                    '-o', os.path.join(
-                        sawtooth_home_genesis, 'data', 'poet.batch')],
-                   check=True)
     policy = "policy"
     subprocess.run(['sawtooth',
                     'identity',
@@ -612,8 +571,8 @@ def validator_genesis_init(sawtooth_home_genesis,
     subprocess.run([
         'sawadm', 'genesis',
         os.path.join(sawtooth_home_genesis, 'data', 'config-genesis.batch'),
-        os.path.join(sawtooth_home_genesis, 'data', 'config.batch'),
-        os.path.join(sawtooth_home_genesis, 'data', 'poet.batch')
+        os.path.join(sawtooth_home_genesis, 'data', 'policy.batch'),
+        os.path.join(sawtooth_home_genesis, 'data', 'role.batch')
     ], check=True)
 
 

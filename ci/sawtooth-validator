@@ -37,7 +37,6 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial univ
     python3-sawtooth-block-info \
     python3-sawtooth-cli \
     python3-sawtooth-validator \
-    python3-sawtooth-poet-cli \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

@@ -21,7 +21,6 @@ MODULE_LIST="
     signing
     cli
     rest_api
-    poet
     settings
     identity
     block_info
@@ -128,32 +127,6 @@ main() {
                 rest_api)
                     test_rest_api
                     ;;
-                poet)
-                    test_poet_cli
-                    test_poet_common
-                    test_poet_core
-                    test_poet_simulator
-                    test_poet_families
-                    test_ias
-                    ;;
-                poet_cli)
-                    test_poet_cli
-                    ;;
-                poet_common)
-                    test_poet_common
-                    ;;
-                poet_core)
-                    test_poet_core
-                    ;;
-                poet_simulator)
-                    test_poet_simulator
-                    ;;
-                poet_families)
-                    test_poet_families
-                    ;;
-                ias)
-                    test_ias
-                    ;;
                 settings)
                     test_settings
                     ;;
@@ -208,36 +181,6 @@ test_cli() {
 test_rest_api() {
     run_docker_test ./rest_api/tests/unit_rest_api.yaml
     copy_coverage .coverage.rest_api
-}
-
-test_poet_cli() {
-    run_docker_test ./consensus/poet/cli/tests/unit_poet_cli.yaml
-    copy_coverage .coverage.poet_cli
-}
-
-test_poet_common() {
-    run_docker_test ./consensus/poet/common/tests/unit_poet_common.yaml
-    copy_coverage .coverage.poet_common
-}
-
-test_poet_core() {
-    run_docker_test ./consensus/poet/core/tests/unit_poet_core.yaml
-    copy_coverage .coverage.poet_core
-}
-
-test_poet_simulator() {
-    run_docker_test ./consensus/poet/simulator/tests/unit_poet_simulator.yaml
-    copy_coverage .coverage.poet_simulator
-}
-
-test_poet_families() {
-    run_docker_test ./consensus/poet/families/tests/test_tp_validator_registry.yaml
-    copy_coverage .coverage.poet_families
-}
-
-test_ias() {
-    run_docker_test ./utility/ias_client/tests/unit_ias_client.yaml
-    copy_coverage .coverage.ias
 }
 
 test_settings() {
@@ -323,14 +266,10 @@ test_rust_sdk() {
 }
 
 test_integration() {
-    run_docker_test test_dynamic_network --timeout 600
-    copy_coverage .coverage.test_dynamic_network
     run_docker_test test_basic_auth_proxy
     copy_coverage .coverage.test_basic_auth_proxy
     run_docker_test test_transactor_permissioning
     copy_coverage .coverage.test_transactor_permissioning
-    run_docker_test test_poet_liveness
-    copy_coverage .coverage.test_poet_liveness
 }
 
 test_deployment() {

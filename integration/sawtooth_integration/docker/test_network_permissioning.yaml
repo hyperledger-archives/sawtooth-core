@@ -18,6 +18,9 @@ version: "2.1"
 services:
 
   test-network-permissioning:
+    build:
+      context: ../../..
+      dockerfile: docker/sawtooth-dev-python
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

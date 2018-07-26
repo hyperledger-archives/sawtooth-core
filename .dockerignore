@@ -17,23 +17,6 @@
 /.idea/
 *.sublime*
 
-# Exclude poet build artifacts
-/consensus/**/__pycache__/
-/consensus/**/build/
-/consensus/**/protobuf/
-/consensus/poet/sgx/*.so
-/consensus/poet/sgx/deps
-/consensus/poet/sgx/*.so
-/consensus/poet/sgx/nose2-junit.xml
-/consensus/poet/sgx/**/poet_enclave.py
-/consensus/poet/sgx/**/poet_enclave_wrap.cpp
-/consensus/poet/sgx/cmake_install.cmake
-/consensus/poet/sgx/htmlcov/
-/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/CMakeFiles/
-/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/Makefile
-/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/cmake_install.cmake
-/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_enclave/cmake_install.cmake
-
 # Everything else
 /adm/Cargo.lock
 /adm/target/
@@ -119,8 +102,6 @@
 /signing/build/
 /signing/sawtooth_signing.egg-info/
 /signing/**/__pycache__/
-
-/utility/**/__pycache__/
 
 /validator/build/
 /validator/sawtooth_validator.egg-info/

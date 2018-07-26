@@ -34,15 +34,6 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  poet-engine:
-    image: sawtooth-poet-engine:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   xo-tp-python:
     image: sawtooth-xo-tp-python:${ISOLATION_ID}
     volumes:
@@ -90,60 +81,6 @@ services:
 
   sawtooth-cli:
     image: sawtooth-cli:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-cli:
-    image: sawtooth-poet-cli:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-common:
-    image: sawtooth-poet-common:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-core:
-    image: sawtooth-poet-core:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-validator-registry:
-    image: sawtooth-poet-validator-registry-tp:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-sgx:
-    image: sawtooth-poet-sgx:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  poet-simulator:
-    image: sawtooth-poet-simulator:${ISOLATION_ID}
     volumes:
       - ../../build/debs:/build/debs
     command: |
@@ -216,24 +153,6 @@ services:
 
   signing:
     image: sawtooth-signing:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  ias_client:
-    image: sawtooth-ias-client:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  ias_proxy:
-    image: sawtooth-ias-proxy:${ISOLATION_ID}
     volumes:
       - ../../build/debs:/build/debs
     command: |

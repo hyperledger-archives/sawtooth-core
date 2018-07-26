@@ -18,7 +18,6 @@
 # without immediately crashing given the default arguments
 
 services="
-poet-engine
 smallbank-tp-go
 xo-tp-go
 intkey-tp-go
@@ -28,7 +27,6 @@ intkey-tp-python
 xo-tp-python
 settings-tp
 identity-tp
-poet-validator-registry-tp
 devmode-rust
 "
 

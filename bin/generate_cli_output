@@ -94,11 +94,6 @@ save_usage sawtooth-rest-api
 save_usage settings-tp
 save_usage identity-tp
 
-save_usage poet
-save_usage poet enclave
-save_usage poet registration
-save_usage poet registration create
-
 save_usage intkey
 save_usage intkey set
 save_usage intkey inc

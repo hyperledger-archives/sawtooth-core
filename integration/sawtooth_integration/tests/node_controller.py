@@ -53,28 +53,11 @@ def everyone_peers_with_everyone(num):
 
 
 # processor arrangements
-
-def intkey_config_registry(num):
-    # all nodes get the same processors
-    return 'intkey-tp-python', 'settings-tp', 'poet-validator-registry-tp'
-
-
-def intkey_config_identity_registry(num):
+def intkey_config_identity(num):
     return (
         'intkey-tp-python',
         'settings-tp',
         'identity-tp',
-        'poet-validator-registry-tp',
-    )
-
-
-def intkey_xo_config_registry(num):
-    # all nodes get the same processors
-    return (
-        'intkey-tp-python',
-        'xo-tp-python',
-        'settings-tp',
-        'poet-validator-registry-tp'
     )
 
 
@@ -103,8 +86,7 @@ def start_node(num,
                peering_func,
                scheduler_func,
                sawtooth_home,
-               validator_cmd_func,
-               poet_kwargs):
+               validator_cmd_func):
     rest_api = start_rest_api(num)
     processors = start_processors(num, processor_func)
     engine = start_engine(num)
@@ -112,8 +94,7 @@ def start_node(num,
                                 peering_func,
                                 scheduler_func,
                                 sawtooth_home,
-                                validator_cmd_func,
-                                poet_kwargs)
+                                validator_cmd_func)
 
     wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)])
 
@@ -180,52 +161,9 @@ def validator_cmds(num,
             sawtooth_home, 'data', 'config-genesis.batch'))
     ])
 
-    with open(
-        '/project/sawtooth-core/consensus/poet/simulator/packaging/'
-            'simulator_rk_pub.pem') as fd:
-        public_key_pem = fd.read()
-
-    # Use the poet CLI to get the enclave measurement so that we can put the
-    # value in the settings config for the validator registry transaction
-    # processor
-    result = \
-        subprocess.run(
-            ['poet', 'enclave', 'measurement'],
-            stdout=subprocess.PIPE)
-    enclave_measurement = result.stdout.decode('utf-8')
-
-    # Use the poet CLI to get the enclave basename so that we can put the
-    # value in the settings config for the validator registry transaction
-    # processor
-    result = \
-        subprocess.run(
-            ['poet', 'enclave', 'basename'],
-            stdout=subprocess.PIPE)
-    enclave_basename = result.stdout.decode('utf-8')
-
-    config_proposal = ' '.join([
-        'sawset proposal create',
-        '-k {}'.format(priv),
-        'sawtooth.consensus.algorithm=poet',
-        'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
-        'sawtooth.poet.valid_enclave_measurements={}'.format(
-            enclave_measurement),
-        'sawtooth.poet.valid_enclave_basenames={}'.format(enclave_basename),
-        'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
-        'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
-        'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
-        '-o {}'.format(os.path.join(sawtooth_home, 'data', 'config.batch'))
-    ])
-
-    poet = 'poet registration create -k {} -o {}'.format(priv, os.path.join(
-        sawtooth_home, 'data', 'poet.batch'))
-
     genesis = ' '.join([
         'sawadm genesis',
-        '{} {} {}'.format(
-            os.path.join(sawtooth_home, 'data', 'config-genesis.batch'),
-            os.path.join(sawtooth_home, 'data', 'config.batch'),
-            os.path.join(sawtooth_home, 'data', 'poet.batch'))
+        os.path.join(sawtooth_home, 'data', 'config-genesis.batch')
     ])
 
     validator_cmd_list = (
@@ -233,8 +171,6 @@ def validator_cmds(num,
         else [
             keygen,
             config_genesis,
-            config_proposal,
-            poet,
             genesis,
             validator,
         ]
@@ -257,10 +193,9 @@ def start_validator(num,
                     peering_func,
                     scheduler_func,
                     sawtooth_home,
-                    validator_cmd_func,
-                    poet_kwargs):
+                    validator_cmd_func):
     cmds = validator_cmd_func(num, peering_func, scheduler_func,
-                              sawtooth_home, **poet_kwargs)
+                              sawtooth_home)
     for cmd in cmds[:-1]:
         process = start_process(cmd)
         process.wait(timeout=60)
@@ -322,7 +257,7 @@ def start_processors(num, processor_func):
 # consensus engine
 
 def engine_cmd(num):
-    return 'poet-engine --connect {s} {v}'.format(
+    return 'devmode-rust --connect {s} {v}'.format(
         s=engine_connection_address(num),
         v='-v'
     )

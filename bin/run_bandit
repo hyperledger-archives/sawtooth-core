@@ -21,16 +21,6 @@ directories="
     build
     cli/build
     cli/tests
-    consensus/poet/cli/build
-    consensus/poet/cli/tests
-    consensus/poet/common/build
-    consensus/poet/common/tests
-    consensus/poet/core/build
-    consensus/poet/core/tests
-    consensus/poet/families/build
-    consensus/poet/families/tests
-    consensus/poet/simulator/build
-    consensus/poet/simulator/tests
     families/settings/tests
     integration
     rest_api/build

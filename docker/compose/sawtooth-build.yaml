@@ -96,46 +96,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  poet-cli:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/cli/Dockerfile
-    image: sawtooth-poet-cli-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-common:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/common/Dockerfile
-    image: sawtooth-poet-common-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-core:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/core/Dockerfile
-    image: sawtooth-poet-core-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-families:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/families/Dockerfile
-    image: sawtooth-poet-families-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  poet-simulator:
-    build:
-      context: ../../
-      dockerfile: ./consensus/poet/simulator/Dockerfile
-    image: sawtooth-poet-simulator-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
   devmode-rust:
     build:
       context: ../../

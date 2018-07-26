@@ -36,8 +36,7 @@ find_packages() {
         | sed -e 's/^::\s//' \
         | grep -v /setup.py$ \
         | grep -v /setup_tests.py$ \
-        | grep -v _pb2\.py$ \
-        | grep -v poet_enclave\.py$
+        | grep -v _pb2\.py$
 }
 
 lint() {
@@ -142,9 +141,7 @@ echo "pycodestyle $(pycodestyle --version)"
 echo "$(pylint --version)"
 
 if [ "$DRY_RUN" = "1" ]; then
-    for dir in signing validator sdk/python sdk/examples/intkey_python \
-        consensus/poet/cli consensus/poet/common consensus/poet/core \
-        consensus/poet/families consensus/poet/sgx consensus/poet/simulator
+    for dir in signing validator sdk/python sdk/examples/intkey_python
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
@@ -227,77 +224,5 @@ PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint families/block_info "$SINCE" || retval=1
-
-# poet
-PYTHONPATH=$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common/tests
-export PYTHONPATH
-lint consensus/poet/common "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/core
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/core/tests
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/simulator
-export PYTHONPATH
-lint consensus/poet/core "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/families
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/families/tests
-export PYTHONPATH
-lint consensus/poet/families "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/sgx
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/sgx/tests
-export PYTHONPATH
-lint consensus/poet/sgx "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/simulator
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/simulator/tests
-export PYTHONPATH
-lint consensus/poet/simulator "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/consensus/poet/cli
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/core
-export PYTHONPATH
-lint consensus/poet/cli "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/consensus/poet/engine
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/core
-export PYTHONPATH
-lint consensus/poet/engine "$SINCE" || retval=1
-
-# utility
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_proxy
-PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_proxy/tests
-PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_client
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
-PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/sgx
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-export PYTHONPATH
-lint utility/ias_proxy "$SINCE" || retval=1
-
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_client
-PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_client/tests
-export PYTHONPATH
-lint utility/ias_client "$SINCE" || retval=1
 
 exit $retval
