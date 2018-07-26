@@ -86,6 +86,14 @@ impl RefCount {
     }
 }
 
+/// An Enum describing where a block is found within the BlockManager.
+/// This is used by iterators calling private methods.
+enum BlockLocation<'a> {
+    MainCache(&'a Block),
+    InStore(&'a str),
+    Unknown,
+}
+
 #[derive(Default)]
 pub struct BlockManager {
     block_by_block_id: HashMap<String, Block>,
@@ -216,21 +224,21 @@ impl BlockManager {
         self.block_by_block_id.get(block_id)
     }
 
-    fn get_block_from_main_cache_or_blockstore_name(
-        &self,
+    fn get_block_from_main_cache_or_blockstore_name<'a>(
+        &'a self,
         block_id: &str,
-    ) -> (Option<&Block>, Option<&str>) {
+    ) -> BlockLocation<'a> {
         let block = self.get_block_by_block_id(block_id);
         if block.is_some() {
-            (block, None)
+            BlockLocation::MainCache(block.unwrap())
         } else {
-            (
-                None,
-                self.blockstore_by_name
-                    .iter()
-                    .find(|(name, store)| store.get(vec![block_id.to_string()]).count() > 0)
-                    .map(|(name, _)| name.as_str()),
-            )
+            let name: Option<&'a str> = self.blockstore_by_name
+                .iter()
+                .find(|(_, store)| store.get(vec![block_id.to_string()]).count() > 0)
+                .map(|(name, _)| name.as_str());
+
+            name.map(BlockLocation::InStore)
+                .unwrap_or(BlockLocation::Unknown)
         }
     }
 
@@ -451,23 +459,16 @@ impl<'a> Iterator for GetBlockIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let block = match self.block_ids.get(self.index) {
-            Some(block_id) => {
-                let (optional_block, optional_blockstore_name) = self.block_manager
-                    .get_block_from_main_cache_or_blockstore_name(block_id);
-                match optional_block {
-                    Some(block) => Some(block),
-                    None => {
-                        if let Some(blockstore_name) = optional_blockstore_name {
-                            self.block_manager
-                                .get_block_from_blockstore((*block_id).into(), blockstore_name)
-                                .expect("An anchor pointed to a blockstore that does not exist")
-                        } else {
-                            self.block_manager
-                                .get_block_from_any_blockstore((*block_id).into())
-                        }
-                    }
-                }
-            }
+            Some(block_id) => match self.block_manager
+                .get_block_from_main_cache_or_blockstore_name(block_id)
+            {
+                BlockLocation::MainCache(block) => Some(block),
+                BlockLocation::InStore(blockstore_name) => self.block_manager
+                    .get_block_from_blockstore((*block_id).into(), blockstore_name)
+                    .expect("An anchor pointed to a blockstore that does not exist"),
+                BlockLocation::Unknown => self.block_manager
+                    .get_block_from_any_blockstore((*block_id).into()),
+            },
             None => None,
         };
         self.index += 1;
@@ -498,22 +499,21 @@ impl<'a> Iterator for BranchIterator<'a> {
         if self.next_block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
-            let (block_option, blockstore_name_option) = self.block_manager
-                .get_block_from_main_cache_or_blockstore_name(self.next_block_id.as_str());
-            let block = block_option.or_else(|| {
-                blockstore_name_option
-                    .map(|blockstore_name| {
-                        self.blockstore = Some(blockstore_name.into());
-                        self.block_manager
-                            .get_block_from_blockstore(self.next_block_id.clone(), blockstore_name)
-                            .expect("Blockstore referenced by anchor does not exist")
-                    })
-                    .unwrap_or(None)
-            });
-            if let Some(block) = block {
-                self.next_block_id = block.previous_block_id.clone();
+            match self.block_manager
+                .get_block_from_main_cache_or_blockstore_name(&self.next_block_id)
+            {
+                BlockLocation::MainCache(block) => {
+                    self.next_block_id = block.previous_block_id.clone();
+                    Some(block)
+                }
+                BlockLocation::InStore(blockstore_name) => {
+                    self.blockstore = Some(blockstore_name.into());
+                    self.block_manager
+                        .get_block_from_blockstore(self.next_block_id.clone(), blockstore_name)
+                        .expect("Blockstore referenced by anchor does not exist")
+                }
+                BlockLocation::Unknown => None,
             }
-            block
         } else {
             let blockstore_id = self.blockstore.as_ref().unwrap();
             let block = self.block_manager
@@ -603,18 +603,18 @@ impl<'a> BranchDiffIterator<'a> {
         if block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
-            let (block_option, blockstore_name_option) = self.block_manager
-                .get_block_from_main_cache_or_blockstore_name(block_id.as_str());
-            block_option.or_else(|| {
-                blockstore_name_option
-                    .map(|blockstore_name| {
-                        self.blockstore = Some(blockstore_name.into());
-                        self.block_manager
-                            .get_block_from_blockstore(block_id, blockstore_name)
-                            .expect("Blockstore referenced by anchor does not exist")
-                    })
-                    .unwrap_or(None)
-            })
+            match self.block_manager
+                .get_block_from_main_cache_or_blockstore_name(block_id.as_str())
+            {
+                BlockLocation::MainCache(block) => Some(block),
+                BlockLocation::InStore(blockstore_name) => {
+                    self.blockstore = Some(blockstore_name.into());
+                    self.block_manager
+                        .get_block_from_blockstore(block_id, blockstore_name)
+                        .expect("Blockstore referenced by anchor does not exist")
+                }
+                BlockLocation::Unknown => None,
+            }
         } else {
             let blockstore_id = self.blockstore.as_ref().unwrap();
             let block = self.block_manager
