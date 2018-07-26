@@ -270,7 +270,8 @@ Participating in Core Development
 Learn about Sawtooth Architecture
 ---------------------------------
 
-See :doc:`/architecture` for information on :term:`Sawtooth core` features such
+See the :doc:`/architecture` for information on :term:`Sawtooth core`
+features such
 as :term:`global state<Global state>`, transactions and :term:`batches<Batch>`
 (the atomic unit of state change in Sawtooth), permissioning, the validator
 network, the event system, and more.
