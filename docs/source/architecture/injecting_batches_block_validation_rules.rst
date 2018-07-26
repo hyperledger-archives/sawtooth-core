@@ -62,7 +62,7 @@ loaded.
 
 This setting is controlled using the existing
 :doc:`Settings transaction family <../transaction_family_specifications/settings_transaction_family>`.
-Take care when when updating this setting, because an incorrect value may cause
+Take care when updating this setting, because an incorrect value may cause
 transaction families to behave incorrectly.
 
 On-Chain Validation Rules
