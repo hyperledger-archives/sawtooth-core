@@ -30,12 +30,13 @@ families may implement the appropriate business logic.
 Scheduling within the Validator
 ===============================
 
-The sawtooth-validator process has two major components which use schedulers to
+The validator has two major components that use schedulers to
 calculate state changes and the resulting Merkle hashes based on transaction
-processing: the Chain Controller and the Block Publisher.  The Chain Controller
-and Block Publisher pass a scheduler to the Executor. While the validator
+processing: the :ref:`Chain Controller <journal-chain-controller-label>`
+and the :ref:`Block Publisher <journal-block-publisher-label>`.
+These two components pass a scheduler to the Executor. While the validator
 contains only a single Chain Controller, a single Block Publisher, and a single
-Executor, there are numerous instances of schedulers which are dynamically
+Executor, there are numerous instances of schedulers that are dynamically
 created as needed.
 
 Chain Controller
@@ -74,23 +75,23 @@ Executor
 The Executor is responsible for the execution of transactions by sending them
 to transaction processors.  The overall flow for each transaction is:
 
-- The Executor obtains the next transaction and initial context from the
-  scheduler
-- The Executor obtains a new context for the transaction from the Context
-  Manager by providing the initial context (contexts are chained together)
-- The Executor sends the transaction and a context reference to the transaction
-  processor
-- The transaction processor updates the context's state via context manager
-  calls
-- The transaction processor notifies the Executor that the transaction is
-  complete
-- The Executor updates the scheduler with the transaction's result with the
-  updated context
+1. The Executor obtains the next transaction and initial context from the
+   scheduler.
+#. The Executor obtains a new context for the transaction from the Context
+   Manager by providing the initial context (contexts are chained together).
+#. The Executor sends the transaction and a context reference to the transaction
+   processor.
+#. The transaction processor updates the context's state via context manager
+   calls.
+#. The transaction processor notifies the Executor that the transaction is
+   complete.
+#. The Executor updates the scheduler with the transaction's result with the
+   updated context.
 
-In the case of serial scheduling, step (1) simply blocks until step (6) from
-the previous transaction has completed.  For the parallel scheduler, step (1)
-blocks until a transaction exists which can be executed because it's
-dependencies have been satisfied, with steps (2) through (6) happening in
+In the case of serial scheduling, step 1 simply blocks until the previous
+transaction's step 6 has completed.  For the parallel scheduler, step 1
+blocks until a transaction exists which can be executed because its
+dependencies have been satisfied, with steps 2 through 6 happening in
 parallel for each transaction being executed.
 
 Iterative Scheduling
@@ -142,7 +143,7 @@ conflicts will be executed in parallel. When the Executor asks for the next
 transaction, the scheduler inspects the list of unscheduled transactions; the
 first in the list for which all predecessors have finished executed will be be
 returned.  If none are found, the scheduler will block and re-check after
-a transaction has finished being executed. 
+a transaction has finished being executed.
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

@@ -76,6 +76,8 @@ ChainController, which checks it for validity and considers making it the
 new block head.
 
 
+.. _journal-block-publisher-label:
+
 The BlockPublisher
 ==================
 
@@ -91,6 +93,8 @@ The BlockPublisher responds to the following events:
 - Summarize block (stop and make the block available)
 - Finalize block (publish the block)
 
+
+.. _journal-chain-controller-label:
 
 The ChainController
 ===================
