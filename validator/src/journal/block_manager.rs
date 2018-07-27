@@ -16,6 +16,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 use block::Block;
 use journal::block_store::{BlockStore, BlockStoreError};
@@ -95,7 +96,7 @@ enum BlockLocation<'a> {
 }
 
 #[derive(Default)]
-pub struct BlockManager {
+struct BlockManagerState {
     block_by_block_id: HashMap<String, Block>,
 
     blockstore_by_name: HashMap<String, Box<BlockStore>>,
@@ -103,14 +104,7 @@ pub struct BlockManager {
     references_by_block_id: HashMap<String, RefCount>,
 }
 
-/// The BlockManager maintains integrity of all the blocks it contains,
-/// such that for any Block within the BlockManager,
-/// that Block's predecessor is also within the BlockManager.
-impl BlockManager {
-    pub fn new() -> Self {
-        BlockManager::default()
-    }
-
+impl BlockManagerState {
     fn contains(&self, block_id: &str) -> bool {
         let in_memory = self.block_by_block_id.contains_key(block_id);
 
@@ -156,17 +150,7 @@ impl BlockManager {
         Ok(())
     }
 
-    /// Put is idempotent, making the guarantee that after put is called with a
-    /// block in the vector argument, that block is in the BlockManager
-    /// whether or not it was already in the BlockManager.
-    /// Put makes three other guarantees
-    ///     - If the zeroth block in branch does not have its predecessor
-    ///       in the BlockManager an error is returned
-    ///     - If any block after the zeroth block in branch
-    ///       does not have its predecessor as the block to its left in
-    ///       branch, an error is returned.
-    ///     - If branch is empty, an error is returned
-    pub fn put(&mut self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
+    fn put(&mut self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
         match branch.split_first() {
             Some((head, tail)) => {
                 if !self.contains(head.previous_block_id.as_str()) {
@@ -216,10 +200,6 @@ impl BlockManager {
         Ok(())
     }
 
-    pub fn get<'a>(&'a self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = &'a Block> + 'a> {
-        Box::new(GetBlockIterator::new(self, block_ids))
-    }
-
     fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
         self.block_by_block_id.get(block_id)
     }
@@ -261,19 +241,7 @@ impl BlockManager {
             .map(|blockstore| blockstore.get(vec![block_id]).nth(0).unwrap())
     }
 
-    pub fn branch<'a>(&'a self, tip: &str) -> Box<Iterator<Item = &Block> + 'a> {
-        Box::new(BranchIterator::new(self, tip.into()))
-    }
-
-    pub fn branch_diff<'a>(
-        &'a self,
-        tip: &str,
-        exclude: &str,
-    ) -> Box<Iterator<Item = &Block> + 'a> {
-        Box::new(BranchDiffIterator::new(self, tip, exclude))
-    }
-
-    pub fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
+    fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
         match self.references_by_block_id.get_mut(block_id) {
             Some(r) => r.increase_external_ref_count(),
             None => return Err(BlockManagerError::UnknownBlock),
@@ -281,9 +249,7 @@ impl BlockManager {
         Ok(())
     }
 
-    /// Starting at a tip block, if the tip block's ref-count drops to 0,
-    /// remove all blocks until a ref-count of 2 is found.
-    pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+    fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
         let (external_ref_count, internal_ref_count, block_id) =
             self.lower_tip_blocks_refcount(tip)?;
 
@@ -360,7 +326,7 @@ impl BlockManager {
         (blocks_to_remove, pointed_to)
     }
 
-    pub fn add_store(
+    fn add_store(
         &mut self,
         store_name: &str,
         store: Box<BlockStore>,
@@ -368,27 +334,114 @@ impl BlockManager {
         self.blockstore_by_name.insert(store_name.into(), store);
         Ok(())
     }
+}
+
+/// The BlockManager maintains integrity of all the blocks it contains,
+/// such that for any Block within the BlockManager,
+/// that Block's predecessor is also within the BlockManager.
+#[derive(Default)]
+pub struct BlockManager {
+    state: Arc<RwLock<BlockManagerState>>,
+}
+
+impl BlockManager {
+    pub fn new() -> Self {
+        BlockManager::default()
+    }
+
+    /// Put is idempotent, making the guarantee that after put is called with a
+    /// block in the vector argument, that block is in the BlockManager
+    /// whether or not it was already in the BlockManager.
+    /// Put makes three other guarantees
+    ///     - If the zeroth block in branch does not have its predecessor
+    ///       in the BlockManager an error is returned
+    ///     - If any block after the zeroth block in branch
+    ///       does not have its predecessor as the block to its left in
+    ///       branch, an error is returned.
+    ///     - If branch is empty, an error is returned
+    pub fn put(&self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+
+        state.put(branch)
+    }
+
+    pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Block>> {
+        Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
+    }
+
+    pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
+        Box::new(BranchIterator::new(Arc::clone(&self.state), tip.into()))
+    }
+
+    pub fn branch_diff(&self, tip: &str, exclude: &str) -> Box<Iterator<Item = Block>> {
+        Box::new(BranchDiffIterator::new(
+            Arc::clone(&self.state),
+            tip,
+            exclude,
+        ))
+    }
+
+    pub fn ref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+        state.ref_block(tip)
+    }
+
+    /// Starting at a tip block, if the tip block's ref-count drops to 0,
+    /// remove all blocks until a ref-count of 1 is found.
+    pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+        state.unref_block(tip)
+    }
+
+    pub fn add_store(
+        &mut self,
+        store_name: &str,
+        store: Box<BlockStore>,
+    ) -> Result<(), BlockManagerError> {
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+
+        state.add_store(store_name, store)
+    }
 
     fn remove_blocks_from_blockstore(
-        &mut self,
+        &self,
         head: &str,
         other: &str,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        let to_be_removed: Vec<Block> = self.branch_diff(other, head).cloned().collect();
+        let to_be_removed: Vec<Block> = self.branch_diff(other, head).collect();
+        let blocks_for_the_main_pool = {
+            let mut state = self.state
+                .write()
+                .expect("No lock holder has poisoned the lock");
 
-        let blockstore = self.blockstore_by_name
-            .get_mut(store_name)
-            .ok_or(BlockManagerError::UnknownBlockStore)?;
+            let blockstore = state
+                .blockstore_by_name
+                .get_mut(store_name)
+                .ok_or(BlockManagerError::UnknownBlockStore)?;
 
-        let blocks_for_the_main_pool = blockstore.delete(
-            to_be_removed
-                .iter()
-                .map(|b| b.header_signature.clone())
-                .collect(),
-        )?;
+            blockstore.delete(
+                to_be_removed
+                    .iter()
+                    .map(|b| b.header_signature.clone())
+                    .collect(),
+            )?
+        };
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+
         for block in blocks_for_the_main_pool {
-            self.block_by_block_id
+            state
+                .block_by_block_id
                 .insert(block.header_signature.clone(), block);
         }
 
@@ -396,31 +449,47 @@ impl BlockManager {
     }
 
     fn insert_blocks_in_blockstore(
-        &mut self,
+        &self,
         head: &str,
         other: &str,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        let to_be_inserted: Vec<Block> = self.branch_diff(head, other).cloned().collect();
+        let to_be_inserted: Vec<Block> = self.branch_diff(head, other).collect();
 
-        let blockstore = self.blockstore_by_name
+        let mut state = self.state
+            .write()
+            .expect("No lock holder has poisoned the lock");
+        let blockstore = state
+            .blockstore_by_name
             .get_mut(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?;
         blockstore.put(to_be_inserted)?;
         Ok(())
     }
 
-    pub fn persist(&mut self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
-        if !self.blockstore_by_name.contains_key(store_name) {
+    pub fn persist(&self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
+        if !self.state
+            .read()
+            .expect("No lock holder has poisoned lock")
+            .blockstore_by_name
+            .contains_key(store_name)
+        {
             return Err(BlockManagerError::UnknownBlockStore);
         }
 
-        let head_block_in_blockstore = self.blockstore_by_name
-            .get(store_name)
-            .expect("Blockstore removed during persist operation")
-            .iter()
-            .nth(0)
-            .map(|b| b.header_signature.clone());
+        let head_block_in_blockstore = {
+            let state = self.state.read().expect("No lock holder has poisoned lock");
+
+            let block_store = state
+                .blockstore_by_name
+                .get(store_name)
+                .expect("Blockstore removed during persist operation");
+            let head = block_store
+                .iter()
+                .nth(0)
+                .map(|b| b.header_signature.clone());
+            head
+        };
 
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
@@ -438,37 +507,42 @@ impl BlockManager {
     }
 }
 
-struct GetBlockIterator<'a> {
-    block_manager: &'a BlockManager,
-    block_ids: &'a [&'a str],
+pub struct GetBlockIterator {
+    state: Arc<RwLock<BlockManagerState>>,
+    block_ids: Vec<String>,
     index: usize,
 }
 
-impl<'a> GetBlockIterator<'a> {
-    pub fn new(block_manager: &'a BlockManager, block_ids: &'a [&'a str]) -> Self {
+impl GetBlockIterator {
+    fn new(state: Arc<RwLock<BlockManagerState>>, block_ids: &[&str]) -> Self {
         GetBlockIterator {
-            block_manager,
-            block_ids,
+            state,
+            block_ids: block_ids.iter().map(|s| (*s).into()).collect(),
             index: 0,
         }
     }
 }
 
-impl<'a> Iterator for GetBlockIterator<'a> {
-    type Item = &'a Block;
+impl Iterator for GetBlockIterator {
+    type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
         let block = match self.block_ids.get(self.index) {
-            Some(block_id) => match self.block_manager
-                .get_block_from_main_cache_or_blockstore_name(block_id)
-            {
-                BlockLocation::MainCache(block) => Some(block),
-                BlockLocation::InStore(blockstore_name) => self.block_manager
-                    .get_block_from_blockstore((*block_id).into(), blockstore_name)
-                    .expect("An anchor pointed to a blockstore that does not exist"),
-                BlockLocation::Unknown => self.block_manager
-                    .get_block_from_any_blockstore((*block_id).into()),
-            },
+            Some(ref block_id) => {
+                let state = self.state
+                    .read()
+                    .expect("No lock holder has poisoned the lock");
+                match state.get_block_from_main_cache_or_blockstore_name(block_id) {
+                    BlockLocation::MainCache(block) => Some(block.clone()),
+                    BlockLocation::InStore(blockstore_name) => state
+                        .get_block_from_blockstore((*block_id).clone(), blockstore_name)
+                        .expect("An anchor pointed to a blockstore that does not exist")
+                        .cloned(),
+                    BlockLocation::Unknown => state
+                        .get_block_from_any_blockstore((*block_id).clone())
+                        .cloned(),
+                }
+            }
             None => None,
         };
         self.index += 1;
@@ -476,72 +550,79 @@ impl<'a> Iterator for GetBlockIterator<'a> {
     }
 }
 
-struct BranchIterator<'a> {
-    block_manager: &'a BlockManager,
+pub struct BranchIterator {
+    state: Arc<RwLock<BlockManagerState>>,
     next_block_id: String,
     blockstore: Option<String>,
 }
 
-impl<'a> BranchIterator<'a> {
-    pub fn new(block_manager: &'a BlockManager, first_block_id: String) -> Self {
+impl BranchIterator {
+    fn new(state: Arc<RwLock<BlockManagerState>>, first_block_id: String) -> Self {
         BranchIterator {
-            block_manager,
+            state,
             next_block_id: first_block_id,
             blockstore: None,
         }
     }
 }
 
-impl<'a> Iterator for BranchIterator<'a> {
-    type Item = &'a Block;
+impl Iterator for BranchIterator {
+    type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
-            match self.block_manager
-                .get_block_from_main_cache_or_blockstore_name(&self.next_block_id)
-            {
+            let state = self.state
+                .read()
+                .expect("No lock holder should have poisoned the lock");
+
+            match state.get_block_from_main_cache_or_blockstore_name(&self.next_block_id) {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
-                    Some(block)
+                    Some(block.clone())
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.into());
-                    self.block_manager
+                    state
                         .get_block_from_blockstore(self.next_block_id.clone(), blockstore_name)
                         .expect("Blockstore referenced by anchor does not exist")
+                        .cloned()
                 }
                 BlockLocation::Unknown => None,
             }
         } else {
             let blockstore_id = self.blockstore.as_ref().unwrap();
-            let block = self.block_manager
+
+            let state = self.state
+                .read()
+                .expect("No lock holder should have poisoned the lock");
+            let block = state
                 .get_block_from_blockstore(self.next_block_id.clone(), blockstore_id)
                 .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
                 .expect(
                     "The block was not in the blockstore referenced by a successor block's anchor",
                 );
-            Some(block)
+            Some(block.clone())
         }
     }
 }
 
-struct BranchDiffIterator<'a> {
-    block_manager: &'a BlockManager,
+pub struct BranchDiffIterator {
+    state: Arc<RwLock<BlockManagerState>>,
 
-    left_block: Option<&'a Block>,
-    right_block: Option<&'a Block>,
+    left_block: Option<Block>,
+    right_block: Option<Block>,
 
     blockstore: Option<String>,
 
     has_reached_common_ancestor: bool,
 }
 
-impl<'a> BranchDiffIterator<'a> {
-    fn new(block_manager: &'a BlockManager, tip: &str, exclude: &str) -> Self {
+impl BranchDiffIterator {
+    fn new(state: Arc<RwLock<BlockManagerState>>, tip: &str, exclude: &str) -> Self {
         let mut iterator = BranchDiffIterator {
-            block_manager,
+            state,
             left_block: None,
             right_block: None,
 
@@ -552,9 +633,9 @@ impl<'a> BranchDiffIterator<'a> {
         iterator.left_block = iterator.get_block_by_block_id(tip.into());
         iterator.right_block = iterator.get_block_by_block_id(exclude.into());
 
-        if let Some(left) = iterator.left_block {
-            if let Some(right) = iterator.right_block {
-                let difference = iterator.block_num_difference(left, right);
+        if let Some(left) = iterator.left_block.clone() {
+            if let Some(right) = iterator.right_block.clone() {
+                let difference = iterator.block_num_difference(&left, &right);
                 if difference < 0 {
                     iterator.right_block = iterator.get_nth_previous_block(
                         right.header_signature.clone(),
@@ -571,14 +652,14 @@ impl<'a> BranchDiffIterator<'a> {
         left.block_num as i64 - right.block_num as i64
     }
 
-    fn get_previous_block(&mut self, block_id: String) -> Option<&'a Block> {
+    fn get_previous_block(&mut self, block_id: String) -> Option<Block> {
         let block = self.get_block_by_block_id(block_id);
         block
             .map(|b| self.get_block_by_block_id(b.previous_block_id.clone()))
             .unwrap_or(None)
     }
 
-    fn get_nth_previous_block(&mut self, block_id: String, n: u64) -> Option<&'a Block> {
+    fn get_nth_previous_block(&mut self, block_id: String, n: u64) -> Option<Block> {
         if n == 0 {
             return None;
         }
@@ -586,56 +667,61 @@ impl<'a> BranchDiffIterator<'a> {
         let mut current_block_id = block_id;
 
         let mut block = self.get_previous_block(current_block_id.clone());
-        if let Some(b) = block {
+        if let Some(ref b) = block {
             current_block_id = b.header_signature.clone();
         }
 
         for _ in 1..n {
             block = self.get_previous_block(current_block_id.clone());
-            if let Some(b) = block {
+            if let Some(ref b) = block {
                 current_block_id = b.header_signature.clone();
             }
         }
         block
     }
 
-    fn get_block_by_block_id(&mut self, block_id: String) -> Option<&'a Block> {
+    fn get_block_by_block_id(&mut self, block_id: String) -> Option<Block> {
         if block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
-            match self.block_manager
-                .get_block_from_main_cache_or_blockstore_name(block_id.as_str())
-            {
-                BlockLocation::MainCache(block) => Some(block),
+            let state = self.state
+                .read()
+                .expect("No lock holder has poisoned the lock");
+            match state.get_block_from_main_cache_or_blockstore_name(block_id.as_str()) {
+                BlockLocation::MainCache(block) => Some(block.clone()),
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.into());
-                    self.block_manager
+                    state
                         .get_block_from_blockstore(block_id, blockstore_name)
                         .expect("Blockstore referenced by anchor does not exist")
+                        .cloned()
                 }
                 BlockLocation::Unknown => None,
             }
         } else {
             let blockstore_id = self.blockstore.as_ref().unwrap();
-            let block = self.block_manager
+            let state = self.state
+                .read()
+                .expect("No lock holder has poisoned the lock");
+            let block = state
                 .get_block_from_blockstore(block_id.clone(), blockstore_id)
                 .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
                 .expect(
                     "The block was not in the blockstore referenced by a successor block's anchor",
                 );
-            Some(block)
+            Some(block.clone())
         }
     }
 }
 
-impl<'a> Iterator for BranchDiffIterator<'a> {
-    type Item = &'a Block;
+impl Iterator for BranchDiffIterator {
+    type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.has_reached_common_ancestor {
             None
-        } else if let Some(left) = self.left_block {
-            if let Some(right) = self.right_block {
+        } else if let Some(ref left) = self.left_block.clone() {
+            if let Some(ref right) = self.right_block.clone() {
                 if left.header_signature == NULL_BLOCK_IDENTIFIER {
                     return None;
                 }
@@ -645,17 +731,17 @@ impl<'a> Iterator for BranchDiffIterator<'a> {
                     self.has_reached_common_ancestor = true;
                     return None;
                 }
-                let difference = self.block_num_difference(left, right);
+                let difference = self.block_num_difference(&left, &right);
                 if difference > 0 {
                     self.left_block = self.get_previous_block(left.header_signature.clone());
                 } else {
                     self.left_block = self.get_previous_block(left.header_signature.clone());
                     self.right_block = self.get_previous_block(right.header_signature.clone());
                 }
-                Some(left)
+                Some(left.clone())
             } else {
                 self.left_block = self.get_previous_block(left.header_signature.clone());
-                Some(left)
+                Some(left.clone())
             }
         } else {
             None
@@ -787,8 +873,8 @@ mod tests {
 
         let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
 
-        assert_eq!(get_block_iter.next(), Some(&a));
-        assert_eq!(get_block_iter.next(), Some(&c));
+        assert_eq!(get_block_iter.next(), Some(a));
+        assert_eq!(get_block_iter.next(), Some(c));
         assert_eq!(get_block_iter.next(), None);
         assert_eq!(get_block_iter.next(), None);
     }
@@ -806,9 +892,9 @@ mod tests {
 
         let mut branch_iter = block_manager.branch("C");
 
-        assert_eq!(branch_iter.next(), Some(&c));
-        assert_eq!(branch_iter.next(), Some(&b));
-        assert_eq!(branch_iter.next(), Some(&a));
+        assert_eq!(branch_iter.next(), Some(c));
+        assert_eq!(branch_iter.next(), Some(b));
+        assert_eq!(branch_iter.next(), Some(a));
         assert_eq!(branch_iter.next(), None);
 
         let mut empty_iter = block_manager.branch("P");
@@ -832,12 +918,12 @@ mod tests {
 
         let mut branch_diff_iter = block_manager.branch_diff("C", "B");
 
-        assert_eq!(branch_diff_iter.next(), Some(&c));
+        assert_eq!(branch_diff_iter.next(), Some(c));
         assert_eq!(branch_diff_iter.next(), None);
 
         let mut branch_diff_iter2 = block_manager.branch_diff("B", "E");
 
-        assert_eq!(branch_diff_iter2.next(), Some(&b));
+        assert_eq!(branch_diff_iter2.next(), Some(b));
         assert_eq!(branch_diff_iter2.next(), None);
 
         let mut branch_diff_iter3 = block_manager.branch_diff("C", "E");
@@ -846,8 +932,8 @@ mod tests {
 
         let mut branch_diff_iter4 = block_manager.branch_diff("E", "C");
 
-        assert_eq!(branch_diff_iter4.next(), Some(&e));
-        assert_eq!(branch_diff_iter4.next(), Some(&d));
+        assert_eq!(branch_diff_iter4.next(), Some(e));
+        assert_eq!(branch_diff_iter4.next(), Some(d));
         assert_eq!(branch_diff_iter4.next(), None);
     }
 
