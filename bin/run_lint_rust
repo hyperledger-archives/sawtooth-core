@@ -21,6 +21,7 @@ dirs="
     $top_dir/sdk/rust
     $top_dir/sdk/examples/intkey_rust
     $top_dir/families/smallbank/smallbank_rust
+    $top_dir/families/identity/rust/sawtooth_identity
     $top_dir/adm
     $top_dir/perf/sawtooth_perf
     $top_dir/perf/sawtooth_workload
