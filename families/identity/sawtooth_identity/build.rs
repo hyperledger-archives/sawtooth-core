@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Bitwise IO, Inc.
+ * Copyright 2018 Bitwise IO Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ extern crate protoc_rust;
 use protoc_rust::Customize;
 
 fn main() {
-    let proto_src_files = glob_simple("../../protos/*.proto");
+    let proto_src_files = glob_simple("../protos/*.proto");
     println!("{:?}", proto_src_files);
 
     protoc_rust::run(protoc_rust::Args {
@@ -30,7 +30,7 @@ fn main() {
             .iter()
             .map(|a| a.as_ref())
             .collect::<Vec<&str>>(),
-        includes: &["../../protos"],
+        includes: &["../protos"],
         customize: Customize {
             ..Default::default()
         },
@@ -39,10 +39,10 @@ fn main() {
     protoc_rust::run(protoc_rust::Args {
         out_dir: "src/",
         input: &[
-            "../../../../protos/identity.proto",
-            "../../../../protos/setting.proto",
+            "../../../protos/identity.proto",
+            "../../../protos/setting.proto",
         ],
-        includes: &["../../../../protos"],
+        includes: &["../../../protos"],
         customize: Customize {
             ..Default::default()
         },

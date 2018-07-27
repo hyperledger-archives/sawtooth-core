@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Bitwise IO, Inc.
+#  Copyright 2018 Bitwise IO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ sabre-sdk = {git = "https://github.com/hyperledger/sawtooth-sabre"}
 
 [target.'cfg(unix)'.dependencies]
 rust-crypto = "0.2"
-sawtooth_sdk = { path = "../../../../sdk/rust" }
+sawtooth_sdk = { path = "../../../sdk/rust" }
 log = "0.3"
 log4rs = "0.7"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
@@ -41,3 +41,19 @@ rustc-serialize = "0.3"
 protoc-rust = "2.0"
 glob = "0.2"
 cfg-if = "0.1"
+
+[package.metadata.deb]
+maintainer = "sawtooth"
+depends = "$auto"
+assets = [
+    ["packaging/systemd/sawtooth-identity-tp.service",
+    "/lib/systemd/system/sawtooth-identity-tp.service", "644"],
+    ["../../../bin/identity-tp-deb", "/usr/bin/identity-tp", "755"],
+    ["packaging/systemd/sawtooth-identity-tp", "/etc/default/sawtooth-identity-tp", "644"],
+    ["target/release/sawtooth_identity", "/usr/bin/sawtooth_identity", "755"],
+]
+maintainer-scripts = "packaging/ubuntu"
+conf-files = [
+    "/lib/systemd/system/sawtooth-identity-tp.service",
+    "/etc/default/sawtooth-identity-tp"
+]

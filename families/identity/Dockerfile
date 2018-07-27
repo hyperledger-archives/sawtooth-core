@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ------------------------------------------------------------------------------
 
-# docker build -f families/identity/rust/Dockerfile -t sawtooth-identity-tp-rust-local .
+# docker build -f families/identity/Dockerfile -t sawtooth-identity-tp-local .
 
 FROM ubuntu:xenial
 
@@ -39,8 +40,8 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
 
 WORKDIR /project/sawtooth-core
 
-CMD cd families/identity/rust/sawtooth_identity \
- && echo "\033[0;32m--- Building identity-tp-rust ---\n\033[0m" \
+CMD cd families/identity/sawtooth_identity \
+ && echo "\033[0;32m--- Building identity-tp ---\n\033[0m" \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \

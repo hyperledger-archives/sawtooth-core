@@ -153,7 +153,7 @@ services:
   identity-tp:
     build:
       context: .
-      dockerfile: families/identity/python/Dockerfile-installed
+      dockerfile: families/identity/Dockerfile-installed
       args:
         - http_proxy
         - https_proxy

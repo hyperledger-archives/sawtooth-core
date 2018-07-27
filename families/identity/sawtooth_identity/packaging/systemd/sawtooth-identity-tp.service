@@ -1,6 +1,4 @@
-#!/bin/bash
-#
-# Copyright 2018 Bitwise IO, Inc.
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -----------------------------------------------------------------------------
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/identity/rust/sawtooth_identity/bin/sawtooth_identity
+# ------------------------------------------------------------------------------
 
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build sawtooth_identity_rust first with 'build_all'"
-fi
+[Unit]
+Description=Sawtooth TP Identity
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-identity-tp
+ExecStart=/usr/bin/sawtooth_identity $SAWTOOTH_IDENTITY_TP_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

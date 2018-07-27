@@ -1,5 +1,5 @@
 #!/bin/bash
-#
+
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/identity/sawtooth_identity/bin/sawtooth_identity
+set -e
 
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build sawtooth_identity_rust first with 'build_all'"
+user="sawtooth"
+group="sawtooth"
+
+if ! getent group $group > /dev/null; then
+    addgroup --quiet --system $group
+fi
+
+if ! getent passwd $user > /dev/null; then
+    adduser --quiet --system --ingroup $group $user
 fi

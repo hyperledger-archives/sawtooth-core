@@ -1,4 +1,3 @@
-#!/bin/bash
 #
 # Copyright 2017 Intel Corporation
 #
@@ -15,12 +14,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/identity/sawtooth_identity/bin/sawtooth_identity
+#
+# Sawtooth -- Identity Transaction Processor Configuration
+#
 
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build sawtooth_identity_rust first with 'build_all'"
-fi
+# The url to connect to a running Validator
+#   connect = "tcp://localhost:4004"
