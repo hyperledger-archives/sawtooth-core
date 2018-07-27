@@ -30,6 +30,7 @@ pub mod client_transaction;
 pub mod consensus;
 pub mod events;
 pub mod genesis;
+pub mod identity;
 pub mod network;
 pub mod processor;
 pub mod setting;
