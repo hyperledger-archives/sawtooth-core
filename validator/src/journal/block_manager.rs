@@ -16,6 +16,7 @@
  */
 
 use std::collections::HashMap;
+use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
 
 use block::Block;
@@ -646,105 +647,38 @@ impl Iterator for BranchIterator {
 }
 
 pub struct BranchDiffIterator {
-    state: Arc<RwLock<BlockManagerState>>,
-
-    left_block: Option<Block>,
-    right_block: Option<Block>,
-
-    blockstore: Option<String>,
+    left_branch: Peekable<BranchIterator>,
+    right_branch: Peekable<BranchIterator>,
 
     has_reached_common_ancestor: bool,
 }
 
 impl BranchDiffIterator {
     fn new(state: Arc<RwLock<BlockManagerState>>, tip: &str, exclude: &str) -> Self {
-        let mut iterator = BranchDiffIterator {
-            state,
-            left_block: None,
-            right_block: None,
+        let mut left_iterator = BranchIterator::new(state.clone(), tip.into()).peekable();
+        let mut right_iterator = BranchIterator::new(state, exclude.into()).peekable();
 
-            blockstore: None,
-            has_reached_common_ancestor: false,
+        let difference = {
+            left_iterator
+                .peek()
+                .map(|left| {
+                    left.block_num as i64
+                        - right_iterator
+                            .peek()
+                            .map(|right| right.block_num as i64)
+                            .unwrap_or(0)
+                })
+                .unwrap_or(0)
         };
-
-        iterator.left_block = iterator.get_block_by_block_id(tip.into());
-        iterator.right_block = iterator.get_block_by_block_id(exclude.into());
-
-        if let Some(left) = iterator.left_block.clone() {
-            if let Some(right) = iterator.right_block.clone() {
-                let difference = iterator.block_num_difference(&left, &right);
-                if difference < 0 {
-                    iterator.right_block = iterator
-                        .get_nth_previous_block(&right.header_signature, difference.abs() as u64);
-                }
-            }
+        if difference < 0 {
+            // seek to the same height on the exclude side
+            right_iterator.nth(difference.abs() as usize - 1);
         }
 
-        iterator
-    }
-
-    fn block_num_difference(&self, left: &Block, right: &Block) -> i64 {
-        left.block_num as i64 - right.block_num as i64
-    }
-
-    fn get_previous_block(&mut self, block_id: &str) -> Option<Block> {
-        let block = self.get_block_by_block_id(block_id);
-        block
-            .map(|b| self.get_block_by_block_id(&b.previous_block_id))
-            .unwrap_or(None)
-    }
-
-    fn get_nth_previous_block(&mut self, block_id: &str, n: u64) -> Option<Block> {
-        if n == 0 {
-            return None;
-        }
-
-        let mut current_block_id = block_id.to_string();
-
-        let mut block = self.get_previous_block(&current_block_id);
-        if let Some(ref b) = block {
-            current_block_id = b.header_signature.clone();
-        }
-
-        for _ in 1..n {
-            block = self.get_previous_block(&current_block_id);
-            if let Some(ref b) = block {
-                current_block_id = b.header_signature.clone();
-            }
-        }
-        block
-    }
-
-    fn get_block_by_block_id(&mut self, block_id: &str) -> Option<Block> {
-        if block_id == NULL_BLOCK_IDENTIFIER {
-            None
-        } else if self.blockstore.is_none() {
-            let state = self.state
-                .read()
-                .expect("No lock holder has poisoned the lock");
-            match state.get_block_from_main_cache_or_blockstore_name(block_id) {
-                BlockLocation::MainCache(block) => Some(block.clone()),
-                BlockLocation::InStore(blockstore_name) => {
-                    self.blockstore = Some(blockstore_name.into());
-                    state
-                        .get_block_from_blockstore(block_id, blockstore_name)
-                        .expect("Blockstore referenced by anchor does not exist")
-                        .cloned()
-                }
-                BlockLocation::Unknown => None,
-            }
-        } else {
-            let blockstore_id = self.blockstore.as_ref().unwrap();
-            let state = self.state
-                .read()
-                .expect("No lock holder has poisoned the lock");
-            let block = state
-                .get_block_from_blockstore(block_id, blockstore_id)
-                .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
-                .expect(
-                    "The block was not in the blockstore referenced by a successor block's anchor",
-                );
-            Some(block.clone())
+        BranchDiffIterator {
+            left_branch: left_iterator,
+            right_branch: right_iterator,
+            has_reached_common_ancestor: false,
         }
     }
 }
@@ -755,31 +689,33 @@ impl Iterator for BranchDiffIterator {
     fn next(&mut self) -> Option<Self::Item> {
         if self.has_reached_common_ancestor {
             None
-        } else if let Some(ref left) = self.left_block.clone() {
-            if let Some(ref right) = self.right_block.clone() {
-                if left.header_signature == NULL_BLOCK_IDENTIFIER {
+        } else {
+            let advance_right = {
+                let left_peek = self.left_branch.peek();
+                let right_peek = self.right_branch.peek();
+
+                if left_peek.is_none() {
                     return None;
                 }
-                if left.header_signature == right.header_signature
-                    && left.block_num == right.block_num
+
+                if right_peek.is_some()
+                    && right_peek.as_ref().unwrap().header_signature
+                        == left_peek.as_ref().unwrap().header_signature
                 {
                     self.has_reached_common_ancestor = true;
                     return None;
                 }
-                let difference = self.block_num_difference(&left, &right);
-                if difference > 0 {
-                    self.left_block = self.get_previous_block(&left.header_signature);
-                } else {
-                    self.left_block = self.get_previous_block(&left.header_signature);
-                    self.right_block = self.get_previous_block(&right.header_signature);
-                }
-                Some(left.clone())
-            } else {
-                self.left_block = self.get_previous_block(&left.header_signature);
-                Some(left.clone())
+
+                right_peek.is_some()
+                    && right_peek.as_ref().unwrap().block_num
+                        == left_peek.as_ref().unwrap().block_num
+            };
+
+            if advance_right {
+                self.right_branch.next();
             }
-        } else {
-            None
+
+            self.left_branch.next()
         }
     }
 }
