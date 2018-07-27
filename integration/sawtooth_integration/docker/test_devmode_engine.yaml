@@ -1,0 +1,339 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  test-devmode-engine:
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -vvvv
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_devmode_engine
+    expose:
+      - 8008
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing:\
+        /project/sawtooth-core/cli"
+
+  intkey-workload:
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8008
+    command: "bash -c \"\
+      while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+      intkey workload --rate 1 --display-frequency 15 --urls http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008 \
+      \""
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/sdk/examples/intkey_python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing:\
+        /project/sawtooth-core/cli"
+
+  smallbank-workload:
+    build:
+      context: ../../..
+      dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+    image: integration-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8008
+    command: "bash -c \"\
+      sawtooth keygen smallbank-key; \
+      while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+      /project/sawtooth-core/perf/smallbank_workload/bin/smallbank-workload load --key /root/.sawtooth/keys/smallbank-key.priv --rate 1 --target http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008 \
+      \""
+    stop_signal: SIGKILL
+
+  validator-0:
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+      - 5005
+    working_dir: /root
+    command: "bash -c \"\
+        sawadm keygen && \
+        sawset genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm=None \
+          sawtooth.consensus.min_wait_time=1 \
+          sawtooth.consensus.max_wait_time=3 \
+          -o config.batch && \
+        sawadm genesis \
+          config-genesis.batch config.batch && \
+        sawtooth-validator -v \
+            --endpoint tcp://validator-0:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
+            --peering dynamic \
+            --scheduler parallel \
+    \""
+    stop_signal: SIGKILL
+
+  validator-1:
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+      - 5005
+    command: "bash -c \"\
+        sawadm keygen && \
+        sawtooth-validator -v \
+            --endpoint tcp://validator-1:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
+            --peering dynamic \
+            --seeds tcp://validator-0:8800 \
+            --scheduler parallel \
+    \""
+    stop_signal: SIGKILL
+
+  validator-2:
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+      - 5005
+    command: "bash -c \"\
+        sawadm keygen && \
+        sawtooth-validator -v \
+            --endpoint tcp://validator-2:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
+            --peering dynamic \
+            --seeds tcp://validator-0:8800 \
+            --scheduler parallel \
+    \""
+    stop_signal: SIGKILL
+
+  devmode-0:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-0:5005 -v
+    stop_signal: SIGKILL
+
+  devmode-1:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-1:5005 -v
+    stop_signal: SIGKILL
+
+  devmode-2:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
+    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    command: devmode-rust --connect tcp://validator-2:5005 -v
+    stop_signal: SIGKILL
+
+  rest-api-0:
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8008
+    command: sawtooth-rest-api --connect tcp://validator-0:4004 --bind rest-api-0:8008
+    stop_signal: SIGKILL
+
+  rest-api-1:
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8008
+    command: sawtooth-rest-api --connect tcp://validator-1:4004 --bind rest-api-1:8008
+    stop_signal: SIGKILL
+
+  rest-api-2:
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8008
+    command: sawtooth-rest-api --connect tcp://validator-2:4004 --bind rest-api-2:8008
+    stop_signal: SIGKILL
+
+  intkey-tp-0:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: intkey-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  intkey-tp-1:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: intkey-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  intkey-tp-2:
+    build:
+      context: ../../..
+      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
+    image: sawtooth-intkey-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: intkey-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-0:
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-rust -C tcp://validator-0:4004
+    stop_signal: SIGKILL
+
+  smallbank-tp-1:
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-rust -C tcp://validator-1:4004
+    stop_signal: SIGKILL
+
+  smallbank-tp-2:
+    build:
+      context: ../../..
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+    image: sawtooth-smallbank-tp-rust$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  settings-tp-0:
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-0:4004
+    stop_signal: SIGKILL
+
+  settings-tp-1:
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-1:4004
+    stop_signal: SIGKILL
+
+  settings-tp-2:
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-2:4004
+    stop_signal: SIGKILL

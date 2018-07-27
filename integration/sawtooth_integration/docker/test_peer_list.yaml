@@ -136,7 +136,7 @@ services:
     \""
     stop_signal: SIGKILL
 
-  devmode:
+  devmode-0:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/devmode_rust/Dockerfile
@@ -147,7 +147,7 @@ services:
     command: devmode-rust --connect tcp://validator-0:5005 -v
     stop_signal: SIGKILL
 
-  devmode:
+  devmode-1:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/devmode_rust/Dockerfile
@@ -158,7 +158,7 @@ services:
     command: devmode-rust --connect tcp://validator-1:5005 -v
     stop_signal: SIGKILL
 
-  devmode:
+  devmode-2:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/devmode_rust/Dockerfile
@@ -169,7 +169,7 @@ services:
     command: devmode-rust --connect tcp://validator-2:5005 -v
     stop_signal: SIGKILL
 
-  devmode:
+  devmode-3:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/devmode_rust/Dockerfile
@@ -180,7 +180,7 @@ services:
     command: devmode-rust --connect tcp://validator-3:5005 -v
     stop_signal: SIGKILL
 
-  devmode:
+  devmode-4:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/devmode_rust/Dockerfile
