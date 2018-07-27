@@ -199,14 +199,12 @@ lint sdk/examples/intkey_python "$SINCE" || retval=1
 lint sdk/examples/xo_python "$SINCE" || retval=1
 lint rest_api "$SINCE" || retval=1
 
-# settings, identity
+# settings
 PYTHONPATH=$top_dir/families/settings/tests
-PYTHONPATH=$PYTHONPATH:$top_dir/families/identity
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 export PYTHONPATH
 lint families/settings "$SINCE" || retval=1
-lint families/identity "$SINCE" || retval=1
 
 # battleship
 PYTHONPATH=$top_dir/families/battleship
