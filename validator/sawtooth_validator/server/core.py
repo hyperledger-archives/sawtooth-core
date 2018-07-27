@@ -221,12 +221,29 @@ class Validator:
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
 
+        # -- Consensus Engine -- #
+        consensus_thread_pool = InstrumentedThreadPoolExecutor(
+            max_workers=3,
+            name='Consensus')
+        consensus_dispatcher = Dispatcher()
+        consensus_service = Interconnect(
+            bind_consensus,
+            consensus_dispatcher,
+            secured=False,
+            heartbeat=False,
+            max_incoming_connections=20,
+            monitor=True,
+            max_future_callback_workers=10)
+
+        consensus_notifier = ConsensusNotifier(consensus_service)
+
         # -- Setup P2P Networking -- #
         gossip = Gossip(
             network_service,
             settings_cache,
             lambda: block_store.chain_head,
             block_store.chain_head_state_root,
+            consensus_notifier,
             endpoint=endpoint,
             peering_mode=peering,
             initial_seed_endpoints=seeds_list,
@@ -266,22 +283,6 @@ class Validator:
         settings_observer = SettingsObserver(
             to_update=settings_cache.invalidate,
             forked=settings_cache.forked)
-
-        # -- Consensus Engine -- #
-        consensus_thread_pool = InstrumentedThreadPoolExecutor(
-            max_workers=3,
-            name='Consensus')
-        consensus_dispatcher = Dispatcher()
-        consensus_service = Interconnect(
-            bind_consensus,
-            consensus_dispatcher,
-            secured=False,
-            heartbeat=False,
-            max_incoming_connections=20,
-            monitor=True,
-            max_future_callback_workers=10)
-
-        consensus_notifier = ConsensusNotifier(consensus_service)
 
         # -- Setup Journal -- #
         batch_injector_factory = DefaultBatchInjectorFactory(

@@ -23,7 +23,8 @@ def add(
         consensus_notifier,
 ):
 
-    handler = handlers.ConsensusRegisterHandler(consensus_proxy)
+    handler = handlers.ConsensusRegisterHandler(
+        consensus_proxy, consensus_notifier)
     dispatcher.add_handler(handler.request_type, handler, thread_pool)
 
     handler = handlers.ConsensusSendToHandler(consensus_proxy)

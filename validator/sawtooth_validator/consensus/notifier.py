@@ -16,6 +16,7 @@
 import hashlib
 import logging
 
+from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.protobuf import consensus_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -28,20 +29,22 @@ class ConsensusNotifier:
 
     def __init__(self, consensus_service):
         self._service = consensus_service
+        self._registered_engines = ConcurrentSet()
 
     def _notify(self, message_type, message):
-        futures = self._service.send_all(
-            message_type,
-            message.SerializeToString())
-        for future in futures:
-            future.result()
+        if self._registered_engines:
+            futures = self._service.send_all(
+                message_type,
+                message.SerializeToString())
+            for future in futures:
+                future.result()
 
     def notify_peer_connected(self, peer_id):
         """A new peer was added"""
         self._notify(
             validator_pb2.Message.CONSENSUS_NOTIFY_PEER_CONNECTED,
             consensus_pb2.ConsensusNotifyPeerConnected(
-                consensus_pb2.ConsensusPeerInfo(
+                peer_info=consensus_pb2.ConsensusPeerInfo(
                     peer_id=bytes.fromhex(peer_id))))
 
     def notify_peer_disconnected(self, peer_id):
@@ -95,3 +98,7 @@ class ConsensusNotifier:
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
             consensus_pb2.ConsensusNotifyBlockCommit(
                 block_id=bytes.fromhex(block_id)))
+
+    def add_registered_engine(self, engine_name, engine_version):
+        """Add to list of registered consensus engines"""
+        self._registered_engines.add((engine_name, engine_version))

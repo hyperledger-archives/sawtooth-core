@@ -13,9 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from collections import namedtuple
+
 
 class UnknownBlock(Exception):
     """The given block could not be found."""
+
+
+StartupInfo = namedtuple(
+    'SignupInfo',
+    ['chain_head', 'peers', 'local_peer_info'])
 
 
 class ConsensusProxy:
@@ -36,11 +43,16 @@ class ConsensusProxy:
 
     def register(self):
         chain_head = self._chain_controller.chain_head
+        if chain_head is None:
+            return None
 
-        # not implemented
-        peers = []
-
-        return chain_head, peers
+        return StartupInfo(
+            chain_head=chain_head,
+            peers=[
+                self._gossip.peer_to_public_key(peer)
+                for peer in self._gossip.get_peers()
+            ],
+            local_peer_info=self._public_key)
 
     # Using network service
     def send_to(self, peer_id, message):

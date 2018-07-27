@@ -80,6 +80,7 @@ class Gossip:
                  settings_cache,
                  current_chain_head_func,
                  current_root_func,
+                 consensus_notifier,
                  endpoint=None,
                  peering_mode='static',
                  initial_seed_endpoints=None,
@@ -99,6 +100,8 @@ class Gossip:
             current_chain_head_func (function): returns the current chain head.
             current_root_func (function): returns the current state root hash
                 for the current chain root.
+            consensus_notifier (consensus.ConsensusNotifier): A proxy for
+                sending peering updates to the consensus engine.
             endpoint (str): The publically accessible zmq-style uri
                 endpoint for this validator.
             peering_mode (str): The type of peering approach. Either 'static'
@@ -143,6 +146,7 @@ class Gossip:
 
         self._current_chain_head_func = current_chain_head_func
         self._current_root_func = current_root_func
+        self._consensus_notifier = consensus_notifier
 
         self._topology = None
         self._peers = {}
@@ -193,6 +197,11 @@ class Gossip:
         with self._lock:
             return copy.copy(self._peers)
 
+    def peer_to_public_key(self, peer):
+        """Returns the public key for the associated peer."""
+        with self._lock:
+            return self._network.connection_id_to_public_key(peer)
+
     @property
     def endpoint(self):
         """Returns the validator's public endpoint.
@@ -223,6 +232,10 @@ class Gossip:
                         self._maximum_peer_connectivity,
                         endpoint))
 
+        public_key = self.peer_to_public_key(connection_id)
+        if public_key:
+            self._consensus_notifier.notify_peer_connected(public_key)
+
     def unregister_peer(self, connection_id):
         """Removes a connection_id from the registry.
 
@@ -230,6 +243,10 @@ class Gossip:
             connection_id (str): A unique identifier which identifies an
                 connection on the network server socket.
         """
+        public_key = self.peer_to_public_key(connection_id)
+        if public_key:
+            self._consensus_notifier.notify_peer_disconnected(public_key)
+
         with self._lock:
             if connection_id in self._peers:
                 del self._peers[connection_id]
