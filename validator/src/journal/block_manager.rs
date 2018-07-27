@@ -553,16 +553,54 @@ impl Iterator for GetBlockIterator {
 
 pub struct BranchIterator {
     state: Arc<RwLock<BlockManagerState>>,
+    initial_block_id: String,
     next_block_id: String,
     blockstore: Option<String>,
 }
 
 impl BranchIterator {
     fn new(state: Arc<RwLock<BlockManagerState>>, first_block_id: String) -> Self {
+        let next_block_id = {
+            let mut block_manager = state
+                .write()
+                .expect("No log holder should have poisoned the lock");
+            match block_manager.ref_block(&first_block_id) {
+                Ok(_) => first_block_id,
+                Err(BlockManagerError::UnknownBlock) => NULL_BLOCK_IDENTIFIER.to_string(),
+
+                Err(err) => {
+                    error!(
+                        "Unable to ref block at {}: {:?}; ignoring",
+                        &first_block_id, err
+                    );
+                    NULL_BLOCK_IDENTIFIER.to_string()
+                }
+            }
+        };
         BranchIterator {
             state,
-            next_block_id: first_block_id,
+            initial_block_id: next_block_id.clone(),
+            next_block_id,
             blockstore: None,
+        }
+    }
+}
+
+impl Drop for BranchIterator {
+    fn drop(&mut self) {
+        if self.initial_block_id != NULL_BLOCK_IDENTIFIER {
+            let mut block_manager = self.state
+                .write()
+                .expect("No log holder should have poisoned the lock");
+            match block_manager.unref_block(&self.initial_block_id) {
+                Ok(_) => (),
+                Err(err) => {
+                    error!(
+                        "Unable to unref block at {}: {:?}; ignoring",
+                        &self.initial_block_id, err
+                    );
+                }
+            }
         }
     }
 }
