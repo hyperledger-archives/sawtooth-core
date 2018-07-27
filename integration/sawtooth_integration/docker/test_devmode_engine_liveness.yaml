@@ -28,7 +28,7 @@ services:
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -vvvv
         -s /project/sawtooth-core/integration/sawtooth_integration/tests
-        test_poet_liveness
+        test_devmode_engine_liveness
     expose:
       - 8008
     stop_signal: SIGKILL
