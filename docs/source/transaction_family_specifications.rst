@@ -15,8 +15,9 @@ your own transaction family. These transaction families are available in the
 * The :doc:`/transaction_family_specifications/identity_transaction_family`
   is an extensible role- and policy-based system for defining permissions in a
   way that can be used by other Sawtooth components.
-  The family name is ``sawtooth_identity``.
-  The transaction processor is :doc:`/cli/identity-tp`.
+  The family name is ``sawtooth_identity``;
+  the associated transaction processor is ``identity-tp`` (see
+  :doc:`/cli/identity-tp`).
 
 * The :doc:`/transaction_family_specifications/integerkey_transaction_family`
   (also called "intkey") simply sets, increments, and decrements the value of
