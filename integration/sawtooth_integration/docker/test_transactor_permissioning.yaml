@@ -33,7 +33,7 @@ services:
   identity-tp:
     build:
       context: ../../..
-      dockerfile: ./families/identity/Dockerfile
+      dockerfile: ./families/identity/python/Dockerfile
     image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

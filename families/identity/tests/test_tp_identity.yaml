@@ -20,7 +20,7 @@ services:
   identity-tp:
     build:
       context: ../../..
-      dockerfile: ./families/identity/Dockerfile
+      dockerfile: ./families/identity/python/Dockerfile
     image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -46,7 +46,7 @@ services:
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/sawtooth-core/families/identity:\
+        PYTHONPATH: "/project/sawtooth-core/families/identity/python:\
             /project/sawtooth-core/families/identity/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\

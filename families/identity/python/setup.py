@@ -37,7 +37,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(
     name='sawtooth-identity',
     version=subprocess.check_output(
-        ['../../bin/get_version']).decode('utf-8').strip(),
+        ['../../../bin/get_version']).decode('utf-8').strip(),
     description='Sawtooth Identity Transaction Processor',
     author='Hyperledger Sawtooth',
     url='https://github.com/hyperledger/sawtooth-core',

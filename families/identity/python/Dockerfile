@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f families/identity/Dockerfile -t sawtooth-identity-tp-local .
+# docker build -f families/identity/python/Dockerfile -t sawtooth-identity-tp-local .
 
 # -------------=== signing build ===-------------
 

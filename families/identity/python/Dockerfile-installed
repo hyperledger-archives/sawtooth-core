@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f families/identity/Dockerfile-installed -t sawtooth-identity-tp .
+# docker build -f families/identity/python/Dockerfile-installed -t sawtooth-identity-tp .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder
@@ -103,7 +103,7 @@ COPY . /project
 RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install \
  && /project/bin/protogen \
- && cd /project/families/identity \
+ && cd /project/families/identity/python \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \
  && python3 setup.py --command-packages=stdeb.command debianize \
@@ -115,7 +115,7 @@ FROM ubuntu:xenial
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
-COPY --from=identity-tp-builder /project/families/python3-sawtooth-identity*.deb /tmp
+COPY --from=identity-tp-builder /project/families/identity/python3-sawtooth-identity*.deb /tmp
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
