@@ -235,13 +235,6 @@ impl BlockManagerState {
             .nth(0))
     }
 
-    fn get_block_from_any_blockstore(&self, block_id: &str) -> Option<&Block> {
-        self.blockstore_by_name
-            .values()
-            .find(|blockstore| blockstore.get(&[block_id]).count() > 0)
-            .map(|blockstore| blockstore.get(&[block_id]).nth(0).unwrap())
-    }
-
     fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
         match self.references_by_block_id.get_mut(block_id) {
             Some(r) => r.increase_external_ref_count(),
@@ -536,14 +529,16 @@ impl Iterator for GetBlockIterator {
         let state = self.state
             .read()
             .expect("Unable to obtain read lock; it has been poisoned");
-        let block: Option<&Block> = match state.get_block_from_main_cache_or_blockstore_name(&block_id) {
+        let block: Option<&Block> = match state
+            .get_block_from_main_cache_or_blockstore_name(&block_id)
+        {
             BlockLocation::MainCache(block) => Some(block),
 
             BlockLocation::InStore(blockstore_name) => state
                 .get_block_from_blockstore(block_id, blockstore_name)
                 .expect("The blockstore name returned for a block id doesn't contain the block."),
 
-            BlockLocation::Unknown => state.get_block_from_any_blockstore(block_id),
+            BlockLocation::Unknown => None,
         };
 
         self.index += 1;
