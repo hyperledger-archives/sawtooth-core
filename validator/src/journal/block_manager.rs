@@ -363,7 +363,7 @@ impl BlockManager {
     pub fn put(&self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
 
         state.put(branch)
     }
@@ -387,7 +387,7 @@ impl BlockManager {
     pub fn ref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
         state.ref_block(tip)
     }
 
@@ -396,7 +396,7 @@ impl BlockManager {
     pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
         state.unref_block(tip)
     }
 
@@ -407,7 +407,7 @@ impl BlockManager {
     ) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
 
         state.add_store(store_name, store)
     }
@@ -422,7 +422,7 @@ impl BlockManager {
         let blocks_for_the_main_pool = {
             let mut state = self.state
                 .write()
-                .expect("No lock holder has poisoned the lock");
+                .expect("Unable to obtain write lock; it has been poisoned");
 
             let blockstore = state
                 .blockstore_by_name
@@ -436,7 +436,7 @@ impl BlockManager {
         };
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
 
         for block in blocks_for_the_main_pool {
             state
@@ -457,7 +457,7 @@ impl BlockManager {
 
         let mut state = self.state
             .write()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain write lock; it has been poisoned");
         let blockstore = state
             .blockstore_by_name
             .get_mut(store_name)
@@ -469,7 +469,7 @@ impl BlockManager {
     pub fn persist(&self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
         if !self.state
             .read()
-            .expect("No lock holder has poisoned lock")
+            .expect("Unable to obtain read lock; it has been poisoned")
             .blockstore_by_name
             .contains_key(store_name)
         {
@@ -477,7 +477,9 @@ impl BlockManager {
         }
 
         let head_block_in_blockstore = {
-            let state = self.state.read().expect("No lock holder has poisoned lock");
+            let state = self.state
+                .read()
+                .expect("Unable to obtain read lock; it has been poisoned");
 
             let block_store = state
                 .blockstore_by_name
@@ -533,7 +535,7 @@ impl Iterator for GetBlockIterator {
         let block_id = &self.block_ids[self.index];
         let state = self.state
             .read()
-            .expect("No lock holder has poisoned the lock");
+            .expect("Unable to obtain read lock; it has been poisoned");
         let block: Option<&Block> = match state.get_block_from_main_cache_or_blockstore_name(&block_id) {
             BlockLocation::MainCache(block) => Some(block),
 
@@ -562,7 +564,7 @@ impl BranchIterator {
         let next_block_id = {
             let mut block_manager = state
                 .write()
-                .expect("No log holder should have poisoned the lock");
+                .expect("Unable to obtain write lock; it has been poisoned");
             match block_manager.ref_block(&first_block_id) {
                 Ok(_) => first_block_id,
                 Err(BlockManagerError::UnknownBlock) => NULL_BLOCK_IDENTIFIER.to_string(),
@@ -590,7 +592,7 @@ impl Drop for BranchIterator {
         if self.initial_block_id != NULL_BLOCK_IDENTIFIER {
             let mut block_manager = self.state
                 .write()
-                .expect("No log holder should have poisoned the lock");
+                .expect("Unable to obtain write lock; it has been poisoned");
             match block_manager.unref_block(&self.initial_block_id) {
                 Ok(_) => (),
                 Err(err) => {
@@ -613,7 +615,7 @@ impl Iterator for BranchIterator {
         } else if self.blockstore.is_none() {
             let state = self.state
                 .read()
-                .expect("No lock holder should have poisoned the lock");
+                .expect("Unable to obtain read lock; it has been poisoned");
 
             match state.get_block_from_main_cache_or_blockstore_name(&self.next_block_id) {
                 BlockLocation::MainCache(block) => {
@@ -634,7 +636,7 @@ impl Iterator for BranchIterator {
 
             let state = self.state
                 .read()
-                .expect("No lock holder should have poisoned the lock");
+                .expect("Unable to obtain read lock; it has been poisoned");
             let block = state
                 .get_block_from_blockstore(&self.next_block_id, blockstore_id)
                 .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
