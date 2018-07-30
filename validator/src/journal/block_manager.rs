@@ -91,7 +91,7 @@ impl RefCount {
 /// An Enum describing where a block is found within the BlockManager.
 /// This is used by iterators calling private methods.
 enum BlockLocation<'a> {
-    MainCache(&'a Block),
+    MainCache(Block),
     InStore(&'a str),
     Unknown,
 }
@@ -206,8 +206,8 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
-        self.block_by_block_id.get(block_id)
+    fn get_block_by_block_id(&self, block_id: &str) -> Option<Block> {
+        self.block_by_block_id.get(block_id).cloned()
     }
 
     fn get_block_from_main_cache_or_blockstore_name<'a>(
@@ -228,11 +228,11 @@ impl BlockManagerState {
         }
     }
 
-    fn get_block_from_blockstore<'a>(
-        &'a self,
+    fn get_block_from_blockstore(
+        &self,
         block_id: &str,
         store_name: &str,
-    ) -> Result<Option<&'a Block>, BlockManagerError> {
+    ) -> Result<Option<Block>, BlockManagerError> {
         Ok(self.blockstore_by_name
             .get(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?
@@ -534,7 +534,7 @@ impl Iterator for GetBlockIterator {
         let state = self.state
             .read()
             .expect("Unable to obtain read lock; it has been poisoned");
-        let block: Option<&Block> = match state
+        let block: Option<Block> = match state
             .get_block_from_main_cache_or_blockstore_name(&block_id)
         {
             BlockLocation::MainCache(block) => Some(block),
@@ -548,7 +548,7 @@ impl Iterator for GetBlockIterator {
 
         self.index += 1;
 
-        Some(block.cloned())
+        Some(block)
     }
 }
 
@@ -627,7 +627,6 @@ impl Iterator for BranchIterator {
                     state
                         .get_block_from_blockstore(&self.next_block_id, blockstore_name)
                         .expect("The blockstore name returned for a block id doesn't contain the block.")
-                        .cloned()
                 }
                 BlockLocation::Unknown => None,
             }
