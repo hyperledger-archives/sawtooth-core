@@ -110,7 +110,7 @@ impl BlockManagerState {
 
         let in_any_blockstore = self.blockstore_by_name
             .values()
-            .any(|blockstore| blockstore.get(vec![block_id.into()]).count() > 0);
+            .any(|blockstore| blockstore.get(&[block_id]).count() > 0);
         let is_root = block_id == NULL_BLOCK_IDENTIFIER;
 
         in_memory || in_any_blockstore || is_root
@@ -214,7 +214,7 @@ impl BlockManagerState {
         } else {
             let name: Option<&'a str> = self.blockstore_by_name
                 .iter()
-                .find(|(_, store)| store.get(vec![block_id.to_string()]).count() > 0)
+                .find(|(_, store)| store.get(&[block_id]).count() > 0)
                 .map(|(name, _)| name.as_str());
 
             name.map(BlockLocation::InStore)
@@ -224,21 +224,21 @@ impl BlockManagerState {
 
     fn get_block_from_blockstore<'a>(
         &'a self,
-        block_id: String,
+        block_id: &str,
         store_name: &str,
     ) -> Result<Option<&'a Block>, BlockManagerError> {
         Ok(self.blockstore_by_name
             .get(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?
-            .get(vec![block_id])
+            .get(&[block_id])
             .nth(0))
     }
 
-    fn get_block_from_any_blockstore(&self, block_id: String) -> Option<&Block> {
+    fn get_block_from_any_blockstore(&self, block_id: &str) -> Option<&Block> {
         self.blockstore_by_name
             .values()
-            .find(|blockstore| blockstore.get(vec![block_id.clone()]).count() > 0)
-            .map(|blockstore| blockstore.get(vec![block_id]).nth(0).unwrap())
+            .find(|blockstore| blockstore.get(&[block_id]).count() > 0)
+            .map(|blockstore| blockstore.get(&[block_id]).nth(0).unwrap())
     }
 
     fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
@@ -428,12 +428,10 @@ impl BlockManager {
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 
-            blockstore.delete(
-                to_be_removed
-                    .iter()
-                    .map(|b| b.header_signature.clone())
-                    .collect(),
-            )?
+            blockstore.delete(&to_be_removed
+                .iter()
+                .map(|b| b.header_signature.as_str())
+                .collect::<Vec<&str>>())?
         };
         let mut state = self.state
             .write()
@@ -539,10 +537,10 @@ impl Iterator for GetBlockIterator {
             BlockLocation::MainCache(block) => Some(block),
 
             BlockLocation::InStore(blockstore_name) => state
-                .get_block_from_blockstore(block_id.to_string(), blockstore_name)
+                .get_block_from_blockstore(block_id, blockstore_name)
                 .expect("An anchor pointed to a blockstore that does not exist"),
 
-            BlockLocation::Unknown => state.get_block_from_any_blockstore(block_id.to_string()),
+            BlockLocation::Unknown => state.get_block_from_any_blockstore(block_id),
         };
 
         self.index += 1;
@@ -624,7 +622,7 @@ impl Iterator for BranchIterator {
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.into());
                     state
-                        .get_block_from_blockstore(self.next_block_id.clone(), blockstore_name)
+                        .get_block_from_blockstore(&self.next_block_id, blockstore_name)
                         .expect("Blockstore referenced by anchor does not exist")
                         .cloned()
                 }
@@ -637,7 +635,7 @@ impl Iterator for BranchIterator {
                 .read()
                 .expect("No lock holder should have poisoned the lock");
             let block = state
-                .get_block_from_blockstore(self.next_block_id.clone(), blockstore_id)
+                .get_block_from_blockstore(&self.next_block_id, blockstore_id)
                 .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
                 .expect(
                     "The block was not in the blockstore referenced by a successor block's anchor",
@@ -676,10 +674,8 @@ impl BranchDiffIterator {
             if let Some(right) = iterator.right_block.clone() {
                 let difference = iterator.block_num_difference(&left, &right);
                 if difference < 0 {
-                    iterator.right_block = iterator.get_nth_previous_block(
-                        right.header_signature.clone(),
-                        difference.abs() as u64,
-                    );
+                    iterator.right_block = iterator
+                        .get_nth_previous_block(&right.header_signature, difference.abs() as u64);
                 }
             }
         }
@@ -691,27 +687,27 @@ impl BranchDiffIterator {
         left.block_num as i64 - right.block_num as i64
     }
 
-    fn get_previous_block(&mut self, block_id: String) -> Option<Block> {
+    fn get_previous_block(&mut self, block_id: &str) -> Option<Block> {
         let block = self.get_block_by_block_id(block_id);
         block
-            .map(|b| self.get_block_by_block_id(b.previous_block_id.clone()))
+            .map(|b| self.get_block_by_block_id(&b.previous_block_id))
             .unwrap_or(None)
     }
 
-    fn get_nth_previous_block(&mut self, block_id: String, n: u64) -> Option<Block> {
+    fn get_nth_previous_block(&mut self, block_id: &str, n: u64) -> Option<Block> {
         if n == 0 {
             return None;
         }
 
-        let mut current_block_id = block_id;
+        let mut current_block_id = block_id.to_string();
 
-        let mut block = self.get_previous_block(current_block_id.clone());
+        let mut block = self.get_previous_block(&current_block_id);
         if let Some(ref b) = block {
             current_block_id = b.header_signature.clone();
         }
 
         for _ in 1..n {
-            block = self.get_previous_block(current_block_id.clone());
+            block = self.get_previous_block(&current_block_id);
             if let Some(ref b) = block {
                 current_block_id = b.header_signature.clone();
             }
@@ -719,14 +715,14 @@ impl BranchDiffIterator {
         block
     }
 
-    fn get_block_by_block_id(&mut self, block_id: String) -> Option<Block> {
+    fn get_block_by_block_id(&mut self, block_id: &str) -> Option<Block> {
         if block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
             let state = self.state
                 .read()
                 .expect("No lock holder has poisoned the lock");
-            match state.get_block_from_main_cache_or_blockstore_name(block_id.as_str()) {
+            match state.get_block_from_main_cache_or_blockstore_name(block_id) {
                 BlockLocation::MainCache(block) => Some(block.clone()),
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.into());
@@ -743,7 +739,7 @@ impl BranchDiffIterator {
                 .read()
                 .expect("No lock holder has poisoned the lock");
             let block = state
-                .get_block_from_blockstore(block_id.clone(), blockstore_id)
+                .get_block_from_blockstore(block_id, blockstore_id)
                 .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
                 .expect(
                     "The block was not in the blockstore referenced by a successor block's anchor",
@@ -772,14 +768,14 @@ impl Iterator for BranchDiffIterator {
                 }
                 let difference = self.block_num_difference(&left, &right);
                 if difference > 0 {
-                    self.left_block = self.get_previous_block(left.header_signature.clone());
+                    self.left_block = self.get_previous_block(&left.header_signature);
                 } else {
-                    self.left_block = self.get_previous_block(left.header_signature.clone());
-                    self.right_block = self.get_previous_block(right.header_signature.clone());
+                    self.left_block = self.get_previous_block(&left.header_signature);
+                    self.right_block = self.get_previous_block(&right.header_signature);
                 }
                 Some(left.clone())
             } else {
-                self.left_block = self.get_previous_block(left.header_signature.clone());
+                self.left_block = self.get_previous_block(&left.header_signature);
                 Some(left.clone())
             }
         } else {
