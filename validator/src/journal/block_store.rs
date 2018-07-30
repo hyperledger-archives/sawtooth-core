@@ -26,13 +26,16 @@ pub enum BlockStoreError {
 }
 
 pub trait BlockStore {
-    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a>;
+    fn get<'a>(
+        &'a self,
+        block_ids: &[&str],
+    ) -> Result<Box<Iterator<Item = &'a Block> + 'a>, BlockStoreError>;
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a>;
+    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = &'a Block> + 'a>, BlockStoreError>;
 }
 
 #[derive(Default)]
@@ -53,7 +56,10 @@ impl InMemoryBlockStore {
 }
 
 impl BlockStore for InMemoryBlockStore {
-    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a> {
+    fn get<'a>(
+        &'a self,
+        block_ids: &[&str],
+    ) -> Result<Box<Iterator<Item = &'a Block> + 'a>, BlockStoreError> {
         let iterator: InMemoryGetBlockIterator = InMemoryGetBlockIterator::new(
             self,
             block_ids
@@ -62,7 +68,7 @@ impl BlockStore for InMemoryBlockStore {
                 .collect(),
         );
 
-        Box::new(iterator)
+        Ok(Box::new(iterator))
     }
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
@@ -99,11 +105,11 @@ impl BlockStore for InMemoryBlockStore {
         Ok(())
     }
 
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a> {
-        Box::new(InMemoryIter {
+    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = &'a Block> + 'a>, BlockStoreError> {
+        Ok(Box::new(InMemoryIter {
             blockstore: self,
             head: &self.chain_head_id,
-        })
+        }))
     }
 }
 
@@ -187,10 +193,10 @@ mod test {
         store
             .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
             .unwrap();
-        assert_eq!(store.get(&["A"]).next().unwrap(), &block_a);
+        assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), &block_a);
 
         {
-            let mut iterator = store.iter();
+            let mut iterator = store.iter().unwrap();
 
             assert_eq!(iterator.next().unwrap(), &block_c);
             assert_eq!(iterator.next().unwrap(), &block_b);

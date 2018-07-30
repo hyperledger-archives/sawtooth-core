@@ -106,15 +106,18 @@ struct BlockManagerState {
 }
 
 impl BlockManagerState {
-    fn contains(&self, block_id: &str) -> bool {
-        let in_memory = self.block_by_block_id.contains_key(block_id);
+    fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
+        if self.block_by_block_id.contains_key(block_id) {
+            return Ok(true);
+        }
 
-        let in_any_blockstore = self.blockstore_by_name
-            .values()
-            .any(|blockstore| blockstore.get(&[block_id]).count() > 0);
-        let is_root = block_id == NULL_BLOCK_IDENTIFIER;
+        for blockstore in self.blockstore_by_name.values() {
+            if blockstore.get(&[block_id])?.count() > 0 {
+                return Ok(true);
+            }
+        }
 
-        in_memory || in_any_blockstore || is_root
+        return Ok(block_id == NULL_BLOCK_IDENTIFIER);
     }
 
     /// Checks that every block is preceded by the block referenced by block.previous_block_id except the
@@ -154,7 +157,7 @@ impl BlockManagerState {
     fn put(&mut self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
         match branch.split_first() {
             Some((head, tail)) => {
-                if !self.contains(head.previous_block_id.as_str()) {
+                if !self.contains(head.previous_block_id.as_str())? {
                     return Err(BlockManagerError::MissingPredecessor(format!(
                         "During Put, missing predecessor of block {}: {}",
                         head.header_signature, head.previous_block_id
@@ -162,7 +165,7 @@ impl BlockManagerState {
                 }
 
                 self.check_predecessor_relationship(tail, head)?;
-                if !self.contains(&head.header_signature) {
+                if !self.contains(&head.header_signature)? {
                     self.references_by_block_id
                         .get_mut(&head.previous_block_id)
                         .map(|r| r.increase_internal_ref_count());
@@ -170,10 +173,12 @@ impl BlockManagerState {
             }
             None => return Err(BlockManagerError::MissingInput),
         }
-        let blocks_not_added_yet: Vec<Block> = branch
-            .into_iter()
-            .filter(|block| !self.contains(block.header_signature.as_str()))
-            .collect();
+        let mut blocks_not_added_yet: Vec<Block> = Vec::new();
+        for block in branch.into_iter() {
+            if !self.contains(block.header_signature.as_str())? {
+                blocks_not_added_yet.push(block);
+            }
+        }
         if let Some((last_block, blocks_with_references)) = blocks_not_added_yet.split_last() {
             self.references_by_block_id.insert(
                 last_block.header_signature.clone(),
@@ -215,7 +220,7 @@ impl BlockManagerState {
         } else {
             let name: Option<&'a str> = self.blockstore_by_name
                 .iter()
-                .find(|(_, store)| store.get(&[block_id]).count() > 0)
+                .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
                 .map(|(name, _)| name.as_str());
 
             name.map(BlockLocation::InStore)
@@ -231,7 +236,7 @@ impl BlockManagerState {
         Ok(self.blockstore_by_name
             .get(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?
-            .get(&[block_id])
+            .get(&[block_id])?
             .nth(0))
     }
 
@@ -479,7 +484,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation");
             let head = block_store
-                .iter()
+                .iter()?
                 .nth(0)
                 .map(|b| b.header_signature.clone());
             head
@@ -635,9 +640,7 @@ impl Iterator for BranchIterator {
             let block = state
                 .get_block_from_blockstore(&self.next_block_id, blockstore_id)
                 .expect("The BlockManager has lost a blockstore that is referenced by a block.")
-                .expect(
-                    "The block was not in the blockstore referenced by a successor block.",
-                );
+                .expect("The block was not in the blockstore referenced by a successor block.");
             Some(block.clone())
         }
     }
