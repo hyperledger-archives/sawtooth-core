@@ -541,7 +541,7 @@ impl Iterator for GetBlockIterator {
 
             BlockLocation::InStore(blockstore_name) => state
                 .get_block_from_blockstore(block_id, blockstore_name)
-                .expect("An anchor pointed to a blockstore that does not exist"),
+                .expect("The blockstore name returned for a block id doesn't contain the block."),
 
             BlockLocation::Unknown => state.get_block_from_any_blockstore(block_id),
         };
@@ -626,7 +626,7 @@ impl Iterator for BranchIterator {
                     self.blockstore = Some(blockstore_name.into());
                     state
                         .get_block_from_blockstore(&self.next_block_id, blockstore_name)
-                        .expect("Blockstore referenced by anchor does not exist")
+                        .expect("The blockstore name returned for a block id doesn't contain the block.")
                         .cloned()
                 }
                 BlockLocation::Unknown => None,
@@ -639,9 +639,9 @@ impl Iterator for BranchIterator {
                 .expect("Unable to obtain read lock; it has been poisoned");
             let block = state
                 .get_block_from_blockstore(&self.next_block_id, blockstore_id)
-                .expect("The Blockmanager has lost a blockstore that is referenced by an anchor")
+                .expect("The BlockManager has lost a blockstore that is referenced by a block.")
                 .expect(
-                    "The block was not in the blockstore referenced by a successor block's anchor",
+                    "The block was not in the blockstore referenced by a successor block.",
                 );
             Some(block.clone())
         }
