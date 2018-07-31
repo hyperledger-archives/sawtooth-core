@@ -42,6 +42,7 @@ class GenesisController:
                  context_manager,
                  transaction_executor,
                  completer,
+                 block_manager,
                  block_store,
                  state_view_factory,
                  identity_signer,
@@ -71,6 +72,7 @@ class GenesisController:
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
         self._completer = completer
+        self._block_manager = block_manager
         self._block_store = block_store
         self._state_view_factory = state_view_factory
         self._identity_signer = identity_signer
@@ -202,6 +204,7 @@ class GenesisController:
 
         self._completer.add_block(block)
         self._block_store.update_chain([blkw])
+        self._block_manager.put([blkw.block])
 
         self._chain_id_manager.save_block_chain_id(block.header_signature)
 
