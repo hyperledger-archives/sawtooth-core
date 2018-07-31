@@ -39,7 +39,8 @@ pub enum ErrorCode {
     MissingPredecessorInBranch = 0x03,
     MissingInput = 0x04,
     UnknownBlock = 0x05,
-    Error = 0x06,
+    InvalidBlockStoreName = 0x06,
+    Error = 0x07,
     InvalidPythonObject = 0x10,
     StopIteration = 0x11,
 }
@@ -64,6 +65,29 @@ pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> Error
     check_null!(block_manager);
     Box::from_raw(block_manager as *mut BlockManager);
     ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_add_store(
+    block_manager: *mut c_void,
+    block_store_name: *const c_char,
+    block_store: *mut py_ffi::PyObject,
+) -> ErrorCode {
+    check_null!(block_manager, block_store_name, block_store);
+
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let py_block_store = PyBlockStore::new(PyObject::from_borrowed_ptr(py, block_store));
+
+    let name = match CStr::from_ptr(block_store_name).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidBlockStoreName,
+    };
+
+    (*(block_manager as *mut BlockManager))
+        .add_store(name, Box::new(py_block_store))
+        .map(|_| ErrorCode::Success)
+        .unwrap_or(ErrorCode::Error)
 }
 
 #[no_mangle]
@@ -417,7 +441,7 @@ mod test {
     use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
-    use cpython::{ObjectProtocol, PyObject, Python, NoArgs};
+    use cpython::{NoArgs, ObjectProtocol, PyObject, Python};
 
     use protobuf;
     use protobuf::Message;
