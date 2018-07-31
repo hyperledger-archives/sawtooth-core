@@ -16,16 +16,19 @@
  */
 
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{PyList, PyObject, Python, ToPyObject};
+use cpython::{FromPyObject, NoArgs, ObjectProtocol, PyList, PyObject, Python, ToPyObject};
 use py_ffi;
+use pylogger;
 
 use block::Block;
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
+use journal::block_store::{BlockStore, BlockStoreError};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -239,4 +242,291 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
         None => return ErrorCode::StopIteration,
     };
     ErrorCode::Success
+}
+
+struct PyBlockStore {
+    py_block_store: PyObject,
+}
+
+impl PyBlockStore {
+    fn new(py_block_store: PyObject) -> Self {
+        PyBlockStore { py_block_store }
+    }
+}
+
+impl BlockStore for PyBlockStore {
+    fn get<'a>(
+        &'a self,
+        block_ids: &[&str],
+    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_block_store
+            .call_method(py, "get_blocks", (block_ids,), None)
+            .and_then(|py_list| py_list.call_method(py, "__iter__", NoArgs, None))
+            .and_then(|py_iter| {
+                Ok(Box::new(PyIteratorWrapper::with_xform(
+                    py_iter,
+                    Box::new(unwrap_block),
+                )) as Box<Iterator<Item = Block>>)
+            })
+            .map_err(|py_err| {
+                pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
+                BlockStoreError::Error(format!("Unable to read blocks: {:?}", block_ids))
+            })
+    }
+
+    fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        let mut deleted_blocks = Vec::new();
+        for block_id in block_ids {
+            let block: Block = self.py_block_store
+                .call_method(py, "get", (block_id,), None)
+                // Unwrap the block wrapper
+                .and_then(|blkw| blkw.getattr(py, "block"))
+                .map_err(|py_err| {
+                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
+                    BlockStoreError::Error(format!("Unable to get blocks"))
+                })?
+                .extract(py)
+                .expect("Unable to convert block from python");
+
+            self.py_block_store
+                .call_method(py, "__delitem__", (block_id,), None)
+                .map_err(|py_err| {
+                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
+                    BlockStoreError::Error(format!("Unable to delete blocks"))
+                })?;
+
+            deleted_blocks.push(block);
+        }
+
+        Ok(deleted_blocks)
+    }
+
+    fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        for block in blocks {
+            let block_wrapper = py.import("sawtooth_validator.journal.block_wrapper")
+                .expect("Unable to import block_wrapper")
+                .get(py, "BlockWrapper")
+                .expect("Unable to import BlockWrapper");
+
+            self.py_block_store
+                .call_method(
+                    py,
+                    "__setitem__",
+                    (
+                        &block.header_signature,
+                        block_wrapper
+                            .call(py, (&block,), None)
+                            .expect("Unable to wrap block."),
+                    ),
+                    None,
+                )
+                .map_err(|py_err| {
+                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
+                    BlockStoreError::Error(format!("Unable to put blocks"))
+                })?;
+        }
+
+        Ok(())
+    }
+
+    fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_block_store
+            .call_method(py, "__iter__", NoArgs, None)
+            .and_then(|py_iter| {
+                Ok(Box::new(PyIteratorWrapper::with_xform(
+                    py_iter,
+                    Box::new(unwrap_block),
+                )) as Box<Iterator<Item = Block>>)
+            })
+            .map_err(|py_err| {
+                let py = unsafe { Python::assume_gil_acquired() };
+                pylogger::exception(py, "Unable to call iter(block_store)", py_err);
+                BlockStoreError::Error(format!("Unable to iterate block store"))
+            })
+    }
+}
+
+fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
+    block_wrapper
+        .getattr(py, "block")
+        .expect("Unable to get block from block wrapper")
+}
+
+struct PyIteratorWrapper<T> {
+    py_iter: PyObject,
+    target_type: PhantomData<T>,
+    xform: Box<Fn(Python, PyObject) -> PyObject>,
+}
+
+impl<T> PyIteratorWrapper<T>
+where
+    for<'source> T: FromPyObject<'source>,
+{
+    fn new(py_iter: PyObject) -> Self {
+        PyIteratorWrapper::with_xform(py_iter, Box::new(|_, obj| obj))
+    }
+
+    fn with_xform(py_iter: PyObject, xform: Box<Fn(Python, PyObject) -> PyObject>) -> Self {
+        PyIteratorWrapper {
+            py_iter,
+            target_type: PhantomData,
+            xform,
+        }
+    }
+}
+
+impl<T> Iterator for PyIteratorWrapper<T>
+where
+    for<'source> T: FromPyObject<'source>,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        match self.py_iter.call_method(py, "__next__", NoArgs, None) {
+            Ok(py_obj) => Some(
+                (*self.xform)(py, py_obj)
+                    .extract(py)
+                    .expect("Unable to convert py obj"),
+            ),
+            Err(py_err) => {
+                if py_err.get_type(py).name(py) != "StopIteration" {
+                    pylogger::exception(py, "Unable to iterate; aborting", py_err);
+                }
+                None
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use block::Block;
+    use journal::NULL_BLOCK_IDENTIFIER;
+    use proto::block::BlockHeader;
+
+    use cpython::{ObjectProtocol, PyObject, Python, NoArgs};
+
+    use protobuf;
+    use protobuf::Message;
+
+    use std::env;
+    use std::fs::remove_file;
+    use std::panic;
+    use std::thread;
+
+    const TEST_DB_SIZE: usize = 10 * 1024 * 1024;
+
+    /// This test matches the basic test in journal::block_store.
+    /// It creates a Python-backed block store, inserts several blocks,
+    /// retrieves them, iterates on them, and deletes one.
+    #[test]
+    fn py_block_store() {
+        run_test(|db_path| {
+            let mut store = PyBlockStore::new(create_block_store(db_path));
+
+            let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
+            let block_b = create_block("B", 2, "A");
+            let block_c = create_block("C", 3, "B");
+
+            store
+                .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
+                .unwrap();
+            assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
+
+            {
+                let mut iterator = store.iter().unwrap();
+
+                assert_eq!(iterator.next().unwrap(), block_c);
+                assert_eq!(iterator.next().unwrap(), block_b);
+                assert_eq!(iterator.next().unwrap(), block_a);
+                assert_eq!(iterator.next(), None);
+            }
+
+            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
+        })
+    }
+
+    fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
+        let mut block_header = BlockHeader::new();
+        block_header.set_previous_block_id(previous_block_id.to_string());
+        block_header.set_block_num(block_num);
+        block_header.set_state_root_hash(format!("state-{}", block_num));
+        Block {
+            header_signature: header_signature.into(),
+            previous_block_id: block_header.get_previous_block_id().to_string(),
+            block_num,
+            batches: vec![],
+            state_root_hash: block_header.get_state_root_hash().to_string(),
+            consensus: vec![],
+            batch_ids: vec![],
+            signer_public_key: "".into(),
+            header_bytes: block_header.write_to_bytes().unwrap(),
+        }
+    }
+
+    fn create_block_store(db_path: &str) -> PyObject {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let block_store_mod = py.import("sawtooth_validator.journal.block_store").unwrap();
+        let block_store = block_store_mod.get(py, "BlockStore").unwrap();
+
+        let db_mod = py.import("sawtooth_validator.database.indexed_database")
+            .unwrap();
+        let indexed_database = db_mod.get(py, "IndexedDatabase").unwrap();
+
+        let db_instance = indexed_database
+            .call(
+                py,
+                (
+                    db_path,
+                    block_store.getattr(py, "serialize_block").unwrap(),
+                    block_store.getattr(py, "deserialize_block").unwrap(),
+                    block_store
+                        .call_method(py, "create_index_configuration", NoArgs, None)
+                        .unwrap(),
+                    "c",
+                    TEST_DB_SIZE,
+                ),
+                None,
+            )
+            .unwrap();
+
+        block_store.call(py, (db_instance,), None).unwrap()
+    }
+
+    fn run_test<T>(test: T) -> ()
+    where
+        T: FnOnce(&str) -> () + panic::UnwindSafe,
+    {
+        let dbpath = temp_db_path();
+
+        let testpath = dbpath.clone();
+        let result = panic::catch_unwind(move || test(&testpath));
+
+        remove_file(dbpath).unwrap();
+
+        assert!(result.is_ok())
+    }
+
+    fn temp_db_path() -> String {
+        let mut temp_dir = env::temp_dir();
+
+        let thread_id = thread::current().id();
+        temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
+        temp_dir.to_str().unwrap().to_string()
+    }
 }
