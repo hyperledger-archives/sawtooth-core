@@ -98,4 +98,7 @@ ENV PATH=$PATH:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin \
 
 RUN rustup component add rustfmt-preview
 
+# required for cargo check to run properly on the validator
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
 WORKDIR /project/sawtooth-core

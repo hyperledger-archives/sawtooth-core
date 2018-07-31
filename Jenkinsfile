@@ -62,13 +62,18 @@ node ('master') {
             // Set the ISOLATION_ID environment variable for the whole pipeline
             env.ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
             env.COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+            env.COMPOSE_HTTP_TIMEOUT = 300
 
             // Use a docker container to build and protogen, so that the Jenkins
             // environment doesn't need all the dependencies.
 
             stage("Build Lint Requirements") {
                 sh 'docker-compose -f docker/compose/run-lint.yaml build'
-                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up validator'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up xo-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up intkey-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up smallbank-tp-rust'
+                sh 'docker-compose -f docker/compose/sawtooth-build.yaml up smallbank-workload'
                 sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
             }
 
@@ -77,6 +82,7 @@ node ('master') {
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-go lint-go'
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-rust lint-rust'
                 sh 'docker-compose -f docker/compose/run-lint.yaml up --abort-on-container-exit --exit-code-from lint-validator lint-validator'
+                sh 'docker-compose -f docker/compose/run-lint.yaml down'
             }
 
             stage("Build Test Dependencies") {
