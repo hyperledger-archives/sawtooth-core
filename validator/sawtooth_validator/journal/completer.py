@@ -65,7 +65,7 @@ class Completer:
             something that it is missing.
         """
         self.gossip = gossip
-        self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
+        self._batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
         self._block_cache = BlockCache(block_store,
                                       cache_keep_time,
                                       cache_purge_frequency)
@@ -159,7 +159,7 @@ class Completer:
         if len(block.batches) != len(block.header.batch_ids):
             building = True
             for batch_id in block.header.batch_ids:
-                if batch_id not in self.batch_cache and \
+                if batch_id not in self._batch_cache and \
                         batch_id not in temp_batches:
                     # Request all missing batches
                     if batch_id not in self._incomplete_blocks:
@@ -216,8 +216,8 @@ class Completer:
     def _finalize_batch_list(self, block, temp_batches):
         batches = []
         for batch_id in block.header.batch_ids:
-            if batch_id in self.batch_cache:
-                batches.append(self.batch_cache[batch_id])
+            if batch_id in self._batch_cache:
+                batches.append(self._batch_cache[batch_id])
             elif batch_id in temp_batches:
                 batches.append(temp_batches[batch_id])
             else:
@@ -308,10 +308,10 @@ class Completer:
 
     def add_batch(self, batch):
         with self.lock:
-            if batch.header_signature in self.batch_cache:
+            if batch.header_signature in self._batch_cache:
                 return
             if self._complete_batch(batch):
-                self.batch_cache[batch.header_signature] = batch
+                self._batch_cache[batch.header_signature] = batch
                 self._add_seen_txns(batch)
                 self._on_batch_received(batch)
                 self._process_incomplete_blocks(batch.header_signature)
@@ -344,11 +344,11 @@ class Completer:
 
     def get_batch(self, batch_id):
         with self.lock:
-            if batch_id in self.batch_cache:
-                return self.batch_cache[batch_id]
+            if batch_id in self._batch_cache:
+                return self._batch_cache[batch_id]
 
             try:
-                return self._block_store.get_batch(batch_id)
+                return self._batch_committed(batch_id)
             except ValueError:
                 return None
 
