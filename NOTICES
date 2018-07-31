@@ -11,7 +11,6 @@ These components are released under separate copyright notices and license terms
 => CBOR for Go and Python
 => C_based_gRPC
 => ConradK rpassword
-=> Maven CBOR for Java
 => Nick Hamann rust_base58=> Serde-RS json
 => aiohttp
 => async-timeout
