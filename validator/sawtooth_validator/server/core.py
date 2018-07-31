@@ -202,7 +202,7 @@ class Validator:
         # -- Setup Transaction Execution Platform -- #
         context_manager = ContextManager(global_state_db)
 
-        batch_tracker = BatchTracker(block_store)
+        batch_tracker = BatchTracker(block_store.has_batch)
 
         settings_cache = SettingsCache(
             SettingsViewFactory(state_view_factory),
