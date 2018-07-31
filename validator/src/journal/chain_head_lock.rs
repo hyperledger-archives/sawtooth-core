@@ -1,8 +1,10 @@
-use std::sync::RwLockWriteGuard;
-
 use batch::Batch;
+use block::Block;
+use cpython;
+use cpython::ToPyObject;
 use journal::block_wrapper::BlockWrapper;
 use journal::publisher::{BlockPublisherState, SyncBlockPublisher};
+use std::sync::RwLockWriteGuard;
 
 /// Abstracts acquiring the lock used by the BlockPublisher without exposing access to the
 /// publisher itself.
@@ -33,7 +35,7 @@ pub struct ChainHeadGuard<'a> {
 impl<'a> ChainHeadGuard<'a> {
     pub fn notify_on_chain_updated(
         &mut self,
-        chain_head: BlockWrapper,
+        chain_head: Block,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {

@@ -67,7 +67,7 @@ pub enum StartError {
 
 pub struct BlockPublisherState {
     pub transaction_executor: Box<ExecutionPlatform>,
-    pub chain_head: Option<BlockWrapper>,
+    pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
 }
@@ -75,7 +75,7 @@ pub struct BlockPublisherState {
 impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<ExecutionPlatform>,
-        chain_head: Option<BlockWrapper>,
+        chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
     ) -> Self {
@@ -157,16 +157,16 @@ impl SyncBlockPublisher {
     pub fn on_chain_updated(
         &self,
         state: &mut BlockPublisherState,
-        chain_head: BlockWrapper,
+        chain_head: Block,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
         info!("Now building on top of block, {}", chain_head);
-        let batches_len = chain_head.block().batches.len();
+        let batches_len = chain_head.batches.len();
         state.chain_head = Some(chain_head);
-        let mut previous_block_id = None;
+        let mut previous_block = None;
         if self.is_building_block(state) {
-            previous_block_id = state
+            previous_block = state
                 .get_previous_block_id()
                 .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
                 .unwrap_or(None);
@@ -178,15 +178,15 @@ impl SyncBlockPublisher {
             .pending_batches
             .rebuild(Some(committed_batches), Some(uncommitted_batches));
 
-        if let Some(block_id) = previous_block_id {
-            self.initialize_block(state, &block_id)
+        if let Some(prev) = previous_block {
+            self.initialize_block(state, &prev.block())
                 .expect("Unable to initialize block after canceling");
         }
     }
 
     pub fn on_chain_updated_internal(
         &mut self,
-        chain_head: BlockWrapper,
+        chain_head: Block,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
@@ -202,14 +202,9 @@ impl SyncBlockPublisher {
         );
     }
 
-    fn get_state_view(&self, py: Python, previous_block: &BlockWrapper) -> PyObject {
-        self.block_wrapper_class
-            .call_method(
-                py,
-                "state_view_for_block",
-                (previous_block, &self.state_view_factory),
-                None,
-            )
+    fn get_state_view(&self, py: Python, previous_block: &Block) -> PyObject {
+        self.state_view_factory
+            .call_method(py, "create_view", (&previous_block.state_root_hash,), None)
             .expect("BlockWrapper, unable to call state_view_for_block")
     }
 
@@ -226,7 +221,7 @@ impl SyncBlockPublisher {
     fn initialize_block(
         &self,
         state: &mut BlockPublisherState,
-        previous_block: &BlockWrapper,
+        previous_block: &Block,
     ) -> Result<(), InitializeBlockError> {
         if state.candidate_block.is_some() {
             warn!("Tried to initialize block but block already initialized");
@@ -245,7 +240,7 @@ impl SyncBlockPublisher {
                     "get_setting",
                     (
                         "sawtooth.publisher.max_batches_per_block",
-                        previous_block.block().state_root_hash.clone(),
+                        &previous_block.state_root_hash,
                     ),
                     Some(&kwargs),
                 )
@@ -255,18 +250,14 @@ impl SyncBlockPublisher {
 
             let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
-            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash());
+            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash);
 
             let kwargs = PyDict::new(py);
             kwargs
-                .set_item(py, "block_num", previous_block.block().block_num + 1)
+                .set_item(py, "block_num", previous_block.block_num + 1)
                 .unwrap();
             kwargs
-                .set_item(
-                    py,
-                    "previous_block_id",
-                    &previous_block.block().header_signature,
-                )
+                .set_item(py, "previous_block_id", &previous_block.header_signature)
                 .unwrap();
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
@@ -283,7 +274,7 @@ impl SyncBlockPublisher {
 
             let scheduler = state
                 .transaction_executor
-                .create_scheduler(&previous_block.block().state_root_hash)
+                .create_scheduler(&previous_block.state_root_hash)
                 .expect("Failed to create new scheduler");
 
             let committed_txn_cache =
@@ -376,7 +367,7 @@ impl SyncBlockPublisher {
             .map(|previous_block_id| self.get_block(previous_block_id.as_str()))
         {
             state.candidate_block = None;
-            self.initialize_block(state, &previous_block)
+            self.initialize_block(state, &previous_block.block())
                 .expect("Initialization failed unexpectedly");
         }
     }
@@ -510,7 +501,7 @@ impl BlockPublisher {
 
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
             tep,
-            chain_head,
+            chain_head.map(|bw| bw.block()),
             None,
             PendingBatchesPool::new(NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT),
         )));
@@ -587,10 +578,7 @@ impl BlockPublisher {
         ChainHeadLock::new(self.publisher.clone())
     }
 
-    pub fn initialize_block(
-        &self,
-        previous_block: BlockWrapper,
-    ) -> Result<(), InitializeBlockError> {
+    pub fn initialize_block(&self, previous_block: Block) -> Result<(), InitializeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock was poisoned");
         self.publisher.initialize_block(&mut state, &previous_block)
     }

@@ -23,6 +23,7 @@ use std::slice;
 use cpython::{PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
+use block::Block;
 use journal::block_wrapper::BlockWrapper;
 use journal::publisher::{
     BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
@@ -268,7 +269,7 @@ pub extern "C" fn block_publisher_initialize_block(
     let py = gil.python();
     let block = unsafe {
         PyObject::from_borrowed_ptr(py, previous_block)
-            .extract::<BlockWrapper>(py)
+            .extract::<Block>(py)
             .unwrap()
     };
 
@@ -394,7 +395,7 @@ pub extern "C" fn block_publisher_on_chain_updated(
     let mut publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
     py.allow_threads(move || {
         publisher.publisher.on_chain_updated_internal(
-            chain_head,
+            chain_head.block(),
             committed_batches,
             uncommitted_batches,
         )
