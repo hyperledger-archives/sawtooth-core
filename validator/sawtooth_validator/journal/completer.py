@@ -235,7 +235,7 @@ class Completer:
                 # Check to see if the dependency has been seen or is in the
                 # current chain (block_store)
                 if dependency not in self._seen_txns and not \
-                        self.block_cache.block_store.has_transaction(
+                        self._block_store.has_transaction(
                         dependency):
                     self._unsatisfied_dependency_count.inc()
 
@@ -347,9 +347,8 @@ class Completer:
             if batch_id in self.batch_cache:
                 return self.batch_cache[batch_id]
 
-            block_store = self.block_cache.block_store
             try:
-                return block_store.get_batch(batch_id)
+                return self._block_store.get_batch(batch_id)
             except ValueError:
                 return None
 
@@ -359,9 +358,8 @@ class Completer:
                 batch_id = self._seen_txns[transaction_id]
                 return self.get_batch(batch_id)
 
-            block_store = self.block_cache.block_store
             try:
-                return block_store.get_batch_by_transaction(transaction_id)
+                return self._block_store.get_batch_by_transaction(transaction_id)
             except ValueError:
                 return None
 
