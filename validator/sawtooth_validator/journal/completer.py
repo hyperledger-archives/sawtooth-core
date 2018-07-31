@@ -17,7 +17,6 @@ import logging
 from threading import RLock
 from collections import deque
 
-from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
@@ -45,13 +44,27 @@ class Completer:
     """
 
     def __init__(self,
-                 block_store,
+                 block_cache,
+                 transaction_committed,
+                 get_committed_batch_by_id,
+                 get_committed_batch_by_txn_id,
+                 get_chain_head,
                  gossip,
                  cache_keep_time=1200,
                  cache_purge_frequency=30,
                  requested_keep_time=300):
         """
-        :param block_store (dictionary) The block store shared with the journal
+        :param block_cache (dictionary) The block cache to use for getting
+            and storing blocks
+        :param transaction_committed (fn(transaction_id) -> bool) A function to
+            determine if a transaction is committed.
+        :param batch_committed (fn(batch_id) -> bool) A function to
+            determine if a batch is committed.
+        :param get_committed_batch_by_txn_id
+            (fn(transaction_id) -> Batch) A function for retrieving a committed
+            batch from a committed transction id.
+        :param get_chain_head (fn() -> Block) A function for getting the
+            current chain head.
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
                 peers
         :param cache_keep_time (float) Time in seconds to keep values in
@@ -66,10 +79,13 @@ class Completer:
         """
         self.gossip = gossip
         self._batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
-        self._block_cache = BlockCache(block_store,
-                                      cache_keep_time,
-                                      cache_purge_frequency)
-        self._block_store = block_store
+        self._block_cache = block_cache
+
+        self._transaction_committed = transaction_committed
+        self._get_committed_batch_by_id = get_committed_batch_by_id
+        self._get_committed_batch_by_txn_id = get_committed_batch_by_txn_id
+        self._get_chain_head = get_chain_head
+
         # avoid throwing away the genesis block
         self._block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
@@ -232,11 +248,9 @@ class Completer:
             txn_header = TransactionHeader()
             txn_header.ParseFromString(txn.header)
             for dependency in txn_header.dependencies:
-                # Check to see if the dependency has been seen or is in the
-                # current chain (block_store)
+                # Check to see if the dependency has been seen or is committed
                 if dependency not in self._seen_txns and not \
-                        self._block_store.has_transaction(
-                        dependency):
+                        self._transaction_committed(dependency):
                     self._unsatisfied_dependency_count.inc()
 
                     # Check to see if the dependency has already been requested
@@ -334,7 +348,7 @@ class Completer:
             BlockWrapper: The head of the chain.
         """
         with self.lock:
-            return self._block_store.chain_head
+            return self._get_chain_head()
 
     def get_block(self, block_id):
         with self.lock:
@@ -348,7 +362,7 @@ class Completer:
                 return self._batch_cache[batch_id]
 
             try:
-                return self._batch_committed(batch_id)
+                return self._get_committed_batch_by_id(batch_id)
             except ValueError:
                 return None
 
@@ -359,7 +373,8 @@ class Completer:
                 return self.get_batch(batch_id)
 
             try:
-                return self._block_store.get_batch_by_transaction(transaction_id)
+                return self._get_committed_batch_by_txn_id(
+                    transaction_id)
             except ValueError:
                 return None
 
