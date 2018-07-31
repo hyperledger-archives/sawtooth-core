@@ -327,7 +327,8 @@ class MockBatchInjector(BatchInjector):
 
 class MockBlockValidator(BlockValidator):
     def __init__(self,
-                 block_cache,
+                 block_manager,
+                 block_store,
                  state_view_factory,
                  transaction_executor,
                  identity_signer,
@@ -339,14 +340,15 @@ class MockBlockValidator(BlockValidator):
         self._submitted_blocks = None
         self._has_block = has_block
         super().__init__(
-            block_cache,
-            state_view_factory,
-            transaction_executor,
-            identity_signer,
-            data_dir,
-            config_dir,
-            permission_verifier,
-            thread_pool)
+            block_manager=block_manager,
+            state_view_factory=state_view_factory,
+            transaction_executor=transaction_executor,
+            identity_signer=identity_signer,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier,
+            thread_pool=thread_pool,
+            block_store=block_store)
 
     def has_block(self, block_id):
         return self._has_block
