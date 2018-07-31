@@ -340,7 +340,7 @@ impl BlockManagerState {
 /// The BlockManager maintains integrity of all the blocks it contains,
 /// such that for any Block within the BlockManager,
 /// that Block's predecessor is also within the BlockManager.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct BlockManager {
     state: Arc<RwLock<BlockManagerState>>,
 }
