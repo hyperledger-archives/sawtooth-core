@@ -66,12 +66,12 @@ class Completer:
         """
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
-        self.block_cache = BlockCache(block_store,
+        self._block_cache = BlockCache(block_store,
                                       cache_keep_time,
                                       cache_purge_frequency)
         self._block_store = block_store
         # avoid throwing away the genesis block
-        self.block_cache[NULL_BLOCK_IDENTIFIER] = None
+        self._block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
                                               cache_purge_frequency)
@@ -121,11 +121,11 @@ class Completer:
 
         """
 
-        if block.header_signature in self.block_cache:
+        if block.header_signature in self._block_cache:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
-        if block.previous_block_id not in self.block_cache:
+        if block.previous_block_id not in self._block_cache:
             if not self._has_block(block.previous_block_id):
                 if block.previous_block_id not in self._incomplete_blocks:
                     self._incomplete_blocks[block.previous_block_id] = [block]
@@ -280,7 +280,7 @@ class Completer:
                     inc_blocks = self._incomplete_blocks[my_key]
                     for inc_block in inc_blocks:
                         if self._complete_block(inc_block):
-                            self.block_cache[inc_block.header_signature] = \
+                            self._block_cache[inc_block.header_signature] = \
                                 inc_block
                             self._on_block_received(inc_block)
                             to_complete.append(inc_block.header_signature)
@@ -300,7 +300,7 @@ class Completer:
             blkw = BlockWrapper(block)
             block = self._complete_block(blkw)
             if block is not None:
-                self.block_cache[block.header_signature] = blkw
+                self._block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
             self._incomplete_blocks_length.set_value(
@@ -338,8 +338,8 @@ class Completer:
 
     def get_block(self, block_id):
         with self.lock:
-            if block_id in self.block_cache:
-                return self.block_cache[block_id]
+            if block_id in self._block_cache:
+                return self._block_cache[block_id]
             return None
 
     def get_batch(self, batch_id):
