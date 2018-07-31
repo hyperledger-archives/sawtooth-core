@@ -77,7 +77,7 @@ class Completer:
             fails to make progress because it thinks it has already requested
             something that it is missing.
         """
-        self.gossip = gossip
+        self._gossip = gossip
         self._batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
         self._block_cache = block_cache
 
@@ -156,7 +156,7 @@ class Completer:
                 LOGGER.debug("Request missing predecessor: %s",
                              block.previous_block_id)
                 self._requested[block.previous_block_id] = None
-                self.gossip.broadcast_block_request(block.previous_block_id)
+                self._gossip.broadcast_block_request(block.previous_block_id)
                 return None
 
         # Check for same number of batch_ids and batches
@@ -187,7 +187,7 @@ class Completer:
                     if batch_id in self._requested:
                         return None
                     self._requested[batch_id] = None
-                    self.gossip.broadcast_batch_by_batch_id_request(batch_id)
+                    self._gossip.broadcast_batch_by_batch_id_request(batch_id)
                     building = False
 
             if not building:
@@ -263,7 +263,7 @@ class Completer:
                         self._incomplete_batches[dependency] += [batch]
                     valid = False
         if not valid:
-            self.gossip.broadcast_batch_by_transaction_id_request(
+            self._gossip.broadcast_batch_by_transaction_id_request(
                 dependencies)
 
         return valid
