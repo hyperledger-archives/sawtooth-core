@@ -68,6 +68,13 @@ class BlockManager(OwnedPointer):
                  self.pointer,
                  ctypes.py_object(branch))
 
+    def __contains__(self, item):
+        try:
+            next(self.get([item]))
+            return True
+        except StopIteration:
+            return False
+
     def get(self, block_ids):
         return _GetBlockIterator(self.pointer, block_ids)
 

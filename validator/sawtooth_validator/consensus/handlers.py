@@ -29,6 +29,7 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusSettingsEntry
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusStateEntry
 
@@ -122,13 +123,18 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         peers = [bytes.fromhex(peer_id) for peer_id in startup_info.peers]
         local_peer_info = startup_info.local_peer_info
 
-        response.chain_head.block_id = bytes.fromhex(chain_head.identifier)
+        block_header = BlockHeader()
+        block_header.ParseFromString(chain_head.header)
+
+        response.chain_head.block_id = bytes.fromhex(
+            chain_head.header_signature)
+
         response.chain_head.previous_id =\
-            bytes.fromhex(chain_head.previous_block_id)
+            bytes.fromhex(block_header.previous_block_id)
         response.chain_head.signer_id =\
-            bytes.fromhex(chain_head.signer_public_key)
-        response.chain_head.block_num = chain_head.block_num
-        response.chain_head.payload = chain_head.consensus
+            bytes.fromhex(block_header.signer_public_key)
+        response.chain_head.block_num = block_header.block_num
+        response.chain_head.payload = block_header.consensus
 
         response.peers.extend([
             consensus_pb2.ConsensusPeerInfo(peer_id=peer_id)
@@ -407,15 +413,18 @@ class ConsensusBlocksGetHandler(ConsensusServiceHandler):
 
     def handle_request(self, request, response):
         try:
-            response.blocks.extend([
-                consensus_pb2.ConsensusBlock(
-                    block_id=bytes.fromhex(block.identifier),
-                    previous_id=bytes.fromhex(block.previous_block_id),
-                    signer_id=bytes.fromhex(block.signer_public_key),
-                    block_num=block.block_num,
-                    payload=block.consensus)
-                for block in self._proxy.blocks_get(request.block_ids)
-            ])
+            blocks = []
+            for block in self._proxy.blocks_get(request.block_ids):
+                block_header = BlockHeader()
+                block_header.ParseFromString(block.header)
+
+                blocks.append(consensus_pb2.ConsensusBlock(
+                    block_id=bytes.fromhex(block.header_signature),
+                    previous_id=bytes.fromhex(block_header.previous_block_id),
+                    signer_id=bytes.fromhex(block_header.signer_public_key),
+                    block_num=block_header.block_num,
+                    payload=block_header.consensus))
+            response.blocks.extend(blocks)
         except UnknownBlock:
             response.status =\
                 consensus_pb2.ConsensusBlocksGetResponse.UNKNOWN_BLOCK
@@ -438,13 +447,18 @@ class ConsensusChainHeadGetHandler(ConsensusServiceHandler):
     def handle_request(self, request, response):
         try:
             chain_head = self._proxy.chain_head_get()
-            response.block.block_id = bytes.fromhex(chain_head.identifier)
+
+            block_header = BlockHeader()
+            block_header.ParseFromString(chain_head.header)
+
+            response.block.block_id = bytes.fromhex(
+                chain_head.header_signature)
             response.block.previous_id =\
-                bytes.fromhex(chain_head.previous_block_id)
+                bytes.fromhex(block_header.previous_block_id)
             response.block.signer_id =\
-                bytes.fromhex(chain_head.signer_public_key)
-            response.block.block_num = chain_head.block_num
-            response.block.payload = chain_head.consensus
+                bytes.fromhex(block_header.signer_public_key)
+            response.block.block_num = block_header.block_num
+            response.block.payload = block_header.consensus
         except UnknownBlock:
             response.status =\
                 consensus_pb2.ConsensusChainHeadGetResponse.NO_CHAIN_HEAD

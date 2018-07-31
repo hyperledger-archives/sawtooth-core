@@ -13,7 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+
 from collections import namedtuple
+
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 
 class UnknownBlock(Exception):
@@ -29,10 +32,10 @@ class ConsensusProxy:
     """Receives requests from the consensus engine handlers and delegates them
     to the appropriate components."""
 
-    def __init__(self, block_cache, block_publisher,
+    def __init__(self, block_manager, block_publisher,
                  chain_controller, gossip, identity_signer,
                  settings_view_factory, state_view_factory):
-        self._block_cache = block_cache
+        self._block_manager = block_manager
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
         self._gossip = gossip
@@ -70,8 +73,9 @@ class ConsensusProxy:
     def initialize_block(self, previous_id):
         if previous_id:
             try:
-                previous_block = self._block_cache[previous_id.hex()]
-            except KeyError:
+                previous_block = next(
+                    self._block_manager.get([previous_id.hex()]))
+            except StopIteration:
                 raise UnknownBlock()
             self._block_publisher.initialize_block(previous_block)
         else:
@@ -90,7 +94,7 @@ class ConsensusProxy:
 
     def check_blocks(self, block_ids):
         for block_id in block_ids:
-            if block_id.hex() not in self._block_cache:
+            if block_id.hex() not in self._block_manager:
                 raise UnknownBlock(block_id.hex())
 
     def get_block_statuses(self, block_ids):
@@ -98,7 +102,9 @@ class ConsensusProxy:
         """
         try:
             return [
-                (block_id.hex(), self._block_cache[block_id.hex()].status)
+                (block_id.hex(),
+                 self._chain_controller.block_validation_result(
+                     block_id.hex()))
                 for block_id in block_ids
             ]
         except KeyError as key_error:
@@ -106,29 +112,29 @@ class ConsensusProxy:
 
     def commit_block(self, block_id):
         try:
-            block = self._block_cache[block_id.hex()]
-        except KeyError as key_error:
-            raise UnknownBlock(key_error.args[0])
+            block = next(self._block_manager.get([block_id.hex()]))
+        except StopIteration as stop_iteration:
+            raise UnknownBlock(stop_iteration.args[0])
         self._chain_controller.commit_block(block)
 
     def ignore_block(self, block_id):
         try:
-            block = self._block_cache[block_id.hex()]
-        except KeyError:
+            block = next(self._block_manager.get([block_id.hex()]))
+        except StopIteration:
             raise UnknownBlock()
         self._chain_controller.ignore_block(block)
 
     def fail_block(self, block_id):
         try:
-            block = self._block_cache[block_id.hex()]
-        except KeyError:
+            block = next(self._block_manager.get([block_id.hex()]))
+        except StopIteration:
             raise UnknownBlock()
         self._chain_controller.fail_block(block)
 
     # Using blockstore and state database
     def blocks_get(self, block_ids):
         '''Returns a list of blocks.'''
-        return self._get_blocks(block_ids)
+        return self._get_blocks([block_id.hex() for block_id in block_ids])
 
     def chain_head_get(self):
         '''Returns the chain head.'''
@@ -142,9 +148,14 @@ class ConsensusProxy:
 
     def settings_get(self, block_id, settings):
         '''Returns a list of key/value pairs (str, str).'''
-        settings_view = \
-            self._get_blocks([block_id])[0].get_settings_view(
-                self._settings_view_factory)
+
+        block = self._get_blocks([block_id.hex()])[0]
+
+        block_header = BlockHeader()
+        block_header.ParseFromString(block.header)
+
+        settings_view = self._settings_view_factory.create_settings_view(
+            block_header.state_root_hash)
 
         result = []
         for setting in settings:
@@ -160,9 +171,12 @@ class ConsensusProxy:
 
     def state_get(self, block_id, addresses):
         '''Returns a list of address/data pairs (str, bytes)'''
-        state_view = \
-            self._get_blocks([block_id])[0].get_state_view(
-                self._state_view_factory)
+        block = self._get_blocks([block_id.hex()])[0]
+        block_header = BlockHeader()
+        block_header.ParseFromString(block.header)
+
+        state_view = self._state_view_factory.create_view(
+            block_header.state_root_hash)
 
         result = []
 
@@ -187,10 +201,9 @@ class ConsensusProxy:
         return result
 
     def _get_blocks(self, block_ids):
-        try:
-            return [
-                self._block_cache[block_id.hex()]
-                for block_id in block_ids
-            ]
-        except KeyError:
-            raise UnknownBlock()
+        block_iter = self._block_manager.get(block_ids)
+        blocks = [b for b in block_iter]
+        if len(blocks) != len(block_ids):
+            return UnknownBlock()
+
+        return blocks
