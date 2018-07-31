@@ -26,9 +26,9 @@ pub enum BlockStoreError {
 }
 
 pub trait BlockStore {
-    fn get<'a>(&'a self, block_ids: Vec<String>) -> Box<Iterator<Item = &'a Block> + 'a>;
+    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a>;
 
-    fn delete(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, BlockStoreError>;
+    fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 
@@ -53,22 +53,28 @@ impl InMemoryBlockStore {
 }
 
 impl BlockStore for InMemoryBlockStore {
-    fn get<'a>(&'a self, block_ids: Vec<String>) -> Box<Iterator<Item = &'a Block> + 'a> {
-        let iterator: InMemoryGetBlockIterator = InMemoryGetBlockIterator::new(self, block_ids);
+    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a> {
+        let iterator: InMemoryGetBlockIterator = InMemoryGetBlockIterator::new(
+            self,
+            block_ids
+                .iter()
+                .map(|block_id| (*block_id).to_string())
+                .collect(),
+        );
 
         Box::new(iterator)
     }
 
-    fn delete(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, BlockStoreError> {
+    fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
         if block_ids
             .iter()
-            .any(|block_id| !self.block_by_block_id.contains_key(block_id))
+            .any(|block_id| !self.block_by_block_id.contains_key(*block_id))
         {
             return Err(BlockStoreError::UnknownBlock);
         }
         let blocks = block_ids.iter().map(|block_id| {
             let block = self.block_by_block_id
-                .remove(block_id)
+                .remove(*block_id)
                 .expect("Block removed during middle of delete operation");
             if block.block_num <= self.chain_head_num {
                 self.chain_head_id = block.previous_block_id.clone();
@@ -181,7 +187,7 @@ mod test {
         store
             .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
             .unwrap();
-        assert_eq!(store.get(vec!["A".into()]).next().unwrap(), &block_a);
+        assert_eq!(store.get(&["A"]).next().unwrap(), &block_a);
 
         {
             let mut iterator = store.iter();
@@ -192,7 +198,7 @@ mod test {
             assert_eq!(iterator.next(), None);
         }
 
-        assert_eq!(store.delete(vec!["C".into()]).unwrap(), vec![block_c]);
+        assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
     }
 
 }
