@@ -7,9 +7,11 @@ Python
 ------
 
 .. toctree::
+   :maxdepth: 1
 
-   sdks/python_sdk/processor.rst
-   sdks/python_sdk/sawtooth_signing.rst
+   Transaction Processor <sdks/python_sdk/processor.rst>
+
+   Signing <sdks/python_sdk/sawtooth_signing.rst>
 
 Go
 --
@@ -21,11 +23,13 @@ Go
 
 Javascript
 ----------
-- `Javascript SDK Reference
+
+- `Transaction Processor and Signing
   <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/>`__
 
 Rust
 ----
+
 - `Transaction Processor
   <rust_sdk/doc/sawtooth_sdk/processor/index.html#http://>`__
 - `Signing
