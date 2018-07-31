@@ -39,7 +39,7 @@ class ChainController(OwnedPointer):
     def __init__(
         self,
         block_store,
-        block_cache,
+        block_manager,
         block_validator,
         state_database,
         chain_head_lock,
@@ -56,10 +56,12 @@ class ChainController(OwnedPointer):
         if observers is None:
             observers = []
 
+        block_validator.set_chain_head_fn(self.chain_head_fn)
+
         _pylibexec(
             'chain_controller_new',
             ctypes.py_object(block_store),
-            ctypes.py_object(block_cache),
+            block_manager.pointer,
             ctypes.py_object(block_validator),
             state_database.pointer,
             chain_head_lock.pointer,
@@ -99,6 +101,15 @@ class ChainController(OwnedPointer):
         _pylibexec('chain_controller_queue_block', self.pointer,
                    ctypes.py_object(block))
 
+    def block_validation_result(self, block_id):
+        result = ctypes.py_object()
+
+        _libexec("chain_controller_block_validation_result", self.pointer,
+                 ctypes.c_char_p(block_id.encode()),
+                 ctypes.byref(result))
+
+        return result.value
+
     def submit_blocks_for_verification(self, blocks):
         _pylibexec('chain_controller_submit_blocks_for_verification',
                    self.pointer,
@@ -108,10 +119,13 @@ class ChainController(OwnedPointer):
         """This is exposed for unit tests, and should not be called directly.
         """
         _pylibexec('chain_controller_on_block_received', self.pointer,
-                   ctypes.py_object(block_wrapper))
+                   ctypes.py_object(block_wrapper.block))
 
     @property
     def chain_head(self):
+        return self.chain_head_fn()
+
+    def chain_head_fn(self):
         result = ctypes.py_object()
 
         _pylibexec('chain_controller_chain_head',

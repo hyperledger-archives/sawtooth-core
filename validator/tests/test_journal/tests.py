@@ -1172,7 +1172,7 @@ class TestChainController(unittest.TestCase):
         self.chain_ctrl.on_block_received(block)
 
     def commit_block(self, block):
-        self.chain_ctrl.commit_block(block)
+        self.chain_ctrl.commit_block(block.block)
 
 
 @unittest.skip(
@@ -1335,6 +1335,7 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
+        block_manager = BlockManager()
         block_publisher = None
         block_validator = None
         chain_controller = None
@@ -1362,8 +1363,9 @@ class TestJournal(unittest.TestCase):
                     signer=btm.identity_signer))
 
             block_validator = BlockValidator(
+                block_store=btm.block_store,
                 state_view_factory=MockStateViewFactory(btm.state_db),
-                block_cache=btm.block_cache,
+                block_manager=block_manager,
                 transaction_executor=self.txn_executor,
                 identity_signer=btm.identity_signer,
                 data_dir=None,
@@ -1377,10 +1379,10 @@ class TestJournal(unittest.TestCase):
 
             chain_controller = ChainController(
                 btm.block_store,
-                btm.block_cache,
-                block_validator,
-                state_database,
-                block_publisher.chain_head_lock,
+                block_manager=block_manager,
+                block_validator=block_validator,
+                state_database=state_database,
+                chain_head_lock=block_publisher.chain_head_lock,
                 consensus_notifier=MockConsensusNotifier(),
                 data_dir=None,
                 observers=[])
@@ -1480,13 +1482,12 @@ class TestChainCommitState(unittest.TestCase):
     """
 
     def gen_block(self, block_id, prev_id, num, batches):
-        return BlockWrapper(
-            Block(
-                header_signature=block_id,
-                batches=batches,
-                header=BlockHeader(
-                    block_num=num,
-                    previous_block_id=prev_id).SerializeToString()))
+        return  Block(
+            header_signature=block_id,
+            batches=batches,
+            header=BlockHeader(
+            block_num=num,
+            previous_block_id=prev_id).SerializeToString())
 
     def gen_batch(self, batch_id, transactions):
         return Batch(header_signature=batch_id, transactions=transactions)
@@ -1815,8 +1816,9 @@ class TestChainCommitState(unittest.TestCase):
         block_cache = BlockCache(
             block_store=block_store)
 
-        for block in uncommitted_blocks:
-            block_cache[block.header_signature] = block
+        block_manager.put(committed_blocks)
+
+        block_manager.put(uncommitted_blocks)
 
         return ChainCommitState(head_id, block_cache, block_store)
 
