@@ -26,13 +26,16 @@ pub enum BlockStoreError {
 }
 
 pub trait BlockStore {
-    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a>;
+    fn get<'a>(
+        &'a self,
+        block_ids: &[&str],
+    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a>;
+    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
 #[derive(Default)]
@@ -53,7 +56,10 @@ impl InMemoryBlockStore {
 }
 
 impl BlockStore for InMemoryBlockStore {
-    fn get<'a>(&'a self, block_ids: &[&str]) -> Box<Iterator<Item = &'a Block> + 'a> {
+    fn get<'a>(
+        &'a self,
+        block_ids: &[&str],
+    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
         let iterator: InMemoryGetBlockIterator = InMemoryGetBlockIterator::new(
             self,
             block_ids
@@ -62,7 +68,7 @@ impl BlockStore for InMemoryBlockStore {
                 .collect(),
         );
 
-        Box::new(iterator)
+        Ok(Box::new(iterator))
     }
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
@@ -99,11 +105,11 @@ impl BlockStore for InMemoryBlockStore {
         Ok(())
     }
 
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = &'a Block> + 'a> {
-        Box::new(InMemoryIter {
+    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        Ok(Box::new(InMemoryIter {
             blockstore: self,
             head: &self.chain_head_id,
-        })
+        }))
     }
 }
 
@@ -127,7 +133,7 @@ impl<'a> InMemoryGetBlockIterator<'a> {
 }
 
 impl<'a> Iterator for InMemoryGetBlockIterator<'a> {
-    type Item = &'a Block;
+    type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
         let block = match self.block_ids.get(self.index) {
@@ -135,7 +141,7 @@ impl<'a> Iterator for InMemoryGetBlockIterator<'a> {
             None => None,
         };
         self.index += 1;
-        block
+        block.cloned()
     }
 }
 
@@ -145,14 +151,14 @@ struct InMemoryIter<'a> {
 }
 
 impl<'a> Iterator for InMemoryIter<'a> {
-    type Item = &'a Block;
+    type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
         let block = self.blockstore.get_block_by_block_id(self.head);
         if let Some(b) = block {
             self.head = &b.previous_block_id;
         }
-        block
+        block.cloned()
     }
 }
 
@@ -187,14 +193,14 @@ mod test {
         store
             .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
             .unwrap();
-        assert_eq!(store.get(&["A"]).next().unwrap(), &block_a);
+        assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
 
         {
-            let mut iterator = store.iter();
+            let mut iterator = store.iter().unwrap();
 
-            assert_eq!(iterator.next().unwrap(), &block_c);
-            assert_eq!(iterator.next().unwrap(), &block_b);
-            assert_eq!(iterator.next().unwrap(), &block_a);
+            assert_eq!(iterator.next().unwrap(), block_c);
+            assert_eq!(iterator.next().unwrap(), block_b);
+            assert_eq!(iterator.next().unwrap(), block_a);
             assert_eq!(iterator.next(), None);
         }
 

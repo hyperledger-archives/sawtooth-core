@@ -43,7 +43,8 @@ class ErrorCode(IntEnum):
     MissingPredecessorInBranch = 0x03
     MissingInput = 0x04
     UnknownBlock = 0x05
-    Error = 0x06
+    InvalidBlockStoreName = 0x06
+    Error = 0x07
     InvalidPythonObject = 0x0F
     StopIteration = 0x11
 
@@ -54,6 +55,12 @@ class BlockManager(OwnedPointer):
         super(BlockManager, self).__init__('block_manager_drop')
         _libexec("block_manager_new",
                  ctypes.byref(self.pointer))
+
+    def add_store(self, name, block_store):
+        _pylibexec("block_manager_add_store",
+                   self.pointer,
+                   ctypes.c_char_p(name.encode()),
+                   ctypes.py_object(block_store))
 
     def put(self, branch):
 
@@ -96,6 +103,8 @@ def _exec(library, name, *args):
         raise MissingInput("Missing input to put method")
     elif res == ErrorCode.UnknownBlock:
         raise UnknownBlock("Block was unknown")
+    elif res == ErrorCode.InvalidBlockStoreName:
+        raise TypeError("Invalid block store name provided")
     else:
         raise Exception("There was an unknown error: {}".format(res))
 
