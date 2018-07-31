@@ -296,7 +296,7 @@ class Completer:
                         if self._complete_block(inc_block):
                             self._block_cache[inc_block.header_signature] = \
                                 inc_block
-                            self._on_block_received(inc_block)
+                            self._on_block_received(inc_block.block)
                             to_complete.append(inc_block.header_signature)
                     del self._incomplete_blocks[my_key]
 
@@ -315,7 +315,7 @@ class Completer:
             block = self._complete_block(blkw)
             if block is not None:
                 self._block_cache[block.header_signature] = blkw
-                self._on_block_received(blkw)
+                self._on_block_received(blkw.block)
                 self._process_incomplete_blocks(block.header_signature)
             self._incomplete_blocks_length.set_value(
                 len(self._incomplete_blocks))
