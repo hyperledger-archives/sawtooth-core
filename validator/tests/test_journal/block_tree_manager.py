@@ -122,7 +122,9 @@ class BlockTreeManager:
 
         self.block_publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
-            block_cache=self.block_cache,
+            get_block=lambda block: self.block_cache[block],
+            transaction_committed=self.block_store.has_transaction,
+            batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
             settings_cache=SettingsCache(
                 SettingsViewFactory(self.state_view_factory),

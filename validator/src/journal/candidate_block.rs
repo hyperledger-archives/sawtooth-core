@@ -49,7 +49,8 @@ pub struct FinalizeBlockResult {
 }
 
 pub struct CandidateBlock {
-    block_store: cpython::PyObject,
+    batch_committed: cpython::PyObject,
+    transaction_committed: cpython::PyObject,
     scheduler: Box<Scheduler>,
     max_batches: usize,
     block_builder: cpython::PyObject,
@@ -70,7 +71,8 @@ pub struct CandidateBlock {
 
 impl CandidateBlock {
     pub fn new(
-        block_store: cpython::PyObject,
+        batch_committed: cpython::PyObject,
+        transaction_committed: cpython::PyObject,
         scheduler: Box<Scheduler>,
         committed_txn_cache: TransactionCommitCache,
         block_builder: cpython::PyObject,
@@ -80,7 +82,8 @@ impl CandidateBlock {
         settings_view: cpython::PyObject,
     ) -> Self {
         CandidateBlock {
-            block_store,
+            batch_committed,
+            transaction_committed,
             scheduler,
             max_batches,
             committed_txn_cache,
@@ -179,14 +182,9 @@ impl CandidateBlock {
         committed_txn_cache.contains(txn.header_signature.as_str()) || {
             let gil = cpython::Python::acquire_gil();
             let py = gil.python();
-            self.block_store
-                .call_method(
-                    py,
-                    "has_transaction",
-                    (txn.header_signature.as_str(),),
-                    None,
-                )
-                .expect("Blockstore has no method 'has_batch'")
+            self.transaction_committed
+                .call(py, (txn.header_signature.as_str(),), None)
+                .expect("Call to determine if transaction is committed failed")
                 .extract::<bool>(py)
                 .unwrap()
         }
@@ -197,9 +195,9 @@ impl CandidateBlock {
             .contains(batch.header_signature.as_str()) || {
             let gil = cpython::Python::acquire_gil();
             let py = gil.python();
-            self.block_store
-                .call_method(py, "has_batch", (batch.header_signature.as_str(),), None)
-                .expect("Blockstore has no method 'has_batch'")
+            self.batch_committed
+                .call(py, (batch.header_signature.as_str(),), None)
+                .expect("Call to determine if batch is committed failed")
                 .extract::<bool>(py)
                 .unwrap()
         }
@@ -351,7 +349,7 @@ impl CandidateBlock {
         let mut committed_txn_cache = {
             let gil = cpython::Python::acquire_gil();
             let py = gil.python();
-            TransactionCommitCache::new(self.block_store.clone_ref(py))
+            TransactionCommitCache::new(self.transaction_committed.clone_ref(py))
         };
 
         let batches_w_no_results: Vec<String> = execution_results

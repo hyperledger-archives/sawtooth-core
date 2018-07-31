@@ -301,7 +301,9 @@ class Validator:
 
         block_publisher = BlockPublisher(
             transaction_executor=transaction_executor,
-            block_cache=block_cache,
+            get_block=lambda block: block_cache[block],
+            transaction_committed=block_store.has_transaction,
+            batch_committed=block_store.has_batch,
             state_view_factory=state_view_factory,
             settings_cache=settings_cache,
             block_sender=block_sender,

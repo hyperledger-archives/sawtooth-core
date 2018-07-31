@@ -103,7 +103,9 @@ pub struct SyncBlockPublisher {
     block_header_class: PyObject,
     block_builder_class: PyObject,
     settings_view_class: PyObject,
-    block_cache: PyObject,
+    block_getter: PyObject,
+    batch_committed: PyObject,
+    transaction_committed: PyObject,
     state_view_factory: PyObject,
     settings_cache: PyObject,
     block_sender: PyObject,
@@ -134,7 +136,9 @@ impl Clone for SyncBlockPublisher {
             block_header_class: self.block_header_class.clone_ref(py),
             block_builder_class: self.block_builder_class.clone_ref(py),
             settings_view_class: self.settings_view_class.clone_ref(py),
-            block_cache: self.block_cache.clone_ref(py),
+            block_getter: self.block_getter.clone_ref(py),
+            batch_committed: self.batch_committed.clone_ref(py),
+            transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone_ref(py),
             settings_cache: self.settings_cache.clone_ref(py),
             block_sender: self.block_sender.clone_ref(py),
@@ -277,18 +281,16 @@ impl SyncBlockPublisher {
                 .create_scheduler(&previous_block.block().state_root_hash)
                 .expect("Failed to create new scheduler");
 
-            let block_store = self.block_cache
-                .getattr(py, "_block_store")
-                .expect("BlockCache has no field _block_store");
-
-            let committed_txn_cache = TransactionCommitCache::new(block_store.clone_ref(py));
+            let committed_txn_cache = TransactionCommitCache::new(
+                self.transaction_committed.clone_ref(py));
 
             let settings_view = self.settings_view_class
                 .call(py, (state_view,), None)
                 .expect("SettingsView could not be constructed");
 
             CandidateBlock::new(
-                block_store,
+                self.batch_committed.clone_ref(py),
+                self.transaction_committed.clone_ref(py),
                 scheduler,
                 committed_txn_cache,
                 block_builder,
@@ -353,7 +355,7 @@ impl SyncBlockPublisher {
     fn get_block_checked(&self, block_id: &str) -> Result<BlockWrapper, PyErr> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let res = self.block_cache.get_item(py, block_id);
+        let res = self.block_getter.call(py, (block_id,), None);
         res.map(|i| i.extract::<BlockWrapper>(py))?
     }
 
@@ -479,7 +481,9 @@ pub struct BlockPublisher {
 impl BlockPublisher {
     pub fn new(
         transaction_executor: PyObject,
-        block_cache: PyObject,
+        block_getter: PyObject,
+        batch_committed: PyObject,
+        transaction_committed: PyObject,
         state_view_factory: PyObject,
         settings_cache: PyObject,
         block_sender: PyObject,
@@ -507,7 +511,9 @@ impl BlockPublisher {
 
         let publisher = SyncBlockPublisher {
             state,
-            block_cache,
+            block_getter,
+            batch_committed,
+            transaction_committed,
             state_view_factory,
             settings_cache,
             block_sender,

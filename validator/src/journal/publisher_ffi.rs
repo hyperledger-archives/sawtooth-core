@@ -49,7 +49,9 @@ macro_rules! check_null {
 #[no_mangle]
 pub extern "C" fn block_publisher_new(
     transaction_executor_ptr: *mut py_ffi::PyObject,
-    block_cache_ptr: *mut py_ffi::PyObject,
+    get_block_ptr: *mut py_ffi::PyObject,
+    batch_committed_ptr: *mut py_ffi::PyObject,
+    transaction_committed_ptr: *mut py_ffi::PyObject,
     state_view_factory_ptr: *mut py_ffi::PyObject,
     settings_cache_ptr: *mut py_ffi::PyObject,
     block_sender_ptr: *mut py_ffi::PyObject,
@@ -65,7 +67,9 @@ pub extern "C" fn block_publisher_new(
 ) -> ErrorCode {
     check_null!(
         transaction_executor_ptr,
-        block_cache_ptr,
+        get_block_ptr,
+        batch_committed_ptr,
+        transaction_committed_ptr,
         state_view_factory_ptr,
         settings_cache_ptr,
         block_sender_ptr,
@@ -82,7 +86,9 @@ pub extern "C" fn block_publisher_new(
     let py = unsafe { Python::assume_gil_acquired() };
 
     let transaction_executor = unsafe { PyObject::from_borrowed_ptr(py, transaction_executor_ptr) };
-    let block_cache = unsafe { PyObject::from_borrowed_ptr(py, block_cache_ptr) };
+    let get_block = unsafe { PyObject::from_borrowed_ptr(py, get_block_ptr) };
+    let batch_committed = unsafe { PyObject::from_borrowed_ptr(py, batch_committed_ptr) };
+    let transaction_committed = unsafe { PyObject::from_borrowed_ptr(py, transaction_committed_ptr) };
     let state_view_factory = unsafe { PyObject::from_borrowed_ptr(py, state_view_factory_ptr) };
     let settings_cache = unsafe { PyObject::from_borrowed_ptr(py, settings_cache_ptr) };
     let block_sender = unsafe { PyObject::from_borrowed_ptr(py, block_sender_ptr) };
@@ -144,7 +150,9 @@ pub extern "C" fn block_publisher_new(
 
     let publisher = BlockPublisher::new(
         transaction_executor,
-        block_cache,
+        get_block,
+        batch_committed,
+        transaction_committed,
         state_view_factory,
         settings_cache,
         block_sender,
