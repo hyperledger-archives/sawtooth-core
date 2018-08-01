@@ -159,8 +159,8 @@ class TestBlockPublisher(unittest.TestCase):
         self.permission_verifier = MockPermissionVerifier()
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -172,7 +172,7 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -335,9 +335,9 @@ class TestBlockPublisher(unittest.TestCase):
 
         mock_batch_injector_factory.create_injectors.return_value = []
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(
                 batch_execution_result=False),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -349,7 +349,7 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -381,8 +381,8 @@ class TestBlockPublisher(unittest.TestCase):
             {addr: value})
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -394,7 +394,7 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -442,8 +442,8 @@ class TestBlockPublisher(unittest.TestCase):
         injected_batch = self.make_batch()
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -455,7 +455,7 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -494,8 +494,8 @@ class TestBlockPublisher(unittest.TestCase):
         batch2 = self.make_batch(txn_count=1)
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -507,7 +507,7 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -1000,8 +1000,8 @@ class TestChainController(unittest.TestCase):
             thread_pool=self.executor)
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -1013,7 +1013,7 @@ class TestChainController(unittest.TestCase):
             ),
             block_sender=MockBlockSender(),
             batch_sender=MockBatchSender(),
-            chain_head=self.block_tree_manager.chain_head,
+            chain_head=self.block_tree_manager.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -1171,8 +1171,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.consensus_notifier = MockConsensusNotifier()
 
         self.publisher = BlockPublisher(
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=self.txn_executor,
-            get_block=lambda block: self.block_tree_manager.block_cache[block],
             transaction_committed=(
                 self.block_tree_manager.block_store.has_transaction
             ),
@@ -1185,7 +1185,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
-            chain_head=self.block_tree_manager.block_store.chain_head,
+            chain_head=self.block_tree_manager.block_store.chain_head.block,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -1314,8 +1314,8 @@ class TestJournal(unittest.TestCase):
         chain_controller = None
         try:
             block_publisher = BlockPublisher(
+                block_manager=block_manager,
                 transaction_executor=self.txn_executor,
-                get_block=lambda block: btm.block_cache[block],
                 transaction_committed=btm.block_store.has_transaction,
                 batch_committed=btm.block_store.has_batch,
                 state_view_factory=MockStateViewFactory(btm.state_db),
@@ -1325,7 +1325,7 @@ class TestJournal(unittest.TestCase):
                 ),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
-                chain_head=btm.block_store.chain_head,
+                chain_head=btm.block_store.chain_head.block,
                 identity_signer=btm.identity_signer,
                 data_dir=None,
                 config_dir=None,
