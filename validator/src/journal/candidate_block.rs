@@ -28,6 +28,7 @@ use crypto::sha2::Sha256;
 use batch::Batch;
 use transaction::Transaction;
 
+use journal::block_wrapper::BlockWrapper;
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::validation_rule_enforcer;
 
@@ -49,6 +50,7 @@ pub struct FinalizeBlockResult {
 }
 
 pub struct CandidateBlock {
+    previous_block: BlockWrapper,
     batch_committed: cpython::PyObject,
     transaction_committed: cpython::PyObject,
     scheduler: Box<Scheduler>,
@@ -71,6 +73,7 @@ pub struct CandidateBlock {
 
 impl CandidateBlock {
     pub fn new(
+        previous_block: BlockWrapper,
         batch_committed: cpython::PyObject,
         transaction_committed: cpython::PyObject,
         scheduler: Box<Scheduler>,
@@ -82,6 +85,7 @@ impl CandidateBlock {
         settings_view: cpython::PyObject,
     ) -> Self {
         CandidateBlock {
+            previous_block,
             batch_committed,
             transaction_committed,
             scheduler,
@@ -104,13 +108,7 @@ impl CandidateBlock {
     }
 
     pub fn previous_block_id(&self) -> String {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.block_builder
-            .getattr(py, "previous_block_id")
-            .expect("BlockBuilder has no attribute 'previous_block_id'")
-            .extract::<String>(py)
-            .unwrap()
+        self.previous_block.header_signature().clone()
     }
 
     pub fn last_batch(&self) -> Option<&Batch> {
@@ -248,14 +246,14 @@ impl CandidateBlock {
             let mut batches_to_add = vec![];
 
             // Inject blocks at the beginning of a Candidate Block
-            let previous_block_id = self.previous_block_id();
             if self.pending_batches.is_empty() {
+                let previous_block = self.previous_block.clone();
                 let mut injected_batches = self.poll_injectors(|injector: &cpython::PyObject| {
                     let gil = cpython::Python::acquire_gil();
                     let py = gil.python();
                     match injector
-                        .call_method(py, "block_start", (previous_block_id.as_str(),), None)
-                        .expect("BlockInjector has not method 'block_start'")
+                        .call_method(py, "block_start", (previous_block.clone(),), None)
+                        .expect("BlockInjector.block_start failed")
                         .extract::<cpython::PyList>(py)
                     {
                         Ok(injected) => injected.iter(py).collect(),

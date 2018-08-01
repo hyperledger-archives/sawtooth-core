@@ -211,9 +211,9 @@ impl SyncBlockPublisher {
             .expect("BlockWrapper, unable to call state_view_for_block")
     }
 
-    fn load_injectors(&self, py: Python, block_id: &str) -> Vec<PyObject> {
+    fn load_injectors(&self, py: Python, state_root: &str) -> Vec<PyObject> {
         self.batch_injector_factory
-            .call_method(py, "create_injectors", (block_id,), None)
+            .call_method(py, "create_injectors", (state_root,), None)
             .expect("BatchInjectorFactory has no method 'create_injectors'")
             .extract::<PyList>(py)
             .unwrap()
@@ -252,7 +252,7 @@ impl SyncBlockPublisher {
 
             let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
-            let batch_injectors = self.load_injectors(py, &previous_block.block().header_signature);
+            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash());
 
             let kwargs = PyDict::new(py);
             kwargs
@@ -289,6 +289,7 @@ impl SyncBlockPublisher {
                 .expect("SettingsView could not be constructed");
 
             CandidateBlock::new(
+                previous_block.clone(),
                 self.batch_committed.clone_ref(py),
                 self.transaction_committed.clone_ref(py),
                 scheduler,

@@ -21,7 +21,6 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoTxn
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
@@ -35,8 +34,7 @@ from sawtooth_block_info.common import BLOCK_INFO_NAMESPACE
 class BlockInfoInjector(BatchInjector):
     """Inject BlockInfo transactions at the beginning of blocks."""
 
-    def __init__(self, block_cache, state_view_factory, signer):
-        self._block_cache = block_cache
+    def __init__(self, state_view_factory, signer):
         self._state_view_factory = state_view_factory
         self._signer = signer
 
@@ -75,7 +73,7 @@ class BlockInfoInjector(BatchInjector):
             header_signature=batch_signature,
         )
 
-    def block_start(self, previous_block_id):
+    def block_start(self, previous_block):
         """Returns an ordered list of batches to inject at the beginning of the
         block. Can also return None if no batches should be injected.
 
@@ -85,9 +83,7 @@ class BlockInfoInjector(BatchInjector):
         Returns:
             A list of batches to inject.
         """
-        previous_block = self._block_cache[previous_block_id].get_block()
-        previous_header = BlockHeader()
-        previous_header.ParseFromString(previous_block.header)
+        previous_header = previous_block.header
 
         block_info = BlockInfo(
             block_num=previous_header.block_num,
@@ -98,11 +94,11 @@ class BlockInfoInjector(BatchInjector):
 
         return [self.create_batch(block_info)]
 
-    def before_batch(self, previous_block_id, batch):
+    def before_batch(self, previous_block, batch):
         pass
 
-    def after_batch(self, previous_block_id, batch):
+    def after_batch(self, previous_block, batch):
         pass
 
-    def block_end(self, previous_block_id, batches):
+    def block_end(self, previous_block, batches):
         pass

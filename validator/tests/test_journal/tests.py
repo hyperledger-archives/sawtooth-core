@@ -1221,7 +1221,6 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             permission_verifier=self.permission_verifier,
             batch_observers=[],
             batch_injector_factory=DefaultBatchInjectorFactory(
-                block_cache=self.block_tree_manager.block_cache,
                 state_view_factory=MockStateViewFactory(
                     self.block_tree_manager.state_db),
                 signer=self.block_tree_manager.identity_signer))
@@ -1359,7 +1358,6 @@ class TestJournal(unittest.TestCase):
                 permission_verifier=self.permission_verifier,
                 batch_observers=[],
                 batch_injector_factory=DefaultBatchInjectorFactory(
-                    block_cache=btm.block_store,
                     state_view_factory=MockStateViewFactory(btm.state_db),
                     signer=btm.identity_signer))
 
