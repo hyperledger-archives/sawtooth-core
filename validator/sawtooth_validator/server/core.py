@@ -144,10 +144,6 @@ class Validator:
         # The cache keep time for the journal's block cache must be greater
         # than the cache keep time used by the completer.
         base_keep_time = 1200
-        block_cache = BlockCache(
-            block_store,
-            keep_time=int(base_keep_time * 9 / 8),
-            purge_frequency=30)
 
         block_manager = BlockManager()
 
@@ -302,8 +298,8 @@ class Validator:
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
+            block_manager=block_manager,
             transaction_executor=transaction_executor,
-            get_block=lambda block: block_cache[block],
             transaction_committed=block_store.has_transaction,
             batch_committed=block_store.has_batch,
             state_view_factory=state_view_factory,

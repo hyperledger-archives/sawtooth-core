@@ -29,6 +29,7 @@ from sawtooth_validator.database.dict_database import DictDatabase
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -100,6 +101,8 @@ class BlockTreeManager:
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
 
+        self.block_manager = BlockManager()
+
         # add the mock reference to the consensus
         consensus_setting_addr = SettingsView.setting_address(
             'sawtooth.consensus.algorithm')
@@ -121,8 +124,8 @@ class BlockTreeManager:
             chain_head = self.genesis_block
 
         self.block_publisher = BlockPublisher(
+            block_manager=self.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_cache[block],
             transaction_committed=self.block_store.has_transaction,
             batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
@@ -131,7 +134,7 @@ class BlockTreeManager:
             ),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
-            chain_head=chain_head,
+            chain_head=chain_head.block,
             identity_signer=self.identity_signer,
             data_dir=None,
             config_dir=None,

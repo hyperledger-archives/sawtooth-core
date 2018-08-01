@@ -124,8 +124,8 @@ class BlockPublisher(OwnedPointer):
     """
 
     def __init__(self,
+                 block_manager,
                  transaction_executor,
-                 get_block,
                  batch_committed,
                  transaction_committed,
                  state_view_factory,
@@ -143,9 +143,9 @@ class BlockPublisher(OwnedPointer):
         Initialize the BlockPublisher object
 
         Args:
+            block_manager (:obj:`BlockManager`): A BlockManager instance
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
-            get_block (fn(block_id) -> Block): A function for getting blocks
             batch_committed (fn(batch_id) -> bool): A function for checking if
                 a batch is committed.
             transaction_committed (fn(transaction_id) -> bool): A function for
@@ -169,8 +169,8 @@ class BlockPublisher(OwnedPointer):
 
         self._to_exception(PY_LIBRARY.call(
             'block_publisher_new',
+            block_manager.pointer,
             ctypes.py_object(transaction_executor),
-            ctypes.py_object(get_block),
             ctypes.py_object(batch_committed),
             ctypes.py_object(transaction_committed),
             ctypes.py_object(state_view_factory),
