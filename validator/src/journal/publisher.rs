@@ -18,7 +18,7 @@
 use batch::Batch;
 use block::Block;
 
-use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, Python};
+use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
@@ -30,7 +30,7 @@ use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
 use execution::py_executor::PyExecutor;
-use journal::block_wrapper::BlockWrapper;
+use journal::block_manager::BlockManager;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
@@ -65,6 +65,11 @@ pub enum StartError {
     Disconnected,
 }
 
+#[derive(Debug)]
+pub enum BlockPublisherError {
+    UnknownBlock(String),
+}
+
 pub struct BlockPublisherState {
     pub transaction_executor: Box<ExecutionPlatform>,
     pub chain_head: Option<Block>,
@@ -97,13 +102,12 @@ impl BlockPublisherState {
 pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
+    block_manager: BlockManager,
     batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
-    block_wrapper_class: PyObject,
     block_header_class: PyObject,
     block_builder_class: PyObject,
     settings_view_class: PyObject,
-    block_getter: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
     state_view_factory: PyObject,
@@ -127,17 +131,16 @@ impl Clone for SyncBlockPublisher {
 
         SyncBlockPublisher {
             state,
+            block_manager: self.block_manager.clone(),
             batch_observers: self
                 .batch_observers
                 .iter()
                 .map(|i| i.clone_ref(py))
                 .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            block_wrapper_class: self.block_wrapper_class.clone_ref(py),
             block_header_class: self.block_header_class.clone_ref(py),
             block_builder_class: self.block_builder_class.clone_ref(py),
             settings_view_class: self.settings_view_class.clone_ref(py),
-            block_getter: self.block_getter.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone_ref(py),
@@ -179,7 +182,7 @@ impl SyncBlockPublisher {
             .rebuild(Some(committed_batches), Some(uncommitted_batches));
 
         if let Some(prev) = previous_block {
-            self.initialize_block(state, &prev.block())
+            self.initialize_block(state, &prev)
                 .expect("Unable to initialize block after canceling");
         }
     }
@@ -349,14 +352,15 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn get_block_checked(&self, block_id: &str) -> Result<BlockWrapper, PyErr> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let res = self.block_getter.call(py, (block_id,), None);
-        res.map(|i| i.extract::<BlockWrapper>(py))?
+    fn get_block_checked(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
+        self.block_manager
+            .get(&[block_id])
+            .next()
+            .expect("Did not return any Results, even not found blocks")
+            .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
     }
 
-    fn get_block(&self, block_id: &str) -> BlockWrapper {
+    fn get_block(&self, block_id: &str) -> Block {
         self.get_block_checked(block_id)
             .expect("Unable to extract BlockWrapper")
     }
@@ -367,7 +371,7 @@ impl SyncBlockPublisher {
             .map(|previous_block_id| self.get_block(previous_block_id.as_str()))
         {
             state.candidate_block = None;
-            self.initialize_block(state, &previous_block.block())
+            self.initialize_block(state, &previous_block)
                 .expect("Initialization failed unexpectedly");
         }
     }
@@ -477,22 +481,21 @@ pub struct BlockPublisher {
 
 impl BlockPublisher {
     pub fn new(
+        block_manager: BlockManager,
         transaction_executor: PyObject,
-        block_getter: PyObject,
         batch_committed: PyObject,
         transaction_committed: PyObject,
         state_view_factory: PyObject,
         settings_cache: PyObject,
         block_sender: PyObject,
         batch_publisher: PyObject,
-        chain_head: Option<BlockWrapper>,
+        chain_head: Option<Block>,
         identity_signer: PyObject,
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
-        block_wrapper_class: PyObject,
         block_header_class: PyObject,
         block_builder_class: PyObject,
         settings_view_class: PyObject,
@@ -501,14 +504,14 @@ impl BlockPublisher {
 
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
             tep,
-            chain_head.map(|bw| bw.block()),
+            chain_head,
             None,
             PendingBatchesPool::new(NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT),
         )));
 
         let publisher = SyncBlockPublisher {
             state,
-            block_getter,
+            block_manager,
             batch_committed,
             transaction_committed,
             state_view_factory,
@@ -521,7 +524,6 @@ impl BlockPublisher {
             permission_verifier,
             batch_observers,
             batch_injector_factory,
-            block_wrapper_class,
             block_header_class,
             block_builder_class,
             settings_view_class,
