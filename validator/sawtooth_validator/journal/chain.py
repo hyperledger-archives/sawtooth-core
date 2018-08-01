@@ -105,10 +105,9 @@ class ChainController(OwnedPointer):
             'chain_controller_commit_block',
             block)
 
-    def queue_block(self, block):
-        self._chain_controller_block_ffi_fn(
-            'chain_controller_queue_block',
-            block)
+    def queue_block(self, block_id):
+        _libexec('chain_controller_queue_block', self.pointer,
+                 ctypes.c_char_p(block_id.encode('utf-8')))
 
     def block_validation_result(self, block_id):
         status = ctypes.c_int32(0)
@@ -119,12 +118,11 @@ class ChainController(OwnedPointer):
 
         return BlockStatus(status.value)
 
-    def on_block_received(self, block_wrapper):
+    def on_block_received(self, block_id):
         """This is exposed for unit tests, and should not be called directly.
         """
-        self._chain_controller_block_ffi_fn(
-            'chain_controller_on_block_received',
-            block_wrapper.block)
+        _libexec('chain_controller_on_block_received', self.pointer,
+                 ctypes.c_char_p(block_id.encode('utf-8')))
 
     @property
     def chain_head(self):

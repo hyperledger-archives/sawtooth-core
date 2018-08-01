@@ -236,11 +236,55 @@ macro_rules! chain_controller_block_ffi {
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
-chain_controller_block_ffi!(chain_controller_queue_block, queue_block, block, block);
+
+#[no_mangle]
+pub extern "C" fn chain_controller_queue_block(
+    chain_controller: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(chain_controller, block_id);
+
+    let block_id = unsafe {
+        match CStr::from_ptr(block_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return ErrorCode::InvalidBlockId,
+        }
+    };
+
+    unsafe {
+        (*(chain_controller as *mut ChainController<PyBlockValidator>)).queue_block(block_id);
+    }
+
+    ErrorCode::Success
+}
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
-chain_controller_block_ffi!(chain_controller_on_block_received, on_block_received, block, block);
+#[no_mangle]
+pub extern "C" fn chain_controller_on_block_received(
+    chain_controller: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(chain_controller, block_id);
+
+    let block_id = unsafe {
+        match CStr::from_ptr(block_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return ErrorCode::InvalidBlockId,
+        }
+    };
+
+    unsafe {
+        if let Err(err) = (*(chain_controller as *mut ChainController<PyBlockValidator>))
+            .on_block_received(block_id.into())
+        {
+            error!("ChainController.on_block_received error: {:?}", err);
+            return ErrorCode::Unknown;
+        }
+    }
+
+    ErrorCode::Success
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_chain_head(

@@ -299,7 +299,7 @@ class Completer:
         # NOTE: BlockManager.put() sets an external reference count of 1 on the
         # block which must later be decremented by the ChainController
         self._block_manager.put([block])
-        self._on_block_received(block)
+        self._on_block_received(block.header_signature)
 
     def set_on_block_received(self, on_block_received_func):
         self._on_block_received = on_block_received_func

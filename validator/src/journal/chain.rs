@@ -280,7 +280,7 @@ pub struct ChainController<BV: BlockValidator> {
     consensus_notifier: Arc<ConsensusNotifier>,
     block_validator: BV,
     // Queues
-    block_queue_sender: Option<Sender<Block>>,
+    block_queue_sender: Option<Sender<String>>,
     commit_queue_sender: Option<Sender<Block>>,
     validation_result_sender: Option<Sender<BlockValidationResult>>,
 
@@ -383,27 +383,35 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         Ok(())
     }
 
-    pub fn on_block_received(&mut self, block: Block) -> Result<(), ChainControllerError> {
+    pub fn on_block_received(&mut self, block_id: String) -> Result<(), ChainControllerError> {
         {
             let mut state = self
                 .state
+                .read()
+                .expect("No lock holder should have poisoned the lock");
+
+            if state.has_block(&block_id) {
+                return Ok(());
+            }
+        }
+        // Only need a read lock to check duplicates, but need to upgrade to write lock for
+        // updating chain head.
+        {
+            let mut state = self.state
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if state.has_block(&block.header_signature) {
-                return Ok(());
-            }
-            match state.block_manager.put(vec![block.clone()]) {
-                Ok(_) => (),
-                Err(err) => warn!("During put to block manager in on_block_received {:?}", err),
-            }
             if state.chain_head.is_none() {
-                if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, block.clone())
-                {
-                    warn!(
-                        "Unable to set chain head; genesis block {} is not valid: {:?}",
-                        &block.header_signature, err
-                    );
+                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                    if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block)
+                    {
+                        warn!(
+                            "Unable to set chain head; genesis block {} is not valid: {:?}",
+                            &block.header_signature, err
+                        );
+                    }
+                } else {
+                    warn!("Received block not in block manager");
                 }
                 return Ok(());
             }
@@ -417,8 +425,16 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
             )
             .clone();
 
-        self.block_validator
-            .submit_blocks_for_verification(&[block], sender);
+        let state = self.state
+            .read()
+            .expect("No lock holder should have poisoned the lock");
+
+        if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            self.block_validator
+                .submit_blocks_for_verification(&[block], sender);
+        } else {
+            warn!("Received block id for block not in block manager: {}", block_id);
+        }
 
         Ok(())
     }
@@ -466,9 +482,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         let block_ids = [block_id];
 
         let block = state.block_manager.get(&block_ids).next();
-        block
-            .expect("The caller must guarantee that the block is known to the block manager")
-            .expect("The caller must guarantee that the block is known to the block manager")
+        let errstr = "The caller must guarantee that the block is known to the block manager";
+        block.expect(errstr).expect(errstr)
     }
 
     pub fn commit_block(&self, block: Block) {
@@ -668,16 +683,16 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         Ok(())
     }
 
-    pub fn queue_block(&self, block: Block) {
+    pub fn queue_block(&self, block_id: &str) {
         if self.block_queue_sender.is_some() {
             let sender = self.block_queue_sender.clone();
-            if let Err(err) = sender.as_ref().unwrap().send(block) {
+            if let Err(err) = sender.as_ref().unwrap().send(block_id.into()) {
                 error!("Unable to add block to block queue: {}", err);
             }
         } else {
             debug!(
                 "Attempting to queue block {} before chain controller is started; Ignoring",
-                block
+                block_id
             );
         }
     }
@@ -862,7 +877,7 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
 
 struct ChainThread<BV: BlockValidator> {
     chain_controller: ChainController<BV>,
-    block_queue: Receiver<Block>,
+    block_queue: Receiver<String>,
     exit: Arc<AtomicBool>,
 }
 
@@ -873,7 +888,7 @@ trait StopHandle: Clone {
 impl<BV: BlockValidator + 'static> ChainThread<BV> {
     fn new(
         chain_controller: ChainController<BV>,
-        block_queue: Receiver<Block>,
+        block_queue: Receiver<String>,
         exit_flag: Arc<AtomicBool>,
     ) -> Self {
         ChainThread {
@@ -885,7 +900,7 @@ impl<BV: BlockValidator + 'static> ChainThread<BV> {
 
     fn run(&mut self) -> Result<(), ChainControllerError> {
         loop {
-            let block = match self
+            let block_id = match self
                 .block_queue
                 .recv_timeout(Duration::from_millis(RECV_TIMEOUT_MILLIS))
             {
@@ -897,9 +912,9 @@ impl<BV: BlockValidator + 'static> ChainThread<BV> {
                     }
                 }
                 Err(_) => break Err(ChainControllerError::BrokenQueue),
-                Ok(block) => block,
+                Ok(block_id) => block_id,
             };
-            self.chain_controller.on_block_received(block)?;
+            self.chain_controller.on_block_received(block_id)?;
 
             if self.exit.load(Ordering::Relaxed) {
                 break Ok(());
