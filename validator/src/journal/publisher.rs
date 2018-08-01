@@ -47,6 +47,7 @@ lazy_static! {
 #[derive(Debug)]
 pub enum InitializeBlockError {
     BlockInProgress,
+    MissingPredecessor,
 }
 
 #[derive(Debug)]
@@ -66,7 +67,7 @@ pub enum StartError {
 }
 
 #[derive(Debug)]
-pub enum BlockPublisherError{
+pub enum BlockPublisherError {
     UnknownBlock(String),
 }
 
@@ -181,8 +182,9 @@ impl SyncBlockPublisher {
             .rebuild(Some(committed_batches), Some(uncommitted_batches));
 
         if let Some(prev) = previous_block {
-            self.initialize_block(state, &prev)
-                .expect("Unable to initialize block after canceling");
+            if let Err(err) = self.initialize_block(state, &prev) {
+                error!("Unable to initialize block after canceling: {:?}", err);
+            }
         }
     }
 
@@ -228,6 +230,14 @@ impl SyncBlockPublisher {
             warn!("Tried to initialize block but block already initialized");
             return Err(InitializeBlockError::BlockInProgress);
         }
+
+        self.block_manager
+            .ref_block(&previous_block.header_signature)
+            .map_err(|err| {
+                error!("Unable to ref block!: {:?}", err);
+                InitializeBlockError::MissingPredecessor
+            })?;
+
         let mut candidate_block = {
             let gil = Python::acquire_gil();
             let py = gil.python();
@@ -348,7 +358,9 @@ impl SyncBlockPublisher {
     }
 
     fn get_block_checked(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
-        self.block_manager.get(&[block_id]).next()
+        self.block_manager
+            .get(&[block_id])
+            .next()
             .expect("Did not return any Results, even not found blocks")
             .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
     }
@@ -462,6 +474,9 @@ impl SyncBlockPublisher {
         let mut candidate_block = None;
         mem::swap(&mut state.candidate_block, &mut candidate_block);
         if let Some(mut candidate_block) = candidate_block {
+            self.block_manager
+                .unref_block(&candidate_block.previous_block_id())
+                .expect("Unable to unref block that was ref'ed during initialize block");
             candidate_block.cancel();
         }
     }
