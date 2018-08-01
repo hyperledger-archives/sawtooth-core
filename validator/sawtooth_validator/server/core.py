@@ -35,7 +35,6 @@ from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
-from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
@@ -254,16 +253,13 @@ class Validator:
         )
 
         completer = Completer(
-            block_cache=BlockCache(
-                block_store,
-                keep_time=base_keep_time,
-                purge_frequency=30),
+            block_manager=block_manager,
             transaction_committed=block_store.has_transaction,
             get_committed_batch_by_id=block_store.get_batch,
             get_committed_batch_by_txn_id=(
                 block_store.get_batch_by_transaction
             ),
-            get_chain_head=lambda: block_store.chain_head,
+            get_chain_head=lambda: unwrap_if_not_none(block_store.chain_head),
             gossip=gossip,
             cache_keep_time=base_keep_time,
             cache_purge_frequency=30,
@@ -506,3 +502,9 @@ class Validator:
 
     def get_chain_head_state_root_hash(self):
         return self._chain_controller.chain_head.state_root_hash
+
+
+def unwrap_if_not_none(blkw):
+    if blkw:
+        return blkw.block
+    return None
