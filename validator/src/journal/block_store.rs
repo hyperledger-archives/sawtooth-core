@@ -25,7 +25,7 @@ pub enum BlockStoreError {
     UnknownBlock,
 }
 
-pub trait BlockStore {
+pub trait BlockStore: Sync + Send {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
