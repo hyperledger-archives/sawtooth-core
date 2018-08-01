@@ -39,6 +39,7 @@ pub enum ErrorCode {
     BlockNotInitialized = 0x04,
     BlockEmpty = 0x05,
     BlockNotInProgress = 0x06,
+    MissingPredecessor = 0x07,
 }
 
 macro_rules! check_null {
@@ -267,6 +268,7 @@ pub extern "C" fn block_publisher_initialize_block(
     let publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
     py.allow_threads(move || match publisher.initialize_block(block) {
         Err(InitializeBlockError::BlockInProgress) => ErrorCode::BlockInProgress,
+        Err(InitializeBlockError::MissingPredecessor) => ErrorCode::MissingPredecessor,
         Ok(_) => ErrorCode::Success,
     })
 }
