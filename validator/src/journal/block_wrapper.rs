@@ -17,7 +17,6 @@
 
 use batch::Batch;
 use block::Block;
-use scheduler::TxnExecutionResult;
 use std::fmt;
 
 use cpython::{self, ObjectProtocol, PyClone, PyObject};
@@ -112,52 +111,6 @@ impl BlockWrapper {
             .expect("Failed to get BlockWrapper.block")
             .extract(py)
             .expect("Failed to extract BlockWrapper.block")
-    }
-
-    pub fn status(&self) -> BlockStatus {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.py_block_wrapper
-            .getattr(py, "status")
-            .expect("Failed to get BlockWrapper.status")
-            .extract(py)
-            .expect("Failed to extract BlockWrapper.status")
-    }
-
-    pub fn execution_results(&self) -> Vec<TxnExecutionResult> {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.py_block_wrapper
-            .getattr(py, "execution_results")
-            .expect("Failed to get BlockWrapper.execution_results")
-            .extract(py)
-            .expect("Failed to extract BlockWrapper.execution_results")
-    }
-
-    pub fn num_transactions(&self) -> usize {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.py_block_wrapper
-            .getattr(py, "num_transactions")
-            .expect("Failed to get BlockWrapper.num_transactions")
-            .extract(py)
-            .expect("Failed to extract BlockWrapper.num_transactions")
-    }
-
-    pub fn set_status(&mut self, status: BlockStatus) {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.py_block_wrapper
-            .setattr(py, "status", status)
-            .expect("Failed to set BlockWrapper.status")
-    }
-
-    pub fn set_num_transactions(&mut self, num: usize) {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.py_block_wrapper
-            .setattr(py, "num_transactions", num)
-            .expect("Failed to set BlockWrapper.num_transactions")
     }
 }
 

@@ -26,7 +26,6 @@ from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
@@ -198,7 +197,7 @@ class GenesisController:
 
         block = block_builder.build_block()
 
-        blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
+        blkw = BlockWrapper(block=block)
 
         LOGGER.info('Genesis block created: %s', blkw)
 
