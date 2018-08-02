@@ -178,7 +178,7 @@ def make_store_and_tracker(size=3):
         * 'aaa...3'
     """
     store = MockBlockStore(size=size)
-    tracker = BatchTracker(store)
+    tracker = BatchTracker(store.has_batch)
     tracker.notify_batch_pending(make_mock_batch('d'))
     tracker.notify_batch_pending(make_mock_batch('f'))
     tracker.notify_txn_invalid('c' * 127 + 'f', 'error message', b'error data')

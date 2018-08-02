@@ -202,7 +202,7 @@ class Validator:
         # -- Setup Transaction Execution Platform -- #
         context_manager = ContextManager(global_state_db)
 
-        batch_tracker = BatchTracker(block_store)
+        batch_tracker = BatchTracker(block_store.has_batch)
 
         settings_cache = SettingsCache(
             SettingsViewFactory(state_view_factory),
@@ -254,8 +254,17 @@ class Validator:
         )
 
         completer = Completer(
-            block_store,
-            gossip,
+            block_cache=BlockCache(
+                block_store,
+                keep_time=base_keep_time,
+                purge_frequency=30),
+            transaction_committed=block_store.has_transaction,
+            get_committed_batch_by_id=block_store.get_batch,
+            get_committed_batch_by_txn_id=(
+                block_store.get_batch_by_transaction
+            ),
+            get_chain_head=lambda: block_store.chain_head,
+            gossip=gossip,
             cache_keep_time=base_keep_time,
             cache_purge_frequency=30,
             requested_keep_time=300)
@@ -286,13 +295,14 @@ class Validator:
 
         # -- Setup Journal -- #
         batch_injector_factory = DefaultBatchInjectorFactory(
-            block_cache=block_cache,
             state_view_factory=state_view_factory,
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
             transaction_executor=transaction_executor,
-            block_cache=block_cache,
+            get_block=lambda block: block_cache[block],
+            transaction_committed=block_store.has_transaction,
+            batch_committed=block_store.has_batch,
             state_view_factory=state_view_factory,
             settings_cache=settings_cache,
             block_sender=block_sender,

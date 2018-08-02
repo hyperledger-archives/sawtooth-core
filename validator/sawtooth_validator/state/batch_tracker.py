@@ -40,16 +40,16 @@ class BatchTracker(ChainObserver,
     relevant Observer class, and implemented here.
 
     Args:
-        block_store (BlockStore): For querying if a batch is committed
+        batch_committed (fn() -> bool): For querying if a batch is committed
         cache_keep_time (float): Time in seconds to keep values in TimedCaches
         cache_purge_frequency (float): Time between purging the TimedCaches
     """
 
     def __init__(self,
-                 block_store,
+                 batch_committed,
                  cache_keep_time=600,
                  cache_purge_frequency=30):
-        self._block_store = block_store
+        self._batch_committed = batch_committed
         self._batch_info = TimedCache(cache_keep_time, cache_purge_frequency)
         self._invalid = TimedCache(cache_keep_time, cache_purge_frequency)
         self._pending = set()
@@ -63,7 +63,7 @@ class BatchTracker(ChainObserver,
         """
         with self._lock:
             for batch_id in self._pending.copy():
-                if self._block_store.has_batch(batch_id):
+                if self._batch_committed(batch_id):
                     self._pending.remove(batch_id)
                     self._update_observers(batch_id,
                                            ClientBatchStatus.COMMITTED)
@@ -119,7 +119,7 @@ class BatchTracker(ChainObserver,
             int: The status enum
         """
         with self._lock:
-            if self._block_store.has_batch(batch_id):
+            if self._batch_committed(batch_id):
                 return ClientBatchStatus.COMMITTED
             if batch_id in self._invalid:
                 return ClientBatchStatus.INVALID

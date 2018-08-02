@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import unittest
-from unittest.mock import Mock
 
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import transaction_pb2
@@ -29,8 +28,7 @@ class BatchTrackerTest(unittest.TestCase):
         - Ensure that the invalid batch info is returned
         - Ensure that modifying the returned info does not affect future calls
         """
-        block_store = Mock()
-        batch_tracker = BatchTracker(block_store)
+        batch_tracker = BatchTracker(batch_committed=lambda batch_id: True)
 
         batch_tracker.notify_batch_pending(
             make_batch("good_batch", "good_txn"))

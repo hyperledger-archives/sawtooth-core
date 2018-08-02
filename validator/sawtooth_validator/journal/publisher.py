@@ -125,7 +125,9 @@ class BlockPublisher(OwnedPointer):
 
     def __init__(self,
                  transaction_executor,
-                 block_cache,
+                 get_block,
+                 batch_committed,
+                 transaction_committed,
                  state_view_factory,
                  settings_cache,
                  block_sender,
@@ -143,7 +145,11 @@ class BlockPublisher(OwnedPointer):
         Args:
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
-            block_cache (:obj:`BlockCache`): A BlockCache instance.
+            get_block (fn(block_id) -> Block): A function for getting blocks
+            batch_committed (fn(batch_id) -> bool): A function for checking if
+                a batch is committed.
+            transaction_committed (fn(transaction_id) -> bool): A function for
+                checking if a transaction is committed.
             state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
                 read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
@@ -164,7 +170,9 @@ class BlockPublisher(OwnedPointer):
         self._to_exception(PY_LIBRARY.call(
             'block_publisher_new',
             ctypes.py_object(transaction_executor),
-            ctypes.py_object(block_cache),
+            ctypes.py_object(get_block),
+            ctypes.py_object(batch_committed),
+            ctypes.py_object(transaction_committed),
             ctypes.py_object(state_view_factory),
             ctypes.py_object(settings_cache),
             ctypes.py_object(block_sender),

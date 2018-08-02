@@ -25,14 +25,14 @@ use batch::Batch;
 pub struct TransactionCommitCache {
     committed: HashSet<String>,
 
-    blockstore: cpython::PyObject,
+    transaction_committed: cpython::PyObject,
 }
 
 impl TransactionCommitCache {
-    pub fn new(blockstore: cpython::PyObject) -> Self {
+    pub fn new(transaction_committed: cpython::PyObject) -> Self {
         TransactionCommitCache {
             committed: HashSet::new(),
-            blockstore,
+            transaction_committed,
         }
     }
 
@@ -65,9 +65,9 @@ impl TransactionCommitCache {
     fn blockstore_has_txn(&self, transaction_id: &str) -> bool {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
-        self.blockstore
-            .call_method(py, "has_transaction", (transaction_id,), None)
-            .unwrap()
+        self.transaction_committed
+            .call(py, (transaction_id,), None)
+            .expect("Call to determine if transaction is committed failed")
             .extract::<bool>(py)
             .unwrap()
     }
