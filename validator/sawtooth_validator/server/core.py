@@ -146,6 +146,7 @@ class Validator:
         base_keep_time = 1200
 
         block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(

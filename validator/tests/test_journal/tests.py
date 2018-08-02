@@ -626,8 +626,8 @@ class TestBlockPublisher(unittest.TestCase):
 class TestBlockValidator(unittest.TestCase):
     def setUp(self):
         self.state_view_factory = MockStateViewFactory()
-        self.block_manager = BlockManager()
         self.block_tree_manager = BlockTreeManager()
+        self.block_manager = self.block_tree_manager.block_manager
         self.root = self.block_tree_manager.chain_head
 
         self.block_validation_handler = self.BlockValidationHandler()
@@ -986,7 +986,7 @@ class TestChainController(unittest.TestCase):
         self.executor = SynchronousExecutor()
         self.consensus_notifier = MockConsensusNotifier()
 
-        block_manager = BlockManager()
+        block_manager = self.block_tree_manager.block_manager
 
         self.block_validator = MockBlockValidator(
             state_view_factory=self.state_view_factory,
@@ -1201,11 +1201,10 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
     def setup_chain_controller(self):
 
-        block_manager = BlockManager()
         self.block_validator = BlockValidator(
             block_store=self.block_tree_manager.block_store,
             state_view_factory=self.state_view_factory,
-            block_manager=block_manager,
+            block_manager=self.block_tree_manager.block_manager,
             transaction_executor=self.transaction_executor,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=self.dir,
@@ -1215,7 +1214,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         self.chain_ctrl = ChainController(
             self.block_tree_manager.block_store,
-            block_manager,
+            self.block_tree_manager.block_manager,
             self.block_validator,
             self.state_database,
             self.publisher.chain_head_lock,
@@ -1308,13 +1307,12 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
-        block_manager = BlockManager()
         block_publisher = None
         block_validator = None
         chain_controller = None
         try:
             block_publisher = BlockPublisher(
-                block_manager=block_manager,
+                block_manager=btm.block_manager,
                 transaction_executor=self.txn_executor,
                 transaction_committed=btm.block_store.has_transaction,
                 batch_committed=btm.block_store.has_batch,
@@ -1338,7 +1336,7 @@ class TestJournal(unittest.TestCase):
             block_validator = BlockValidator(
                 block_store=btm.block_store,
                 state_view_factory=MockStateViewFactory(btm.state_db),
-                block_manager=block_manager,
+                block_manager=btm.block_manager,
                 transaction_executor=self.txn_executor,
                 identity_signer=btm.identity_signer,
                 data_dir=None,
@@ -1352,7 +1350,7 @@ class TestJournal(unittest.TestCase):
 
             chain_controller = ChainController(
                 btm.block_store,
-                block_manager=block_manager,
+                block_manager=btm.block_manager,
                 block_validator=block_validator,
                 state_database=state_database,
                 chain_head_lock=block_publisher.chain_head_lock,
@@ -1787,6 +1785,7 @@ class TestChainCommitState(unittest.TestCase):
         block_store.update_chain(committed_blocks)
 
         block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         block_manager.put(committed_blocks)
 
