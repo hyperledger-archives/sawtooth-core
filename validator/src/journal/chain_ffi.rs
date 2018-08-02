@@ -561,6 +561,36 @@ impl BlockValidator for PyBlockValidator {
             })
             .unwrap_or(());
     }
+
+    fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let sender_ptr = Box::into_raw(Box::new(response_sender)) as u64;
+
+        let sender_c_void = self
+            .ctypes_c_void
+            .call(py, (sender_ptr,), None)
+            .expect("unable to create ctypes.c_void_p");
+
+        let py_sender = self
+            .py_validation_response_sender
+            .call(py, (sender_c_void,), None)
+            .expect("unable to create ValidationResponseSender");
+
+        let py_callback = self
+            .py_callback_maker
+            .call(py, (py_sender,), None)
+            .expect("Unable to create py_callback");
+
+        match self
+            .py_block_validator
+            .call_method(py, "process_pending", (block, py_callback), None)
+        {
+            Ok(_) => (),
+            Err(py_err) => warn!("During call to process_pending: {:?}", py_err),
+        }
+    }
 }
 
 struct PyBlockStore {

@@ -122,8 +122,7 @@ class BlockValidator:
         self._block_manager = block_manager
         self._block_store = block_store
         self._block_validity_fn = None
-        self._block_validity_cache = _Cache(100)
-        self._block_scheduler = BlockScheduler(self._block_validity_cache)
+        self._block_scheduler = BlockScheduler()
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._identity_signer = identity_signer
@@ -144,8 +143,7 @@ class BlockValidator:
         self._block_scheduler.set_block_validity_fn(func=func)
 
     def _block_validity(self, block_id):
-        validity = self._block_validity_cache.get(block_id)
-        return validity if validity else self._block_validity_fn(block_id)
+        return self._block_validity_fn(block_id)
 
     def _get_previous_block_state_root(self, block):
         block_header = BlockHeader()
@@ -401,26 +399,17 @@ class BlockValidator:
             self._thread_pool.submit(
                 self.process_block_verification, block, callback)
 
-    def _release_pending(self, block):
-        """Removes the block from processing and returns any blocks that should
-        now be scheduled for processing, cleaning up the pending block trackers
-        in the process.
+    def process_pending(self, block, callback):
+        """Removes the block from processing if it is already valid, and
+        returns pending blocks that were waiting on the valid block.
         """
+
         ready = []
         block_id = block.header_signature
         if self._block_validity(block_id) == BlockStatus.Valid:
             ready.extend(self._block_scheduler.done(block))
 
-        elif self._block_validity(block_id) == BlockStatus.Invalid:
-            # Mark all pending blocks as invalid
-            invalid = self._block_scheduler.done(block, and_descendants=True)
-            for blk in invalid:
-                blk.status = BlockStatus.Invalid
-                LOGGER.debug(
-                    'Marking descendant block invalid: %s',
-                    block.header_signature)
-
-        return ready
+        self.submit_blocks_for_verification(ready, callback)
 
     def has_block(self, block_id):
         return block_id in self._block_scheduler
@@ -446,16 +435,10 @@ class BlockValidator:
             result = self.validate_block(block)
             LOGGER.info(
                 'Block %s passed validation', block.header_signature)
-            self._block_validity_cache.set(
-                block.header_signature,
-                BlockStatus.Valid)
         except BlockValidationFailure as err:
             LOGGER.warning(
                 'Block %s failed validation: %s', block.header_signature, err)
             result = self.return_block_failure(block)
-            self._block_validity_cache.set(
-                block.header_signature,
-                BlockStatus.Invalid)
 
         except BlockValidationError as err:
             LOGGER.error(
@@ -470,18 +453,10 @@ class BlockValidator:
         if result:
             callback(result)
 
-        try:
-            blocks_now_ready = self._release_pending(block)
-            self.submit_blocks_for_verification(blocks_now_ready, callback)
-        except Exception:  # pylint: disable=broad-except
-            LOGGER.exception(
-                "Submitting pending blocks failed with unexpected error: %s",
-                block)
-
 
 class BlockScheduler:
 
-    def __init__(self, block_validity_cache):
+    def __init__(self):
         # Blocks that are currently being processed
         self._processing = set()
 
@@ -497,8 +472,6 @@ class BlockScheduler:
         self._pending_gauge = COLLECTOR.gauge(
             'blocks_pending', instance=self)
         self._pending_gauge.set_value(0)
-
-        self._block_validity_cache = block_validity_cache
         self._block_validity_fn = None
         self._lock = RLock()
 
@@ -507,8 +480,7 @@ class BlockScheduler:
 
     def _block_validity(self, block_id):
 
-        validity = self._block_validity_cache.get(block_id)
-        return validity if validity else self._block_validity_fn(block_id)
+        return self._block_validity_fn(block_id)
 
     def schedule(self, blocks):
         """Add the blocks to the scheduler and return any blocks that are
@@ -628,23 +600,3 @@ class BlockScheduler:
     def _update_gauges(self):
         self._pending_gauge.set_value(len(self._pending))
         self._processing_gauge.set_value(len(self._processing))
-
-
-class _Cache:
-    def __init__(self, capacity):
-        self._capacity = capacity
-        self._cache = collections.OrderedDict()
-        self._lock = RLock()
-
-    def get(self, item):
-        with self._lock:
-            return self._cache.get(item)
-
-    def set(self, item, value):
-        with self._lock:
-            try:
-                self._cache.pop(item)
-            except KeyError:
-                if len(self._cache) >= self._capacity:
-                    self._cache.popitem(last=False)
-            self._cache[item] = value

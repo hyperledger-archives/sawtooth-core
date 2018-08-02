@@ -486,6 +486,11 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         blocks_considered_count.inc();
 
         self.consensus_notifier.notify_block_new(block);
+
+        match self.notify_block_validation_results_received(&block) {
+            Ok(_) => (),
+            Err(err) => warn!("{:?}", err),
+        }
     }
 
     fn handle_block_commit(&mut self, block: &Block) -> Result<(), ChainControllerError> {
@@ -658,6 +663,19 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
 
         self.block_validator
             .submit_blocks_for_verification(blocks, sender);
+        Ok(())
+    }
+
+    fn notify_block_validation_results_received(
+        &self,
+        block: &Block,
+    ) -> Result<(), ChainControllerError> {
+        let sender = self.validation_result_sender
+            .as_ref()
+            .expect("Unable to ref validation_result_sender")
+            .clone();
+
+        self.block_validator.process_pending(block, sender);
         Ok(())
     }
 
