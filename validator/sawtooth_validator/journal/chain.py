@@ -56,8 +56,6 @@ class ChainController(OwnedPointer):
         if observers is None:
             observers = []
 
-        block_validator.set_chain_head_fn(self.chain_head_fn)
-
         _pylibexec(
             'chain_controller_new',
             ctypes.py_object(block_store),
