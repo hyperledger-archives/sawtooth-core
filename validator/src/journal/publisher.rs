@@ -172,7 +172,7 @@ impl SyncBlockPublisher {
         if self.is_building_block(state) {
             previous_block = state
                 .get_previous_block_id()
-                .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
+                .map(|block_id| self.get_block(block_id.as_str()).ok())
                 .unwrap_or(None);
             self.cancel_block(state);
         }
@@ -362,7 +362,7 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn get_block_checked(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
+    fn get_block(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
         self.block_manager
             .get(&[block_id])
             .next()
@@ -370,19 +370,22 @@ impl SyncBlockPublisher {
             .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
     }
 
-    fn get_block(&self, block_id: &str) -> Block {
-        self.get_block_checked(block_id)
-            .expect("Unable to extract BlockWrapper")
-    }
-
     fn restart_block(&self, state: &mut BlockPublisherState) {
-        if let Some(previous_block) = state
+        match state
             .get_previous_block_id()
             .map(|previous_block_id| self.get_block(previous_block_id.as_str()))
         {
-            state.candidate_block = None;
-            self.initialize_block(state, &previous_block)
-                .expect("Initialization failed unexpectedly");
+            Some(Ok(previous_block)) => {
+                self.cancel_block(state);
+
+                if let Err(err) = self.initialize_block(state, &previous_block) {
+                    error!("Initialization failed unexpectedly: {:?}", err);
+                }
+            }
+            Some(Err(err)) => {
+                error!("Unable to read previous block on restart: {:?}", err);
+            }
+            None => (),
         }
     }
 
