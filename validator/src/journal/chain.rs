@@ -38,7 +38,7 @@ use uluru;
 use batch::Batch;
 use block::Block;
 use journal;
-use journal::block_manager::BlockManager;
+use journal::block_manager::{BlockManager, BlockManagerError};
 use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
 use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
@@ -51,6 +51,8 @@ use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
+
+const COMMIT_STORE: &str = "commit_store";
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -95,6 +97,12 @@ impl From<ChainReadError> for ChainControllerError {
 impl From<ForkResolutionError> for ChainControllerError {
     fn from(err: ForkResolutionError) -> Self {
         ChainControllerError::ForkResolutionError(err.0)
+    }
+}
+
+impl From<BlockManagerError> for ChainControllerError {
+    fn from(err: BlockManagerError) -> Self {
+        ChainControllerError::ChainUpdateError(format!("{:?}", err))
     }
 }
 
@@ -374,7 +382,9 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                         .save_block_chain_id(&block.header_signature)?;
                 }
 
-                state.chain_writer.update_chain(&[block.clone()], &[])?;
+                state
+                    .block_manager
+                    .persist(&block.header_signature, COMMIT_STORE)?;
                 state.chain_head = Some(block.clone());
                 let mut guard = lock.acquire();
                 guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
@@ -542,9 +552,10 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                         .as_slice(),
                 );
 
-                state
-                    .chain_writer
-                    .update_chain(&result.new_chain, &result.current_chain)?;
+                state.block_manager.persist(
+                    &state.chain_head.as_ref().unwrap().header_signature,
+                    COMMIT_STORE,
+                )?;
 
                 info!(
                     "Chain head updated to {}",

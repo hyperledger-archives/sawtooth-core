@@ -20,7 +20,9 @@ use std::marker::PhantomData;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{FromPyObject, NoArgs, ObjectProtocol, PyList, PyObject, Python, ToPyObject};
+use cpython::{
+    FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, ToPyObject,
+};
 use py_ffi;
 use pylogger;
 
@@ -381,6 +383,16 @@ impl BlockStore for PyBlockStore {
     }
 }
 
+impl Clone for PyBlockStore {
+    fn clone(&self) -> Self {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        PyBlockStore {
+            py_block_store: self.py_block_store.clone_ref(py),
+        }
+    }
+}
+
 fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
     block_wrapper
         .getattr(py, "block")
@@ -442,7 +454,7 @@ mod test {
     use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
-    use cpython::{NoArgs, ObjectProtocol, PyObject, Python};
+    use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 
     use protobuf;
     use protobuf::Message;
@@ -460,7 +472,12 @@ mod test {
     #[test]
     fn py_block_store() {
         run_test(|db_path| {
-            let mut store = PyBlockStore::new(create_block_store(db_path));
+            let py_block_store = create_block_store(db_path);
+            let mut store = {
+                let gil_guard = Python::acquire_gil();
+                let py = gil_guard.python();
+                PyBlockStore::new(py_block_store.clone_ref(py))
+            };
 
             let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
             let block_b = create_block("B", 2, "A");
@@ -480,7 +497,52 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
+            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
+
+            let chain_head = get_chain_head(&py_block_store);
+
+            assert_eq!(block_b, chain_head);
+        })
+    }
+
+    #[test]
+    fn persist_to_py_block_store() {
+        run_test(|db_path| {
+            let py_block_store = create_block_store(db_path);
+            let mut store = {
+                let gil_guard = Python::acquire_gil();
+                let py = gil_guard.python();
+                PyBlockStore::new(py_block_store.clone_ref(py))
+            };
+
+            let block_manager = BlockManager::new();
+            block_manager.add_store("commit_store", Box::new(store.clone()));
+
+            let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
+            let block_b = create_block("B", 2, "A");
+            let block_c = create_block("C", 3, "B");
+
+            block_manager
+                .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
+                .unwrap();
+            block_manager
+                .persist(&block_c.header_signature, "commit_store")
+                .unwrap();
+
+            assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
+
+            {
+                let mut iterator = store.iter().unwrap();
+
+                assert_eq!(iterator.next().unwrap(), block_c);
+                assert_eq!(iterator.next().unwrap(), block_b);
+                assert_eq!(iterator.next().unwrap(), block_a);
+                assert_eq!(iterator.next(), None);
+            }
+
+            let chain_head = get_chain_head(&py_block_store);
+
+            assert_eq!(block_c, chain_head);
         })
     }
 
@@ -532,6 +594,19 @@ mod test {
             .unwrap();
 
         block_store.call(py, (db_instance,), None).unwrap()
+    }
+
+    fn get_chain_head(py_block_store: &PyObject) -> Block {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        py_block_store
+            .getattr(py, "chain_head")
+            .map_err(|py_err| py_err.print(py))
+            .unwrap()
+            .getattr(py, "block")
+            .unwrap()
+            .extract(py)
+            .unwrap()
     }
 
     fn run_test<T>(test: T) -> ()
