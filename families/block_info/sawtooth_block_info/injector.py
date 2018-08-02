@@ -21,6 +21,7 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoTxn
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
@@ -78,12 +79,15 @@ class BlockInfoInjector(BatchInjector):
         block. Can also return None if no batches should be injected.
 
         Args:
-            previous_block_id (str): The signature of the previous block.
+            previous_block (Block): The previous block.
 
         Returns:
             A list of batches to inject.
         """
-        previous_header = previous_block.header
+
+        previous_header_bytes = previous_block.header
+        previous_header = BlockHeader()
+        previous_header.ParseFromString(previous_header_bytes)
 
         block_info = BlockInfo(
             block_num=previous_header.block_num,

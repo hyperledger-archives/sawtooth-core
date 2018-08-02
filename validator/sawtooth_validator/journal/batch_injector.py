@@ -43,7 +43,7 @@ class BatchInjector(metaclass=abc.ABCMeta):
         block. Can also return None if no batches should be injected.
 
         Args:
-            previous_block_id (str): The signature of the previous block.
+            previous_block (Block): The previous block.
 
         Returns:
             A list of batches to inject.
