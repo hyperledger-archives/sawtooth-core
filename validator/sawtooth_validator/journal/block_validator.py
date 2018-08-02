@@ -122,7 +122,7 @@ class BlockValidator:
         self._block_manager = block_manager
         self._block_store = block_store
         self._block_validity_fn = None
-        self._block_scheduler = BlockScheduler()
+        self._block_scheduler = BlockScheduler(block_manager)
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._identity_signer = identity_signer
@@ -456,7 +456,7 @@ class BlockValidator:
 
 class BlockScheduler:
 
-    def __init__(self):
+    def __init__(self, block_manager):
         # Blocks that are currently being processed
         self._processing = set()
 
@@ -474,6 +474,8 @@ class BlockScheduler:
         self._pending_gauge.set_value(0)
         self._block_validity_fn = None
         self._lock = RLock()
+
+        self._block_manager = block_manager
 
     def set_block_validity_fn(self, func):
         self._block_validity_fn = func
@@ -523,11 +525,32 @@ class BlockScheduler:
                     continue
 
                 if self._block_validity(prev_id) == BlockStatus.Unknown:
-                    LOGGER.warning(
-                        "Block %s submitted for processing but predecessor"
-                        " %s has not been validated and is not pending."
-                        " Adding to pending.", block, prev_id)
-                    self._add_block_to_pending(block)
+                    LOGGER.info(
+                        "%s predecessor status is Unknown, scheduling all "
+                        "blocks since last predecessor with known status.",
+                        block.header_signature)
+
+                    branch = self._block_manager.branch(prev_id)
+                    pending = []
+                    for predecessor in branch:
+                        validity = self._block_validity(
+                            predecessor.header_signature)
+                        if validity != BlockStatus.Unknown:
+                            break
+                        pending.append(predecessor)
+
+                    # Reverse the list so we add the block with the smallest
+                    # height first, which should be the block with a known
+                    # status
+                    pending.reverse()
+
+                    # Call schedule recursively. Since we know the first block
+                    # has a known status, the else below will be executed for
+                    # the first block and then the rest will be caught by the
+                    # prev_id checks above, guaranteeing that this will not
+                    # recurse more than once
+                    self.schedule(pending)
+
                 else:
                     LOGGER.debug(
                         "Adding block %s for processing",
