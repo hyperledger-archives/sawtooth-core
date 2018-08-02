@@ -14,23 +14,53 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use std::sync::mpsc::Sender;
 
-use journal::block_wrapper::BlockWrapper;
+use cpython;
+use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
+
+use block::Block;
+use journal::block_wrapper::BlockStatus;
+use scheduler::TxnExecutionResult;
+use std::sync::mpsc::Sender;
 
 #[derive(Debug)]
 pub enum ValidationError {
     BlockValidationFailure(String),
 }
 
-pub trait BlockValidator: Send + Sync {
+pub trait BlockValidator: Sync + Send + Clone {
     fn has_block(&self, block_id: &str) -> bool;
 
-    fn validate_block(&self, block: BlockWrapper) -> Result<(), ValidationError>;
+    fn validate_block(&self, block: Block) -> Result<(), ValidationError>;
 
     fn submit_blocks_for_verification(
         &self,
-        blocks: &[BlockWrapper],
-        response_sender: Sender<BlockWrapper>,
+        blocks: &[Block],
+        response_sender: Sender<BlockValidationResult>,
     );
+}
+
+#[derive(Clone, Debug)]
+pub struct BlockValidationResult {
+    pub block_id: String,
+    pub execution_results: Vec<TxnExecutionResult>,
+    pub num_transactions: u64,
+    pub status: BlockStatus,
+}
+
+impl<'source> FromPyObject<'source> for BlockValidationResult {
+    fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
+        let status: BlockStatus = obj.getattr(py, "status")?.extract(py)?;
+        let execution_results: Vec<TxnExecutionResult> =
+            obj.getattr(py, "execution_results")?.extract(py)?;
+        let block_id: String = obj.getattr(py, "block_id")?.extract(py)?;
+        let num_transactions = obj.getattr(py, "num_transactions")?.extract(py)?;
+
+        Ok(BlockValidationResult {
+            block_id,
+            execution_results,
+            num_transactions,
+            status,
+        })
+    }
 }

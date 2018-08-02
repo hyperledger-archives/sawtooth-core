@@ -485,6 +485,14 @@ impl PyBlockValidator {
     }
 }
 
+impl Clone for PyBlockValidator {
+    fn clone(&self) -> Self {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        PyBlockValidator::new(self.py_block_validator.clone_ref(py))
+    }
+}
+
 impl BlockValidator for PyBlockValidator {
     fn has_block(&self, block_id: &str) -> bool {
         let gil_guard = Python::acquire_gil();
