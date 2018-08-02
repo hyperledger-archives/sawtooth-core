@@ -38,6 +38,8 @@ pub trait BlockValidator: Sync + Send + Clone {
         blocks: &[Block],
         response_sender: Sender<BlockValidationResult>,
     );
+
+    fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>);
 }
 
 #[derive(Clone, Debug)]
