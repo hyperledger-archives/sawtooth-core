@@ -33,6 +33,7 @@ use std::thread;
 use std::time::Duration;
 
 use protobuf;
+use uluru;
 
 use batch::Batch;
 use block::Block;
@@ -49,6 +50,7 @@ use proto::transaction_receipt::TransactionReceipt;
 use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
+const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -145,9 +147,12 @@ struct ForkResolutionResult<'a> {
 #[derive(Debug)]
 struct ForkResolutionError(String);
 
+type BlockValidationResultCache =
+    uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
+
 struct ChainControllerState {
     block_manager: BlockManager,
-    block_validation_results: HashMap<String, BlockValidationResult>,
+    block_validation_results: BlockValidationResultCache,
     chain_writer: Box<ChainWriter>,
     chain_reader: Box<ChainReader>,
     chain_head: Option<Block>,
@@ -164,9 +169,9 @@ impl ChainControllerState {
         block_iter.next().map(|b| b.is_some()).unwrap_or(false)
     }
 
-    fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
+    fn block_validation_result(&mut self, block_id: &str) -> Option<BlockValidationResult> {
         self.block_validation_results
-            .get(block_id)
+            .find(|result| &result.block_id == block_id)
             .cloned()
             .or_else(|| {
                 if self
@@ -300,7 +305,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
                 block_manager,
-                block_validation_results: HashMap::new(),
+                block_validation_results: BlockValidationResultCache::default(),
                 chain_writer,
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
@@ -332,10 +337,10 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         state.chain_head.clone()
     }
 
-    pub fn block_validation_result(&mut self, block_id: &str) -> Option<BlockValidationResult> {
+    pub fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
         let mut state = self
             .state
-            .read()
+            .write()
             .expect("No lock holder should have poisoned the lock");
         state.block_validation_result(block_id)
     }
@@ -439,17 +444,17 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
 
         state
             .block_validation_results
-            .get_mut(&block.header_signature)
+            .find(|result| &result.block_id == &block.header_signature)
             .map(|result| result.status = BlockStatus::Invalid);
     }
 
-    fn set_block_validation_result(&self, block_id: String, result: BlockValidationResult) {
+    fn set_block_validation_result(&self, result: BlockValidationResult) {
         let mut state = self
             .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
-        state.block_validation_results.insert(block_id, result);
+        state.block_validation_results.insert(result);
     }
 
     fn get_block_unchecked(&self, block_id: String) -> Block {
@@ -578,7 +583,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 for block in result.new_chain.iter().rev() {
                     let receipts: Vec<TransactionReceipt> = state
                         .block_validation_results
-                        .get(&block.header_signature)
+                        .find(|result| &block.header_signature == &result.block_id)
                         .expect("A block that has no validation results was committed")
                         .execution_results
                         .iter()
@@ -670,7 +675,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         &self,
         block: &Block,
     ) -> Result<(), ChainControllerError> {
-        let sender = self.validation_result_sender
+        let sender = self
+            .validation_result_sender
             .as_ref()
             .expect("Unable to ref validation_result_sender")
             .clone();
@@ -791,10 +797,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 };
 
                 if !result_thread_exit.load(Ordering::Relaxed) {
-                    result_thread_controller.set_block_validation_result(
-                        block_validation_result.block_id.clone(),
-                        block_validation_result.clone(),
-                    );
+                    result_thread_controller
+                        .set_block_validation_result(block_validation_result.clone());
                     let block = result_thread_controller
                         .get_block_unchecked(block_validation_result.block_id);
                     result_thread_controller.on_block_validated(&block);
