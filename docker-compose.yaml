@@ -20,6 +20,10 @@ services:
     build:
       context: .
       dockerfile: families/settings/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-settings-tp-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -40,6 +44,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/intkey_python/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: intkey-tp-python-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -61,6 +69,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/xo_python/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: xo-tp-python-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -82,6 +94,10 @@ services:
     build:
       context: .
       dockerfile: docker/sawtooth-shell
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-shell-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -100,6 +116,10 @@ services:
     build:
       context: .
       dockerfile: validator/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-validator-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -137,6 +157,10 @@ services:
     build:
       context: .
       dockerfile: rest_api/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-rest-api-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
@@ -160,6 +184,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/devmode_rust/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-devmode-rust-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
