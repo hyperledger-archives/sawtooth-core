@@ -102,6 +102,7 @@ class BlockTreeManager:
         self.state_db = {}
 
         self.block_manager = BlockManager()
+        self.block_manager.add_store("commit_store", self.block_store)
 
         # add the mock reference to the consensus
         consensus_setting_addr = SettingsView.setting_address(
