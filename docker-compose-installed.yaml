@@ -20,6 +20,10 @@ services:
     build:
       context: .
       dockerfile: families/settings/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-settings-tp:${ISOLATION_ID}
     container_name: sawtooth-settings-tp-default
     depends_on:
@@ -30,6 +34,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/intkey_python/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-intkey-tp-python:${ISOLATION_ID}
     container_name: sawtooth-intkey-tp-python-default
     depends_on:
@@ -40,6 +48,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/xo_python/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-xo-tp-python:${ISOLATION_ID}
     container_name: sawtooth-xo-tp-python-default
     depends_on:
@@ -50,6 +62,10 @@ services:
     build:
       context: .
       dockerfile: validator/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-validator:${ISOLATION_ID}
     container_name: sawtooth-validator-default
     expose:
@@ -72,6 +88,10 @@ services:
     build:
       context: .
       dockerfile: rest_api/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-rest-api:${ISOLATION_ID}
     container_name: sawtooth-rest-api-default
     ports:
@@ -84,6 +104,10 @@ services:
     build:
       context: .
       dockerfile: ci/sawtooth-shell-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-shell:${ISOLATION_ID}
     container_name: sawtooth-shell-default
     depends_on:
@@ -97,6 +121,10 @@ services:
     build:
       context: .
       dockerfile: adm/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-admin-tools:${ISOLATION_ID}
     container_name: sawtooth-admin-tools
 
@@ -104,6 +132,10 @@ services:
     build:
       context: .
       dockerfile: cli/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-cli:${ISOLATION_ID}
     container_name: sawtooth-cli-default
 
@@ -111,6 +143,10 @@ services:
     build:
       context: .
       dockerfile: families/block_info/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-block-info-tp:${ISOLATION_ID}
     container_name: sawtooth-block-info-tp-default
 
@@ -118,6 +154,10 @@ services:
     build:
       context: .
       dockerfile: families/identity/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-identity-tp:${ISOLATION_ID}
     container_name: sawtooth-identity-tp-default
 
@@ -125,6 +165,10 @@ services:
     build:
       context: .
       dockerfile: families/smallbank/smallbank_go/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
     container_name: sawtooth-smallbank-tp-go-default
 
@@ -132,6 +176,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/intkey_go/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-intkey-tp-go:${ISOLATION_ID}
     container_name: sawtooth-intkey-tp-go-default
 
@@ -139,6 +187,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/noop_go/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-noop-tp-go:${ISOLATION_ID}
     container_name: sawtooth-noop-tp-go-default
 
@@ -146,6 +198,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/xo_go/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-xo-tp-go:${ISOLATION_ID}
     container_name: sawtooth-xo-tp-go-default
 
@@ -153,6 +209,10 @@ services:
     build:
       context: .
       dockerfile: sdk/python/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-sdk-python:${ISOLATION_ID}
     container_name: sawtooth-sdk-python-default
 
@@ -160,6 +220,10 @@ services:
     build:
       context: .
       dockerfile: signing/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-signing:${ISOLATION_ID}
     container_name: sawtooth-signing-default
 
@@ -167,6 +231,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/intkey_python/Dockerfile-tests-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-intkey-tests:${ISOLATION_ID}
     container_name: sawtooth-intkey-tests-default
 
@@ -174,6 +242,10 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/xo_python/Dockerfile-tests-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-xo-tests:${ISOLATION_ID}
     container_name: sawtooth-xo-tests-default
 
@@ -181,6 +253,10 @@ services:
     build:
       context: .
       dockerfile: integration/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-integration:${ISOLATION_ID}
     container_name: sawtooth-integration-default
 
@@ -188,6 +264,10 @@ services:
     build:
       context: .
       dockerfile: perf/smallbank_workload/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-smallbank-workload:${ISOLATION_ID}
     container_name: sawtooth-smallbank-workload
 
@@ -195,6 +275,10 @@ services:
     build:
       context: .
       dockerfile: perf/intkey_workload/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-intkey-workload:${ISOLATION_ID}
     container_name: sawtooth-intkey-workload
 
@@ -202,5 +286,9 @@ services:
     build:
       context: .
       dockerfile: sdk/examples/devmode_rust/Dockerfile-installed
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-devmode-rust:${ISOLATION_ID}
     container_name: sawtooth-devmode-rust
