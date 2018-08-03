@@ -127,7 +127,8 @@ impl Clone for SyncBlockPublisher {
 
         SyncBlockPublisher {
             state,
-            batch_observers: self.batch_observers
+            batch_observers: self
+                .batch_observers
                 .iter()
                 .map(|i| i.clone_ref(py))
                 .collect(),
@@ -189,7 +190,8 @@ impl SyncBlockPublisher {
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
-        let mut state = self.state
+        let mut state = self
+            .state
             .write()
             .expect("RwLock was poisoned during a write lock");
         self.on_chain_updated(
@@ -236,7 +238,8 @@ impl SyncBlockPublisher {
 
             let kwargs = PyDict::new(py);
             kwargs.set_item(py, "default_value", 0).unwrap();
-            let max_batches = self.settings_cache
+            let max_batches = self
+                .settings_cache
                 .call_method(
                     py,
                     "get_setting",
@@ -268,11 +271,13 @@ impl SyncBlockPublisher {
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
                 .unwrap();
-            let block_header = self.block_header_class
+            let block_header = self
+                .block_header_class
                 .call(py, NoArgs, Some(&kwargs))
                 .expect("BlockHeader could not be constructed");
 
-            let block_builder = self.block_builder_class
+            let block_builder = self
+                .block_builder_class
                 .call(py, (block_header,), None)
                 .expect("BlockBuilder could not be constructed");
 
@@ -281,10 +286,11 @@ impl SyncBlockPublisher {
                 .create_scheduler(&previous_block.block().state_root_hash)
                 .expect("Failed to create new scheduler");
 
-            let committed_txn_cache = TransactionCommitCache::new(
-                self.transaction_committed.clone_ref(py));
+            let committed_txn_cache =
+                TransactionCommitCache::new(self.transaction_committed.clone_ref(py));
 
-            let settings_view = self.settings_view_class
+            let settings_view = self
+                .settings_view_class
                 .call(py, (state_view,), None)
                 .expect("SettingsView could not be constructed");
 
@@ -334,10 +340,9 @@ impl SyncBlockPublisher {
                     );
                     state.candidate_block = None;
                     match finalize_result.block {
-                        Some(block) => Some(Ok(self.publish_block(
-                            block,
-                            finalize_result.injected_batch_ids,
-                        ))),
+                        Some(block) => Some(Ok(
+                            self.publish_block(block, finalize_result.injected_batch_ids)
+                        )),
                         None => None,
                     }
                 }
@@ -606,7 +611,8 @@ impl BlockPublisher {
     }
 
     pub fn pending_batch_info(&self) -> (i32, i32) {
-        let state = self.publisher
+        let state = self
+            .publisher
             .state
             .read()
             .expect("RwLock was poisoned during a write lock");
@@ -617,7 +623,8 @@ impl BlockPublisher {
     }
 
     pub fn has_batch(&self, batch_id: &str) -> bool {
-        let state = self.publisher
+        let state = self
+            .publisher
             .state
             .read()
             .expect("RwLock was poisoned during a write lock");
@@ -673,7 +680,8 @@ impl IncomingBatchSender {
         IncomingBatchSender { ids, sender }
     }
     pub fn put(&mut self, batch: Batch) -> Result<(), BatchQueueError> {
-        let mut ids = self.ids
+        let mut ids = self
+            .ids
             .write()
             .expect("RwLock was poisoned during a write lock");
 
@@ -686,7 +694,8 @@ impl IncomingBatchSender {
     }
 
     pub fn has_batch(&self, batch_id: &str) -> Result<bool, BatchQueueError> {
-        Ok(self.ids
+        Ok(self
+            .ids
             .read()
             .expect("RwLock was poisoned during a write lock")
             .contains(batch_id))
@@ -796,7 +805,8 @@ impl PendingBatchesPool {
     }
 
     pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: Batch) {
-        let last_index = self.batches
+        let last_index = self
+            .batches
             .iter()
             .position(|i| i.header_signature == last_sent.header_signature);
 

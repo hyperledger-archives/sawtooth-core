@@ -334,7 +334,8 @@ impl BlockStore for PyBlockStore {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
         for block in blocks {
-            let block_wrapper = py.import("sawtooth_validator.journal.block_wrapper")
+            let block_wrapper = py
+                .import("sawtooth_validator.journal.block_wrapper")
                 .expect("Unable to import block_wrapper")
                 .get(py, "BlockWrapper")
                 .expect("Unable to import BlockWrapper");
@@ -508,7 +509,8 @@ mod test {
         let block_store_mod = py.import("sawtooth_validator.journal.block_store").unwrap();
         let block_store = block_store_mod.get(py, "BlockStore").unwrap();
 
-        let db_mod = py.import("sawtooth_validator.database.indexed_database")
+        let db_mod = py
+            .import("sawtooth_validator.database.indexed_database")
             .unwrap();
         let indexed_database = db_mod.get(py, "IndexedDatabase").unwrap();
 

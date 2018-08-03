@@ -290,10 +290,8 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
 
             fork_diff.push(block.clone());
 
-            block = self.get_from_cache_strict(
-                &block.previous_block_id(),
-                "Failed to build fork diff",
-            )?;
+            block = self
+                .get_from_cache_strict(&block.previous_block_id(), "Failed to build fork diff")?;
         }
     }
 
@@ -354,7 +352,8 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
             )?;
 
             cur_chain.push(current);
-            current = self.block_cache
+            current = self
+                .block_cache
                 .get(&cur_chain.last().unwrap().previous_block_id())
                 .expect("Could not find current chain predecessor in block cache");
         }
@@ -471,7 +470,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn chain_head(&self) -> Option<BlockWrapper> {
-        let state = self.state
+        let state = self
+            .state
             .read()
             .expect("No lock holder should have poisoned the lock");
 
@@ -479,7 +479,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn on_block_received(&mut self, block: BlockWrapper) -> Result<(), ChainControllerError> {
-        let mut state = self.state
+        let mut state = self
+            .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
@@ -499,7 +500,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         }
 
         state.block_cache.put(block.clone());
-        let sender = self.validation_result_sender
+        let sender = self
+            .validation_result_sender
             .as_ref()
             .expect(
                 "Attempted to submit blocks for validation before starting the chain controller",
@@ -514,7 +516,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn has_block(&self, block_id: &str) -> bool {
-        let state = self.state
+        let state = self
+            .state
             .read()
             .expect("No lock holder should have poisoned the lock");
         state.has_block(block_id)
@@ -525,7 +528,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     }
 
     pub fn fail_block(&self, block: &mut BlockWrapper) {
-        let mut state = self.state
+        let mut state = self
+            .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
@@ -558,7 +562,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     fn handle_block_commit(&mut self, block: &BlockWrapper) -> Result<(), ChainControllerError> {
         {
             // only hold this lock as long as the loop is active.
-            let mut state = self.state
+            let mut state = self
+                .state
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
@@ -710,7 +715,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         &self,
         blocks: &[BlockWrapper],
     ) -> Result<(), ChainControllerError> {
-        let sender = self.validation_result_sender
+        let sender = self
+            .validation_result_sender
             .as_ref()
             .expect(
                 "Attempted to submit blocks for validation before starting the chain controller",
@@ -742,7 +748,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
     fn initialize_chain_head(&mut self) {
         // we need to check to see if a genesis block was created and stored,
         // before this controller was started
-        let mut state = self.state
+        let mut state = self
+            .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
@@ -936,7 +943,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainThread<BC, BV>
 
     fn run(&mut self) -> Result<(), ChainControllerError> {
         loop {
-            let block = match self.block_queue
+            let block = match self
+                .block_queue
                 .recv_timeout(Duration::from_millis(RECV_TIMEOUT_MILLIS))
             {
                 Err(mpsc::RecvTimeoutError::Timeout) => {

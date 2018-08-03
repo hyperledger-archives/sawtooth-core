@@ -108,7 +108,8 @@ fn try_pyobj_to_transaction_result(
 
 impl<'source> FromPyObject<'source> for StateChange {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        let state_change_bytes = obj.call_method(py, "SerializeToString", cpython::NoArgs, None)
+        let state_change_bytes = obj
+            .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)?;
         let state_change: StateChange =
@@ -119,7 +120,8 @@ impl<'source> FromPyObject<'source> for StateChange {
 
 impl<'source> FromPyObject<'source> for Event {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        let event_bytes = obj.call_method(py, "SerializeToString", cpython::NoArgs, None)
+        let event_bytes = obj
+            .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)?;
         let event: Event = ::protobuf::parse_from_bytes(event_bytes.as_slice()).unwrap();

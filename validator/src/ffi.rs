@@ -16,14 +16,8 @@
  */
 
 #[no_mangle]
-pub extern "C" fn ffi_reclaim_bytes(
-    bytes: *mut *const u8,
-    bytes_len: *mut usize,
-) -> isize {
-    unsafe { ::std::slice::from_raw_parts(
-        (*bytes) as *mut u8,
-        *bytes_len,
-    ) };
+pub extern "C" fn ffi_reclaim_bytes(bytes: *mut *const u8, bytes_len: *mut usize) -> isize {
+    unsafe { ::std::slice::from_raw_parts((*bytes) as *mut u8, *bytes_len) };
 
     0
 }

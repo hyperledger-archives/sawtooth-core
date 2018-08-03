@@ -273,7 +273,8 @@ impl CandidateBlock {
             batches_to_add.push(batch);
 
             {
-                let batches_to_test = self.pending_batches
+                let batches_to_test = self
+                    .pending_batches
                     .iter()
                     .chain(batches_to_add.iter())
                     .collect::<Vec<_>>();
@@ -324,7 +325,8 @@ impl CandidateBlock {
             .expect("BlockBuilder has no attribute 'block_header'")
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap();
-        let signature = self.identity_signer
+        let signature = self
+            .identity_signer
             .call_method(py, "sign", (header_bytes,), None)
             .expect("Signer has no method 'sign'");
         block_builder
@@ -388,7 +390,8 @@ impl CandidateBlock {
             }
 
             if batches_w_no_results.contains(&batch.header_signature) {
-                if !self.injected_batch_ids
+                if !self
+                    .injected_batch_ids
                     .contains(batch.header_signature.as_str())
                 {
                     pending_batches.push(batch)
@@ -406,11 +409,14 @@ impl CandidateBlock {
                     );
                     bad_batches.push(batch.clone());
                     pending_batches.clear();
-                    pending_batches.append(&mut self.pending_batches
-                        .clone()
-                        .into_iter()
-                        .filter(|b| !bad_batches.contains(b))
-                        .collect());
+                    pending_batches.append(
+                        &mut self
+                            .pending_batches
+                            .clone()
+                            .into_iter()
+                            .filter(|b| !bad_batches.contains(b))
+                            .collect(),
+                    );
                     return Ok(None);
                 } else {
                     let gil = Python::acquire_gil();
@@ -514,7 +520,8 @@ impl CandidateBlock {
                 block,
                 remaining_batches: self.remaining_batches.clone(),
                 last_batch,
-                injected_batch_ids: self.injected_batch_ids
+                injected_batch_ids: self
+                    .injected_batch_ids
                     .clone()
                     .into_iter()
                     .collect::<Vec<String>>(),

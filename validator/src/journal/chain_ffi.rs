@@ -441,7 +441,8 @@ impl BlockCache for PyBlockCache {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
-        match self.py_block_cache
+        match self
+            .py_block_cache
             .call_method(py, "__contains__", (block_id,), None)
         {
             Err(py_err) => {
@@ -456,7 +457,8 @@ impl BlockCache for PyBlockCache {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
-        match self.py_block_cache
+        match self
+            .py_block_cache
             .set_item(py, block.header_signature(), &block)
         {
             Err(py_err) => {
@@ -499,13 +501,15 @@ impl PyBlockValidator {
             .get(py, "c_void_p")
             .expect("Unable to get c_void_p");
 
-        let chain_module = py.import("sawtooth_validator.journal.chain")
+        let chain_module = py
+            .import("sawtooth_validator.journal.chain")
             .expect("Unable to import sawtooth_validator.journal.chain");
         let py_validation_response_sender = chain_module
             .get(py, "ValidationResponseSender")
             .expect("Unable to get ValidationResponseSender");
 
-        let ffi_module = py.import("sawtooth_validator.ffi")
+        let ffi_module = py
+            .import("sawtooth_validator.ffi")
             .expect("Unable to import sawtooth_validator.ffi");
         let py_callback_maker = ffi_module
             .get(py, "python_to_sender_callback")
@@ -525,7 +529,8 @@ impl BlockValidator for PyBlockValidator {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
-        match self.py_block_validator
+        match self
+            .py_block_validator
             .call_method(py, "has_block", (block_id,), None)
         {
             Err(_) => {
@@ -558,15 +563,18 @@ impl BlockValidator for PyBlockValidator {
 
         let sender_ptr = Box::into_raw(Box::new(response_sender)) as u64;
 
-        let sender_c_void = self.ctypes_c_void
+        let sender_c_void = self
+            .ctypes_c_void
             .call(py, (sender_ptr,), None)
             .expect("unable to create ctypes.c_void_p");
 
-        let py_sender = self.py_validation_response_sender
+        let py_sender = self
+            .py_validation_response_sender
             .call(py, (sender_c_void,), None)
             .expect("unable to create ValidationResponseSender");
 
-        let py_callback = self.py_callback_maker
+        let py_callback = self
+            .py_callback_maker
             .call(py, (py_sender,), None)
             .expect("Unable to create py_callback");
 
@@ -795,9 +803,9 @@ impl ToPyObject for TransactionReceipt {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> PyObject {
-        let txn_receipt_protobuf_mod = py.import(
-            "sawtooth_validator.protobuf.transaction_receipt_pb2",
-        ).expect("Unable to import transaction_receipt_pb2");
+        let txn_receipt_protobuf_mod = py
+            .import("sawtooth_validator.protobuf.transaction_receipt_pb2")
+            .expect("Unable to import transaction_receipt_pb2");
         let py_txn_receipt_class = txn_receipt_protobuf_mod
             .get(py, "TransactionReceipt")
             .expect("Unable to get TransactionReceipt");
