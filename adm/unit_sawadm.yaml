@@ -21,6 +21,10 @@ services:
     build:
       context: ../
       dockerfile: ./adm/adm-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-adm-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
