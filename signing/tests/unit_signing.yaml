@@ -21,6 +21,10 @@ services:
     build:
       context: ../..
       dockerfile: signing/tests/signing-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: signing-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
