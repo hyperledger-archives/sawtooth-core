@@ -21,6 +21,10 @@ services:
     build:
       context: ../../..
       dockerfile: integration/sawtooth_integration/docker/integration-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -45,6 +49,10 @@ services:
     build:
       context: ../../..
       dockerfile: ./sdk/examples/intkey_python/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-intkey-tp-python$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
