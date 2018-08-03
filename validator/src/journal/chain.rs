@@ -122,14 +122,6 @@ pub trait ChainReader: Send + Sync {
     fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError>;
 }
 
-pub trait ChainWriter: Send + Sync {
-    fn update_chain(
-        &mut self,
-        new_chain: &[Block],
-        old_chain: &[Block],
-    ) -> Result<(), ChainControllerError>;
-}
-
 pub trait ConsensusNotifier: Send + Sync {
     fn notify_block_new(&self, block: &Block);
     fn notify_block_valid(&self, block_id: &str);
@@ -161,7 +153,6 @@ type BlockValidationResultCache =
 struct ChainControllerState {
     block_manager: BlockManager,
     block_validation_results: BlockValidationResultCache,
-    chain_writer: Box<ChainWriter>,
     chain_reader: Box<ChainReader>,
     chain_head: Option<Block>,
     chain_id_manager: ChainIdManager,
@@ -301,7 +292,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     pub fn new(
         block_manager: BlockManager,
         block_validator: BV,
-        chain_writer: Box<ChainWriter>,
         chain_reader: Box<ChainReader>,
         chain_head_lock: ChainHeadLock,
         consensus_notifier: Box<ConsensusNotifier>,
@@ -314,7 +304,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
             state: Arc::new(RwLock::new(ChainControllerState {
                 block_manager,
                 block_validation_results: BlockValidationResultCache::default(),
-                chain_writer,
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
                 observers,

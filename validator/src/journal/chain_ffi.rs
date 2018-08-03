@@ -88,7 +88,6 @@ pub extern "C" fn chain_controller_new(
     let py = unsafe { Python::assume_gil_acquired() };
 
     let py_block_store_reader = unsafe { PyObject::from_borrowed_ptr(py, block_store) };
-    let py_block_store_writer = unsafe { PyObject::from_borrowed_ptr(py, block_store) };
     let py_block_validator = unsafe { PyObject::from_borrowed_ptr(py, block_validator) };
     let py_observers = unsafe { PyObject::from_borrowed_ptr(py, observers) };
     let chain_head_lock_ref =
@@ -113,7 +112,6 @@ pub extern "C" fn chain_controller_new(
     let chain_controller = ChainController::new(
         block_manager,
         PyBlockValidator::new(py_block_validator),
-        Box::new(PyBlockStore::new(py_block_store_writer)),
         Box::new(PyBlockStore::new(py_block_store_reader)),
         chain_head_lock_ref.clone(),
         Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
@@ -600,27 +598,6 @@ struct PyBlockStore {
 impl PyBlockStore {
     fn new(py_block_store: PyObject) -> Self {
         PyBlockStore { py_block_store }
-    }
-}
-
-impl ChainWriter for PyBlockStore {
-    fn update_chain(
-        &mut self,
-        new_chain: &[Block],
-        old_chain: &[Block],
-    ) -> Result<(), ChainControllerError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .call_method(py, "update_chain", (new_chain, old_chain), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                ChainControllerError::ChainUpdateError(format!(
-                    "An error occurred while executing update_chain: {}",
-                    py_err.get_type(py).name(py)
-                ))
-            })
     }
 }
 
