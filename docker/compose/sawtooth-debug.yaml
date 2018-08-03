@@ -20,6 +20,10 @@ services:
     build:
       context: ../..
       dockerfile: docker/sawtooth-debug-python
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     volumes:
       - ../../:/project/sawtooth-core
     image: debug-sawtooth-python
@@ -41,6 +45,10 @@ services:
     build:
       context: ../..
       dockerfile: docker/sawtooth-debug-python
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     volumes:
       - ../../:/project/sawtooth-core
     image: debug-sawtooth-python
@@ -71,6 +79,10 @@ services:
     build:
       context: ../..
       dockerfile: docker/sawtooth-debug-python
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     volumes:
       - ../../:/project/sawtooth-core
     image: debug-sawtooth-python
@@ -85,6 +97,10 @@ services:
     build:
       context: ../..
       dockerfile: docker/sawtooth-debug-python
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     volumes:
       - ../../:/project/sawtooth-core
     image: debug-sawtooth-python
@@ -99,6 +115,10 @@ services:
     build:
       context: ../..
       dockerfile: docker/sawtooth-debug-python
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     volumes:
       - ../../:/project/sawtooth-core
     image: debug-sawtooth-python
