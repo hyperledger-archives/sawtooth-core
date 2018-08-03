@@ -171,7 +171,8 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         return arg_error("The number of accounts must be greater than 0.");
     }
 
-    let target: Vec<String> = match args.value_of("target")
+    let target: Vec<String> = match args
+        .value_of("target")
         .unwrap_or("http://localhost:8008")
         .parse()
     {
@@ -205,7 +206,8 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             None => None,
         }
     };
-    let seed: Vec<usize> = match args.value_of("seed")
+    let seed: Vec<usize> = match args
+        .value_of("seed")
         .unwrap_or({
             let mut rng = rand::thread_rng();
             rng.gen::<usize>().to_string().as_ref()
@@ -371,7 +373,8 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         return arg_error("rate must be a number greater than 0");
     }
 
-    let target: String = match args.value_of("target")
+    let target: String = match args
+        .value_of("target")
         .unwrap_or("http://localhost:8008")
         .parse()
     {
