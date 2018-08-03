@@ -216,7 +216,8 @@ impl<'a> IntkeyState<'a> {
     }
 
     pub fn set(&mut self, name: &str, value: u32) -> Result<(), ApplyError> {
-        let mut map: BTreeMap<Key, Value> = match self.get_cache
+        let mut map: BTreeMap<Key, Value> = match self
+            .get_cache
             .get_mut(&IntkeyState::calculate_address(name))
         {
             Some(m) => m.clone(),
