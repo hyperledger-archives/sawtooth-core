@@ -348,7 +348,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         &self,
         state: &mut ChainControllerState,
         lock: &ChainHeadLock,
-        block: Block,
+        block: &Block,
     ) -> Result<(), ChainControllerError> {
         if block.previous_block_id == journal::NULL_BLOCK_IDENTIFIER {
             let chain_id = state.chain_id_manager.get_block_chain_id()?;
