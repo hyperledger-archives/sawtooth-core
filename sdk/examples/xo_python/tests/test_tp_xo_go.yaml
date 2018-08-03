@@ -30,6 +30,10 @@ services:
     build:
       context: ../../../..
       dockerfile: sdk/python/tests/python-sdk-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: python-sdk-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
