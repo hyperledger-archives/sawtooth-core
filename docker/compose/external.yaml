@@ -20,6 +20,10 @@ services:
     build:
       context: ../
       dockerfile: ./apache-basic_auth_proxy
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: apache-basic_auth_proxy:${ISOLATION_ID}
     container_name: apache-basic_auth_proxy-default
 
@@ -27,6 +31,10 @@ services:
     build:
       context: ../
       dockerfile: ./grafana/sawtooth-stats-grafana
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-stats-grafana:${ISOLATION_ID}
     container_name: sawtooth-stats-grafana-default
 
@@ -34,5 +42,9 @@ services:
     build:
       context: ../
       dockerfile: ./influxdb/sawtooth-stats-influxdb
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-stats-influxdb:${ISOLATION_ID}
     container_name: sawtooth-stats-influxdb-default

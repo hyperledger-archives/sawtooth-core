@@ -21,6 +21,10 @@ services:
     build:
       context: ../
       dockerfile: ./lint
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: lint:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
@@ -30,6 +34,10 @@ services:
     build:
       context: ../
       dockerfile: ./lint
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: lint:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
@@ -39,6 +47,10 @@ services:
     build:
       context: ../
       dockerfile: ./lint
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: lint:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
@@ -48,6 +60,10 @@ services:
     build:
       context: ../
       dockerfile: ./lint
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: lint:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
