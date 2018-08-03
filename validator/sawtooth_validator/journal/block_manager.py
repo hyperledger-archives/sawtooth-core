@@ -43,7 +43,7 @@ class ErrorCode(IntEnum):
     MissingPredecessorInBranch = 0x03
     MissingInput = 0x04
     UnknownBlock = 0x05
-    InvalidBlockStoreName = 0x06
+    InvalidInputString = 0x06
     Error = 0x07
     InvalidPythonObject = 0x0F
     StopIteration = 0x11
@@ -67,6 +67,12 @@ class BlockManager(OwnedPointer):
         _libexec("block_manager_put",
                  self.pointer,
                  ctypes.py_object(branch))
+
+    def persist(self, block_id, store_name):
+        _libexec("block_manager_persist",
+                 self.pointer,
+                 ctypes.c_char_p(block_id.encode()),
+                 ctypes.c_char_p(store_name.encode()))
 
     def __contains__(self, block_id):
         try:
@@ -112,7 +118,7 @@ def _exec(library, name, *args):
         raise MissingInput("Missing input to put method")
     elif res == ErrorCode.UnknownBlock:
         raise UnknownBlock("Block was unknown")
-    elif res == ErrorCode.InvalidBlockStoreName:
+    elif res == ErrorCode.InvalidInputString:
         raise TypeError("Invalid block store name provided")
     else:
         raise Exception("There was an unknown error: {}".format(res))

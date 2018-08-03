@@ -41,7 +41,7 @@ pub enum ErrorCode {
     MissingPredecessorInBranch = 0x03,
     MissingInput = 0x04,
     UnknownBlock = 0x05,
-    InvalidBlockStoreName = 0x06,
+    InvalidInputString = 0x06,
     Error = 0x07,
     InvalidPythonObject = 0x10,
     StopIteration = 0x11,
@@ -83,11 +83,34 @@ pub unsafe extern "C" fn block_manager_add_store(
 
     let name = match CStr::from_ptr(block_store_name).to_str() {
         Ok(s) => s,
-        Err(_) => return ErrorCode::InvalidBlockStoreName,
+        Err(_) => return ErrorCode::InvalidInputString,
     };
 
     (*(block_manager as *mut BlockManager))
         .add_store(name, Box::new(py_block_store))
+        .map(|_| ErrorCode::Success)
+        .unwrap_or(ErrorCode::Error)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_persist(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+    store_name: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id, store_name);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+    let name = match CStr::from_ptr(store_name).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    (*(block_manager as *mut BlockManager))
+        .persist(block_id, name)
         .map(|_| ErrorCode::Success)
         .unwrap_or(ErrorCode::Error)
 }
