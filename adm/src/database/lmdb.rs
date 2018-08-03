@@ -117,7 +117,8 @@ impl<'a> LmdbDatabaseReader<'a> {
     }
 
     pub fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
-        let index = self.db
+        let index = self
+            .db
             .indexes
             .get(index)
             .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
@@ -128,7 +129,8 @@ impl<'a> LmdbDatabaseReader<'a> {
 
     #[allow(dead_code)]
     pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
-        let cursor = self.txn
+        let cursor = self
+            .txn
             .cursor(&self.db.main)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
         let access = self.txn.access();
@@ -139,11 +141,13 @@ impl<'a> LmdbDatabaseReader<'a> {
     }
 
     pub fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
-        let index = self.db
+        let index = self
+            .db
             .indexes
             .get(index)
             .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
-        let cursor = self.txn
+        let cursor = self
+            .txn
             .cursor(index)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
         let access = self.txn.access();
@@ -163,7 +167,8 @@ impl<'a> LmdbDatabaseReader<'a> {
     }
 
     pub fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
-        let index = self.db
+        let index = self
+            .db
             .indexes
             .get(index)
             .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
@@ -224,7 +229,8 @@ impl<'a> LmdbDatabaseWriter<'a> {
         key: &[u8],
         value: &[u8],
     ) -> Result<(), DatabaseError> {
-        let index = self.db
+        let index = self
+            .db
             .indexes
             .get(index)
             .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;
@@ -235,7 +241,8 @@ impl<'a> LmdbDatabaseWriter<'a> {
     }
 
     pub fn index_delete(&mut self, index: &str, key: &[u8]) -> Result<(), DatabaseError> {
-        let index = self.db
+        let index = self
+            .db
             .indexes
             .get(index)
             .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;

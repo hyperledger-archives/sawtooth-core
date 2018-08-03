@@ -122,7 +122,8 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 }
 
 fn chown(path: &Path, uid: u32, gid: u32) -> Result<(), CliError> {
-    let pathstr = path.to_str()
+    let pathstr = path
+        .to_str()
         .ok_or_else(|| CliError::EnvironmentError(format!("Invalid path: {:?}", path)))?;
     let cpath =
         CString::new(pathstr).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
