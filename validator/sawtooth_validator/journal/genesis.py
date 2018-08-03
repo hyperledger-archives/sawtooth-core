@@ -203,8 +203,8 @@ class GenesisController:
         LOGGER.info('Genesis block created: %s', blkw)
 
         self._completer.add_block(block)
-        self._block_store.update_chain([blkw])
         self._block_manager.put([blkw.block])
+        self._block_manager.persist(blkw.identifier, "commit_store")
 
         self._chain_id_manager.save_block_chain_id(block.header_signature)
 
