@@ -184,7 +184,8 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         return arg_error("rate must be a number greater than 0");
     }
 
-    let target: String = match args.value_of("target")
+    let target: String = match args
+        .value_of("target")
         .unwrap_or("http://localhost:8008")
         .parse()
     {
