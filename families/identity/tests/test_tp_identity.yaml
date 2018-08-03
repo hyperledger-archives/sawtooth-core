@@ -21,6 +21,10 @@ services:
     build:
       context: ../../..
       dockerfile: ./families/identity/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -33,6 +37,10 @@ services:
     build:
       context: ../../..
       dockerfile: families/identity/tests/identity-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: identity-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

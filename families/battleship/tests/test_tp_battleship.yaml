@@ -21,6 +21,10 @@ services:
     build:
       context: ../../..
       dockerfile: ./families/battleship/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: sawtooth-battleship-tp$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -33,6 +37,10 @@ services:
     build:
       context: ../../..
       dockerfile: ./families/battleship/tests/battleship-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: battleship-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
