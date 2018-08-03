@@ -128,7 +128,8 @@ impl Iterator for IntKeyIterator {
                     .nth(index)
                     .expect("There is an indexing bug in the intkey iterator");
 
-                let value = self.names
+                let value = self
+                    .names
                     .get(name)
                     .expect("There is an indexing bug in the intkey iterator")
                     .to_owned();
