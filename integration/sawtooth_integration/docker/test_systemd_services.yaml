@@ -20,6 +20,10 @@ services:
     build:
       context: ../../..
       dockerfile: ./integration/sawtooth_integration/docker/integration-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
     image: integration-tests:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
