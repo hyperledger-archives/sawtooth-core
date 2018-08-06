@@ -161,13 +161,6 @@ struct ChainControllerState {
 }
 
 impl ChainControllerState {
-    fn has_block(&self, block_id: &str) -> bool {
-        let block_ids = [block_id];
-
-        let mut block_iter = self.block_manager.get(&block_ids);
-        block_iter.next().map(|b| b.is_some()).unwrap_or(false)
-    }
-
     fn block_validation_result(&mut self, block_id: &str) -> Option<BlockValidationResult> {
         self.block_validation_results
             .find(|result| &result.block_id == block_id)
@@ -384,16 +377,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     }
 
     pub fn on_block_received(&mut self, block_id: String) -> Result<(), ChainControllerError> {
-        {
-            let mut state = self
-                .state
-                .read()
-                .expect("No lock holder should have poisoned the lock");
-
-            if state.has_block(&block_id) {
-                return Ok(());
-            }
-        }
         // Only need a read lock to check duplicates, but need to upgrade to write lock for
         // updating chain head.
         {
@@ -437,14 +420,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         }
 
         Ok(())
-    }
-
-    pub fn has_block(&self, block_id: &str) -> bool {
-        let state = self
-            .state
-            .read()
-            .expect("No lock holder should have poisoned the lock");
-        state.has_block(block_id)
     }
 
     pub fn ignore_block(&self, block: &Block) {

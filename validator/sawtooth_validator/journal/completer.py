@@ -94,7 +94,7 @@ class Completer:
                                      cache_purge_frequency)
         self._on_block_received = None
         self._on_batch_received = None
-        self._has_block = None
+        self._has_block = lambda block_id: block_id in block_manager
         self.lock = RLock()
 
         # Tracks how many times an unsatisfied dependency is found
@@ -306,9 +306,6 @@ class Completer:
 
     def set_on_batch_received(self, on_batch_received_func):
         self._on_batch_received = on_batch_received_func
-
-    def set_chain_has_block(self, set_chain_has_block):
-        self._has_block = set_chain_has_block
 
     def add_block(self, block):
         with self.lock:

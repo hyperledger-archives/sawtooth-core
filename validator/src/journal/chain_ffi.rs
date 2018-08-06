@@ -181,29 +181,6 @@ pub extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorC
     ErrorCode::Success
 }
 
-#[no_mangle]
-pub extern "C" fn chain_controller_has_block(
-    chain_controller: *mut c_void,
-    block_id: *const c_char,
-    result: *mut bool,
-) -> ErrorCode {
-    check_null!(chain_controller, block_id);
-
-    let block_id = unsafe {
-        match CStr::from_ptr(block_id).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidBlockId,
-        }
-    };
-
-    unsafe {
-        *result =
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).has_block(block_id);
-    }
-
-    ErrorCode::Success
-}
-
 macro_rules! chain_controller_block_ffi {
     ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
         #[no_mangle]

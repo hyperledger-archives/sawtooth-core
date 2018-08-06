@@ -357,7 +357,6 @@ class Validator:
         responder = Responder(completer)
 
         completer.set_on_block_received(chain_controller.queue_block)
-        completer.set_chain_has_block(chain_controller.has_block)
 
         self._incoming_batch_sender = None
 
@@ -365,7 +364,7 @@ class Validator:
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
-            chain_controller.has_block, self.has_batch,
+            lambda block_id: block_id in block_manager, self.has_batch,
             permission_verifier, block_publisher, consensus_notifier)
 
         component_handlers.add(

@@ -78,14 +78,6 @@ class ChainController(OwnedPointer):
     def stop(self):
         _libexec('chain_controller_stop', self.pointer)
 
-    def has_block(self, block_id):
-        result = ctypes.c_bool()
-
-        _libexec('chain_controller_has_block',
-                 self.pointer, ctypes.c_char_p(block_id.encode()),
-                 ctypes.byref(result))
-        return result.value
-
     def _chain_controller_block_ffi_fn(self, name, block):
         payload = block.SerializeToString()
         _libexec(name, self.pointer, payload, len(payload))
