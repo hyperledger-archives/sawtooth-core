@@ -63,7 +63,7 @@ impl<F: Fn(String)> ForkCache<F> {
 
         let (expired, keep): (HashMap<_, _>, HashMap<_, _>) = cache
             .into_iter()
-            .partition(|(_, timestamp)| timestamp.elapsed() > self.keep_time );
+            .partition(|(_, timestamp)| timestamp.elapsed() > self.keep_time);
 
         for (head, timestamp) in keep.into_iter() {
             self.cache.insert(head, timestamp);
@@ -73,7 +73,6 @@ impl<F: Fn(String)> ForkCache<F> {
             (self.on_expired)(head);
         }
     }
-
 
     // Private helper methods
 
@@ -100,17 +99,14 @@ impl<F: Fn(String)> ForkCache<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::rc::Rc;
     use std::cell::RefCell;
+    use std::rc::Rc;
 
     // Setup a cache and a vector for expired items to be sent to
     fn setup(keep_time: Duration) -> (ForkCache<impl Fn(String)>, Rc<RefCell<Vec<String>>>) {
         let expired = Rc::new(RefCell::new(Vec::new()));
         let expired_cloned = Rc::clone(&expired);
-        let cache = ForkCache::new(
-            keep_time,
-            move |id| expired_cloned.borrow_mut().push(id),
-        );
+        let cache = ForkCache::new(keep_time, move |id| expired_cloned.borrow_mut().push(id));
         (cache, expired)
     }
 
@@ -147,7 +143,8 @@ mod tests {
         cache.insert("b", None);
         cache.insert("c", Some("b"));
 
-        { // Need to drop the RefCell borrow
+        {
+            // Need to drop the RefCell borrow
             let mut expired = expired.borrow_mut();
             assert_eq!(1, expired.len());
             assert!(expired.contains(&String::from("b")));
@@ -172,7 +169,8 @@ mod tests {
         cache.insert("c", Some("a"));
         cache.insert("d", Some("a"));
 
-        { // Need to drop the RefCell borrow
+        {
+            // Need to drop the RefCell borrow
             let mut expired = expired.borrow_mut();
             assert_eq!(vec![String::from("a")], *expired);
             expired.clear();

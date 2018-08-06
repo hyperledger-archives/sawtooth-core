@@ -416,14 +416,16 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                             .unwrap()
                             .to_string(),
                     );
-                    data.set_initial_savings_balance(txn_hash
-                        [&Yaml::from_str("initial_savings_balance")]
-                        .as_i64()
-                        .unwrap() as u32);
-                    data.set_initial_checking_balance(txn_hash
-                        [&Yaml::from_str("initial_checking_balance")]
-                        .as_i64()
-                        .unwrap() as u32);
+                    data.set_initial_savings_balance(
+                        txn_hash[&Yaml::from_str("initial_savings_balance")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
+                    data.set_initial_checking_balance(
+                        txn_hash[&Yaml::from_str("initial_checking_balance")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
                     payload.set_create_account(data);
                 }
 
@@ -466,12 +468,16 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                     payload.set_payload_type(SBPayloadType::SEND_PAYMENT);
                     let mut data =
                         smallbank::SmallbankTransactionPayload_SendPaymentTransactionData::new();
-                    data.set_source_customer_id(txn_hash[&Yaml::from_str("source_customer_id")]
-                        .as_i64()
-                        .unwrap() as u32);
-                    data.set_dest_customer_id(txn_hash[&Yaml::from_str("dest_customer_id")]
-                        .as_i64()
-                        .unwrap() as u32);
+                    data.set_source_customer_id(
+                        txn_hash[&Yaml::from_str("source_customer_id")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
+                    data.set_dest_customer_id(
+                        txn_hash[&Yaml::from_str("dest_customer_id")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
                     data.set_amount(txn_hash[&Yaml::from_str("amount")].as_i64().unwrap() as u32);
                     payload.set_send_payment(data);
                 }
@@ -480,12 +486,16 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                     payload.set_payload_type(SBPayloadType::AMALGAMATE);
                     let mut data =
                         smallbank::SmallbankTransactionPayload_AmalgamateTransactionData::new();
-                    data.set_source_customer_id(txn_hash[&Yaml::from_str("source_customer_id")]
-                        .as_i64()
-                        .unwrap() as u32);
-                    data.set_dest_customer_id(txn_hash[&Yaml::from_str("dest_customer_id")]
-                        .as_i64()
-                        .unwrap() as u32);
+                    data.set_source_customer_id(
+                        txn_hash[&Yaml::from_str("source_customer_id")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
+                    data.set_dest_customer_id(
+                        txn_hash[&Yaml::from_str("dest_customer_id")]
+                            .as_i64()
+                            .unwrap() as u32,
+                    );
                     payload.set_amalgamate(data);
                 }
                 Some(txn_type) => panic!(format!("unknown transaction_type: {}", txn_type)),

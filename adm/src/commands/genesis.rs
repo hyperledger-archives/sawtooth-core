@@ -47,7 +47,8 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         )));
     }
 
-    let input_files = args.values_of("input_file")
+    let input_files = args
+        .values_of("input_file")
         .ok_or_else(|| CliError::ArgumentError("No input files passed".into()))?;
 
     let batch_lists = input_files

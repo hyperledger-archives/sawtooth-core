@@ -15,8 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyDict, PyErr, PyModule, PyObject, PyResult, PyTuple, Python,
-              PythonObject, ToPyObject};
+use cpython::{
+    ObjectProtocol, PyDict, PyErr, PyModule, PyObject, PyResult, PyTuple, Python, PythonObject,
+    ToPyObject,
+};
 use log;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
@@ -25,7 +27,8 @@ pub fn set_up_logger(verbosity: u64, py: Python) {
 
     PyLogger::init(verbosity_level, py).expect("Failed to set logger");
 
-    let server_log = py.import("sawtooth_validator.server.log")
+    let server_log = py
+        .import("sawtooth_validator.server.log")
         .map_err(|err| err.print(py))
         .unwrap();
 

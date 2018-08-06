@@ -702,7 +702,8 @@ impl Node {
             },
         );
 
-        let children = self.children
+        let children = self
+            .children
             .into_iter()
             .map(|(k, v)| {
                 (
@@ -809,7 +810,8 @@ mod tests {
                 .collect(),
         };
 
-        let packed = n.into_bytes()
+        let packed = n
+            .into_bytes()
             .unwrap()
             .iter()
             .map(|b| format!("{:x}", b))
@@ -1351,11 +1353,12 @@ mod tests {
 
     fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
         let reader = db.reader().unwrap();
-        protobuf::parse_from_bytes(&reader
-            .index_get(CHANGE_LOG_INDEX, root_hash)
-            .expect("No db errors")
-            .expect("A change log entry"))
-            .expect("The change log entry to have bytes")
+        protobuf::parse_from_bytes(
+            &reader
+                .index_get(CHANGE_LOG_INDEX, root_hash)
+                .expect("No db errors")
+                .expect("A change log entry"),
+        ).expect("The change log entry to have bytes")
     }
 
     fn assert_has_successors(change_log: &ChangeLogEntry, successor_roots: &[&[u8]]) {

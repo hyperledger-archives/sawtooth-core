@@ -42,7 +42,11 @@ impl From<cpython::PyErr> for SchedulerError {
     }
 }
 
-type CombinedOptionalBatchResult = Vec<(Vec<PyTxnExecutionResult>, Option<PyBatchExecutionResult>, String)>;
+type CombinedOptionalBatchResult = Vec<(
+    Vec<PyTxnExecutionResult>,
+    Option<PyBatchExecutionResult>,
+    String,
+)>;
 
 pub struct PyScheduler {
     py_scheduler: cpython::PyObject,
@@ -60,7 +64,8 @@ impl PyScheduler {
     fn is_complete(&self, block: bool) -> Result<bool, SchedulerError> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
-        Ok(self.py_scheduler
+        Ok(self
+            .py_scheduler
             .call_method(py, "complete", (block,), None)
             .expect("No method complete on python scheduler")
             .extract::<bool>(py)?)
@@ -119,30 +124,32 @@ impl Scheduler for PyScheduler {
 
     fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError> {
         if self.is_complete(block)? {
-            let results = self.batch_ids
-                .iter()
-                .map(|id| {
-                    let gil = cpython::Python::acquire_gil();
-                    let py = gil.python();
-                    let batch_result: Option<PyBatchExecutionResult> = self.py_scheduler
-                        .call_method(py, "get_batch_execution_result", (id,), None)
-                        .expect("No method get_batch_execution_result on python scheduler")
-                        .extract(py)?;
+            let results =
+                self.batch_ids
+                    .iter()
+                    .map(|id| {
+                        let gil = cpython::Python::acquire_gil();
+                        let py = gil.python();
+                        let batch_result: Option<PyBatchExecutionResult> = self
+                            .py_scheduler
+                            .call_method(py, "get_batch_execution_result", (id,), None)
+                            .expect("No method get_batch_execution_result on python scheduler")
+                            .extract(py)?;
 
-                    if batch_result.is_some() {
-                        let txn_results: Vec<PyTxnExecutionResult> = self.py_scheduler
+                        if batch_result.is_some() {
+                            let txn_results: Vec<PyTxnExecutionResult> = self.py_scheduler
                             .call_method(py, "get_transaction_execution_results", (id,), None)
                             .expect(
                                 "No method get_transaction_execution_results on python scheduler",
                             )
                             .extract(py)?;
 
-                        Ok((txn_results, batch_result, id.to_owned()))
-                    } else {
-                        Ok((vec![], None, id.to_owned()))
-                    }
-                })
-                .collect::<PyResult<CombinedOptionalBatchResult>>()?;
+                            Ok((txn_results, batch_result, id.to_owned()))
+                        } else {
+                            Ok((vec![], None, id.to_owned()))
+                        }
+                    })
+                    .collect::<PyResult<CombinedOptionalBatchResult>>()?;
 
             let beginning_state_hash = results
                 .first()

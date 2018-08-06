@@ -37,7 +37,8 @@ impl ExecutionPlatform for PyExecutor {
     fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr> {
         let py = unsafe { cpython::Python::assume_gil_acquired() };
 
-        let scheduler = self.executor
+        let scheduler = self
+            .executor
             .call_method(py, "create_scheduler", (state_hash,), None)
             .expect(
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",

@@ -162,7 +162,8 @@ fn batch_transactions(txns: Vec<Transaction>, signer: &signing::Signer) -> Batch
     };
     let public_key = pk.as_hex();
 
-    let txn_ids = txns.iter()
+    let txn_ids = txns
+        .iter()
         .map(|txn| String::from(txn.get_header_signature()))
         .collect();
     batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
@@ -209,7 +210,8 @@ impl<'a> Iterator for SignedBatchIterator<'a> {
     type Item = BatchResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let txns = self.transaction_iterator
+        let txns = self
+            .transaction_iterator
             .take(self.max_batch_size)
             .collect();
 

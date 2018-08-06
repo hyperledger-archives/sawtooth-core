@@ -141,7 +141,8 @@ impl ZmqService {
         response_type: Message_MessageType,
     ) -> Result<O, Error> {
         let corr_id = generate_correlation_id();
-        let mut future = self.sender
+        let mut future = self
+            .sender
             .send(request_type, &corr_id, &request.write_to_bytes()?)?;
 
         let msg = future.get_timeout(self.timeout)?;

@@ -79,7 +79,8 @@ impl BlockStore for InMemoryBlockStore {
             return Err(BlockStoreError::UnknownBlock);
         }
         let blocks = block_ids.iter().map(|block_id| {
-            let block = self.block_by_block_id
+            let block = self
+                .block_by_block_id
                 .remove(*block_id)
                 .expect("Block removed during middle of delete operation");
             if block.block_num <= self.chain_head_num {

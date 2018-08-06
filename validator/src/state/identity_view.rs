@@ -182,13 +182,16 @@ impl Named for Policy {
 fn role_address(name: &str) -> String {
     let mut address = String::new();
     address.push_str(ROLE_NS);
-    address.push_str(&name.splitn(MAX_KEY_PARTS, ".")
-        .chain(repeat(""))
-        .enumerate()
-        .map(|(i, part)| short_hash(part, if i == 0 { 14 } else { 16 }))
-        .take(MAX_KEY_PARTS)
-        .collect::<Vec<_>>()
-        .join(""));
+    address.push_str(
+        &name
+            .splitn(MAX_KEY_PARTS, ".")
+            .chain(repeat(""))
+            .enumerate()
+            .map(|(i, part)| short_hash(part, if i == 0 { 14 } else { 16 }))
+            .take(MAX_KEY_PARTS)
+            .collect::<Vec<_>>()
+            .join(""),
+    );
 
     address
 }
@@ -398,7 +401,8 @@ mod tests {
             Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
-            let iterable: Vec<_> = self.state
+            let iterable: Vec<_> = self
+                .state
                 .iter()
                 .filter(|(key, _)| key.starts_with(prefix.unwrap_or("")))
                 .map(|(key, value)| Ok((key.clone().to_string(), value.clone())))

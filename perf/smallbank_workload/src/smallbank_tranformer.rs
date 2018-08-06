@@ -68,33 +68,26 @@ impl<'a> SBPayloadTransformer<'a> {
 
     fn get_dependencies(&self, payload: &SmallbankTransactionPayload) -> Vec<String> {
         match payload.get_payload_type() {
-            SmallbankTransactionPayload_PayloadType::DEPOSIT_CHECKING => {
-                self.get_dependencies_for_customer_ids(&[payload
+            SmallbankTransactionPayload_PayloadType::DEPOSIT_CHECKING => self
+                .get_dependencies_for_customer_ids(&[payload
                     .get_deposit_checking()
-                    .get_customer_id()])
-            }
-            SmallbankTransactionPayload_PayloadType::WRITE_CHECK => {
-                self.get_dependencies_for_customer_ids(&[payload
-                    .get_write_check()
-                    .get_customer_id()])
-            }
-            SmallbankTransactionPayload_PayloadType::TRANSACT_SAVINGS => {
-                self.get_dependencies_for_customer_ids(&[payload
+                    .get_customer_id()]),
+            SmallbankTransactionPayload_PayloadType::WRITE_CHECK => self
+                .get_dependencies_for_customer_ids(&[payload.get_write_check().get_customer_id()]),
+            SmallbankTransactionPayload_PayloadType::TRANSACT_SAVINGS => self
+                .get_dependencies_for_customer_ids(&[payload
                     .get_transact_savings()
-                    .get_customer_id()])
-            }
-            SmallbankTransactionPayload_PayloadType::SEND_PAYMENT => {
-                self.get_dependencies_for_customer_ids(&[
+                    .get_customer_id()]),
+            SmallbankTransactionPayload_PayloadType::SEND_PAYMENT => self
+                .get_dependencies_for_customer_ids(&[
                     payload.get_send_payment().get_source_customer_id(),
                     payload.get_send_payment().get_dest_customer_id(),
-                ])
-            }
-            SmallbankTransactionPayload_PayloadType::AMALGAMATE => {
-                self.get_dependencies_for_customer_ids(&[
+                ]),
+            SmallbankTransactionPayload_PayloadType::AMALGAMATE => self
+                .get_dependencies_for_customer_ids(&[
                     payload.get_amalgamate().get_source_customer_id(),
                     payload.get_amalgamate().get_dest_customer_id(),
-                ])
-            }
+                ]),
             _ => vec![],
         }
     }

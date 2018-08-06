@@ -32,7 +32,8 @@ impl ToPyObject for Batch {
     fn to_py_object(&self, py: cpython::Python) -> Self::ObjectType {
         let mut rust_batch = proto::batch::Batch::new();
         rust_batch.set_header(self.header_bytes.clone());
-        let proto_txns = self.transactions
+        let proto_txns = self
+            .transactions
             .iter()
             .map(|txn| {
                 let mut proto_txn = proto::transaction::Transaction::new();
@@ -46,7 +47,8 @@ impl ToPyObject for Batch {
         rust_batch.set_trace(self.trace);
         rust_batch.set_header_signature(self.header_signature.clone());
 
-        let batch_pb2 = py.import("sawtooth_validator.protobuf.batch_pb2")
+        let batch_pb2 = py
+            .import("sawtooth_validator.protobuf.batch_pb2")
             .expect("unable for python to import sawtooth_validator.protobuf.batch_pb2");
         let batch = batch_pb2
             .call(py, "Batch", cpython::NoArgs, None)
@@ -71,7 +73,8 @@ impl ToPyObject for Batch {
 
 impl<'source> FromPyObject<'source> for Batch {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        let batch_bytes = obj.call_method(py, "SerializeToString", cpython::NoArgs, None)
+        let batch_bytes = obj
+            .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)
             .unwrap();

@@ -88,7 +88,8 @@ pub extern "C" fn block_publisher_new(
     let transaction_executor = unsafe { PyObject::from_borrowed_ptr(py, transaction_executor_ptr) };
     let get_block = unsafe { PyObject::from_borrowed_ptr(py, get_block_ptr) };
     let batch_committed = unsafe { PyObject::from_borrowed_ptr(py, batch_committed_ptr) };
-    let transaction_committed = unsafe { PyObject::from_borrowed_ptr(py, transaction_committed_ptr) };
+    let transaction_committed =
+        unsafe { PyObject::from_borrowed_ptr(py, transaction_committed_ptr) };
     let state_view_factory = unsafe { PyObject::from_borrowed_ptr(py, state_view_factory_ptr) };
     let settings_cache = unsafe { PyObject::from_borrowed_ptr(py, settings_cache_ptr) };
     let block_sender = unsafe { PyObject::from_borrowed_ptr(py, block_sender_ptr) };
@@ -115,7 +116,8 @@ pub extern "C" fn block_publisher_new(
         .iter(py)
         .collect();
 
-    let batch_publisher_mod = py.import("sawtooth_validator.journal.consensus.batch_publisher")
+    let batch_publisher_mod = py
+        .import("sawtooth_validator.journal.consensus.batch_publisher")
         .expect("Unable to import 'sawtooth_validator.journal.consensus.batch_publisher'");
     let batch_publisher = batch_publisher_mod
         .call(
@@ -126,24 +128,28 @@ pub extern "C" fn block_publisher_new(
         )
         .expect("Unable to create BatchPublisher");
 
-    let block_wrapper_mod = py.import("sawtooth_validator.journal.block_wrapper")
+    let block_wrapper_mod = py
+        .import("sawtooth_validator.journal.block_wrapper")
         .expect("Unable to import 'sawtooth_validator.journal.block_wrapper'");
 
     let block_wrapper_class = block_wrapper_mod
         .get(py, "BlockWrapper")
         .expect("Unable to import BlockWrapper from 'sawtooth_validator.journal.block_wrapper'");
 
-    let block_header_class = py.import("sawtooth_validator.protobuf.block_pb2")
+    let block_header_class = py
+        .import("sawtooth_validator.protobuf.block_pb2")
         .expect("Unable to import 'sawtooth_validator.protobuf.block_pb2'")
         .get(py, "BlockHeader")
         .expect("Unable to import BlockHeader from 'sawtooth_validator.protobuf.block_pb2'");
 
-    let block_builder_class = py.import("sawtooth_validator.journal.block_builder")
+    let block_builder_class = py
+        .import("sawtooth_validator.journal.block_builder")
         .expect("Unable to import 'sawtooth_validator.journal.block_builder'")
         .get(py, "BlockBuilder")
         .expect("Unable to import BlockBuilder from 'sawtooth_validator.journal.block_builder'");
 
-    let settings_view_class = py.import("sawtooth_validator.state.settings_view")
+    let settings_view_class = py
+        .import("sawtooth_validator.state.settings_view")
         .expect("Unable to import 'sawtooth_validator.state.settings_view'")
         .get(py, "SettingsView")
         .expect("Unable to import SettingsView from 'sawtooth_validator.state.settings_view'");

@@ -26,14 +26,15 @@ use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
 
-use smallbank::{Account, SmallbankTransactionPayload,
-                SmallbankTransactionPayload_AmalgamateTransactionData,
-                SmallbankTransactionPayload_CreateAccountTransactionData,
-                SmallbankTransactionPayload_DepositCheckingTransactionData,
-                SmallbankTransactionPayload_PayloadType,
-                SmallbankTransactionPayload_SendPaymentTransactionData,
-                SmallbankTransactionPayload_TransactSavingsTransactionData,
-                SmallbankTransactionPayload_WriteCheckTransactionData};
+use smallbank::{
+    Account, SmallbankTransactionPayload, SmallbankTransactionPayload_AmalgamateTransactionData,
+    SmallbankTransactionPayload_CreateAccountTransactionData,
+    SmallbankTransactionPayload_DepositCheckingTransactionData,
+    SmallbankTransactionPayload_PayloadType,
+    SmallbankTransactionPayload_SendPaymentTransactionData,
+    SmallbankTransactionPayload_TransactSavingsTransactionData,
+    SmallbankTransactionPayload_WriteCheckTransactionData,
+};
 
 pub struct SmallbankTransactionHandler {
     family_name: String,

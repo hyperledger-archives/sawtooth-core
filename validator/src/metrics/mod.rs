@@ -20,7 +20,8 @@ use cpython::{NoArgs, ObjectProtocol, PyDict, PyModule, PyObject, Python, ToPyOb
 pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
     let gil = Python::acquire_gil();
     let py = gil.python();
-    let py_metrics = py.import("sawtooth_validator.metrics")
+    let py_metrics = py
+        .import("sawtooth_validator.metrics")
         .expect("Failed to import sawtooth_validator.metrics module");
     let py_collector = py_metrics
         .call(py, "get_collector", (name.as_ref(),), None)
@@ -101,7 +102,8 @@ impl MetricsCollectorHandle {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let py_level = self.py_metrics
+        let py_level = self
+            .py_metrics
             .get(py, into_level_str(level.unwrap_or(Default::default())))
             .expect("Failed to get metric level");
         let py_tags: PyDict = tags.unwrap_or_else(|| HashMap::new()).into_py_object(py);
@@ -168,7 +170,8 @@ impl Timer {
         let gil = Python::acquire_gil();
         let py = gil.python();
         TimerHandle {
-            py_timer_ctx: self.py_timer
+            py_timer_ctx: self
+                .py_timer
                 .call_method(py, "time", NoArgs, None)
                 .expect("Failed to call Timer.time()"),
         }

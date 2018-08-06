@@ -178,7 +178,8 @@ impl InboundRouter {
                 let mut expected_replies = self.expected_replies.lock().unwrap();
                 match expected_replies.remove(message.get_correlation_id()) {
                     Some(sender) => sender.send(Ok(message)).expect("Unable to route reply"),
-                    None => self.inbound_tx
+                    None => self
+                        .inbound_tx
                         .send(Ok(message))
                         .expect("Unable to route new message"),
                 }
@@ -280,7 +281,8 @@ impl SendReceiveStream {
                 break;
             }
 
-            match self.outbound_recv
+            match self
+                .outbound_recv
                 .recv_timeout(Duration::from_millis(POLL_TIMEOUT as u64))
             {
                 Ok(SocketCommand::Send(msg)) => {

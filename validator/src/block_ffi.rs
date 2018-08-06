@@ -30,7 +30,8 @@ use transaction::Transaction;
 
 impl<'source> FromPyObject<'source> for Block {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        let bytes: Vec<u8> = obj.call_method(py, "SerializeToString", cpython::NoArgs, None)?
+        let bytes: Vec<u8> = obj
+            .call_method(py, "SerializeToString", cpython::NoArgs, None)?
             .extract(py)?;
 
         let mut proto_block: ProtoBlock = protobuf::parse_from_bytes(&bytes)
@@ -101,7 +102,8 @@ impl ToPyObject for Block {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> PyObject {
-        let block_protobuf_mod = py.import("sawtooth_validator.protobuf.block_pb2")
+        let block_protobuf_mod = py
+            .import("sawtooth_validator.protobuf.block_pb2")
             .expect("Unable to import block_pb2");
         let py_block = block_protobuf_mod
             .get(py, "Block")
@@ -111,7 +113,8 @@ impl ToPyObject for Block {
         proto_block.set_header(self.header_bytes.clone());
         proto_block.set_header_signature(self.header_signature.clone());
 
-        let proto_batches = self.batches
+        let proto_batches = self
+            .batches
             .iter()
             .map(|batch| {
                 let mut proto_batch = ProtoBatch::new();

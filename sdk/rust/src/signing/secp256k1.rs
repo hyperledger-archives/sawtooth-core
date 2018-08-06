@@ -118,7 +118,8 @@ impl Context for Secp256k1Context {
         sha.result(hash);
 
         let sk = secp256k1::key::SecretKey::from_slice(&self.context, key.as_slice())?;
-        let sig = self.context
+        let sig = self
+            .context
             .sign(&secp256k1::Message::from_slice(hash)?, &sk)?;
         let compact = sig.serialize_compact(&self.context);
         Ok(compact

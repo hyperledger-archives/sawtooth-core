@@ -38,33 +38,21 @@ for dir in $dirs; do
 
     echo "-- rustfmt"
 
-    diff=$(cargo fmt -- --write-mode=diff)
+    diff=$(cargo fmt -- --check)
     rustfmt_exit=$?
 
-    # rustfmt returns the following exit codes:
+    # rustfmt --check returns the following exit codes:
     #
     # 0 = No errors
-    # 1 = Encountered operational errors e.g. an IO error
-    # 2 = Failed to reformat code because of parsing errors
-    # 3 = Code is valid, but it is impossible to format it properly
-    # 4 = Formatted code differs from existing code (write-mode diff only)
-    #
-    # Codes 3 and 4 both indicate formatting errors in the code, so
-    # they will be treated the same.
-    #
-    # This may change in the future.
-    # See https://github.com/rust-lang-nursery/rustfmt/issues/1977.
+    # 1 = Formatted code differs from existing code (check only)
 
     if [[ $rustfmt_exit != 0 ]]; then
         exitcode=1
-
         if [[ $rustfmt_exit == 1 ]]; then
-            echo "rustfmt encountered an operational error"
-        elif [[ $rustfmt_exit == 2 ]]; then
-            echo "Parsing error in $dir"
+          echo "Incorrect formatting: $dir (error code: $rustfmt_exit)"
+          echo -e $diff
         else
-            echo "Incorrect formatting: $dir (error code: $rustfmt_exit)"
-            echo -e $diff
+            echo "rustfmt encountered an operational error"
         fi
     fi
 

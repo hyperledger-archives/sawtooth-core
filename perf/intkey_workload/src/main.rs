@@ -217,19 +217,22 @@ fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
 }
 
 fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
-    let batch_size: usize = args.value_of("batch-size")
+    let batch_size: usize = args
+        .value_of("batch-size")
         .unwrap_or("1")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
-    let num_names: usize = args.value_of("names")
+    let num_names: usize = args
+        .value_of("names")
         .unwrap_or("100")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
-    let urls: Vec<String> = args.value_of("urls")
+    let urls: Vec<String> = args
+        .value_of("urls")
         .unwrap_or("http://127.0.0.1:8008")
         .parse()
         .map_err(|_| String::from("urls are a comma separated list of strings"))
@@ -239,37 +242,43 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             Ok(split.map(|s| s.to_string()).collect())
         })?;
 
-    let rate: usize = args.value_of("rate")
+    let rate: usize = args
+        .value_of("rate")
         .unwrap_or("10")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
-    let unsatisfiable: f32 = args.value_of("unsatisfiable")
+    let unsatisfiable: f32 = args
+        .value_of("unsatisfiable")
         .unwrap_or("0.0")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
-    let unnecessary: f32 = args.value_of("unnecessary")
+    let unnecessary: f32 = args
+        .value_of("unnecessary")
         .unwrap_or("0.0")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
-    let wildcard: f32 = args.value_of("wildcard")
+    let wildcard: f32 = args
+        .value_of("wildcard")
         .unwrap_or("0.0")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
-    let invalid: f32 = args.value_of("invalid")
+    let invalid: f32 = args
+        .value_of("invalid")
         .unwrap_or("0.0")
         .parse()
         .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
-    let display: u32 = args.value_of("display")
+    let display: u32 = args
+        .value_of("display")
         .unwrap_or("30")
         .parse()
         .map_err(IntKeyCliError::from)

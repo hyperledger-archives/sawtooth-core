@@ -122,7 +122,8 @@ fn glob_simple(pattern: &str) -> Vec<ProtoFile> {
 }
 
 fn protofile_info(path: &Path) -> ProtoFile {
-    let module_name = path.file_stem()
+    let module_name = path
+        .file_stem()
         .expect("Unable to get file stem")
         .to_str()
         .expect("File name should be utf-8")

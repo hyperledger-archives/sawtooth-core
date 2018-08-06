@@ -83,7 +83,8 @@ impl StatePruningManager {
     /// Add a single state root to the pruning queue.
     pub fn add_to_queue(&mut self, height: u64, state_root_hash: &str) {
         let state_root_hash = state_root_hash.into();
-        if !self.state_root_prune_queue
+        if !self
+            .state_root_prune_queue
             .iter()
             .any(|candidate| candidate.1 == state_root_hash)
         {
