@@ -16,7 +16,9 @@
 import hashlib
 import logging
 
+
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import consensus_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -67,15 +69,17 @@ class ConsensusNotifier:
         summary = hashlib.sha256()
         for batch in block.batches:
             summary.update(batch.header_signature.encode())
+        block_header = BlockHeader()
+        block_header.ParseFromString(block.header)
         self._notify(
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_NEW,
             consensus_pb2.ConsensusNotifyBlockNew(
                 block=consensus_pb2.ConsensusBlock(
-                    block_id=bytes.fromhex(block.identifier),
-                    previous_id=bytes.fromhex(block.previous_block_id),
-                    signer_id=bytes.fromhex(block.header.signer_public_key),
-                    block_num=block.block_num,
-                    payload=block.consensus,
+                    block_id=bytes.fromhex(block.header_signature),
+                    previous_id=bytes.fromhex(block_header.previous_block_id),
+                    signer_id=bytes.fromhex(block_header.signer_public_key),
+                    block_num=block_header.block_num,
+                    payload=block_header.consensus,
                     summary=summary.digest())))
 
     def notify_block_valid(self, block_id):

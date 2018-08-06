@@ -338,7 +338,7 @@ impl BlockManagerState {
 /// The BlockManager maintains integrity of all the blocks it contains,
 /// such that for any Block within the BlockManager,
 /// that Block's predecessor is also within the BlockManager.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct BlockManager {
     state: Arc<RwLock<BlockManagerState>>,
 }
@@ -382,7 +382,7 @@ impl BlockManager {
         ))
     }
 
-    pub fn ref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+    pub fn ref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
             .expect("Unable to obtain write lock; it has been poisoned");
@@ -391,7 +391,7 @@ impl BlockManager {
 
     /// Starting at a tip block, if the tip block's ref-count drops to 0,
     /// remove all blocks until a ref-count of 1 is found.
-    pub fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+    pub fn unref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
         let mut state = self.state
             .write()
             .expect("Unable to obtain write lock; it has been poisoned");
@@ -399,7 +399,7 @@ impl BlockManager {
     }
 
     pub fn add_store(
-        &mut self,
+        &self,
         store_name: &str,
         store: Box<BlockStore>,
     ) -> Result<(), BlockManagerError> {

@@ -29,6 +29,7 @@ from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
+from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -64,13 +65,18 @@ class TestGenesisController(unittest.TestCase):
     def test_requires_genesis(self):
         self._with_empty_batch_file()
 
+        block_store = self.make_block_store()
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
+
         genesis_ctrl = GenesisController(
-            Mock('context_manager'),
-            Mock('txn_executor'),
-            Mock('completer'),
-            self.make_block_store(),  # Empty block store
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,  # Empty block store
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -83,14 +89,17 @@ class TestGenesisController(unittest.TestCase):
         block_store = self.make_block_store({
             block.header_signature: block
         })
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         genesis_ctrl = GenesisController(
-            Mock('context_manager'),
-            Mock('txn_executor'),
-            Mock('completer'),
-            block_store,
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -102,14 +111,17 @@ class TestGenesisController(unittest.TestCase):
         self._with_network_name('some_network_name')
 
         block_store = self.make_block_store()
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         genesis_ctrl = GenesisController(
-            Mock('context_manager'),
-            Mock('txn_executor'),
-            Mock('completer'),
-            block_store,
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -126,14 +138,17 @@ class TestGenesisController(unittest.TestCase):
         the the GenesisController should not require genesis.
         """
         block_store = self.make_block_store()
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         genesis_ctrl = GenesisController(
-            Mock(name='context_manager'),
-            Mock(name='txn_executor'),
-            Mock('completer'),
-            block_store,
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -153,14 +168,17 @@ class TestGenesisController(unittest.TestCase):
 
         block = self._create_block()
         block_store = self.make_block_store({block.header_signature: block})
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         genesis_ctrl = GenesisController(
-            Mock('context_manager'),
-            Mock('txn_executor'),
-            Mock('completer'),
-            block_store,
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -181,14 +199,17 @@ class TestGenesisController(unittest.TestCase):
         self._with_network_name('some_block_chain_id')
 
         block_store = self.make_block_store()
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         genesis_ctrl = GenesisController(
-            Mock('context_manager'),
-            Mock('txn_executor'),
-            Mock('completer'),
-            block_store,
-            Mock('StateViewFactory'),
-            self._signer,
+            context_manager=Mock('context_manager'),
+            transaction_executor=Mock('txn_executor'),
+            completer=Mock('completer'),
+            block_store=block_store,
+            state_view_factory=Mock('StateViewFactory'),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -211,6 +232,8 @@ class TestGenesisController(unittest.TestCase):
         """
         genesis_file = self._with_empty_batch_file()
         block_store = self.make_block_store()
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         state_database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_genesis.lmdb'),
@@ -227,12 +250,13 @@ class TestGenesisController(unittest.TestCase):
         completer.add_block = Mock('add_block')
 
         genesis_ctrl = GenesisController(
-            ctx_mgr,
-            txn_executor,
-            completer,
-            block_store,
-            StateViewFactory(state_database),
-            self._signer,
+            context_manager=ctx_mgr,
+            transaction_executor=txn_executor,
+            completer=completer,
+            block_store=block_store,
+            state_view_factory=StateViewFactory(state_database),
+            identity_signer=self._signer,
+            block_manager=block_manager,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),

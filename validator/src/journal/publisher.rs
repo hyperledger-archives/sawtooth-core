@@ -18,7 +18,7 @@
 use batch::Batch;
 use block::Block;
 
-use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, Python};
+use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
@@ -30,7 +30,7 @@ use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
 use execution::py_executor::PyExecutor;
-use journal::block_wrapper::BlockWrapper;
+use journal::block_manager::BlockManager;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
@@ -47,6 +47,7 @@ lazy_static! {
 #[derive(Debug)]
 pub enum InitializeBlockError {
     BlockInProgress,
+    MissingPredecessor,
 }
 
 #[derive(Debug)]
@@ -65,9 +66,14 @@ pub enum StartError {
     Disconnected,
 }
 
+#[derive(Debug)]
+pub enum BlockPublisherError {
+    UnknownBlock(String),
+}
+
 pub struct BlockPublisherState {
     pub transaction_executor: Box<ExecutionPlatform>,
-    pub chain_head: Option<BlockWrapper>,
+    pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
 }
@@ -75,7 +81,7 @@ pub struct BlockPublisherState {
 impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<ExecutionPlatform>,
-        chain_head: Option<BlockWrapper>,
+        chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
     ) -> Self {
@@ -97,13 +103,12 @@ impl BlockPublisherState {
 pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
+    block_manager: BlockManager,
     batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
-    block_wrapper_class: PyObject,
     block_header_class: PyObject,
     block_builder_class: PyObject,
     settings_view_class: PyObject,
-    block_getter: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
     state_view_factory: PyObject,
@@ -127,16 +132,15 @@ impl Clone for SyncBlockPublisher {
 
         SyncBlockPublisher {
             state,
+            block_manager: self.block_manager.clone(),
             batch_observers: self.batch_observers
                 .iter()
                 .map(|i| i.clone_ref(py))
                 .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            block_wrapper_class: self.block_wrapper_class.clone_ref(py),
             block_header_class: self.block_header_class.clone_ref(py),
             block_builder_class: self.block_builder_class.clone_ref(py),
             settings_view_class: self.settings_view_class.clone_ref(py),
-            block_getter: self.block_getter.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone_ref(py),
@@ -156,18 +160,18 @@ impl SyncBlockPublisher {
     pub fn on_chain_updated(
         &self,
         state: &mut BlockPublisherState,
-        chain_head: BlockWrapper,
+        chain_head: Block,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
         info!("Now building on top of block, {}", chain_head);
-        let batches_len = chain_head.block().batches.len();
+        let batches_len = chain_head.batches.len();
         state.chain_head = Some(chain_head);
-        let mut previous_block_id = None;
+        let mut previous_block = None;
         if self.is_building_block(state) {
-            previous_block_id = state
+            previous_block = state
                 .get_previous_block_id()
-                .map(|block_id| self.get_block_checked(block_id.as_str()).ok())
+                .map(|block_id| self.get_block(block_id.as_str()).ok())
                 .unwrap_or(None);
             self.cancel_block(state);
         }
@@ -177,15 +181,16 @@ impl SyncBlockPublisher {
             .pending_batches
             .rebuild(Some(committed_batches), Some(uncommitted_batches));
 
-        if let Some(block_id) = previous_block_id {
-            self.initialize_block(state, &block_id)
-                .expect("Unable to initialize block after canceling");
+        if let Some(prev) = previous_block {
+            if let Err(err) = self.initialize_block(state, &prev) {
+                error!("Unable to initialize block after canceling: {:?}", err);
+            }
         }
     }
 
     pub fn on_chain_updated_internal(
         &mut self,
-        chain_head: BlockWrapper,
+        chain_head: Block,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
@@ -200,14 +205,9 @@ impl SyncBlockPublisher {
         );
     }
 
-    fn get_state_view(&self, py: Python, previous_block: &BlockWrapper) -> PyObject {
-        self.block_wrapper_class
-            .call_method(
-                py,
-                "state_view_for_block",
-                (previous_block, &self.state_view_factory),
-                None,
-            )
+    fn get_state_view(&self, py: Python, previous_block: &Block) -> PyObject {
+        self.state_view_factory
+            .call_method(py, "create_view", (&previous_block.state_root_hash,), None)
             .expect("BlockWrapper, unable to call state_view_for_block")
     }
 
@@ -224,12 +224,20 @@ impl SyncBlockPublisher {
     fn initialize_block(
         &self,
         state: &mut BlockPublisherState,
-        previous_block: &BlockWrapper,
+        previous_block: &Block,
     ) -> Result<(), InitializeBlockError> {
         if state.candidate_block.is_some() {
             warn!("Tried to initialize block but block already initialized");
             return Err(InitializeBlockError::BlockInProgress);
         }
+
+        self.block_manager
+            .ref_block(&previous_block.header_signature)
+            .map_err(|err| {
+                error!("Unable to ref block!: {:?}", err);
+                InitializeBlockError::MissingPredecessor
+            })?;
+
         let mut candidate_block = {
             let gil = Python::acquire_gil();
             let py = gil.python();
@@ -242,7 +250,7 @@ impl SyncBlockPublisher {
                     "get_setting",
                     (
                         "sawtooth.publisher.max_batches_per_block",
-                        previous_block.block().state_root_hash.clone(),
+                        &previous_block.state_root_hash,
                     ),
                     Some(&kwargs),
                 )
@@ -252,18 +260,14 @@ impl SyncBlockPublisher {
 
             let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
-            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash());
+            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash);
 
             let kwargs = PyDict::new(py);
             kwargs
-                .set_item(py, "block_num", previous_block.block().block_num + 1)
+                .set_item(py, "block_num", previous_block.block_num + 1)
                 .unwrap();
             kwargs
-                .set_item(
-                    py,
-                    "previous_block_id",
-                    &previous_block.block().header_signature,
-                )
+                .set_item(py, "previous_block_id", &previous_block.header_signature)
                 .unwrap();
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
@@ -278,11 +282,11 @@ impl SyncBlockPublisher {
 
             let scheduler = state
                 .transaction_executor
-                .create_scheduler(&previous_block.block().state_root_hash)
+                .create_scheduler(&previous_block.state_root_hash)
                 .expect("Failed to create new scheduler");
 
-            let committed_txn_cache = TransactionCommitCache::new(
-                self.transaction_committed.clone_ref(py));
+            let committed_txn_cache =
+                TransactionCommitCache::new(self.transaction_committed.clone_ref(py));
 
             let settings_view = self.settings_view_class
                 .call(py, (state_view,), None)
@@ -353,26 +357,30 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn get_block_checked(&self, block_id: &str) -> Result<BlockWrapper, PyErr> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let res = self.block_getter.call(py, (block_id,), None);
-        res.map(|i| i.extract::<BlockWrapper>(py))?
-    }
-
-    fn get_block(&self, block_id: &str) -> BlockWrapper {
-        self.get_block_checked(block_id)
-            .expect("Unable to extract BlockWrapper")
+    fn get_block(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
+        self.block_manager
+            .get(&[block_id])
+            .next()
+            .expect("Did not return any Results, even not found blocks")
+            .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
     }
 
     fn restart_block(&self, state: &mut BlockPublisherState) {
-        if let Some(previous_block) = state
+        match state
             .get_previous_block_id()
             .map(|previous_block_id| self.get_block(previous_block_id.as_str()))
         {
-            state.candidate_block = None;
-            self.initialize_block(state, &previous_block)
-                .expect("Initialization failed unexpectedly");
+            Some(Ok(previous_block)) => {
+                self.cancel_block(state);
+
+                if let Err(err) = self.initialize_block(state, &previous_block) {
+                    error!("Initialization failed unexpectedly: {:?}", err);
+                }
+            }
+            Some(Err(err)) => {
+                error!("Unable to read previous block on restart: {:?}", err);
+            }
+            None => (),
         }
     }
 
@@ -469,6 +477,9 @@ impl SyncBlockPublisher {
         let mut candidate_block = None;
         mem::swap(&mut state.candidate_block, &mut candidate_block);
         if let Some(mut candidate_block) = candidate_block {
+            self.block_manager
+                .unref_block(&candidate_block.previous_block_id())
+                .expect("Unable to unref block that was ref'ed during initialize block");
             candidate_block.cancel();
         }
     }
@@ -481,22 +492,21 @@ pub struct BlockPublisher {
 
 impl BlockPublisher {
     pub fn new(
+        block_manager: BlockManager,
         transaction_executor: PyObject,
-        block_getter: PyObject,
         batch_committed: PyObject,
         transaction_committed: PyObject,
         state_view_factory: PyObject,
         settings_cache: PyObject,
         block_sender: PyObject,
         batch_publisher: PyObject,
-        chain_head: Option<BlockWrapper>,
+        chain_head: Option<Block>,
         identity_signer: PyObject,
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
-        block_wrapper_class: PyObject,
         block_header_class: PyObject,
         block_builder_class: PyObject,
         settings_view_class: PyObject,
@@ -512,7 +522,7 @@ impl BlockPublisher {
 
         let publisher = SyncBlockPublisher {
             state,
-            block_getter,
+            block_manager,
             batch_committed,
             transaction_committed,
             state_view_factory,
@@ -525,7 +535,6 @@ impl BlockPublisher {
             permission_verifier,
             batch_observers,
             batch_injector_factory,
-            block_wrapper_class,
             block_header_class,
             block_builder_class,
             settings_view_class,
@@ -582,10 +591,7 @@ impl BlockPublisher {
         ChainHeadLock::new(self.publisher.clone())
     }
 
-    pub fn initialize_block(
-        &self,
-        previous_block: BlockWrapper,
-    ) -> Result<(), InitializeBlockError> {
+    pub fn initialize_block(&self, previous_block: Block) -> Result<(), InitializeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock was poisoned");
         self.publisher.initialize_block(&mut state, &previous_block)
     }

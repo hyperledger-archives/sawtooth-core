@@ -29,6 +29,7 @@ extern crate lazy_static;
 extern crate log;
 #[cfg(test)]
 extern crate rand;
+extern crate uluru;
 
 // exported modules
 pub mod database;

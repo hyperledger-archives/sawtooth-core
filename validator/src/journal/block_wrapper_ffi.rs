@@ -16,25 +16,20 @@
  */
 
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, ToPyObject};
 
 use journal::block_wrapper::BlockStatus;
 use journal::block_wrapper::BlockWrapper;
 
 use batch::Batch;
-use block::Block;
 use transaction::Transaction;
 
 use protobuf;
-use protobuf::Message;
 
 use proto::batch::Batch as ProtoBatch;
 use proto::batch::BatchHeader;
-use proto::block::Block as ProtoBlock;
-use proto::block::BlockHeader;
 use proto::transaction::Transaction as ProtoTxn;
 use proto::transaction::TransactionHeader;
-use pylogger;
 
 lazy_static! {
     static ref PY_BLOCK_WRAPPER: PyObject = Python::acquire_gil()

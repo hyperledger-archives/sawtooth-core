@@ -36,6 +36,7 @@ from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.batch_injector import \
@@ -143,10 +144,9 @@ class Validator:
         # The cache keep time for the journal's block cache must be greater
         # than the cache keep time used by the completer.
         base_keep_time = 1200
-        block_cache = BlockCache(
-            block_store,
-            keep_time=int(base_keep_time * 9 / 8),
-            purge_frequency=30)
+
+        block_manager = BlockManager()
+        block_manager.add_store("commit_store", block_store)
 
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(
@@ -299,8 +299,8 @@ class Validator:
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
+            block_manager=block_manager,
             transaction_executor=transaction_executor,
-            get_block=lambda block: block_cache[block],
             transaction_committed=block_store.has_transaction,
             batch_committed=block_store.has_batch,
             state_view_factory=state_view_factory,
@@ -316,7 +316,8 @@ class Validator:
             batch_injector_factory=batch_injector_factory)
 
         block_validator = BlockValidator(
-            block_cache=block_cache,
+            block_manager=block_manager,
+            block_store=block_store,
             state_view_factory=state_view_factory,
             transaction_executor=transaction_executor,
             identity_signer=identity_signer,
@@ -326,7 +327,7 @@ class Validator:
 
         chain_controller = ChainController(
             block_store=block_store,
-            block_cache=block_cache,
+            block_manager=block_manager,
             block_validator=block_validator,
             state_database=global_state_db,
             chain_head_lock=block_publisher.chain_head_lock,
@@ -341,10 +342,14 @@ class Validator:
                 settings_observer
             ])
 
+        block_validator.set_block_validity_fn(
+            chain_controller.block_validation_result)
+
         genesis_controller = GenesisController(
             context_manager=context_manager,
             transaction_executor=transaction_executor,
             completer=completer,
+            block_manager=block_manager,
             block_store=block_store,
             state_view_factory=state_view_factory,
             identity_signer=identity_signer,
@@ -386,7 +391,7 @@ class Validator:
         self._network_thread_pool = network_thread_pool
 
         consensus_proxy = ConsensusProxy(
-            block_cache=block_cache,
+            block_manager=block_manager,
             chain_controller=chain_controller,
             block_publisher=block_publisher,
             gossip=gossip,
