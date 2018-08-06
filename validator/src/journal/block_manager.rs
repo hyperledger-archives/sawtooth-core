@@ -640,9 +640,13 @@ impl Iterator for BranchIterator {
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.into());
-                    state
+                    let block = state
                         .get_block_from_blockstore(&self.next_block_id, blockstore_name)
-                        .expect("The blockstore name returned for a block id doesn't contain the block.")
+                        .expect("The blockstore name returned for a block id doesn't exist.")
+                        .expect("The blockstore name returned for a block id doesn't contain the block.");
+
+                    self.next_block_id = block.previous_block_id.clone();
+                    Some(block)
                 }
                 BlockLocation::Unknown => None,
             }
@@ -653,11 +657,17 @@ impl Iterator for BranchIterator {
                 .state
                 .read()
                 .expect("Unable to obtain read lock; it has been poisoned");
-            let block = state
+
+            let block_option = state
                 .get_block_from_blockstore(&self.next_block_id, blockstore_id)
-                .expect("The BlockManager has lost a blockstore that is referenced by a block.")
-                .expect("The block was not in the blockstore referenced by a successor block.");
-            Some(block.clone())
+                .expect("The BlockManager has lost a blockstore that is referenced by a block.");
+
+            if let Some(block) = block_option {
+                self.next_block_id = block.previous_block_id.clone();
+                Some(block.clone())
+            } else {
+                None
+            }
         }
     }
 }
@@ -711,6 +721,7 @@ impl Iterator for BranchDiffIterator {
                 let right_peek = self.right_branch.peek();
 
                 if left_peek.is_none() {
+                    self.has_reached_common_ancestor = true;
                     return None;
                 }
 
