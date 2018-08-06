@@ -16,6 +16,8 @@
  */
 
 use batch::Batch;
+use proto;
+use protobuf::{self, Message};
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -39,5 +41,46 @@ impl fmt::Display for Block {
             "Block(id: {}, block_num: {}, state_root_hash: {}, previous_block_id: {})",
             self.header_signature, self.block_num, self.state_root_hash, self.previous_block_id
         )
+    }
+}
+
+impl From<Block> for proto::block::Block {
+    fn from(other: Block) -> Self {
+        let mut proto_block = proto::block::Block::new();
+        proto_block.set_batches(protobuf::RepeatedField::from_vec(
+            other
+                .batches
+                .into_iter()
+                .map(proto::batch::Batch::from)
+                .collect(),
+        ));
+        proto_block.set_header_signature(other.header_signature);
+        proto_block.set_header(other.header_bytes);
+        proto_block
+    }
+}
+
+impl From<proto::block::Block> for Block {
+    fn from(mut proto_block: proto::block::Block) -> Self {
+        let mut block_header: proto::block::BlockHeader =
+            protobuf::parse_from_bytes(proto_block.get_header())
+                .expect("Unable to parse BlockHeader bytes");
+
+        Block {
+            header_signature: proto_block.take_header_signature(),
+            header_bytes: proto_block.take_header(),
+            state_root_hash: block_header.take_state_root_hash(),
+            consensus: block_header.take_consensus(),
+            batch_ids: block_header.take_batch_ids().into_vec(),
+            signer_public_key: block_header.take_signer_public_key(),
+            previous_block_id: block_header.take_previous_block_id(),
+            block_num: block_header.get_block_num(),
+
+            batches: proto_block
+                .take_batches()
+                .into_iter()
+                .map(Batch::from)
+                .collect(),
+        }
     }
 }
