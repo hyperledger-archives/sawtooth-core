@@ -139,9 +139,9 @@ class _BlockIterator:
 
         block = ctypes.py_object()
 
-        _pylibexec("{}_next".format(self.name),
-                   self._c_iter_ptr,
-                   ctypes.byref(block))
+        _libexec("{}_next".format(self.name),
+                 self._c_iter_ptr,
+                 ctypes.byref(block))
 
         if block.value is None:
             raise StopIteration()
