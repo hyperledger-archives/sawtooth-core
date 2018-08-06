@@ -86,10 +86,14 @@ pub unsafe extern "C" fn block_manager_add_store(
         Err(_) => return ErrorCode::InvalidInputString,
     };
 
-    (*(block_manager as *mut BlockManager))
-        .add_store(name, Box::new(py_block_store))
-        .map(|_| ErrorCode::Success)
-        .unwrap_or(ErrorCode::Error)
+    let block_manager = (*(block_manager as *mut BlockManager)).clone();
+
+    py.allow_threads(move || {
+        block_manager
+            .add_store(name, Box::new(py_block_store))
+            .map(|_| ErrorCode::Success)
+            .unwrap_or(ErrorCode::Error)
+    })
 }
 
 #[no_mangle]
