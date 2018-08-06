@@ -28,12 +28,15 @@ use py_ffi;
 use pylogger;
 use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
+use std::mem;
 use std::os::raw::{c_char, c_void};
+use std::slice;
 use std::sync::mpsc::Sender;
 use std::thread;
 
-use protobuf::Message;
+use protobuf::{self, Message};
 
+use proto;
 use proto::transaction_receipt::TransactionReceipt;
 
 #[repr(u32)]
@@ -151,7 +154,7 @@ pub extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> Error
 pub unsafe extern "C" fn chain_controller_block_validation_result(
     chain_controller: *mut c_void,
     block_id: *const c_char,
-    result: *mut *const py_ffi::PyObject,
+    result: *mut i32,
 ) -> ErrorCode {
     let block_id = match CStr::from_ptr(block_id).to_str() {
         Ok(s) => s,
@@ -164,10 +167,7 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
         Some(r) => r.status,
         None => BlockStatus::Unknown,
     };
-    let gil = cpython::Python::acquire_gil();
-    let py = gil.python();
-    let py_status = status.to_py_object(py);
-    *result = py_status.steal_ptr();
+    *result = status as i32;
     ErrorCode::Success
 }
 
@@ -207,38 +207,26 @@ pub extern "C" fn chain_controller_has_block(
 macro_rules! chain_controller_block_ffi {
     ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
         #[no_mangle]
-        pub extern "C" fn $ffi_fn_name(
+        pub unsafe extern "C" fn $ffi_fn_name(
             chain_controller: *mut c_void,
-            block: *mut py_ffi::PyObject,
+            block_bytes: *const u8,
+            block_bytes_len: usize,
         ) -> ErrorCode {
-            check_null!(chain_controller, block);
+            check_null!(chain_controller, block_bytes);
 
-            let gil_guard = Python::acquire_gil();
-            let py = gil_guard.python();
-
-            let mut $block: Block = unsafe {
-                match PyObject::from_borrowed_ptr(py, block).extract(py) {
-                    Ok(val) => val,
-                    Err(py_err) => {
-                        pylogger::exception(
-                            py,
-                            "chain_controller_queue_block: unable to get block",
-                            py_err,
-                        );
-                        return ErrorCode::InvalidPythonObject;
+            let $block: Block = {
+                let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+                let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+                    Ok(block) => block,
+                    Err(err) => {
+                        error!("Failed to parse block bytes: {:?}", err);
+                        return ErrorCode::Unknown;
                     }
-                }
+                };
+                proto_block.into()
             };
 
-            unsafe {
-                let controller = (*(chain_controller
-                    as *mut ChainController<PyBlockValidator>))
-                    .light_clone();
-
-                py.allow_threads(move || {
-                    controller.$cc_fn_name($($block_args)*);
-                });
-            }
+            (*(chain_controller as *mut ChainController<PyBlockValidator>)).$cc_fn_name($($block_args)*);
 
             ErrorCode::Success
         }
@@ -248,115 +236,42 @@ macro_rules! chain_controller_block_ffi {
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
-
-#[no_mangle]
-pub extern "C" fn chain_controller_queue_block(
-    chain_controller: *mut c_void,
-    block: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(chain_controller, block);
-
-    let gil_guard = Python::acquire_gil();
-    let py = gil_guard.python();
-
-    let block: Block = unsafe {
-        match PyObject::from_borrowed_ptr(py, block).extract(py) {
-            Ok(val) => val,
-            Err(py_err) => {
-                pylogger::exception(
-                    py,
-                    "chain_controller_queue_block: unable to get block",
-                    py_err,
-                );
-                return ErrorCode::InvalidPythonObject;
-            }
-        }
-    };
-    unsafe {
-        let controller =
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
-
-        py.allow_threads(move || {
-            let builder = thread::Builder::new().name("ChainController.queue_block".into());
-            builder
-                .spawn(move || {
-                    controller.queue_block(block);
-                })
-                .unwrap()
-                .join()
-                .unwrap();
-        });
-    }
-
-    ErrorCode::Success
-}
+chain_controller_block_ffi!(chain_controller_queue_block, queue_block, block, block);
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
-#[no_mangle]
-pub extern "C" fn chain_controller_on_block_received(
-    chain_controller: *mut c_void,
-    block: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(chain_controller, block);
-
-    let gil_guard = Python::acquire_gil();
-    let py = gil_guard.python();
-
-    let block: Block = unsafe {
-        match PyObject::from_borrowed_ptr(py, block).extract(py) {
-            Ok(val) => val,
-            Err(py_err) => {
-                pylogger::exception(
-                    py,
-                    "chain_controller_on_block_received: unable to get block",
-                    py_err,
-                );
-                return ErrorCode::InvalidPythonObject;
-            }
-        }
-    };
-    unsafe {
-        let mut controller =
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
-
-        py.allow_threads(move || {
-            // A thread has to be spawned here, otherwise, any subsequent attempt to
-            // re-acquire the GIL and import of python modules will fail.
-            let builder = thread::Builder::new().name("ChainController.on_block_received".into());
-            builder
-                .spawn(move || match controller.on_block_received(block) {
-                    Ok(_) => ErrorCode::Success,
-                    Err(err) => {
-                        error!("Unable to call on_block_received: {:?}", err);
-                        ErrorCode::Unknown
-                    }
-                })
-                .unwrap()
-                .join()
-                .unwrap()
-        })
-    }
-}
+chain_controller_block_ffi!(chain_controller_on_block_received, on_block_received, block, block);
 
 #[no_mangle]
-pub extern "C" fn chain_controller_chain_head(
+pub unsafe extern "C" fn chain_controller_chain_head(
     chain_controller: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block: *mut *const u8,
+    block_len: *mut usize,
 ) -> ErrorCode {
     check_null!(chain_controller);
-    unsafe {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
 
-        let controller =
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
+    let controller = (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
 
-        let chain_head = py.allow_threads(move || controller.chain_head());
+    if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
+        match chain_head.write_to_bytes() {
+            Ok(payload) => {
+                *block_len = payload.len();
+                *block = payload.as_ptr();
 
-        *block = chain_head.into_py_object(py).steal_ptr();
+                mem::forget(payload);
+
+                ErrorCode::Success
+            }
+            Err(err) => {
+                warn!("Failed to serialize Block proto to bytes: {}", err);
+                ErrorCode::Unknown
+            }
+        }
+    } else {
+        *block = 0 as *const u8;
+        *block_len = 0;
+        ErrorCode::Success
     }
-    ErrorCode::Success
 }
 
 #[no_mangle]

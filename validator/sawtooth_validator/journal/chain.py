@@ -17,10 +17,13 @@ from abc import abstractmethod
 import ctypes
 from enum import IntEnum
 
+from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
 from sawtooth_validator.ffi import OwnedPointer
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 
 
 class ChainObserver(metaclass=ABCMeta):
@@ -83,49 +86,67 @@ class ChainController(OwnedPointer):
                  ctypes.byref(result))
         return result.value
 
+    def _chain_controller_block_ffi_fn(self, name, block):
+        payload = block.SerializeToString()
+        _libexec(name, self.pointer, payload, len(payload))
+
     def ignore_block(self, block):
-        _pylibexec('chain_controller_ignore_block', self.pointer,
-                   ctypes.py_object(block))
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_ignore_block',
+            block)
 
     def fail_block(self, block):
-        _pylibexec('chain_controller_fail_block', self.pointer,
-                   ctypes.py_object(block))
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_fail_block',
+            block)
 
     def commit_block(self, block):
-        _pylibexec('chain_controller_commit_block', self.pointer,
-                   ctypes.py_object(block))
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_commit_block',
+            block)
 
     def queue_block(self, block):
-        _pylibexec('chain_controller_queue_block', self.pointer,
-                   ctypes.py_object(block))
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_queue_block',
+            block)
 
     def block_validation_result(self, block_id):
-        result = ctypes.py_object()
+        status = ctypes.c_int32(0)
 
         _libexec("chain_controller_block_validation_result", self.pointer,
                  ctypes.c_char_p(block_id.encode()),
-                 ctypes.byref(result))
+                 ctypes.byref(status))
 
-        return result.value
+        return BlockStatus(status.value)
 
     def on_block_received(self, block_wrapper):
         """This is exposed for unit tests, and should not be called directly.
         """
-        _pylibexec('chain_controller_on_block_received', self.pointer,
-                   ctypes.py_object(block_wrapper.block))
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_on_block_received',
+            block_wrapper.block)
 
     @property
     def chain_head(self):
         return self.chain_head_fn()
 
     def chain_head_fn(self):
-        result = ctypes.py_object()
+        (c_result, c_result_len) = ffi.prepare_byte_result()
 
-        _pylibexec('chain_controller_chain_head',
-                   self.pointer,
-                   ctypes.byref(result))
+        _libexec('chain_controller_chain_head',
+                 self.pointer,
+                 ctypes.byref(c_result),
+                 ctypes.byref(c_result_len))
 
-        return result.value
+        # Check if NULL
+        if not c_result:
+            return None
+
+        payload = ffi.from_c_bytes(c_result, c_result_len)
+        block = Block()
+        block.ParseFromString(payload)
+
+        return block
 
 
 class ValidationResponseSender(OwnedPointer):
