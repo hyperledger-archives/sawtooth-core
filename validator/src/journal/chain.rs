@@ -435,7 +435,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         info!("Ignoring block {}", block)
     }
 
-    pub fn fail_block(&self, block: &mut Block) {
+    pub fn fail_block(&self, block: &Block) {
         let mut state = self
             .state
             .write()
