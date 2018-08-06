@@ -654,23 +654,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         }
     }
 
-    pub fn submit_blocks_for_verification(
-        &self,
-        blocks: &[Block],
-    ) -> Result<(), ChainControllerError> {
-        let sender = self
-            .validation_result_sender
-            .as_ref()
-            .expect(
-                "Attempted to submit blocks for validation before starting the chain controller",
-            )
-            .clone();
-
-        self.block_validator
-            .submit_blocks_for_verification(blocks, sender);
-        Ok(())
-    }
-
     fn notify_block_validation_results_received(
         &self,
         block: &Block,

@@ -108,11 +108,6 @@ class ChainController(OwnedPointer):
 
         return result.value
 
-    def submit_blocks_for_verification(self, blocks):
-        _pylibexec('chain_controller_submit_blocks_for_verification',
-                   self.pointer,
-                   ctypes.py_object(blocks))
-
     def on_block_received(self, block_wrapper):
         """This is exposed for unit tests, and should not be called directly.
         """

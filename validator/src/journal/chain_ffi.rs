@@ -291,55 +291,6 @@ pub extern "C" fn chain_controller_queue_block(
     ErrorCode::Success
 }
 
-#[no_mangle]
-pub extern "C" fn chain_controller_submit_blocks_for_verification(
-    chain_controller: *mut c_void,
-    blocks: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(chain_controller, blocks);
-
-    let gil_guard = Python::acquire_gil();
-    let py = gil_guard.python();
-
-    let blocks: Vec<Block> = unsafe {
-        match PyObject::from_borrowed_ptr(py, blocks).extract(py) {
-            Ok(val) => val,
-            Err(py_err) => {
-                pylogger::exception(
-                    py,
-                    "chain_controller_on_block_received: unable to get block",
-                    py_err,
-                );
-                return ErrorCode::InvalidPythonObject;
-            }
-        }
-    };
-    unsafe {
-        let controller =
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
-
-        py.allow_threads(move || {
-            // A thread has to be spawned here, otherwise, any subsequent attempt to
-            // re-acquire the GIL and import of python modules will fail.
-            let builder = thread::Builder::new()
-                .name("ChainController.submit_blocks_for_verification".into());
-            builder
-                .spawn(
-                    move || match controller.submit_blocks_for_verification(&blocks) {
-                        Ok(_) => ErrorCode::Success,
-                        Err(err) => {
-                            error!("Unable to call submit_blocks_for_verification: {:?}", err);
-                            ErrorCode::Unknown
-                        }
-                    },
-                )
-                .unwrap()
-                .join()
-                .unwrap()
-        })
-    }
-}
-
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
 #[no_mangle]
