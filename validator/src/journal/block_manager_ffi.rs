@@ -17,12 +17,14 @@
 
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{
     FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, ToPyObject,
 };
+use protobuf::{self, Message};
 use py_ffi;
 use pylogger;
 
@@ -31,6 +33,7 @@ use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
 use journal::block_store::{BlockStore, BlockStoreError};
+use proto;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -119,36 +122,47 @@ pub unsafe extern "C" fn block_manager_persist(
         .unwrap_or(ErrorCode::Error)
 }
 
+#[repr(C)]
+#[derive(Debug)]
+pub struct PutEntry {
+    block_bytes: *mut u8,
+    block_bytes_len: usize,
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_put(
     block_manager: *mut c_void,
-    branch: *mut py_ffi::PyObject,
+    branch: *const *const c_void,
+    branch_len: usize,
 ) -> ErrorCode {
     check_null!(block_manager, branch);
 
-    let gil = Python::acquire_gil();
-    let py = gil.python();
+    let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
+        .into_iter()
+        .map(|ptr| {
+            let entry = *ptr as *const PutEntry;
+            let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
+            let proto_block: proto::block::Block =
+                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
-    let py_branch = PyObject::from_borrowed_ptr(py, branch);
-
-    let branch: Vec<Block> = py_branch
-        .extract::<PyList>(py)
-        .expect("Failed to extract PyList from Branch")
-        .iter(py)
-        .map(|b| {
-            b.extract::<Block>(py)
-                .expect("Unable to extract Block in PyList, py_branch")
+            Ok(Block::from(proto_block))
         })
         .collect();
 
-    match (*(block_manager as *mut BlockManager)).put(branch) {
-        Err(BlockManagerError::MissingPredecessor(_)) => ErrorCode::MissingPredecessor,
-        Err(BlockManagerError::MissingInput) => ErrorCode::MissingInput,
-        Err(BlockManagerError::MissingPredecessorInBranch(_)) => {
-            ErrorCode::MissingPredecessorInBranch
+    match branch_result {
+        Ok(branch) => match (*(block_manager as *mut BlockManager)).put(branch) {
+            Err(BlockManagerError::MissingPredecessor(_)) => ErrorCode::MissingPredecessor,
+            Err(BlockManagerError::MissingInput) => ErrorCode::MissingInput,
+            Err(BlockManagerError::MissingPredecessorInBranch(_)) => {
+                ErrorCode::MissingPredecessorInBranch
+            }
+            Err(_) => ErrorCode::Error,
+            Ok(_) => ErrorCode::Success,
+        },
+        Err(err) => {
+            error!("Error processing branch: {:?}", err);
+            ErrorCode::Error
         }
-        Err(_) => ErrorCode::Error,
-        Ok(_) => ErrorCode::Success,
     }
 }
 
@@ -187,20 +201,26 @@ pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) 
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut GetBlockIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
+    if let Some(Some(block)) = (*(iterator as *mut GetBlockIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
 
-    ErrorCode::Success
+        *block_len = bytes.as_slice().len();
+        *block_bytes = bytes.as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 #[no_mangle]
@@ -230,19 +250,26 @@ pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_voi
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut BranchIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
-    ErrorCode::Success
+    if let Some(block) = (*(iterator as *mut BranchIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
+
+        *block_len = bytes.as_slice().len();
+        *block_bytes = bytes.as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 #[no_mangle]
@@ -282,19 +309,26 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut BranchDiffIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
-    ErrorCode::Success
+    if let Some(block) = (*(iterator as *mut BranchDiffIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
+
+        *block_len = bytes.as_slice().len();
+        *block_bytes = bytes.as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 struct PyBlockStore {
