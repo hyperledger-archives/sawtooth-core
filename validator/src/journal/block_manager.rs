@@ -476,11 +476,17 @@ impl BlockManager {
             .state
             .write()
             .expect("Unable to obtain write lock; it has been poisoned");
+
+        for block in &to_be_inserted {
+            state.block_by_block_id.remove(&block.header_signature);
+        }
+
         let blockstore = state
             .blockstore_by_name
             .get_mut(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?;
         blockstore.put(to_be_inserted)?;
+
         Ok(())
     }
 
