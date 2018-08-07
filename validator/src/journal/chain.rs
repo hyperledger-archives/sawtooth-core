@@ -43,6 +43,7 @@ use journal::block_validator::{BlockValidationResult, BlockValidator, Validation
 use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
+use journal::fork_cache::ForkCache;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
 
@@ -157,6 +158,7 @@ struct ChainControllerState {
     chain_id_manager: ChainIdManager,
     observers: Vec<Box<ChainObserver>>,
     state_pruning_manager: StatePruningManager,
+    fork_cache: ForkCache,
 }
 
 impl ChainControllerState {
@@ -270,22 +272,20 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
         state_pruning_manager: StatePruningManager,
+        fork_cache_keep_time: Duration,
     ) -> Self {
         let mut chain_controller = ChainController {
-            state: Arc::new(RwLock::new(
-                ChainControllerState {
-                    block_manager,
-                    chain_reader,
-                    chain_id_manager: ChainIdManager::new(data_dir),
-                    observers,
-                    chain_head: None,
-                    state_pruning_manager,
-                },
-            )),
+            state: Arc::new(RwLock::new(ChainControllerState {
+                block_manager: block_manager.clone(),
+                chain_reader,
+                chain_id_manager: ChainIdManager::new(data_dir),
+                observers,
+                chain_head: None,
+                state_pruning_manager,
+                fork_cache: ForkCache::new(fork_cache_keep_time),
+            })),
             block_validator,
-            block_validation_results: Arc::new(RwLock::new(
-                BlockValidationResultCache::default(),
-            )),
+            block_validation_results: Arc::new(RwLock::new(BlockValidationResultCache::default())),
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             commit_queue_sender: None,
@@ -386,14 +386,14 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         // Only need a read lock to check duplicates, but need to upgrade to write lock for
         // updating chain head.
         {
-            let mut state = self.state
+            let mut state = self
+                .state
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
                 if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-                    if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block)
-                    {
+                    if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
                             &block.header_signature, err
@@ -414,15 +414,48 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
             )
             .clone();
 
-        let state = self.state
-            .read()
-            .expect("No lock holder should have poisoned the lock");
+        let block = {
+            let mut state = self
+                .state
+                .read()
+                .expect("No lock holder should have poisoned the lock");
 
-        if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-            self.block_validator
-                .submit_blocks_for_verification(&[block], sender);
-        } else {
-            warn!("Received block id for block not in block manager: {}", block_id);
+            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                self.block_validator
+                    .submit_blocks_for_verification(&[block.clone()], sender);
+                Some(block)
+            } else {
+                warn!(
+                    "Received block id for block not in block manager: {}",
+                    block_id
+                );
+                None
+            }
+        };
+
+        if let Some(block) = block {
+            let mut state = self
+                .state
+                .write()
+                .expect("No lock holder should have poisoned the lock");
+
+            let mut expired: Vec<String> = Vec::new();
+
+            if let Some(block_id) = state
+                .fork_cache
+                .insert(&block_id, Some(&block.previous_block_id))
+            {
+                expired.push(block_id);
+            }
+
+            expired.extend_from_slice(state.fork_cache.purge().as_slice());
+
+            for block_id in expired {
+                debug!("Unref'ing block {}", block_id);
+                if let Err(err) = state.block_manager.unref_block(&block_id) {
+                    error!("Failed to unref expired block: {}", block_id);
+                }
+            }
         }
 
         Ok(())

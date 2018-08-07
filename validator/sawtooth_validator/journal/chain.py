@@ -48,6 +48,7 @@ class ChainController(OwnedPointer):
         chain_head_lock,
         consensus_notifier,
         state_pruning_block_depth=1000,
+        fork_cache_keep_time=300,  # seconds
         data_dir=None,
         observers=None
     ):
@@ -69,6 +70,7 @@ class ChainController(OwnedPointer):
             ctypes.py_object(consensus_notifier),
             ctypes.py_object(observers),
             ctypes.c_long(state_pruning_block_depth),
+            ctypes.c_long(fork_cache_keep_time),
             ctypes.c_char_p(data_dir.encode()),
             ctypes.byref(self.pointer))
 

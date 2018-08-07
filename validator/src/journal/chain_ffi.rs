@@ -33,6 +33,7 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 use std::sync::mpsc::Sender;
 use std::thread;
+use std::time::Duration;
 
 use protobuf::{self, Message};
 
@@ -67,6 +68,7 @@ pub extern "C" fn chain_controller_new(
     consensus_notifier: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
+    fork_cache_keep_time: u32,
     data_directory: *const c_char,
     chain_controller_ptr: *mut *const c_void,
 ) -> ErrorCode {
@@ -122,6 +124,7 @@ pub extern "C" fn chain_controller_new(
         state_pruning_block_depth,
         observer_wrappers,
         state_pruning_manager,
+        Duration::from_secs(fork_cache_keep_time as u64),
     );
 
     unsafe {
