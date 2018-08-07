@@ -350,6 +350,15 @@ impl BlockManager {
         BlockManager::default()
     }
 
+    pub fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
+        let state = self
+            .state
+            .read()
+            .expect("Unable to obtain read lock; it has been poisoned");
+
+        state.contains(block_id)
+    }
+
     /// Put is idempotent, making the guarantee that after put is called with a
     /// block in the vector argument, that block is in the BlockManager
     /// whether or not it was already in the BlockManager.

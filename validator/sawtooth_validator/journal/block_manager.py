@@ -93,13 +93,13 @@ class BlockManager(OwnedPointer):
                  ctypes.c_char_p(store_name.encode()))
 
     def __contains__(self, block_id):
-        try:
-            # if StopIteration isn't raised the block
-            # associated with block_id is in the block_manager
-            next(self.get([block_id]))
-            return True
-        except StopIteration:
-            return False
+        contains = ctypes.c_bool(False)
+        _libexec(
+            "block_manager_contains",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()),
+            ctypes.byref(contains))
+        return contains
 
     def get(self, block_ids):
         return _GetBlockIterator(self.pointer, block_ids)

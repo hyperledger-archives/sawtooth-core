@@ -73,6 +73,31 @@ pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> Error
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn block_manager_contains(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+    result: *mut bool,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).contains(block_id) {
+        Ok(contains) => {
+            *result = contains;
+            ErrorCode::Success
+        }
+        Err(err) => {
+            error!("Unexpected error calling BlockManager.contains: {:?}", err);
+            ErrorCode::Error
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn block_manager_add_store(
     block_manager: *mut c_void,
     block_store_name: *const c_char,
