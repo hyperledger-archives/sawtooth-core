@@ -575,20 +575,32 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     })
                 });
 
-                for block in result.new_chain.iter().rev() {
-                    let receipts: Vec<TransactionReceipt> = self.block_validation_results
+                for blk in result.new_chain.iter().rev() {
+                    let mut cache = self
+                        .block_validation_results
                         .write()
-                        .expect("Unable to acquire read lock, due to poisoning")
-                        .find(|result| &block.header_signature == &result.block_id)
-                        .expect("A block that has no validation results was committed")
-                        .execution_results
-                        .iter()
-                        .map(TransactionReceipt::from)
-                        .collect();
-                    for observer in state.observers.iter_mut() {
-                        observer.chain_update(&block, receipts.as_slice());
+                        .expect("Unable to acquire read lock, due to poisoning");
+
+                    match cache.find(|result| &blk.header_signature == &result.block_id) {
+                        Some(validation_results) => {
+                            let receipts: Vec<TransactionReceipt> = validation_results
+                                .execution_results
+                                .iter()
+                                .map(TransactionReceipt::from)
+                                .collect();
+                            for observer in state.observers.iter_mut() {
+                                observer.chain_update(&block, receipts.as_slice());
+                            }
+                        }
+                        None => {
+                            error!(
+                                "While committing {}, found block {} missing execution results",
+                                &block, &blk,
+                            );
+                        }
                     }
                 }
+
                 let total_committed_txns = match state.chain_reader.count_committed_transactions() {
                     Ok(count) => count,
                     Err(err) => {
