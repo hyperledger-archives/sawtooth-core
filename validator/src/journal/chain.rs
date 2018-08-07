@@ -421,9 +421,18 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 .expect("No lock holder should have poisoned the lock");
 
             if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-                self.block_validator
-                    .submit_blocks_for_verification(&[block.clone()], sender);
-                Some(block)
+                // Add a reference to to hand to the block validator.
+                if let Err(err) = state.block_manager.ref_block(&block_id) {
+                    error!(
+                        "Unable to ref block received from block manager; ignoring: {:?}",
+                        err
+                    );
+                    None
+                } else {
+                    self.block_validator
+                        .submit_blocks_for_verification(&[block.clone()], sender);
+                    Some(block)
+                }
             } else {
                 warn!(
                     "Received block id for block not in block manager: {}",
@@ -522,6 +531,14 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         match self.notify_block_validation_results_received(&block) {
             Ok(_) => (),
             Err(err) => warn!("{:?}", err),
+        }
+        // Remove the ref that was handed to the block validator on submission
+        let state = self
+            .state
+            .read()
+            .expect("Unable to acquire lock; it has been poisoned");
+        if let Err(err) = state.block_manager.unref_block(&block.header_signature) {
+            warn!("Unable to unref block that was just validated: {:?}", err);
         }
     }
 
