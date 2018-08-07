@@ -22,6 +22,12 @@ use std::sync::{Arc, RwLock};
 use block::Block;
 use journal::block_store::{BlockStore, BlockStoreError};
 use journal::NULL_BLOCK_IDENTIFIER;
+use metrics;
+
+lazy_static! {
+    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+        metrics::get_collector("sawtooth_validator.block_manager");
+}
 
 #[derive(Debug, PartialEq)]
 pub enum BlockManagerError {
@@ -203,6 +209,11 @@ impl BlockManagerState {
                 );
             })
         };
+
+        COLLECTOR
+            .gauge("BlockManager.pool_size", None, None)
+            .set_value(self.block_by_block_id.len());
+
         Ok(())
     }
 
@@ -267,6 +278,10 @@ impl BlockManagerState {
                 optional_new_tip = new_tip;
             }
         }
+
+        COLLECTOR
+            .counter("BlockManager.expired", None, None)
+            .inc_n(blocks_to_remove.len());
 
         blocks_to_remove.iter().for_each(|block_id| {
             self.block_by_block_id.remove(block_id.as_str());
@@ -450,6 +465,11 @@ impl BlockManager {
                     .collect::<Vec<&str>>(),
             )?
         };
+
+        COLLECTOR
+            .counter("BlockManager.persisted", None, None)
+            .dec_n(blocks_for_the_main_pool.len());
+
         let mut state = self
             .state
             .write()
@@ -471,6 +491,10 @@ impl BlockManager {
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
         let to_be_inserted: Vec<Block> = self.branch_diff(head, other).collect();
+
+        COLLECTOR
+            .counter("BlockManager.persisted", None, None)
+            .inc_n(to_be_inserted.len());
 
         let mut state = self
             .state
