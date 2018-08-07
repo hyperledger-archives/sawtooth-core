@@ -123,6 +123,7 @@ class BlockTreeManager:
             self.genesis_block = self.generate_genesis_block()
             self.set_chain_head(self.genesis_block)
             chain_head = self.genesis_block
+            self.block_manager.put([chain_head.block])
 
         self.block_publisher = BlockPublisher(
             block_manager=self.block_manager,
@@ -214,6 +215,7 @@ class BlockTreeManager:
 
         block_wrapper.status = status
 
+        self.block_manager.put([block_wrapper.block])
         if add_to_cache:
             self.block_cache[block_wrapper.identifier] = block_wrapper
 

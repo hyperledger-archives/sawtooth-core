@@ -41,7 +41,7 @@ class MockCompleter():
         self.store = {}
 
     def add_block(self, block):
-        self.store[block.header_signature] = BlockWrapper(block)
+        self.store[block.header_signature] = block
 
     def add_batch(self, batch):
         self.store[batch.header_signature] = batch

@@ -159,6 +159,14 @@ impl Counter {
             .call_method(py, "dec", NoArgs, None)
             .expect("Failed to call Counter.dec()");
     }
+
+    pub fn dec_n(&mut self, value: usize) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.py_counter
+            .call_method(py, "dec", (value,), None)
+            .expect("Failed to call Counter.dec()");
+    }
 }
 
 pub struct Timer {

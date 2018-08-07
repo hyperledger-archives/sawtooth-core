@@ -1033,11 +1033,10 @@ class TestChainController(unittest.TestCase):
         self.block_validator.set_block_validity_fn(
             self.chain_ctrl.block_validation_result)
 
-        self.chain_ctrl.start()
-
         self.init_head = self.chain_ctrl.chain_head
-        block_manager.put([self.init_head])
         self.block_manager = block_manager
+
+        self.chain_ctrl.start()
 
     def tearDown(self):
         shutil.rmtree(self.dir)
@@ -1052,8 +1051,16 @@ class TestChainController(unittest.TestCase):
 
     def test_commit_block(self):
         new_block = self.generate_block(self.init_head)
+        self.receive_block(self.init_head)
+        self.receive_block(new_block)
+
+        LOGGER.critical("committing %s", new_block)
         self.commit_block(new_block)
+
+        LOGGER.critical("asserting committed")
         self.assert_block_committed(new_block)
+
+        LOGGER.critical("asserting head")
         self.assert_is_chain_head(new_block)
 
     def test_on_block_validated(self):
@@ -1111,6 +1118,8 @@ class TestChainController(unittest.TestCase):
 
     def assert_new_block_notified(self, block):
         while not self.consensus_notifier.new_block:
+            LOGGER.critical("processing")
+            self.executor.process_all()
             sleep(1)
         new_block_id = self.consensus_notifier.new_block.header_signature
         block_id = block.header_signature
@@ -1140,7 +1149,7 @@ class TestChainController(unittest.TestCase):
             *args, **kwargs)
 
     def receive_block(self, block):
-        self.chain_ctrl.on_block_received(block)
+        self.chain_ctrl.queue_block(block.header_signature)
 
     def commit_block(self, block):
         self.chain_ctrl.commit_block(block.block)
