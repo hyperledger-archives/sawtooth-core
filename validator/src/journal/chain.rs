@@ -107,7 +107,7 @@ impl From<BlockManagerError> for ChainControllerError {
 }
 
 pub trait ChainObserver: Send + Sync {
-    fn chain_update(&mut self, block: &Block, receipts: &[&TransactionReceipt]);
+    fn chain_update(&mut self, block: &Block, receipts: &[TransactionReceipt]);
 }
 
 #[derive(Debug)]
@@ -586,7 +586,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                         .map(TransactionReceipt::from)
                         .collect();
                     for observer in state.observers.iter_mut() {
-                        observer.chain_update(&block, &receipts.iter().collect::<Vec<_>>());
+                        observer.chain_update(&block, receipts.as_slice());
                     }
                 }
                 let total_committed_txns = match state.chain_reader.count_committed_transactions() {

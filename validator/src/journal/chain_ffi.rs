@@ -588,7 +588,7 @@ impl PyChainObserver {
 }
 
 impl ChainObserver for PyChainObserver {
-    fn chain_update(&mut self, block: &Block, receipts: &[&TransactionReceipt]) {
+    fn chain_update(&mut self, block: &Block, receipts: &[TransactionReceipt]) {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
