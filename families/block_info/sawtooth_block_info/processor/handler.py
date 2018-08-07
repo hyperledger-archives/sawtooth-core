@@ -46,7 +46,7 @@ def validate_hex(string, length):
 
 def validate_timestamp(timestamp, tolerance):
     now = time.time()
-    if (timestamp - now) > tolerance:
+    if timestamp > now + tolerance:
         raise InvalidTransaction(
             "Timestamp must be less than local time."
             " Expected {0} in ({1}-{2}, {1}+{2})".format(
