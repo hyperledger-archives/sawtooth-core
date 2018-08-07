@@ -275,6 +275,7 @@ impl BlockManagerState {
                     self.find_block_ids_for_blocks_with_refcount_1_or_less(&block_id);
                 blocks_to_remove.append(&mut predecesors_to_remove);
                 self.block_by_block_id.remove(tip);
+                self.references_by_block_id.remove(tip);
                 optional_new_tip = new_tip;
             }
         }
@@ -284,7 +285,8 @@ impl BlockManagerState {
             .inc_n(blocks_to_remove.len());
 
         blocks_to_remove.iter().for_each(|block_id| {
-            self.block_by_block_id.remove(block_id.as_str());
+            self.block_by_block_id.remove(block_id);
+            self.references_by_block_id.remove(block_id);
         });
 
         if let Some(block_id) = optional_new_tip {
