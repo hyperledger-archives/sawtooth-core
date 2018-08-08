@@ -126,6 +126,40 @@ impl BlockStore for InMemoryBlockStore {
     }
 }
 
+impl BatchIndex for InMemoryBlockStore {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .flat_map(|block| block.batches)
+            .any(|batch| &batch.header_signature == id))
+    }
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .find(|block| block.batch_ids.contains(&id.into())))
+    }
+}
+
+impl TransactionIndex for InMemoryBlockStore {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .flat_map(|block| block.batches)
+            .flat_map(|batch| batch.transactions)
+            .any(|txn| &txn.header_signature == id))
+    }
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
+        Ok(self.iter()?.find(|block| {
+            block
+                .batches
+                .iter()
+                .any(|batch| batch.transaction_ids.contains(&id.into()))
+        }))
+    }
+}
+
 struct InMemoryGetBlockIterator<'a> {
     blockstore: &'a InMemoryBlockStore,
     block_ids: Vec<String>,
