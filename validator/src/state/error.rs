@@ -38,58 +38,58 @@ pub enum StateDatabaseError {
 
 impl fmt::Display for StateDatabaseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &StateDatabaseError::NotFound(ref msg) => write!(f, "Value not found: {}", msg),
-            &StateDatabaseError::DeserializationError(ref err) => {
+        match *self {
+            StateDatabaseError::NotFound(ref msg) => write!(f, "Value not found: {}", msg),
+            StateDatabaseError::DeserializationError(ref err) => {
                 write!(f, "Unable to deserialize entry: {}", err)
             }
-            &StateDatabaseError::SerializationError(ref err) => {
+            StateDatabaseError::SerializationError(ref err) => {
                 write!(f, "Unable to serialize entry: {}", err)
             }
-            &StateDatabaseError::ChangeLogEncodingError(ref msg) => {
+            StateDatabaseError::ChangeLogEncodingError(ref msg) => {
                 write!(f, "Unable to serialize change log entry: {}", msg)
             }
-            &StateDatabaseError::InvalidRecord => write!(f, "A node was malformed"),
-            &StateDatabaseError::InvalidHash(ref msg) => {
+            StateDatabaseError::InvalidRecord => write!(f, "A node was malformed"),
+            StateDatabaseError::InvalidHash(ref msg) => {
                 write!(f, "The given hash is invalid: {}", msg)
             }
-            &StateDatabaseError::InvalidChangeLogIndex(ref msg) => {
+            StateDatabaseError::InvalidChangeLogIndex(ref msg) => {
                 write!(f, "A change log entry was missing or malformed: {}", msg)
             }
-            &StateDatabaseError::DatabaseError(ref err) => {
+            StateDatabaseError::DatabaseError(ref err) => {
                 write!(f, "A database error occurred: {}", err)
             }
-            &StateDatabaseError::UnknownError => write!(f, "An unknown error occurred"),
+            StateDatabaseError::UnknownError => write!(f, "An unknown error occurred"),
         }
     }
 }
 
 impl Error for StateDatabaseError {
     fn description(&self) -> &str {
-        match self {
-            &StateDatabaseError::NotFound(ref msg) => &msg,
-            &StateDatabaseError::DeserializationError(ref err) => err.description(),
-            &StateDatabaseError::SerializationError(ref err) => err.description(),
-            &StateDatabaseError::ChangeLogEncodingError(ref msg) => &msg,
-            &StateDatabaseError::InvalidRecord => "Invalid record",
-            &StateDatabaseError::InvalidHash(ref msg) => &msg,
-            &StateDatabaseError::InvalidChangeLogIndex(ref msg) => &msg,
-            &StateDatabaseError::DatabaseError(ref err) => err.description(),
-            &StateDatabaseError::UnknownError => "Unknown Error",
+        match *self {
+            StateDatabaseError::NotFound(ref msg) => &msg,
+            StateDatabaseError::DeserializationError(ref err) => err.description(),
+            StateDatabaseError::SerializationError(ref err) => err.description(),
+            StateDatabaseError::ChangeLogEncodingError(ref msg) => &msg,
+            StateDatabaseError::InvalidRecord => "Invalid record",
+            StateDatabaseError::InvalidHash(ref msg) => &msg,
+            StateDatabaseError::InvalidChangeLogIndex(ref msg) => &msg,
+            StateDatabaseError::DatabaseError(ref err) => err.description(),
+            StateDatabaseError::UnknownError => "Unknown Error",
         }
     }
 
     fn cause(&self) -> Option<&Error> {
-        match self {
-            &StateDatabaseError::NotFound(_) => None,
-            &StateDatabaseError::DeserializationError(ref err) => Some(err),
-            &StateDatabaseError::SerializationError(ref err) => Some(err),
-            &StateDatabaseError::ChangeLogEncodingError(_) => None,
-            &StateDatabaseError::InvalidRecord => None,
-            &StateDatabaseError::InvalidHash(_) => None,
-            &StateDatabaseError::InvalidChangeLogIndex(_) => None,
-            &StateDatabaseError::DatabaseError(ref err) => Some(err),
-            &StateDatabaseError::UnknownError => None,
+        match *self {
+            StateDatabaseError::NotFound(_) => None,
+            StateDatabaseError::DeserializationError(ref err) => Some(err),
+            StateDatabaseError::SerializationError(ref err) => Some(err),
+            StateDatabaseError::ChangeLogEncodingError(_) => None,
+            StateDatabaseError::InvalidRecord => None,
+            StateDatabaseError::InvalidHash(_) => None,
+            StateDatabaseError::InvalidChangeLogIndex(_) => None,
+            StateDatabaseError::DatabaseError(ref err) => Some(err),
+            StateDatabaseError::UnknownError => None,
         }
     }
 }
