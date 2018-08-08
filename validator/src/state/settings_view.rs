@@ -129,7 +129,7 @@ fn setting_address(key: &str) -> String {
     let mut address = String::new();
     address.push_str(CONFIG_STATE_NAMESPACE);
     address.push_str(
-        &key.splitn(MAX_KEY_PARTS, ".")
+        &key.splitn(MAX_KEY_PARTS, '.')
             .chain(repeat(""))
             .map(short_hash)
             .take(MAX_KEY_PARTS)

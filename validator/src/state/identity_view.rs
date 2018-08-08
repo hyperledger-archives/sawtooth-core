@@ -184,7 +184,7 @@ fn role_address(name: &str) -> String {
     address.push_str(ROLE_NS);
     address.push_str(
         &name
-            .splitn(MAX_KEY_PARTS, ".")
+            .splitn(MAX_KEY_PARTS, '.')
             .chain(repeat(""))
             .enumerate()
             .map(|(i, part)| short_hash(part, if i == 0 { 14 } else { 16 }))

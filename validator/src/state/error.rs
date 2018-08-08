@@ -120,7 +120,7 @@ impl From<ProtobufError> for StateDatabaseError {
             WireError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{:?}", err)),
             Utf8(err) => StateDatabaseError::ChangeLogEncodingError(format!("{}", err)),
             MessageNotInitialized { message: err } => {
-                StateDatabaseError::ChangeLogEncodingError(format!("{}", err))
+                StateDatabaseError::ChangeLogEncodingError(err.to_string())
             }
         }
     }
