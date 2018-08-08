@@ -55,7 +55,7 @@ fn enforce_rules(rules: Option<String>, expected_signer: &str, batches: &[&Batch
         .for_each(|batch| transactions.extend(&batch.transactions));
 
     let mut valid = true;
-    for rule_str in rules.unwrap().split(";") {
+    for rule_str in rules.unwrap().split(';') {
         if let Some((rule_type, arguments)) = parse_rule(rule_str) {
             if rule_type == "NofX" {
                 valid = do_nofx(&transactions, &arguments);
@@ -215,12 +215,12 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
 
 /// Splits up a rule string in the form of "<rule_type>:<rule_arg>,*"
 fn parse_rule(rule: &str) -> Option<(&str, Vec<&str>)> {
-    let mut rule_parts: Vec<&str> = rule.split(":").collect();
+    let mut rule_parts: Vec<&str> = rule.split(':').collect();
     if rule_parts.len() != 2 {
         return None;
     }
 
-    let rule_args = rule_parts.pop().unwrap().split(",").collect::<Vec<_>>();
+    let rule_args = rule_parts.pop().unwrap().split(',').collect::<Vec<_>>();
     let rule_type = rule_parts.pop().unwrap();
 
     Some((rule_type.trim(), rule_args))
