@@ -25,6 +25,7 @@ use block::Block;
 use journal::block_manager::BlockManager;
 use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
 use journal::NULL_BLOCK_IDENTIFIER;
+use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
@@ -115,6 +116,120 @@ impl<B: BatchIndex, T: TransactionIndex> ChainCommitState<B, T> {
         }
         let last_block = blocks.last().cloned();
         (batch_ids, txn_ids, last_block)
+    }
+
+    fn block_in_chain(&self, block: &Block) -> bool {
+        if let Some(ref common) = self.ancestor {
+            return block.block_num <= common.block_num;
+        }
+        false
+    }
+
+    pub fn validate_no_duplicate_batches(
+        &self,
+        batch_ids: Vec<String>,
+    ) -> Result<(), ChainCommitStateError> {
+        if let Some(batch_id) = check_no_duplicates(batch_ids.as_slice()) {
+            return Err(ChainCommitStateError::DuplicateBatch(batch_id));
+        }
+        for id in batch_ids {
+            if self.uncommitted_batch_ids.contains(&id) {
+                return Err(ChainCommitStateError::DuplicateBatch((*id).into()));
+            }
+
+            if self.batch_index.contains(&id).map_err(|err| {
+                ChainCommitStateError::Error(format!("Reading contains on BatchIndex: {:?}", err))
+            })? {
+                if let Some(ref block) = self
+                    .batch_index
+                    .get_block_by_id(&id)
+                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                {
+                    if self.block_in_chain(block) {
+                        return Err(ChainCommitStateError::DuplicateBatch(id));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_no_duplicate_transactions(
+        &self,
+        transaction_ids: Vec<String>,
+    ) -> Result<(), ChainCommitStateError> {
+        if let Some(txn_id) = check_no_duplicates(transaction_ids.as_slice()) {
+            return Err(ChainCommitStateError::DuplicateTransaction(txn_id));
+        }
+
+        for id in transaction_ids {
+            if self.uncommitted_txn_ids.contains(&(*id).into()) {
+                return Err(ChainCommitStateError::DuplicateTransaction(id));
+            }
+
+            if self
+                .transaction_index
+                .contains(&id)
+                .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+            {
+                if let Some(ref block) = self
+                    .transaction_index
+                    .get_block_by_id(&id)
+                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                {
+                    if self.block_in_chain(block) {
+                        return Err(ChainCommitStateError::DuplicateTransaction(id));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate_transaction_dependencies(
+        self,
+        transactions: &[Transaction],
+    ) -> Result<(), ChainCommitStateError> {
+        let mut dependencies = vec![];
+        let mut txn_ids = vec![];
+        for txn in transactions {
+            txn_ids.push(txn.header_signature.clone());
+
+            for dep in &txn.dependencies {
+                dependencies.push(dep.clone());
+            }
+        }
+        for dep in dependencies {
+            // Check for dependencies within the given block's batches
+            if txn_ids.contains(&dep) {
+                continue;
+            }
+
+            // Check for dependencies within the uncommitted blocks
+            if self.uncommitted_txn_ids.contains(&dep) {
+                continue;
+            }
+
+            // Check for the dependency in the committed blocks
+            if self
+                .transaction_index
+                .contains(&dep)
+                .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+            {
+                if let Some(ref block) = self
+                    .transaction_index
+                    .get_block_by_id(&dep)
+                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                {
+                    if self.block_in_chain(block) {
+                        continue;
+                    }
+                }
+            }
+            return Err(ChainCommitStateError::MissingDependency(dep));
+        }
+        Ok(())
     }
 }
 
