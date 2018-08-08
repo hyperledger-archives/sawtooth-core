@@ -342,6 +342,16 @@ impl SyncBlockPublisher {
                         finalize_result.remaining_batches.clone(),
                         finalize_result.last_batch.clone(),
                     );
+
+                    let previous_block_id = &state
+                        .candidate_block
+                        .as_ref()
+                        .expect("Failed to get candidate block, even though it is being published!")
+                        .previous_block_id();
+                    self.block_manager
+                        .unref_block(previous_block_id)
+                        .expect("Unable to unref block that was ref'ed during initialize block");
+
                     state.candidate_block = None;
                     match finalize_result.block {
                         Some(block) => Some(Ok(
