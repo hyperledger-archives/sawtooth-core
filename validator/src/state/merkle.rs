@@ -93,7 +93,7 @@ impl MerkleDatabase {
         let removed_addresses = if change_log.get_successors().len() > 1 {
             // Currently, we don't clean up a parent with multiple successors
             vec![]
-        } else if change_log.get_successors().len() == 0 {
+        } else if change_log.get_successors().is_empty() {
             // deleting the tip of a trie lineage
 
             let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
@@ -102,12 +102,12 @@ impl MerkleDatabase {
                     change_log.take_additions(),
                 )?;
 
-            for hash in deletion_candidates.iter() {
+            for hash in &deletion_candidates {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
             }
 
-            for hash in duplicates.iter() {
+            for hash in &duplicates {
                 decrement_ref_count(&mut db_writer, hash)?;
             }
 
@@ -138,12 +138,12 @@ impl MerkleDatabase {
                     successor.take_deletions(),
                 )?;
 
-            for hash in deletion_candidates.iter() {
+            for hash in &deletion_candidates {
                 let hash_hex = ::hex::encode(hash);
                 delete_ignore_missing(&mut db_writer, hash_hex.as_bytes())?
             }
 
-            for hash in duplicates.iter() {
+            for hash in &duplicates {
                 decrement_ref_count(&mut db_writer, hash)?;
             }
 
