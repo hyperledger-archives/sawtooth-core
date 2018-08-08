@@ -283,3 +283,559 @@ impl TransactionCommitCache {
             .unwrap()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use block::Block;
+    use journal::block_store::InMemoryBlockStore;
+    use journal::NULL_BLOCK_IDENTIFIER;
+    use transaction::Transaction;
+
+    /// Creates Chains of blocks that match this diagram
+    /// chain4                    B4-4  - B5-4
+    ///                         /
+    /// chain1          B2-1 - B3-1- B4-1 -- B5-1
+    ///               /
+    /// chain0    B0-B1-B2 - B3 -- B4 ---  B5
+    ///                    \
+    /// chain2               B3-2 - B4-2 -- B5-2
+    ///                          \
+    /// chain3                      B4-3 -- B5-3
+    ///
+    ///  the batches in B2-1, for example, are B2-1b0 and B2-1b1
+    ///  the transactions in b0, are B2-1b0t0, B2'b0t1, and B2-1b0t2
+    ///
+    fn create_chains_to_put_in_block_manager() -> Vec<Vec<Block>> {
+        let mut previous_block_id = ::journal::NULL_BLOCK_IDENTIFIER;
+        let chain0 = ["B0", "B1", "B2", "B3", "B4", "B5"]
+            .iter()
+            .map(|ref mut block_id| {
+                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                previous_block_id = block_id;
+                block
+            })
+            .collect();
+
+        let mut previous_block_id = "B1";
+        let chain1 = ["B2-1", "B3-1", "B4-1", "B5-1"]
+            .iter()
+            .map(|ref mut block_id| {
+                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                previous_block_id = block_id;
+                block
+            })
+            .collect();
+
+        let mut previous_block_id = "B3-1";
+        let chain4 = ["B4-4", "B5-4"]
+            .iter()
+            .map(|ref mut block_id| {
+                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                previous_block_id = block_id;
+                block
+            })
+            .collect();
+
+        let mut previous_block_id = "B2";
+        let chain2 = ["B3-2", "B4-2", "B5-2"]
+            .iter()
+            .map(|ref mut block_id| {
+                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                previous_block_id = block_id;
+                block
+            })
+            .collect();
+
+        let mut previous_block_id = "B3-2";
+        let chain3 = ["B4-3", "B5-3"]
+            .iter()
+            .map(|ref mut block_id| {
+                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                previous_block_id = block_id;
+                block
+            })
+            .collect();
+        vec![chain0, chain1, chain4, chain2, chain3]
+    }
+
+    #[test]
+    fn test_no_duplicates() {
+        assert_eq!(
+            check_no_duplicates(&["1".into(), "2".into(), "3".into()]),
+            None
+        );
+    }
+
+    #[test]
+    fn test_duplicates1() {
+        assert_eq!(
+            check_no_duplicates(&["1".into(), "2".into(), "1".into()]),
+            Some("1".into())
+        );
+    }
+
+    #[test]
+    fn test_duplicates2() {
+        assert_eq!(
+            check_no_duplicates(&["1".into(), "1".into(), "2".into()]),
+            Some("1".into())
+        );
+    }
+
+    #[test]
+    fn test_dependency_in_other_fork() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
+            .into_iter()
+            .map(|t_id| create_transaction((*t_id).into(), vec!["B2b0t0".into()]))
+            .collect();
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-1",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_transaction_dependencies(&transactions),
+            Err(ChainCommitStateError::MissingDependency("B2b0t0".into()))
+        );
+    }
+
+    #[test]
+    fn test_dependency_in_chain() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
+            .into_iter()
+            .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
+            .collect();
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-1",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_transaction_dependencies(&transactions),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_dependency_in_uncommitted() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
+            .into_iter()
+            .map(|t_id| create_transaction((*t_id).into(), vec!["B4-3b0t0".into()]))
+            .collect();
+
+        block_manager
+            .persist("B1", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-3",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_transaction_dependencies(&transactions),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_batches() {
+        let (block_manager, block_store) = setup_state();
+
+        let batches = vec!["B6b0".into(), "B6b1".into()];
+
+        block_manager
+            .persist("B4", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+        let chain_commit_state = ChainCommitState::new(
+            "B5",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_no_duplicates_because_batches_in_other_fork() {
+        let (block_manager, block_store) = setup_state();
+
+        let batches = vec!["B3b0".into(), "B3b1".into()];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-2",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_batches_duplicate_in_branch() {
+        let (block_manager, block_store) = setup_state();
+
+        let batches = vec!["B2b0".into(), "B2b1".into()];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manage is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-2",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Err(ChainCommitStateError::DuplicateBatch("B2b0".into()))
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_batches_duplicate_in_uncommitted() {
+        let (block_manager, block_store) = setup_state();
+
+        let batches = vec!["B5-2b0".into(), "B5-2b1".into()];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-2",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Err(ChainCommitStateError::DuplicateBatch("B5-2b0".into()))
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_batches_duplicate_in_other_fork() {
+        let (block_manager, block_store) = setup_state();
+
+        let batches = vec!["B2b0".into(), "B2b1".into()];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-1",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_transactions() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions = vec![
+            "B6b0t0".into(),
+            "B6b0t1".into(),
+            "B6b0t2".into(),
+            "B6b1t0".into(),
+            "B6b1t1".into(),
+            "B6b1t2".into(),
+        ];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_transactions_duplicate_in_branch() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2b0t2".into()];
+
+        block_manager
+            .persist("B5-3", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-2",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Err(ChainCommitStateError::DuplicateTransaction("B2b0t2".into())),
+        )
+    }
+
+    #[test]
+    fn test_no_duplicate_transactions_duplicate_in_uncommitted() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2-1b0t1".into()];
+
+        block_manager
+            .persist("B5-3", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-4",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Err(ChainCommitStateError::DuplicateTransaction(
+                "B2-1b0t1".into()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_no_duplicate_transactions_duplicate_in_other_fork() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2b0t1".into()];
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B5-1",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_before_genesis() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions = vec!["B0b0t0".into(), "B0b0t1".into(), "B0b0t2".into()];
+        let batches = vec!["B0b0".into(), "B0b1".into()];
+        let block_store_clone = block_store.clone();
+        let chain_commit_state = ChainCommitState::new(
+            NULL_BLOCK_IDENTIFIER,
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store.clone(),
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Ok(())
+        );
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Ok(())
+        );
+
+        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
+        let batches = vec!["B3b0".into(), "B3b1".into()];
+        let chain_commit_state = ChainCommitState::new(
+            "B2",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store.clone(),
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Ok(())
+        );
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Ok(())
+        );
+
+        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
+        let batches = vec!["B3b0".into(), "B3b1".into()];
+
+        let chain_commit_state = ChainCommitState::new(
+            "B3",
+            &block_manager,
+            *block_store.clone(),
+            *block_store.clone(),
+            *block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_batches(batches),
+            Err(ChainCommitStateError::DuplicateBatch("B3b0".into()))
+        );
+        assert_eq!(
+            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            Err(ChainCommitStateError::DuplicateTransaction("B3b0t0".into()))
+        );
+    }
+
+    fn create_block_w_batches_txns(previous_block_id: &str, block_id: &str) -> Block {
+        let batches = vec!["b0", "b1"]
+            .into_iter()
+            .map(|batch_id: &str| {
+                let batch_header_signature = format!("{}{}", block_id, batch_id);
+                let txns = vec!["t0", "t1", "t2"]
+                    .into_iter()
+                    .map(|t_id: &str| {
+                        let txn_id = format!("{}{}", batch_header_signature, t_id);
+                        create_transaction(txn_id, vec![])
+                    })
+                    .collect();
+                create_batch(batch_header_signature, txns)
+            })
+            .collect();
+
+        let block = create_block(block_id, previous_block_id, batches);
+
+        block
+    }
+
+    fn create_block(block_id: &str, previous_id: &str, batches: Vec<Batch>) -> Block {
+        let batch_ids = batches.iter().map(|b| b.header_signature.clone()).collect();
+        Block {
+            header_signature: block_id.into(),
+            batches,
+            state_root_hash: "".into(),
+            consensus: vec![],
+            batch_ids,
+            signer_public_key: "".into(),
+            previous_block_id: previous_id.into(),
+            block_num: 0,
+            header_bytes: vec![],
+        }
+    }
+
+    fn create_batch(batch_id: String, transactions: Vec<Transaction>) -> Batch {
+        let transaction_ids = transactions
+            .iter()
+            .map(|t| t.header_signature.clone())
+            .collect();
+        Batch {
+            header_signature: batch_id,
+            transactions,
+            signer_public_key: "".into(),
+            transaction_ids,
+            trace: false,
+            header_bytes: vec![],
+        }
+    }
+
+    fn create_transaction(txn_id: String, dependencies: Vec<String>) -> Transaction {
+        Transaction {
+            header_signature: txn_id,
+            payload: vec![],
+            batcher_public_key: "".into(),
+            dependencies,
+            family_name: "".into(),
+            family_version: "".into(),
+            inputs: vec![],
+            outputs: vec![],
+            nonce: "".into(),
+            payload_sha512: "".into(),
+            signer_public_key: "".into(),
+            header_bytes: vec![],
+        }
+    }
+
+    fn setup_state() -> (BlockManager, Box<InMemoryBlockStore>) {
+        let mut block_manager = BlockManager::new();
+
+        for branch in create_chains_to_put_in_block_manager() {
+            block_manager
+                .put(branch)
+                .expect("The branches were created to be `put` in the block manager without error");
+        }
+        let block_store = Box::new(InMemoryBlockStore::new());
+        block_manager
+            .add_store("commit", block_store.clone())
+            .expect("The block manager failed to add a blockstore");
+
+        (block_manager, block_store)
+    }
+
+}
