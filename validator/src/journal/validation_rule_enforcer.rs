@@ -183,7 +183,7 @@ fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
 fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&str]) -> bool {
     let indices: Result<Vec<usize>, _> = arguments.iter().map(|s| s.trim().parse()).collect();
 
-    if indices.is_err() || indices.as_ref().unwrap().len() == 0 {
+    if indices.is_err() || indices.as_ref().unwrap().is_empty() {
         warn!(
             "Ignore, local requires one or more comma separated integers \
              that represent indices, not {:?}",
