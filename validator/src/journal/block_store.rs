@@ -38,7 +38,19 @@ pub trait BlockStore: Sync + Send {
     fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
-#[derive(Default)]
+pub trait BatchIndex {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
+}
+
+pub trait TransactionIndex {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
+}
+
+#[derive(Clone, Default)]
 pub struct InMemoryBlockStore {
     block_by_block_id: HashMap<String, Block>,
     chain_head_num: u64,
