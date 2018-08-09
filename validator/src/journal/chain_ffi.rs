@@ -271,6 +271,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
     chain_controller: *mut c_void,
     block: *mut *const u8,
     block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(chain_controller);
 
@@ -279,8 +280,9 @@ pub unsafe extern "C" fn chain_controller_chain_head(
     if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
         match chain_head.write_to_bytes() {
             Ok(payload) => {
+                *block_cap = payload.capacity();
                 *block_len = payload.len();
-                *block = payload.as_ptr();
+                *block = payload.as_slice().as_ptr();
 
                 mem::forget(payload);
 

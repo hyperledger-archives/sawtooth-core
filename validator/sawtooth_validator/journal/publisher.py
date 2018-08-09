@@ -291,23 +291,27 @@ class BlockPublisher(OwnedPointer):
         self._py_call('initialize_block', ctypes.py_object(block))
 
     def summarize_block(self, force=False):
-        (c_result, c_result_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
         self._call(
             'summarize_block',
             ctypes.c_bool(force),
-            ctypes.byref(c_result), ctypes.byref(c_result_len))
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        return ffi.from_c_bytes(c_result, c_result_len)
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
     def finalize_block(self, consensus=None, force=False):
-        (c_result, c_result_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
         self._call(
             'finalize_block',
             consensus, len(consensus),
             ctypes.c_bool(force),
-            ctypes.byref(c_result), ctypes.byref(c_result_len))
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        return ffi.from_c_bytes(c_result, c_result_len).decode('utf-8')
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap).decode('utf-8')
 
     def cancel_block(self):
         self._call("cancel_block")

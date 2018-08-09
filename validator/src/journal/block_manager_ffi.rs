@@ -228,6 +228,7 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
     iterator: *mut c_void,
     block_bytes: *mut *const u8,
     block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
@@ -237,8 +238,9 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
             .write_to_bytes()
             .expect("Failed to serialize proto Block");
 
-        *block_len = bytes.as_slice().len();
-        *block_bytes = bytes.as_ptr();
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
 
         mem::forget(bytes);
 
@@ -277,6 +279,7 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
     iterator: *mut c_void,
     block_bytes: *mut *const u8,
     block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
@@ -286,8 +289,9 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
             .write_to_bytes()
             .expect("Failed to serialize proto Block");
 
-        *block_len = bytes.as_slice().len();
-        *block_bytes = bytes.as_ptr();
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
 
         mem::forget(bytes);
 
@@ -336,6 +340,7 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     iterator: *mut c_void,
     block_bytes: *mut *const u8,
     block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
@@ -345,8 +350,9 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
             .write_to_bytes()
             .expect("Failed to serialize proto Block");
 
-        *block_len = bytes.as_slice().len();
-        *block_bytes = bytes.as_ptr();
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
 
         mem::forget(bytes);
 

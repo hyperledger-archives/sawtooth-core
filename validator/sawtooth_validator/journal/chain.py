@@ -123,18 +123,19 @@ class ChainController(OwnedPointer):
         return self.chain_head_fn()
 
     def chain_head_fn(self):
-        (c_result, c_result_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
 
         _libexec('chain_controller_chain_head',
                  self.pointer,
-                 ctypes.byref(c_result),
-                 ctypes.byref(c_result_len))
+                 ctypes.byref(vec_ptr),
+                 ctypes.byref(vec_len),
+                 ctypes.byref(vec_cap))
 
         # Check if NULL
-        if not c_result:
+        if not vec_ptr:
             return None
 
-        payload = ffi.from_c_bytes(c_result, c_result_len)
+        payload = ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
         block = Block()
         block.ParseFromString(payload)
 
