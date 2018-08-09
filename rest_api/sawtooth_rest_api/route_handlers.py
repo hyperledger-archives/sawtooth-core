@@ -262,7 +262,7 @@ class RouteHandler:
             paging: Paging info and nav, like total resources and a next link
         """
         paging_controls = self._get_paging_controls(request)
-
+        self._get_head_id(request)
         head, root = await self._head_to_root(request.url.query.get(
             'head', None))
         validator_query = client_state_pb2.ClientStateListRequest(
