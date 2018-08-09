@@ -28,6 +28,7 @@ from sawtooth_validator.ffi import OwnedPointer
 from sawtooth_validator.consensus.handlers import BlockEmpty
 from sawtooth_validator.consensus.handlers import BlockInProgress
 from sawtooth_validator.consensus.handlers import BlockNotInitialized
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -167,6 +168,12 @@ class BlockPublisher(OwnedPointer):
         """
         super(BlockPublisher, self).__init__('block_publisher_drop')
 
+        if chain_head is not None:
+            chain_head = BlockWrapper.wrap(chain_head)
+            chain_head_block = chain_head.block
+        else:
+            chain_head_block = None
+
         self._to_exception(PY_LIBRARY.call(
             'block_publisher_new',
             block_manager.pointer,
@@ -177,7 +184,7 @@ class BlockPublisher(OwnedPointer):
             ctypes.py_object(settings_cache),
             ctypes.py_object(block_sender),
             ctypes.py_object(batch_sender),
-            ctypes.py_object(chain_head),
+            ctypes.py_object(chain_head_block),
             ctypes.py_object(identity_signer),
             ctypes.py_object(data_dir),
             ctypes.py_object(config_dir),
