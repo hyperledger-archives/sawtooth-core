@@ -27,13 +27,23 @@ use sawtooth_sdk::consensus::{engine::*, service::Service};
 
 const DEFAULT_WAIT_TIME: u64 = 0;
 
+#[derive(Default)]
+struct LogGuard {
+    not_ready_to_summarize: bool,
+    not_ready_to_finalize: bool,
+}
+
 pub struct DevmodeService {
     service: Box<Service>,
+    log_guard: LogGuard,
 }
 
 impl DevmodeService {
     pub fn new(service: Box<Service>) -> Self {
-        DevmodeService { service }
+        DevmodeService {
+            service,
+            log_guard: LogGuard::default(),
+        }
     }
 
     fn get_chain_head(&mut self) -> Block {
@@ -63,18 +73,26 @@ impl DevmodeService {
         debug!("Finalizing block");
         let mut summary = self.service.summarize_block();
         while let Err(Error::BlockNotReady) = summary {
-            warn!("Block not ready to summarize");
+            if !self.log_guard.not_ready_to_summarize {
+                self.log_guard.not_ready_to_summarize = true;
+                warn!("Block not ready to summarize");
+            }
             sleep(time::Duration::from_secs(1));
             summary = self.service.summarize_block();
         }
+        self.log_guard.not_ready_to_summarize = false;
 
         let consensus: Vec<u8> = create_consensus(&summary.expect("Failed to summarize block"));
         let mut block_id = self.service.finalize_block(consensus.clone());
         while let Err(Error::BlockNotReady) = block_id {
-            warn!("Block not ready to finalize");
+            if !self.log_guard.not_ready_to_finalize {
+                self.log_guard.not_ready_to_finalize = true;
+                warn!("Block not ready to finalize");
+            }
             sleep(time::Duration::from_secs(1));
             block_id = self.service.finalize_block(consensus.clone());
         }
+        self.log_guard.not_ready_to_finalize = false;
 
         block_id.expect("Failed to finalize block")
     }
