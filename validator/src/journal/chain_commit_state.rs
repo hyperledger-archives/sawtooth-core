@@ -24,6 +24,7 @@ use batch::Batch;
 use block::Block;
 use journal::block_manager::BlockManager;
 use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
+use journal::NULL_BLOCK_IDENTIFIER;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
@@ -49,6 +50,72 @@ fn check_no_duplicates(ids: &[String]) -> Option<String> {
         }
     }
     None
+}
+
+impl<B: BatchIndex, T: TransactionIndex> ChainCommitState<B, T> {
+    pub fn new<BS: BlockStore>(
+        branch_head_id: &str,
+        block_manager: &BlockManager,
+        batch_index: B,
+        transaction_index: T,
+        block_store: BS,
+    ) -> Result<Self, ChainCommitStateError> {
+        let current_chain_head_id = block_store
+            .iter()
+            .map_err(|err| {
+                ChainCommitStateError::Error(format!(
+                    "Getting chain head in ChainCommitState: {:?}",
+                    err
+                ))
+            })?
+            .nth(0)
+            .map(|block| block.header_signature.clone());
+
+        let (batch_ids, txn_ids, common_ancestor) = if branch_head_id != NULL_BLOCK_IDENTIFIER {
+            if let Some(ref chain_head_id) = current_chain_head_id {
+                let uncommitted_branch = block_manager
+                    .branch_diff(branch_head_id, chain_head_id)
+                    .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?;
+
+                Self::return_ids_for_blocks_batches_txns(uncommitted_branch)
+            } else {
+                let uncommitted_branch = block_manager
+                    .branch(branch_head_id)
+                    .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?;
+                let (batch_ids, txn_ids, _) =
+                    Self::return_ids_for_blocks_batches_txns(uncommitted_branch);
+                (batch_ids, txn_ids, None)
+            }
+        } else {
+            (vec![], vec![], None)
+        };
+        Ok(ChainCommitState {
+            batch_index,
+            transaction_index,
+            ancestor: common_ancestor,
+            uncommitted_batch_ids: batch_ids,
+            uncommitted_txn_ids: txn_ids,
+        })
+    }
+
+    fn return_ids_for_blocks_batches_txns(
+        uncommitted_branch: Box<Iterator<Item = Block>>,
+    ) -> (Vec<String>, Vec<String>, Option<Block>) {
+        let mut batch_ids = vec![];
+        let mut txn_ids = vec![];
+        let mut blocks = vec![];
+        for block in uncommitted_branch {
+            for batch in &block.batches {
+                batch_ids.push(batch.header_signature.clone());
+                for transaction in &batch.transactions {
+                    txn_ids.push(transaction.header_signature.clone());
+                }
+            }
+            blocks.push(block);
+        }
+        let last_block = blocks.last().cloned();
+        (batch_ids, txn_ids, last_block)
+    }
 }
 
 pub struct TransactionCommitCache {
