@@ -37,7 +37,9 @@ def load_default_validator_config():
         scheduler='serial',
         minimum_peer_connectivity=3,
         maximum_peer_connectivity=10,
-        state_pruning_block_depth=100)
+        state_pruning_block_depth=100,
+        fork_cache_keep_time=300,
+    )
 
 
 def load_toml_validator_config(filename):
@@ -65,7 +67,8 @@ def load_toml_validator_config(filename):
          'network_private_key', 'scheduler', 'permissions', 'roles',
          'opentsdb_url', 'opentsdb_db', 'opentsdb_username',
          'opentsdb_password', 'minimum_peer_connectivity',
-         'maximum_peer_connectivity', 'state_pruning_block_depth'])
+         'maximum_peer_connectivity', 'state_pruning_block_depth',
+         'fork_cache_keep_time'])
     if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -112,7 +115,9 @@ def load_toml_validator_config(filename):
         maximum_peer_connectivity=toml_config.get(
             "maximum_peer_connectivity", None),
         state_pruning_block_depth=toml_config.get(
-            "state_pruning_block_depth", None)
+            "state_pruning_block_depth", None),
+        fork_cache_keep_time=toml_config.get(
+            "fork_cache_keep_time", None),
     )
 
     return config
@@ -143,6 +148,7 @@ def merge_validator_config(configs):
     minimum_peer_connectivity = None
     maximum_peer_connectivity = None
     state_pruning_block_depth = None
+    fork_cache_keep_time = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -183,6 +189,8 @@ def merge_validator_config(configs):
             maximum_peer_connectivity = config.maximum_peer_connectivity
         if config.state_pruning_block_depth is not None:
             state_pruning_block_depth = config.state_pruning_block_depth
+        if config.fork_cache_keep_time is not None:
+            fork_cache_keep_time = config.fork_cache_keep_time
 
     return ValidatorConfig(
         bind_network=bind_network,
@@ -203,7 +211,9 @@ def merge_validator_config(configs):
         opentsdb_password=opentsdb_password,
         minimum_peer_connectivity=minimum_peer_connectivity,
         maximum_peer_connectivity=maximum_peer_connectivity,
-        state_pruning_block_depth=state_pruning_block_depth)
+        state_pruning_block_depth=state_pruning_block_depth,
+        fork_cache_keep_time=fork_cache_keep_time,
+    )
 
 
 def parse_permissions(permissions):
@@ -253,7 +263,8 @@ class ValidatorConfig:
                  opentsdb_username=None, opentsdb_password=None,
                  minimum_peer_connectivity=None,
                  maximum_peer_connectivity=None,
-                 state_pruning_block_depth=None):
+                 state_pruning_block_depth=None,
+                 fork_cache_keep_time=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -274,6 +285,7 @@ class ValidatorConfig:
         self._minimum_peer_connectivity = minimum_peer_connectivity
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._state_pruning_block_depth = state_pruning_block_depth
+        self._fork_cache_keep_time = fork_cache_keep_time
 
     @property
     def bind_network(self):
@@ -351,6 +363,10 @@ class ValidatorConfig:
     def state_pruning_block_depth(self):
         return self._state_pruning_block_depth
 
+    @property
+    def fork_cache_keep_time(self):
+        return self._fork_cache_keep_time
+
     def __repr__(self):
         # not including  password for opentsdb
         return (
@@ -360,7 +376,8 @@ class ValidatorConfig:
             "scheduler={}, permissions={}, roles={} "
             "opentsdb_url={}, opentsdb_db={}, opentsdb_username={}, "
             "minimum_peer_connectivity={}, maximum_peer_connectivity={}, "
-            "state_pruning_block_depth={})"
+            "state_pruning_block_depth={}, "
+            "fork_cache_keep_time={})"
         ).format(
             self.__class__.__name__,
             repr(self._bind_network),
@@ -380,7 +397,9 @@ class ValidatorConfig:
             repr(self._opentsdb_username),
             repr(self._minimum_peer_connectivity),
             repr(self._maximum_peer_connectivity),
-            repr(self._state_pruning_block_depth))
+            repr(self._state_pruning_block_depth),
+            repr(self._fork_cache_keep_time),
+        )
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -402,7 +421,8 @@ class ValidatorConfig:
             ('opentsdb_password', self._opentsdb_password),
             ('minimum_peer_connectivity', self._minimum_peer_connectivity),
             ('maximum_peer_connectivity', self._maximum_peer_connectivity),
-            ('state_pruning_block_depth', self._state_pruning_block_depth)
+            ('state_pruning_block_depth', self._state_pruning_block_depth),
+            ('fork_cache_keep_time', self._fork_cache_keep_time)
         ])
 
     def to_toml_string(self):

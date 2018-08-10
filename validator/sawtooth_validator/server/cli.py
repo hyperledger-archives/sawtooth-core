@@ -112,6 +112,8 @@ def main(args):
             peers=args['peers'],
             scheduler=args['scheduler'],
             seeds=args['seeds'],
+            state_pruning_block_depth=args['state_pruning_block_depth'],
+            fork_cache_keep_time=args['fork_cache_keep_time'],
         )
 
         validator_config = \
@@ -265,6 +267,7 @@ def main(args):
         validator_config.minimum_peer_connectivity,
         validator_config.maximum_peer_connectivity,
         validator_config.state_pruning_block_depth,
+        validator_config.fork_cache_keep_time,
         validator_config.network_public_key,
         validator_config.network_private_key,
         roles=validator_config.roles)

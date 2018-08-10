@@ -84,6 +84,7 @@ class Validator:
                  minimum_peer_connectivity,
                  maximum_peer_connectivity,
                  state_pruning_block_depth,
+                 fork_cache_keep_time,
                  network_public_key=None,
                  network_private_key=None,
                  roles=None):
@@ -329,6 +330,7 @@ class Validator:
             chain_head_lock=block_publisher.chain_head_lock,
             consensus_notifier=consensus_notifier,
             state_pruning_block_depth=state_pruning_block_depth,
+            fork_cache_keep_time=fork_cache_keep_time,
             data_dir=data_dir,
             observers=[
                 event_broadcaster,
