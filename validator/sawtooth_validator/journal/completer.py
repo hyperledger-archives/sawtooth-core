@@ -19,6 +19,7 @@ from collections import deque
 
 from sawtooth_validator.journal.block_manager import UnknownBlock
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf import network_pb2
@@ -114,6 +115,14 @@ class Completer:
             'incomplete_batches_length', instance=self)
         self._incomplete_batches_length.set_value(0)
 
+    def _ref_block(self, block_id):
+        if block_id != NULL_BLOCK_IDENTIFIER:
+            self._block_manager.ref_block(block_id)
+
+    def _unref_block(self, block_id):
+        if block_id != NULL_BLOCK_IDENTIFIER:
+            self._block_manager.unref_block(block_id)
+
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
             the journal. If the block's predecessor is not in the block_manager
@@ -146,7 +155,7 @@ class Completer:
             # unref the previous block. If the block is complete, first put the
             # new block in, incrementing the internal reference count of the
             # previous block, and then unref the previous block.
-            self._block_manager.ref_block(block.previous_block_id)
+            self._ref_block(block.previous_block_id)
             previous_block_in_block_manager = True
         except UnknownBlock:
             previous_block_in_block_manager = False
@@ -175,7 +184,7 @@ class Completer:
         if len(block.batches) > len(block.header.batch_ids):
             LOGGER.debug("Block has extra batches. Dropping %s", block)
             # Drop Ref-A
-            self._block_manager.unref_block(block.previous_block_id)
+            self._unref_block(block.previous_block_id)
             return None
 
         # used to supplement batch_cache, contains batches already in block
@@ -198,8 +207,7 @@ class Completer:
                     # We have already requested the batch, do not do so again
                     if batch_id in self._requested:
                         # Drop Ref-A
-                        self._block_manager.unref_block(
-                            block.previous_block_id)
+                        self._unref_block(block.previous_block_id)
                         return None
                     self._requested[batch_id] = None
                     self._gossip.broadcast_batch_by_batch_id_request(batch_id)
@@ -208,7 +216,7 @@ class Completer:
             # The block cannot be completed.
             if not building:
                 # Drop Ref-A
-                self._block_manager.unref_block(block.previous_block_id)
+                self._unref_block(block.previous_block_id)
                 return None
 
             batches = self._finalize_batch_list(block, temp_batches)
@@ -221,7 +229,7 @@ class Completer:
             # Create Ref-B
             self._block_manager.put([block.block])
             # Drop Ref-A
-            self._block_manager.unref_block(block.previous_block_id)
+            self._unref_block(block.previous_block_id)
             return block
 
         batch_id_list = [x.header_signature for x in block.batches]
@@ -233,7 +241,7 @@ class Completer:
             # Create Ref-B
             self._block_manager.put([block.block])
             # Drop Ref-A
-            self._block_manager.unref_block(block.previous_block_id)
+            self._unref_block(block.previous_block_id)
             return block
         # Check to see if the block has all batch_ids and they can be put
         # in the correct order
@@ -246,7 +254,7 @@ class Completer:
                 block.batches.extend(batches)
             else:
                 # Drop Ref-A
-                self._block_manager.unref_block(block.previous_block_id)
+                self._unref_block(block.previous_block_id)
                 return None
 
             if block.header_signature in self._requested:
@@ -255,13 +263,13 @@ class Completer:
             # Create Ref-B
             self._block_manager.put([block.block])
             # Drop Ref-A
-            self._block_manager.unref_block(block.previous_block_id)
+            self._unref_block(block.previous_block_id)
             return block
 
         LOGGER.debug("Block.header.batch_ids does not match set of "
                      "batches in block.batches Dropping %s", block)
         # Drop Ref-A
-        self._block_manager.unref_block(block.previous_block_id)
+        self._unref_block(block.previous_block_id)
         return None
 
     def _finalize_batch_list(self, block, temp_batches):
