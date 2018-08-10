@@ -192,6 +192,50 @@ pub unsafe extern "C" fn block_manager_put(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn block_manager_ref_block(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).ref_block(block_id) {
+        Ok(()) => ErrorCode::Success,
+        Err(BlockManagerError::UnknownBlock) => ErrorCode::UnknownBlock,
+        Err(err) => {
+            error!("Unexpected error while ref'ing block: {:?}", err);
+            ErrorCode::Error
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_unref_block(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).unref_block(block_id) {
+        Ok(_) => ErrorCode::Success,
+        Err(BlockManagerError::UnknownBlock) => ErrorCode::UnknownBlock,
+        Err(err) => {
+            error!("Unexpected error while unref'ing block: {:?}", err);
+            ErrorCode::Error
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_new(
     block_manager: *mut c_void,
     block_ids: *const *const c_char,

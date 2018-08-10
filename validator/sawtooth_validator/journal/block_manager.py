@@ -86,6 +86,20 @@ class BlockManager(OwnedPointer):
                  self.pointer,
                  c_put_items, ctypes.c_size_t(len(branch)))
 
+    # Raises UnknownBlock if the block is not found
+    def ref_block(self, block_id):
+        _libexec(
+            "block_manager_ref_block",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()))
+
+    # Raises UnknownBlock if the block is not found
+    def unref_block(self, block_id):
+        _libexec(
+            "block_manager_unref_block",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()))
+
     def persist(self, block_id, store_name):
         _libexec("block_manager_persist",
                  self.pointer,

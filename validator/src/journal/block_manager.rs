@@ -261,7 +261,7 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn unref_block(&mut self, tip: &str) -> Result<(), BlockManagerError> {
+    fn unref_block(&mut self, tip: &str) -> Result<bool, BlockManagerError> {
         let (external_ref_count, internal_ref_count, block_id) =
             self.lower_tip_blocks_refcount(tip)?;
 
@@ -269,15 +269,19 @@ impl BlockManagerState {
 
         let mut optional_new_tip = None;
 
+        let mut dropped = false;
+
         if external_ref_count == 0 && internal_ref_count == 0 {
             if let Some(block_id) = block_id {
                 let (mut predecesors_to_remove, new_tip) =
                     self.find_block_ids_for_blocks_with_refcount_1_or_less(&block_id);
                 blocks_to_remove.append(&mut predecesors_to_remove);
+                debug!("Removing block {}", tip);
                 self.block_by_block_id.remove(tip);
                 self.references_by_block_id.remove(tip);
                 optional_new_tip = new_tip;
             }
+            dropped = true;
         }
 
         COLLECTOR
@@ -285,6 +289,7 @@ impl BlockManagerState {
             .inc_n(blocks_to_remove.len());
 
         blocks_to_remove.iter().for_each(|block_id| {
+            debug!("Removing block {}", block_id);
             self.block_by_block_id.remove(block_id);
             self.references_by_block_id.remove(block_id);
         });
@@ -295,7 +300,7 @@ impl BlockManagerState {
             };
         };
 
-        Ok(())
+        Ok(dropped)
     }
 
     fn lower_tip_blocks_refcount(
@@ -419,7 +424,7 @@ impl BlockManager {
 
     /// Starting at a tip block, if the tip block's ref-count drops to 0,
     /// remove all blocks until a ref-count of 1 is found.
-    pub fn unref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
+    pub fn unref_block(&self, tip: &str) -> Result<bool, BlockManagerError> {
         let mut state = self
             .state
             .write()

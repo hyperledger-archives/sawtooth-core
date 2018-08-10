@@ -421,7 +421,10 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 .expect("No lock holder should have poisoned the lock");
 
             if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-                // Add a reference to to hand to the block validator.
+                // Create Ref-C: Hold this block until we finish validating it. If the block is
+                // invalid, unref it. If the block is valid, pass the reference on to consensus and
+                // wait to unref until consensus renders a {commit, ignore, fail} opinion on the
+                // block.
                 if let Err(err) = state.block_manager.ref_block(&block_id) {
                     error!(
                         "Unable to ref block received from block manager; ignoring: {:?}",
@@ -448,21 +451,38 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            let mut expired: Vec<String> = Vec::new();
-
+            // Transfer Ref-B: Implicitly transfer ownership of the external reference placed on
+            // this block by the completer. The ForkCache is now responsible for unrefing the block
+            // when it expires. This happens when either 1) the block is replaced in the cache by
+            // another block which extends it, at which point this block will have an int. ref.
+            // count of at least 1, or 2) the fork becomes inactive the block is purged, at which
+            // point the block may be dropped if no other ext. ref's exist.
             if let Some(block_id) = state
                 .fork_cache
                 .insert(&block_id, Some(&block.previous_block_id))
             {
-                expired.push(block_id);
+                // Drop Ref-B: This fork was extended and so this block has an int. ref. count of
+                // at least one, so we can drop the ext. ref. placed on the block to keep the fork
+                // around.
+                match state.block_manager.unref_block(&block_id) {
+                    Ok(true) => {
+                        panic!(
+                            "Block {:?} was unref'ed because it was the head of a fork that was
+                            just extended. The unref caused the block to drop, but it should have
+                            had an internal reference count of at least 1.",
+                            block_id,
+                        );
+                    }
+                    Ok(false) => (),
+                    Err(err) => error!("Failed to unref expired block {}: {:?}", block_id, err),
+                }
             }
 
-            expired.extend_from_slice(state.fork_cache.purge().as_slice());
-
-            for block_id in expired {
-                debug!("Unref'ing block {}", block_id);
+            for block_id in state.fork_cache.purge() {
+                // Drop Ref-B: The fork is no longer active, and we have to drop the ext. ref.
+                // placed on the block to keep the fork around.
                 if let Err(err) = state.block_manager.unref_block(&block_id) {
-                    error!("Failed to unref expired block: {}", block_id);
+                    error!("Failed to unref expired block {}: {:?}", block_id, err);
                 }
             }
         }
@@ -471,7 +491,19 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     }
 
     pub fn ignore_block(&self, block: &Block) {
-        info!("Ignoring block {}", block)
+        info!("Ignoring block {}", block);
+        let state = self
+            .state
+            .read()
+            .expect("No lock holder should have poisoned the lock");
+
+        // Drop Ref-C: Consensus is not interested in this block anymore
+        if let Err(err) = state.block_manager.unref_block(&block.header_signature) {
+            error!(
+                "Failed to unref ignored block {}: {:?}",
+                &block.header_signature, err
+            );
+        }
     }
 
     pub fn fail_block(&self, block: &Block) {
@@ -483,6 +515,19 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         cache
             .find(|result| &result.block_id == &block.header_signature)
             .map(|result| result.status = BlockStatus::Invalid);
+
+        let state = self
+            .state
+            .read()
+            .expect("No lock holder should have poisoned the lock");
+
+        // Drop Ref-C: Consensus is not interested in this block anymore
+        if let Err(err) = state.block_manager.unref_block(&block.header_signature) {
+            error!(
+                "Failed to unref failed block {}: {:?}",
+                &block.header_signature, err
+            );
+        }
     }
 
     fn set_block_validation_result(&self, result: BlockValidationResult) {
@@ -526,19 +571,14 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
+        // Transfer Ref-C: The block has been validated and ownership of the ext. ref. is passed
+        // to the consensus engine. The consensus engine is responsible for rendering an opinion of
+        // either commit, fail, or ignore, at which time the ext. ref. will be accounted for.
         self.consensus_notifier.notify_block_new(block);
 
         match self.notify_block_validation_results_received(&block) {
             Ok(_) => (),
             Err(err) => warn!("{:?}", err),
-        }
-        // Remove the ref that was handed to the block validator on submission
-        let state = self
-            .state
-            .read()
-            .expect("Unable to acquire lock; it has been poisoned");
-        if let Err(err) = state.block_manager.unref_block(&block.header_signature) {
-            warn!("Unable to unref block that was just validated: {:?}", err);
         }
     }
 
@@ -561,7 +601,22 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     continue;
                 }
 
+                // Transfer Ref-C: Consensus has decided this block should become the new chain
+                // head, so the ChainController takes ownership of this ext. ref. The block should
+                // be unref'ed when a new chain head replaces it.
                 state.chain_head = Some(block.clone());
+
+                // Drop Ref-C: This block is no longer the chain head, and we need to remove the
+                // ext. ref. from when it was.
+                if let Err(err) = state
+                    .block_manager
+                    .unref_block(&chain_head.header_signature)
+                {
+                    error!(
+                        "Failed to unref failed block {}: {:?}",
+                        &chain_head.header_signature, err,
+                    );
+                }
 
                 let new_roots: Vec<String> = result
                     .new_chain
