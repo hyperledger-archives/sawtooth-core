@@ -21,6 +21,35 @@ use cpython;
 use cpython::ObjectProtocol;
 
 use batch::Batch;
+use block::Block;
+use journal::block_manager::BlockManager;
+use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
+
+#[derive(Debug, PartialEq)]
+pub enum ChainCommitStateError {
+    MissingDependency(String),
+    DuplicateTransaction(String),
+    DuplicateBatch(String),
+    BlockStoreUpdated,
+    Error(String),
+}
+
+pub struct ChainCommitState<B: BatchIndex, T: TransactionIndex> {
+    batch_index: B,
+    transaction_index: T,
+    ancestor: Option<Block>,
+    uncommitted_batch_ids: Vec<String>,
+    uncommitted_txn_ids: Vec<String>,
+}
+
+fn check_no_duplicates(ids: &[String]) -> Option<String> {
+    for (i, id1) in ids.iter().enumerate() {
+        if ids[i + 1..ids.len()].contains(id1) {
+            return Some(id1.to_string());
+        }
+    }
+    None
+}
 
 pub struct TransactionCommitCache {
     committed: HashSet<String>,
