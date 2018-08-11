@@ -57,19 +57,13 @@ impl From<protobuf::ProtobufError> for IdentityViewError {
 /// Provides a view into global state which translates Role and Policy names
 /// into the corresponding addresses, and returns the deserialized values from
 /// state.
-pub struct IdentityView<R>
-where
-    R: StateReader,
-{
-    state_reader: R,
+pub struct IdentityView {
+    state_reader: Box<StateReader>,
 }
 
-impl<R> IdentityView<R>
-where
-    R: StateReader,
-{
+impl IdentityView {
     /// Creates an IdentityView from a given StateReader.
-    pub fn new(state_reader: R) -> Self {
+    pub fn new(state_reader: Box<StateReader>) -> Self {
         IdentityView { state_reader }
     }
 
@@ -241,7 +235,7 @@ mod tests {
     #[test]
     fn no_roles() {
         let mock_reader = MockStateReader::new(vec![]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(None, identity_view.get_role("my_role").unwrap());
         let expect_empty: Vec<Role> = vec![];
@@ -254,7 +248,7 @@ mod tests {
             role_entry("role1", "some_policy"),
             role_entry("role2", "some_other_policy"),
         ]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(
             Some(role("role2", "some_other_policy")),
@@ -268,7 +262,7 @@ mod tests {
             role_entry("role1", "some_policy"),
             role_entry("role2", "some_other_policy"),
         ]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(
             vec![
@@ -282,7 +276,7 @@ mod tests {
     #[test]
     fn no_policies() {
         let mock_reader = MockStateReader::new(vec![]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(None, identity_view.get_policy("my_policy").unwrap());
         let expect_empty: Vec<Policy> = vec![];
@@ -295,7 +289,7 @@ mod tests {
             policy_entry("policy1", &["some_pubkey"]),
             policy_entry("policy2", &["some_other_pubkey"]),
         ]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(
             Some(policy("policy2", &["some_other_pubkey"])),
@@ -309,7 +303,7 @@ mod tests {
             policy_entry("policy1", &["some_pubkey"]),
             policy_entry("policy2", &["some_other_pubkey"]),
         ]);
-        let identity_view = IdentityView::new(mock_reader);
+        let identity_view = IdentityView::new(Box::new(mock_reader));
 
         assert_eq!(
             vec![

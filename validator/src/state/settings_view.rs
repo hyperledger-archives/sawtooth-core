@@ -79,19 +79,13 @@ impl SettingsViewFactory {
     }
 }
 
-pub struct SettingsView<R>
-where
-    R: StateReader,
-{
-    state_reader: R,
+pub struct SettingsView {
+    state_reader: Box<StateReader>,
 }
 
-impl<R> SettingsView<R>
-where
-    R: StateReader,
-{
+impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
-    pub fn new(state_reader: R) -> Self {
+    pub fn new(state_reader: Box<StateReader>) -> Self {
         SettingsView { state_reader }
     }
 
@@ -203,7 +197,7 @@ mod tests {
             setting_entry("my.other.list", "13;14;15"),
         ]);
 
-        let settings_view = SettingsView::new(mock_reader);
+        let settings_view = SettingsView::new(Box::new(mock_reader));
 
         // Test not founds
         assert_eq!(
