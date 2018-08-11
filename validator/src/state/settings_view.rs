@@ -140,6 +140,12 @@ impl SettingsView {
     }
 }
 
+impl From<Box<StateReader>> for SettingsView {
+    fn from(state_reader: Box<StateReader>) -> Self {
+        SettingsView { state_reader }
+    }
+}
+
 fn setting_address(key: &str) -> String {
     let mut address = String::new();
     address.push_str(CONFIG_STATE_NAMESPACE);

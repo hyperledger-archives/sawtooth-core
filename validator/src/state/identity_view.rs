@@ -141,6 +141,12 @@ impl IdentityView {
     }
 }
 
+impl From<Box<StateReader>> for IdentityView {
+    fn from(state_reader: Box<StateReader>) -> Self {
+        IdentityView::new(state_reader)
+    }
+}
+
 trait ProtobufList<T>: protobuf::Message {
     fn values(&self) -> &[T];
 }
