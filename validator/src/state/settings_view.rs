@@ -14,6 +14,8 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
@@ -60,6 +62,7 @@ impl From<ParseIntError> for SettingsViewError {
 
 pub struct SettingsView {
     state_reader: Box<StateReader>,
+    cache: RefCell<HashMap<String, Option<String>>>,
 }
 
 // Given that this is not threadsafe, but can be members of objects that can
@@ -70,7 +73,10 @@ unsafe impl Sync for SettingsView {}
 impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
     pub fn new(state_reader: Box<StateReader>) -> Self {
-        SettingsView { state_reader }
+        SettingsView {
+            state_reader,
+            cache: RefCell::new(HashMap::new()),
+        }
     }
 
     pub fn get_setting_str(
@@ -100,33 +106,49 @@ impl SettingsView {
     where
         F: FnOnce(&str) -> Result<T, SettingsViewError>,
     {
-        self.state_reader
-            .get(&setting_address(key))
-            .map_err(SettingsViewError::from)
-            .and_then(|bytes_opt: Option<Vec<u8>>| {
-                Ok(if let Some(bytes) = bytes_opt {
-                    Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+        {
+            let cache = self.cache.borrow();
+            if cache.contains_key(key) {
+                eprintln!("{} in cache", key);
+                return if let Some(str_value) = cache.get(key).unwrap() {
+                    Ok(Some(value_parser(&str_value)?))
                 } else {
-                    None
-                })
-            })
-            .and_then(|setting_opt: Option<Setting>| {
-                if let Some(setting) = setting_opt {
-                    for setting_entry in setting.get_entries() {
-                        if setting_entry.get_key() == key {
-                            let parsed_value = value_parser(&setting_entry.get_value())?;
-                            return Ok(Some(parsed_value));
-                        }
-                    }
-                }
-                Ok(default_value)
-            })
+                    Ok(default_value)
+                };
+            }
+        }
+        let bytes_opt = self.state_reader.get(&setting_address(key))?;
+        let setting_opt = if let Some(bytes) = bytes_opt {
+            Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+        } else {
+            None
+        };
+
+        let optional_str_value: Option<String> = setting_opt.and_then(|setting| {
+            setting
+                .get_entries()
+                .iter()
+                .find(|entry| entry.key == key)
+                .map(|entry| entry.get_value().to_string())
+        });
+
+        {
+            // cache it:
+            let mut cache = self.cache.borrow_mut();
+            cache.insert(key.to_string(), optional_str_value.clone());
+        }
+
+        if let Some(str_value) = optional_str_value.as_ref() {
+            Ok(Some(value_parser(str_value)?))
+        } else {
+            Ok(default_value)
+        }
     }
 }
 
 impl From<Box<StateReader>> for SettingsView {
     fn from(state_reader: Box<StateReader>) -> Self {
-        SettingsView { state_reader }
+        SettingsView::new(state_reader)
     }
 }
 
