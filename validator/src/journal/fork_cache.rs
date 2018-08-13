@@ -44,7 +44,7 @@ impl<F: Fn(String)> ForkCache<F> {
     /// Insert a new fork. If `previous` is not None and it exists, it is removed and `on_expired`
     /// is called with it. Inserting the same `head` twice has no affect.
     pub fn insert(&mut self, head: &str, previous: Option<&str>) {
-        if let Some(_) = self.cache.get(head) {
+        if self.cache.get(head).is_some() {
             return;
         }
 
@@ -65,11 +65,11 @@ impl<F: Fn(String)> ForkCache<F> {
             .into_iter()
             .partition(|(_, timestamp)| timestamp.elapsed() > self.keep_time);
 
-        for (head, timestamp) in keep.into_iter() {
+        for (head, timestamp) in keep {
             self.cache.insert(head, timestamp);
         }
 
-        for (head, _) in expired.into_iter() {
+        for (head, _) in expired {
             (self.on_expired)(head);
         }
     }

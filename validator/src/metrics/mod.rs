@@ -104,9 +104,9 @@ impl MetricsCollectorHandle {
 
         let py_level = self
             .py_metrics
-            .get(py, into_level_str(level.unwrap_or(Default::default())))
+            .get(py, into_level_str(level.unwrap_or_default()))
             .expect("Failed to get metric level");
-        let py_tags: PyDict = tags.unwrap_or_else(|| HashMap::new()).into_py_object(py);
+        let py_tags: PyDict = tags.unwrap_or_else(HashMap::new).into_py_object(py);
         let kwargs = PyDict::new(py);
         kwargs.set_item(py, "level", py_level).unwrap();
         kwargs.set_item(py, "tags", py_tags).unwrap();
