@@ -304,9 +304,7 @@ impl BlockManagerState {
     ) -> Result<(u64, u64, Option<String>), BlockManagerError> {
         match self.references_by_block_id.get_mut(tip) {
             Some(ref mut ref_block) => {
-                if ref_block.external_ref_count > 0 {
-                    ref_block.decrease_external_ref_count();
-                }
+                ref_block.decrease_external_ref_count();
                 Ok((
                     ref_block.external_ref_count,
                     ref_block.internal_ref_count,
