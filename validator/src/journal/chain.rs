@@ -611,18 +611,6 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 // be unref'ed when a new chain head replaces it.
                 state.chain_head = Some(block.clone());
 
-                // Drop Ref-C: This block is no longer the chain head, and we need to remove the
-                // ext. ref. from when it was.
-                if let Err(err) = state
-                    .block_manager
-                    .unref_block(&chain_head.header_signature)
-                {
-                    error!(
-                        "Failed to unref previous chain head {}: {:?}",
-                        &chain_head.header_signature, err,
-                    );
-                }
-
                 let new_roots: Vec<String> = result
                     .new_chain
                     .iter()
@@ -650,6 +638,18 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     &state.chain_head.as_ref().unwrap().header_signature,
                     COMMIT_STORE,
                 )?;
+
+                // Drop Ref-C: This block is no longer the chain head, and we need to remove the
+                // ext. ref. from when it was.
+                if let Err(err) = state
+                    .block_manager
+                    .unref_block(&chain_head.header_signature)
+                {
+                    error!(
+                        "Failed to unref previous chain head {}: {:?}",
+                        &chain_head.header_signature, err,
+                    );
+                }
 
                 info!(
                     "Chain head updated to {}",
