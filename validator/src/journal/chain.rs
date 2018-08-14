@@ -204,7 +204,7 @@ impl ChainControllerState {
         };
 
         info!(
-            "Comparing current chain head '{}' against new block '{}'",
+            "Building fork resoultion for chain head '{}' against new block '{}'",
             &chain_head, &new_block
         );
         if let Some(prior_heads_successor) = result.new_chain.get(0) {
@@ -613,7 +613,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     .unref_block(&chain_head.header_signature)
                 {
                     error!(
-                        "Failed to unref failed block {}: {:?}",
+                        "Failed to unref previous chain head {}: {:?}",
                         &chain_head.header_signature, err,
                     );
                 }
