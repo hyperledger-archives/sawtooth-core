@@ -204,6 +204,6 @@ class ConsensusProxy:
         block_iter = self._block_manager.get(block_ids)
         blocks = [b for b in block_iter]
         if len(blocks) != len(block_ids):
-            return UnknownBlock()
+            raise UnknownBlock()
 
         return blocks
