@@ -36,6 +36,10 @@ class DuplicateBatch(Exception):
         self.batch_id = batch_id
 
 
+class BlockStoreUpdated(Exception):
+    pass
+
+
 class ChainCommitState:
     """Checking to see if a batch or transaction in a block has already been
     committed is somewhat difficult because of the presence of forks. While
@@ -124,8 +128,14 @@ class ChainCommitState:
                 raise DuplicateTransaction(txn_id)
 
             if self.block_store.has_transaction(txn_id):
-                committed_block =\
-                    self.block_store.get_block_by_transaction_id(txn_id)
+                try:
+                    committed_block =\
+                        self.block_store.get_block_by_transaction_id(txn_id)
+                except ValueError:
+                    raise BlockStoreUpdated(
+                        "The BlockStore updated while checking for duplicate"
+                        " transactions."
+                    )
 
                 if self._block_in_chain(committed_block):
                     raise DuplicateTransaction(txn_id)
@@ -149,8 +159,14 @@ class ChainCommitState:
 
             # Check if the batch is in one of the committed blocks
             if self.block_store.has_batch(batch_id):
-                committed_block =\
-                    self.block_store.get_block_by_batch_id(batch_id)
+                try:
+                    committed_block =\
+                        self.block_store.get_block_by_batch_id(batch_id)
+                except ValueError:
+                    raise BlockStoreUpdated(
+                        "The BlockStore updated while checking for duplicate"
+                        " transactions."
+                    )
 
                 # This is only a duplicate batch if the batch is in a block
                 # that would stay committed if this block were committed. This

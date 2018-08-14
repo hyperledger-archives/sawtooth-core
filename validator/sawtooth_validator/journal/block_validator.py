@@ -28,6 +28,7 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
 from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
 from sawtooth_validator.journal.chain_commit_state import MissingDependency
+from sawtooth_validator.journal.chain_commit_state import BlockStoreUpdated
 from sawtooth_validator.journal.validation_rule_enforcer import \
     enforce_validation_rules
 from sawtooth_validator.state.settings_view import SettingsViewFactory
@@ -218,7 +219,8 @@ class BlockValidator:
 
                 except (DuplicateBatch,
                         DuplicateTransaction,
-                        MissingDependency) as err:
+                        MissingDependency,
+                        BlockStoreUpdated) as err:
                     if not self._check_chain_head_updated(chain_head, block):
                         raise BlockValidationFailure(
                             "Block {} failed validation: {}".format(
