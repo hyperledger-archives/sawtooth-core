@@ -220,20 +220,22 @@ impl ChainControllerState {
 
     fn check_chain_head_updated(
         &self,
-        chain_head: &Block,
+        expected_chain_head: &Block,
         block: &Block,
     ) -> Result<bool, ChainControllerError> {
-        let current_chain_head = self.chain_reader.chain_head()?;
-        if current_chain_head
+        let actual_chain_head = self.chain_reader.chain_head()?;
+        if actual_chain_head
             .as_ref()
-            .map(|block| block.header_signature != chain_head.header_signature)
+            .map(|actual_chain_head| {
+                actual_chain_head.header_signature != expected_chain_head.header_signature
+            })
             .unwrap_or(false)
         {
             warn!(
                 "Chain head updated from {} to {} while resolving \
                  fork for block {}. Reprocessing resolution.",
-                chain_head,
-                current_chain_head.as_ref().unwrap(),
+                expected_chain_head,
+                actual_chain_head.as_ref().unwrap(),
                 block
             );
             return Ok(true);
@@ -457,24 +459,27 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
             // another block which extends it, at which point this block will have an int. ref.
             // count of at least 1, or 2) the fork becomes inactive the block is purged, at which
             // point the block may be dropped if no other ext. ref's exist.
-            if let Some(block_id) = state
+            if let Some(previous_block_id) = state
                 .fork_cache
                 .insert(&block_id, Some(&block.previous_block_id))
             {
                 // Drop Ref-B: This fork was extended and so this block has an int. ref. count of
                 // at least one, so we can drop the ext. ref. placed on the block to keep the fork
                 // around.
-                match state.block_manager.unref_block(&block_id) {
+                match state.block_manager.unref_block(&previous_block_id) {
                     Ok(true) => {
                         panic!(
                             "Block {:?} was unref'ed because it was the head of a fork that was
                             just extended. The unref caused the block to drop, but it should have
                             had an internal reference count of at least 1.",
-                            block_id,
+                            previous_block_id,
                         );
                     }
                     Ok(false) => (),
-                    Err(err) => error!("Failed to unref expired block {}: {:?}", block_id, err),
+                    Err(err) => error!(
+                        "Failed to unref expired block {}: {:?}",
+                        previous_block_id, err
+                    ),
                 }
             }
 
