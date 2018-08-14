@@ -171,11 +171,11 @@ impl ChainControllerState {
 
         let new_chain = self
             .block_manager
-            .branch_diff(&new_block.header_signature, &chain_head.header_signature)
+            .branch_diff(&new_block.header_signature, &chain_head.header_signature)?
             .collect::<Vec<Block>>();
         let current_chain = self
             .block_manager
-            .branch_diff(&chain_head.header_signature, &new_block.header_signature)
+            .branch_diff(&chain_head.header_signature, &new_block.header_signature)?
             .collect::<Vec<Block>>();
 
         let committed_batches: Vec<Batch> = new_chain.iter().fold(vec![], |mut batches, block| {

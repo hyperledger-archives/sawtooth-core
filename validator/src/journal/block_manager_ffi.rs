@@ -306,8 +306,12 @@ pub unsafe extern "C" fn block_manager_branch_iterator_new(
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidPythonObject,
     };
+    match (*(block_manager as *mut BlockManager)).branch(tip) {
+        Ok(branch) => *iterator = Box::into_raw(branch) as *const c_void,
+        Err(BlockManagerError::UnknownBlock) => return ErrorCode::UnknownBlock,
+        Err(_) => return ErrorCode::Error,
+    }
 
-    *iterator = Box::into_raw((*(block_manager as *mut BlockManager)).branch(tip)) as *const c_void;
     ErrorCode::Success
 }
 
@@ -363,9 +367,11 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidPythonObject,
     };
-
-    *iterator = Box::into_raw((*(block_manager as *mut BlockManager)).branch_diff(tip, exclude))
-        as *const c_void;
+    match (*(block_manager as *mut BlockManager)).branch_diff(tip, exclude) {
+        Ok(branch_diff) => *iterator = Box::into_raw(branch_diff) as *const c_void,
+        Err(BlockManagerError::UnknownBlock) => return ErrorCode::UnknownBlock,
+        Err(_) => return ErrorCode::Error,
+    }
 
     ErrorCode::Success
 }

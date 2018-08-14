@@ -402,16 +402,23 @@ impl BlockManager {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
-    pub fn branch(&self, tip: &str) -> Box<Iterator<Item = Block>> {
-        Box::new(BranchIterator::new(Arc::clone(&self.state), tip.into()))
+    pub fn branch(&self, tip: &str) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+        Ok(Box::new(BranchIterator::new(
+            Arc::clone(&self.state),
+            tip.into(),
+        )?))
     }
 
-    pub fn branch_diff(&self, tip: &str, exclude: &str) -> Box<Iterator<Item = Block>> {
-        Box::new(BranchDiffIterator::new(
+    pub fn branch_diff(
+        &self,
+        tip: &str,
+        exclude: &str,
+    ) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+        Ok(Box::new(BranchDiffIterator::new(
             Arc::clone(&self.state),
             tip,
             exclude,
-        ))
+        )?))
     }
 
     pub fn ref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
@@ -451,7 +458,7 @@ impl BlockManager {
         other: &str,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        let to_be_removed: Vec<Block> = self.branch_diff(other, head).collect();
+        let to_be_removed: Vec<Block> = self.branch_diff(other, head)?.collect();
         let blocks_for_the_main_pool = {
             let mut state = self
                 .state
@@ -491,12 +498,9 @@ impl BlockManager {
 
     fn insert_blocks_in_blockstore(
         &self,
-        head: &str,
-        other: &str,
+        to_be_inserted: Vec<Block>,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        let to_be_inserted: Vec<Block> = self.branch_diff(head, other).collect();
-
         COLLECTOR
             .counter("BlockManager.persisted", None, None)
             .inc_n(to_be_inserted.len());
@@ -551,12 +555,13 @@ impl BlockManager {
             let other = head_block_in_blockstore.as_str();
 
             self.remove_blocks_from_blockstore(head, other, store_name)?;
-
-            self.insert_blocks_in_blockstore(head, other, store_name)?;
+            let to_be_inserted = self.branch_diff(head, other)?.collect();
+            self.insert_blocks_in_blockstore(to_be_inserted, store_name)?;
         } else {
             // There are no other blocks in the blockstore and so
             // we would like to insert all of the blocks
-            self.insert_blocks_in_blockstore(head, "NULL", store_name)?;
+            let to_be_inserted = self.branch(head)?.collect();
+            self.insert_blocks_in_blockstore(to_be_inserted, store_name)?;
         }
 
         Ok(())
@@ -618,30 +623,29 @@ pub struct BranchIterator {
 }
 
 impl BranchIterator {
-    fn new(state: Arc<RwLock<BlockManagerState>>, first_block_id: String) -> Self {
+    fn new(
+        state: Arc<RwLock<BlockManagerState>>,
+        first_block_id: String,
+    ) -> Result<Self, BlockManagerError> {
         let next_block_id = {
             let mut block_manager = state
                 .write()
                 .expect("Unable to obtain write lock; it has been poisoned");
             match block_manager.ref_block(&first_block_id) {
                 Ok(_) => first_block_id,
-                Err(BlockManagerError::UnknownBlock) => NULL_BLOCK_IDENTIFIER.to_string(),
-
+                Err(BlockManagerError::UnknownBlock) => return Err(BlockManagerError::UnknownBlock),
                 Err(err) => {
-                    error!(
-                        "Unable to ref block at {}: {:?}; ignoring",
-                        &first_block_id, err
-                    );
-                    NULL_BLOCK_IDENTIFIER.to_string()
+                    warn!("During constructing branch iterator: {:?}", err);
+                    return Err(BlockManagerError::UnknownBlock);
                 }
             }
         };
-        BranchIterator {
+        Ok(BranchIterator {
             state,
             initial_block_id: next_block_id.clone(),
             next_block_id,
             blockstore: None,
-        }
+        })
     }
 }
 
@@ -724,9 +728,13 @@ pub struct BranchDiffIterator {
 }
 
 impl BranchDiffIterator {
-    fn new(state: Arc<RwLock<BlockManagerState>>, tip: &str, exclude: &str) -> Self {
-        let mut left_iterator = BranchIterator::new(state.clone(), tip.into()).peekable();
-        let mut right_iterator = BranchIterator::new(state, exclude.into()).peekable();
+    fn new(
+        state: Arc<RwLock<BlockManagerState>>,
+        tip: &str,
+        exclude: &str,
+    ) -> Result<Self, BlockManagerError> {
+        let mut left_iterator = BranchIterator::new(state.clone(), tip.into())?.peekable();
+        let mut right_iterator = BranchIterator::new(state, exclude.into())?.peekable();
 
         let difference = {
             left_iterator
@@ -745,11 +753,11 @@ impl BranchDiffIterator {
             right_iterator.nth(difference.abs() as usize - 1);
         }
 
-        BranchDiffIterator {
+        Ok(BranchDiffIterator {
             left_branch: left_iterator,
             right_branch: right_iterator,
             has_reached_common_ancestor: false,
-        }
+        })
     }
 }
 
@@ -939,16 +947,17 @@ mod tests {
             .put(vec![a.clone(), b.clone(), c.clone()])
             .unwrap();
 
-        let mut branch_iter = block_manager.branch("C");
+        let mut branch_iter = block_manager.branch("C").unwrap();
 
         assert_eq!(branch_iter.next(), Some(c));
         assert_eq!(branch_iter.next(), Some(b));
         assert_eq!(branch_iter.next(), Some(a));
         assert_eq!(branch_iter.next(), None);
 
-        let mut empty_iter = block_manager.branch("P");
-
-        assert_eq!(empty_iter.next(), None);
+        assert!(
+            block_manager.branch("P").is_err(),
+            "Iterating on a branch that does not exist returns an error"
+        );
     }
 
     #[test]
@@ -965,38 +974,34 @@ mod tests {
         block_manager.put(vec![c.clone()]).unwrap();
         block_manager.put(vec![d.clone(), e.clone()]).unwrap();
 
-        let mut branch_diff_iter = block_manager.branch_diff("C", "B");
+        let mut branch_diff_iter = block_manager.branch_diff("C", "B").unwrap();
 
         assert_eq!(branch_diff_iter.next(), Some(c.clone()));
         assert_eq!(branch_diff_iter.next(), None);
 
-        let mut branch_diff_iter2 = block_manager.branch_diff("B", "E");
+        let mut branch_diff_iter2 = block_manager.branch_diff("B", "E").unwrap();
 
         assert_eq!(branch_diff_iter2.next(), Some(b.clone()));
         assert_eq!(branch_diff_iter2.next(), None);
 
-        let mut branch_diff_iter3 = block_manager.branch_diff("C", "E");
+        let mut branch_diff_iter3 = block_manager.branch_diff("C", "E").unwrap();
 
         assert_eq!(branch_diff_iter3.next(), None);
 
-        let mut branch_diff_iter4 = block_manager.branch_diff("E", "C");
+        let mut branch_diff_iter4 = block_manager.branch_diff("E", "C").unwrap();
 
         assert_eq!(branch_diff_iter4.next(), Some(e.clone()));
         assert_eq!(branch_diff_iter4.next(), Some(d.clone()));
         assert_eq!(branch_diff_iter4.next(), None);
 
-        // Test that it will appropriately return the complete tree when
-        // the exclude is unknown
-        let mut branch_diff_iter5 = block_manager.branch_diff("E", "X");
-        assert_eq!(branch_diff_iter5.next(), Some(e.clone()));
-        assert_eq!(branch_diff_iter5.next(), Some(d.clone()));
-        assert_eq!(branch_diff_iter5.next(), Some(c.clone()));
-        assert_eq!(branch_diff_iter5.next(), Some(a.clone()));
-        assert_eq!(branch_diff_iter5.next(), None);
+        // Test that it will return an error if a block is missing
+        assert!(block_manager.branch_diff("E", "X").is_err());
 
-        // Test that it will return None when the tip specified is unknown
-        let mut branch_diff_iter6 = block_manager.branch_diff("X", "E");
-        assert_eq!(branch_diff_iter6.next(), None);
+        // Test that it will return an error result if the tip is unkown
+        assert!(
+            block_manager.branch_diff("X", "E").is_err(),
+            "Branch Diff with an unknown tip will cause an error"
+        );
     }
 
     #[test]
