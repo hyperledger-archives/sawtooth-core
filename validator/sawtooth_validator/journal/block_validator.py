@@ -340,7 +340,8 @@ class BlockValidator:
                 prev_block = next(
                     self._block_manager.get([block_header.previous_block_id]))
             except StopIteration:
-                pass
+                if block_header.previous_block_id != NULL_BLOCK_IDENTIFIER:
+                    raise
             else:
                 if self._block_validity(prev_block.header_signature) == \
                         BlockStatus.Invalid:
