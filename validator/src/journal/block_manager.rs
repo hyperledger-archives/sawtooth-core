@@ -1051,4 +1051,33 @@ mod tests {
             )))
         );
     }
+
+    #[test]
+    fn test_idempotent() {
+        let mut blockman = BlockManager::new();
+
+        let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let b = create_block("B", "A", 1);
+        let c = create_block("C", "B", 1);
+        let d = create_block("D", "C", 1);
+
+        blockman
+            .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
+            .unwrap();
+        // Ext. Ref. = 1
+
+        blockman.ref_block("D");
+        // Ext. Ref. = 2
+
+        blockman
+            .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
+            .unwrap();
+        // Ext. Ref. = 2
+
+        assert!(!blockman.unref_block("D").unwrap());
+        // Ext. Ref. = 1
+
+        assert!(blockman.unref_block("D").unwrap());
+        // Ext. Ref. = 0, dropped
+    }
 }
