@@ -1051,7 +1051,6 @@ class TestChainController(unittest.TestCase):
 
     def test_commit_block(self):
         new_block = self.generate_block(self.init_head)
-        self.receive_block(self.init_head)
         self.receive_block(new_block)
 
         LOGGER.critical("committing %s", new_block)
@@ -1148,8 +1147,9 @@ class TestChainController(unittest.TestCase):
         return self.block_tree_manager.generate_block(
             *args, **kwargs)
 
-    def receive_block(self, block):
-        self.chain_ctrl.queue_block(block.header_signature)
+    def receive_block(self, blkw):
+        self.block_tree_manager.block_manager.put([blkw.block])
+        self.chain_ctrl.queue_block(blkw.header_signature)
 
     def commit_block(self, block):
         self.chain_ctrl.commit_block(block.block)

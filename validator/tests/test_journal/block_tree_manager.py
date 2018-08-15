@@ -121,9 +121,11 @@ class BlockTreeManager:
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()
-            self.set_chain_head(self.genesis_block)
             chain_head = self.genesis_block
             self.block_manager.put([chain_head.block])
+            self.block_manager.persist(
+                chain_head.block.header_signature,
+                "commit_store")
 
         self.block_publisher = BlockPublisher(
             block_manager=self.block_manager,
@@ -146,9 +148,6 @@ class BlockTreeManager:
     @property
     def chain_head(self):
         return self.block_store.chain_head
-
-    def set_chain_head(self, block):
-        self.block_store.update_chain([block], [])
 
     def generate_block(self, previous_block=None,
                        add_to_store=False,
