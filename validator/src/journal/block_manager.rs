@@ -473,12 +473,10 @@ impl BlockManager {
 
     fn remove_blocks_from_blockstore(
         &self,
-        head: &str,
-        other: &str,
+        to_be_removed: Vec<Block>,
+        block_by_block_id: &mut HashMap<String, Block>,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        let to_be_removed: Vec<Block> = self.branch_diff(other, head)?.collect();
-
         let blocks_for_the_main_pool = {
             let mut blockstore_by_name = self
                 .state
@@ -501,11 +499,6 @@ impl BlockManager {
             .counter("BlockManager.persisted", None, None)
             .dec_n(blocks_for_the_main_pool.len());
 
-        let mut block_by_block_id = self
-            .state
-            .block_by_block_id
-            .write()
-            .expect("Acquiring block pool write lock; lock poisioned");
         for block in blocks_for_the_main_pool {
             block_by_block_id.insert(block.header_signature.clone(), block);
         }
@@ -516,16 +509,13 @@ impl BlockManager {
     fn insert_blocks_in_blockstore(
         &self,
         to_be_inserted: Vec<Block>,
+        block_by_block_id: &mut HashMap<String, Block>,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
         COLLECTOR
             .counter("BlockManager.persisted", None, None)
             .inc_n(to_be_inserted.len());
-        let mut block_by_block_id = self
-            .state
-            .block_by_block_id
-            .write()
-            .expect("Acquiring block pool write lock; lock poisoned");
+
         for block in &to_be_inserted {
             block_by_block_id.remove(&block.header_signature);
         }
@@ -571,15 +561,25 @@ impl BlockManager {
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
-
-            self.remove_blocks_from_blockstore(head, other, store_name)?;
             let to_be_inserted = self.branch_diff(head, other)?.collect();
-            self.insert_blocks_in_blockstore(to_be_inserted, store_name)?;
+            let to_be_removed = self.branch_diff(other, head)?.collect();
+            let mut block_by_block_id = self
+                .state
+                .block_by_block_id
+                .write()
+                .expect("Acquiring block pool write lock; lock poisoned");
+            self.remove_blocks_from_blockstore(to_be_removed, &mut block_by_block_id, store_name)?;
+            self.insert_blocks_in_blockstore(to_be_inserted, &mut block_by_block_id, store_name)?;
         } else {
             // There are no other blocks in the blockstore and so
             // we would like to insert all of the blocks
             let to_be_inserted = self.branch(head)?.collect();
-            self.insert_blocks_in_blockstore(to_be_inserted, store_name)?;
+            let mut block_by_block_id = self
+                .state
+                .block_by_block_id
+                .write()
+                .expect("Acquiring block pool write lock; lock poisoned");
+            self.insert_blocks_in_blockstore(to_be_inserted, &mut block_by_block_id, store_name)?;
         }
 
         Ok(())
