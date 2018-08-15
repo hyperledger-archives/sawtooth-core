@@ -96,28 +96,35 @@ impl RefCount {
 
 /// An Enum describing where a block is found within the BlockManager.
 /// This is used by iterators calling private methods.
-enum BlockLocation<'a> {
+enum BlockLocation {
     MainCache(Block),
-    InStore(&'a str),
+    InStore(String),
     Unknown,
 }
 
 #[derive(Default)]
 struct BlockManagerState {
-    block_by_block_id: HashMap<String, Block>,
+    block_by_block_id: RwLock<HashMap<String, Block>>,
 
-    blockstore_by_name: HashMap<String, Box<BlockStore>>,
+    blockstore_by_name: RwLock<HashMap<String, Box<BlockStore>>>,
 
-    references_by_block_id: HashMap<String, RefCount>,
+    references_by_block_id: RwLock<HashMap<String, RefCount>>,
 }
 
 impl BlockManagerState {
     fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
-        if self.block_by_block_id.contains_key(block_id) {
+        let block_by_block_id = self
+            .block_by_block_id
+            .read()
+            .expect("Acquiring block pool read lock; lock poisoned");
+        if block_by_block_id.contains_key(block_id) {
             return Ok(true);
         }
-
-        for blockstore in self.blockstore_by_name.values() {
+        let blockstore_by_name = self
+            .blockstore_by_name
+            .read()
+            .expect("Acquiring blockstore read lock; lock poisoned");
+        for blockstore in blockstore_by_name.values() {
             if blockstore.get(&[block_id])?.count() > 0 {
                 return Ok(true);
             }
@@ -160,7 +167,11 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn put(&mut self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
+    fn put(&self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
+        let mut references_by_block_id = self
+            .references_by_block_id
+            .write()
+            .expect("Acquiring reference write lock; lock poisoned");
         match branch.split_first() {
             Some((head, tail)) => {
                 if !self.contains(head.previous_block_id.as_str())? {
@@ -172,7 +183,7 @@ impl BlockManagerState {
 
                 self.check_predecessor_relationship(tail, head)?;
                 if !self.contains(&head.header_signature)? {
-                    self.references_by_block_id
+                    references_by_block_id
                         .get_mut(&head.previous_block_id)
                         .map(|r| r.increase_internal_ref_count());
                 }
@@ -186,21 +197,23 @@ impl BlockManagerState {
             }
         }
         if let Some((last_block, blocks_with_references)) = blocks_not_added_yet.split_last() {
-            self.references_by_block_id.insert(
+            references_by_block_id.insert(
                 last_block.header_signature.clone(),
                 RefCount::new_unreffed_block(
                     last_block.header_signature.clone(),
                     last_block.previous_block_id.clone(),
                 ),
             );
-            self.block_by_block_id
-                .insert(last_block.header_signature.clone(), last_block.clone());
+            let mut block_by_block_id = self
+                .block_by_block_id
+                .write()
+                .expect("Acquiring block pool write lock; lock poisoned");
+            block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
             blocks_with_references.into_iter().for_each(|block| {
-                self.block_by_block_id
-                    .insert(block.header_signature.clone(), block.clone());
+                block_by_block_id.insert(block.header_signature.clone(), block.clone());
 
-                self.references_by_block_id.insert(
+                references_by_block_id.insert(
                     block.header_signature.clone(),
                     RefCount::new_reffed_block(
                         block.header_signature.clone(),
@@ -212,24 +225,33 @@ impl BlockManagerState {
 
         COLLECTOR
             .gauge("BlockManager.pool_size", None, None)
-            .set_value(self.block_by_block_id.len());
+            .set_value(
+                self.block_by_block_id
+                    .read()
+                    .expect("Acquiring block pool read lock; lock poisoned")
+                    .len(),
+            );
 
         Ok(())
     }
 
-    fn get_block_from_main_cache_or_blockstore_name<'a>(
-        &'a self,
-        block_id: &str,
-    ) -> BlockLocation<'a> {
-        let block = self.block_by_block_id.get(block_id).cloned();
+    fn get_block_from_main_cache_or_blockstore_name<'a>(&self, block_id: &str) -> BlockLocation {
+        let block_by_block_id = self
+            .block_by_block_id
+            .read()
+            .expect("Acquiring block pool read lock; lock poisoned");
+        let blockstore_by_name = self
+            .blockstore_by_name
+            .read()
+            .expect("Acquiring blockstore by name read lock; lock poisoned");
+        let block = block_by_block_id.get(block_id).cloned();
         if block.is_some() {
             BlockLocation::MainCache(block.unwrap())
         } else {
-            let name: Option<&'a str> = self
-                .blockstore_by_name
+            let name: Option<String> = blockstore_by_name
                 .iter()
                 .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
-                .map(|(name, _)| name.as_str());
+                .map(|(name, _)| name.clone());
 
             name.map(BlockLocation::InStore)
                 .unwrap_or(BlockLocation::Unknown)
@@ -241,25 +263,39 @@ impl BlockManagerState {
         block_id: &str,
         store_name: &str,
     ) -> Result<Option<Block>, BlockManagerError> {
-        Ok(self
+        let blockstore_by_name = self
             .blockstore_by_name
-            .get(store_name)
+            .read()
+            .expect("Acquiring blockstore by name read lock; lock poisoned");
+        let blockstore = blockstore_by_name.get(store_name);
+        let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
             .get(&[block_id])?
-            .nth(0))
+            .nth(0);
+        Ok(block)
     }
 
-    fn ref_block(&mut self, block_id: &str) -> Result<(), BlockManagerError> {
-        match self.references_by_block_id.get_mut(block_id) {
+    fn ref_block(&self, block_id: &str) -> Result<(), BlockManagerError> {
+        match self
+            .references_by_block_id
+            .write()
+            .expect("Acquiring references write lock; lock poisoned")
+            .get_mut(block_id)
+        {
             Some(r) => r.increase_external_ref_count(),
             None => return Err(BlockManagerError::UnknownBlock),
         }
         Ok(())
     }
 
-    fn unref_block(&mut self, tip: &str) -> Result<bool, BlockManagerError> {
+    fn unref_block(&self, tip: &str) -> Result<bool, BlockManagerError> {
+        let mut references_by_block_id = self
+            .references_by_block_id
+            .write()
+            .expect("Acquiring references write lock; lock poisoned");
+
         let (external_ref_count, internal_ref_count, block_id) =
-            self.lower_tip_blocks_refcount(tip)?;
+            self.lower_tip_blocks_refcount(&mut references_by_block_id, tip)?;
 
         let mut blocks_to_remove = vec![];
 
@@ -269,12 +305,18 @@ impl BlockManagerState {
 
         if external_ref_count == 0 && internal_ref_count == 0 {
             if let Some(block_id) = block_id {
-                let (mut predecesors_to_remove, new_tip) =
-                    self.find_block_ids_for_blocks_with_refcount_1_or_less(&block_id);
+                let (mut predecesors_to_remove, new_tip) = self
+                    .find_block_ids_for_blocks_with_refcount_1_or_less(
+                        &references_by_block_id,
+                        &block_id,
+                    );
                 blocks_to_remove.append(&mut predecesors_to_remove);
                 debug!("Removing block {}", tip);
-                self.block_by_block_id.remove(tip);
-                self.references_by_block_id.remove(tip);
+                self.block_by_block_id
+                    .write()
+                    .expect("Acquiring block pool write lock; lock poisoned")
+                    .remove(tip);
+                references_by_block_id.remove(tip);
                 optional_new_tip = new_tip;
             }
             dropped = true;
@@ -286,12 +328,15 @@ impl BlockManagerState {
 
         blocks_to_remove.iter().for_each(|block_id| {
             debug!("Removing block {}", block_id);
-            self.block_by_block_id.remove(block_id);
-            self.references_by_block_id.remove(block_id);
+            self.block_by_block_id
+                .write()
+                .expect("Acquiring block pool write lock; lock poisoned")
+                .remove(block_id);
+            references_by_block_id.remove(block_id);
         });
 
         if let Some(block_id) = optional_new_tip {
-            if let Some(ref mut new_tip) = self.references_by_block_id.get_mut(block_id.as_str()) {
+            if let Some(ref mut new_tip) = references_by_block_id.get_mut(block_id.as_str()) {
                 new_tip.decrease_internal_ref_count();
             };
         };
@@ -300,10 +345,11 @@ impl BlockManagerState {
     }
 
     fn lower_tip_blocks_refcount(
-        &mut self,
+        &self,
+        references_by_block_id: &mut HashMap<String, RefCount>,
         tip: &str,
     ) -> Result<(u64, u64, Option<String>), BlockManagerError> {
-        match self.references_by_block_id.get_mut(tip) {
+        match references_by_block_id.get_mut(tip) {
             Some(ref mut ref_block) => {
                 ref_block.decrease_external_ref_count();
                 Ok((
@@ -319,14 +365,15 @@ impl BlockManagerState {
     /// Starting from some `tip` block_id, walk back until finding a block that has a
     /// internal ref_count >= 2 or an external_ref_count > 0.
     fn find_block_ids_for_blocks_with_refcount_1_or_less(
-        &mut self,
+        &self,
+        references_by_block_id: &HashMap<String, RefCount>,
         tip: &str,
     ) -> (Vec<String>, Option<String>) {
         let mut blocks_to_remove = vec![];
         let mut block_id = tip;
         let pointed_to;
         loop {
-            if let Some(ref ref_block) = self.references_by_block_id.get(block_id) {
+            if let Some(ref ref_block) = references_by_block_id.get(block_id) {
                 if ref_block.internal_ref_count >= 2 || ref_block.external_ref_count >= 1 {
                     pointed_to = Some(block_id.into());
                     break;
@@ -343,12 +390,11 @@ impl BlockManagerState {
         (blocks_to_remove, pointed_to)
     }
 
-    fn add_store(
-        &mut self,
-        store_name: &str,
-        store: Box<BlockStore>,
-    ) -> Result<(), BlockManagerError> {
-        self.blockstore_by_name.insert(store_name.into(), store);
+    fn add_store(&self, store_name: &str, store: Box<BlockStore>) -> Result<(), BlockManagerError> {
+        self.blockstore_by_name
+            .write()
+            .expect("Acquiring blockstore write lock; lock poisoned")
+            .insert(store_name.into(), store);
         Ok(())
     }
 }
@@ -358,7 +404,7 @@ impl BlockManagerState {
 /// that Block's predecessor is also within the BlockManager.
 #[derive(Default, Clone)]
 pub struct BlockManager {
-    state: Arc<RwLock<BlockManagerState>>,
+    state: Arc<BlockManagerState>,
 }
 
 impl BlockManager {
@@ -367,12 +413,7 @@ impl BlockManager {
     }
 
     pub fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
-        let state = self
-            .state
-            .read()
-            .expect("Unable to obtain read lock; it has been poisoned");
-
-        state.contains(block_id)
+        self.state.contains(block_id)
     }
 
     /// Put is idempotent, making the guarantee that after put is called with a
@@ -386,12 +427,7 @@ impl BlockManager {
     ///       branch, an error is returned.
     ///     - If branch is empty, an error is returned
     pub fn put(&self, branch: Vec<Block>) -> Result<(), BlockManagerError> {
-        let mut state = self
-            .state
-            .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-
-        state.put(branch)
+        self.state.put(branch)
     }
 
     pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Option<Block>>> {
@@ -418,21 +454,13 @@ impl BlockManager {
     }
 
     pub fn ref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
-        let mut state = self
-            .state
-            .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-        state.ref_block(tip)
+        self.state.ref_block(tip)
     }
 
     /// Starting at a tip block, if the tip block's ref-count drops to 0,
     /// remove all blocks until a ref-count of 1 is found.
     pub fn unref_block(&self, tip: &str) -> Result<bool, BlockManagerError> {
-        let mut state = self
-            .state
-            .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-        state.unref_block(tip)
+        self.state.unref_block(tip)
     }
 
     pub fn add_store(
@@ -440,12 +468,7 @@ impl BlockManager {
         store_name: &str,
         store: Box<BlockStore>,
     ) -> Result<(), BlockManagerError> {
-        let mut state = self
-            .state
-            .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-
-        state.add_store(store_name, store)
+        self.state.add_store(store_name, store)
     }
 
     fn remove_blocks_from_blockstore(
@@ -455,14 +478,14 @@ impl BlockManager {
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
         let to_be_removed: Vec<Block> = self.branch_diff(other, head)?.collect();
-        let blocks_for_the_main_pool = {
-            let mut state = self
-                .state
-                .write()
-                .expect("Unable to obtain write lock; it has been poisoned");
 
-            let blockstore = state
+        let blocks_for_the_main_pool = {
+            let mut blockstore_by_name = self
+                .state
                 .blockstore_by_name
+                .write()
+                .expect("Acquiring blockstore write lock; lock poisoned");
+            let mut blockstore = blockstore_by_name
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 
@@ -478,15 +501,13 @@ impl BlockManager {
             .counter("BlockManager.persisted", None, None)
             .dec_n(blocks_for_the_main_pool.len());
 
-        let mut state = self
+        let mut block_by_block_id = self
             .state
+            .block_by_block_id
             .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-
+            .expect("Acquiring block pool write lock; lock poisioned");
         for block in blocks_for_the_main_pool {
-            state
-                .block_by_block_id
-                .insert(block.header_signature.clone(), block);
+            block_by_block_id.insert(block.header_signature.clone(), block);
         }
 
         Ok(())
@@ -500,18 +521,21 @@ impl BlockManager {
         COLLECTOR
             .counter("BlockManager.persisted", None, None)
             .inc_n(to_be_inserted.len());
-
-        let mut state = self
+        let mut block_by_block_id = self
             .state
+            .block_by_block_id
             .write()
-            .expect("Unable to obtain write lock; it has been poisoned");
-
+            .expect("Acquiring block pool write lock; lock poisoned");
         for block in &to_be_inserted {
-            state.block_by_block_id.remove(&block.header_signature);
+            block_by_block_id.remove(&block.header_signature);
         }
 
-        let blockstore = state
+        let mut blockstore_by_name = self
+            .state
             .blockstore_by_name
+            .write()
+            .expect("Acquiring blockstore write lock; lock poisoned");
+        let blockstore = blockstore_by_name
             .get_mut(store_name)
             .ok_or(BlockManagerError::UnknownBlockStore)?;
         blockstore.put(to_be_inserted)?;
@@ -522,22 +546,21 @@ impl BlockManager {
     pub fn persist(&self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
         if !self
             .state
+            .blockstore_by_name
             .read()
             .expect("Unable to obtain read lock; it has been poisoned")
-            .blockstore_by_name
             .contains_key(store_name)
         {
             return Err(BlockManagerError::UnknownBlockStore);
         }
 
         let head_block_in_blockstore = {
-            let state = self
+            let blockstore_by_name = self
                 .state
-                .read()
-                .expect("Unable to obtain read lock; it has been poisoned");
-
-            let block_store = state
                 .blockstore_by_name
+                .read()
+                .expect("Acquiring blockstore read lock; lock poisoned");
+            let block_store = blockstore_by_name
                 .get(store_name)
                 .expect("Blockstore removed during persist operation");
             let head = block_store
@@ -546,7 +569,6 @@ impl BlockManager {
                 .map(|b| b.header_signature.clone());
             head
         };
-
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
 
@@ -565,13 +587,13 @@ impl BlockManager {
 }
 
 pub struct GetBlockIterator {
-    state: Arc<RwLock<BlockManagerState>>,
+    state: Arc<BlockManagerState>,
     block_ids: Vec<String>,
     index: usize,
 }
 
 impl GetBlockIterator {
-    fn new(state: Arc<RwLock<BlockManagerState>>, block_ids: &[&str]) -> Self {
+    fn new(state: Arc<BlockManagerState>, block_ids: &[&str]) -> Self {
         GetBlockIterator {
             state,
             block_ids: block_ids.iter().map(|s| (*s).into()).collect(),
@@ -589,17 +611,15 @@ impl Iterator for GetBlockIterator {
         }
 
         let block_id = &self.block_ids[self.index];
-        let state = self
+        let block: Option<Block> = match self
             .state
-            .read()
-            .expect("Unable to obtain read lock; it has been poisoned");
-        let block: Option<Block> = match state
             .get_block_from_main_cache_or_blockstore_name(&block_id)
         {
             BlockLocation::MainCache(block) => Some(block),
 
-            BlockLocation::InStore(blockstore_name) => state
-                .get_block_from_blockstore(block_id, blockstore_name)
+            BlockLocation::InStore(blockstore_name) => self
+                .state
+                .get_block_from_blockstore(block_id, &blockstore_name)
                 .expect("The blockstore name returned for a block id doesn't contain the block."),
 
             BlockLocation::Unknown => None,
@@ -612,7 +632,7 @@ impl Iterator for GetBlockIterator {
 }
 
 pub struct BranchIterator {
-    state: Arc<RwLock<BlockManagerState>>,
+    state: Arc<BlockManagerState>,
     initial_block_id: String,
     next_block_id: String,
     blockstore: Option<String>,
@@ -620,14 +640,11 @@ pub struct BranchIterator {
 
 impl BranchIterator {
     fn new(
-        state: Arc<RwLock<BlockManagerState>>,
+        state: Arc<BlockManagerState>,
         first_block_id: String,
     ) -> Result<Self, BlockManagerError> {
         let next_block_id = {
-            let mut block_manager = state
-                .write()
-                .expect("Unable to obtain write lock; it has been poisoned");
-            match block_manager.ref_block(&first_block_id) {
+            match state.ref_block(&first_block_id) {
                 Ok(_) => first_block_id,
                 Err(BlockManagerError::UnknownBlock) => return Err(BlockManagerError::UnknownBlock),
                 Err(err) => {
@@ -648,11 +665,7 @@ impl BranchIterator {
 impl Drop for BranchIterator {
     fn drop(&mut self) {
         if self.initial_block_id != NULL_BLOCK_IDENTIFIER {
-            let mut block_manager = self
-                .state
-                .write()
-                .expect("Unable to obtain write lock; it has been poisoned");
-            match block_manager.unref_block(&self.initial_block_id) {
+            match self.state.unref_block(&self.initial_block_id) {
                 Ok(_) => (),
                 Err(err) => {
                     error!(
@@ -672,20 +685,18 @@ impl Iterator for BranchIterator {
         if self.next_block_id == NULL_BLOCK_IDENTIFIER {
             None
         } else if self.blockstore.is_none() {
-            let state = self
+            match self
                 .state
-                .read()
-                .expect("Unable to obtain read lock; it has been poisoned");
-
-            match state.get_block_from_main_cache_or_blockstore_name(&self.next_block_id) {
+                .get_block_from_main_cache_or_blockstore_name(&self.next_block_id)
+            {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
                     Some(block.clone())
                 }
                 BlockLocation::InStore(blockstore_name) => {
-                    self.blockstore = Some(blockstore_name.into());
-                    let block = state
-                        .get_block_from_blockstore(&self.next_block_id, blockstore_name)
+                    self.blockstore = Some(blockstore_name.clone());
+                    let block = self.state
+                        .get_block_from_blockstore(&self.next_block_id, &blockstore_name)
                         .expect("The blockstore name returned for a block id doesn't exist.")
                         .expect("The blockstore name returned for a block id doesn't contain the block.");
 
@@ -697,12 +708,8 @@ impl Iterator for BranchIterator {
         } else {
             let blockstore_id = self.blockstore.as_ref().unwrap();
 
-            let state = self
+            let block_option = self
                 .state
-                .read()
-                .expect("Unable to obtain read lock; it has been poisoned");
-
-            let block_option = state
                 .get_block_from_blockstore(&self.next_block_id, blockstore_id)
                 .expect("The BlockManager has lost a blockstore that is referenced by a block.");
 
@@ -725,7 +732,7 @@ pub struct BranchDiffIterator {
 
 impl BranchDiffIterator {
     fn new(
-        state: Arc<RwLock<BlockManagerState>>,
+        state: Arc<BlockManagerState>,
         tip: &str,
         exclude: &str,
     ) -> Result<Self, BlockManagerError> {
@@ -825,7 +832,7 @@ mod tests {
         let c = create_block("C", "B", 2);
         let c_block_id = c.header_signature.clone();
 
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         assert_eq!(block_manager.put(vec![a, b]), Ok(()));
 
         assert_eq!(block_manager.put(vec![c]), Ok(()));
@@ -860,7 +867,7 @@ mod tests {
         let f = create_block("F", "E", 4);
         let f_block_id = &f.header_signature.clone();
 
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         block_manager.put(vec![a.clone(), b, c]).unwrap();
         block_manager.put(vec![d]).unwrap();
         block_manager.put(vec![e, f]).unwrap();
@@ -886,7 +893,7 @@ mod tests {
 
     #[test]
     fn test_put_empty_vec() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         assert_eq!(
             block_manager.put(vec![]),
             Err(BlockManagerError::MissingInput)
@@ -895,7 +902,7 @@ mod tests {
 
     #[test]
     fn test_put_missing_predecessor() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         let a = create_block("A", "o", 54);
         let b = create_block("B", "A", 55);
         assert_eq!(
@@ -908,7 +915,7 @@ mod tests {
 
     #[test]
     fn test_get_blocks() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let b = create_block("B", "A", 1);
         let c = create_block("C", "B", 2);
@@ -934,7 +941,7 @@ mod tests {
 
     #[test]
     fn test_branch_in_memory() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
         let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let b = create_block("B", "A", 1);
         let c = create_block("C", "B", 2);
@@ -958,7 +965,7 @@ mod tests {
 
     #[test]
     fn test_branch_diff() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
 
         let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let b = create_block("B", "A", 1);
@@ -1002,7 +1009,7 @@ mod tests {
 
     #[test]
     fn test_persist_ref_unref() {
-        let mut block_manager = BlockManager::new();
+        let block_manager = BlockManager::new();
 
         let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let b = create_block("B", "A", 1);
@@ -1058,7 +1065,7 @@ mod tests {
 
     #[test]
     fn test_idempotent() {
-        let mut blockman = BlockManager::new();
+        let blockman = BlockManager::new();
 
         let a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let b = create_block("B", "A", 1);
@@ -1070,7 +1077,7 @@ mod tests {
             .unwrap();
         // Ext. Ref. = 1
 
-        blockman.ref_block("D");
+        blockman.ref_block("D").unwrap();
         // Ext. Ref. = 2
 
         blockman
