@@ -17,9 +17,8 @@ import logging
 from threading import RLock
 from collections import deque
 
-from sawtooth_validator.journal.block_manager import UnknownBlock
+from sawtooth_validator.journal.block_manager import MissingPredecessor
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf import network_pb2
@@ -114,13 +113,34 @@ class Completer:
             'incomplete_batches_length', instance=self)
         self._incomplete_batches_length.set_value(0)
 
-    def _ref_block(self, block_id):
-        if block_id != NULL_BLOCK_IDENTIFIER:
-            self._block_manager.ref_block(block_id)
+    def _put_or_request_if_missing_predecessor(self, blkw):
+        try:
+            # Create Ref-B
+            self._block_manager.put([blkw.block])
+            return blkw
+        except MissingPredecessor:
+            # The predecessor dropped out of the block manager between when we
+            # checked if it was there and when the block was determined to be
+            # complete.
+            return self._request_previous_if_not_already_requested(blkw)
 
-    def _unref_block(self, block_id):
-        if block_id != NULL_BLOCK_IDENTIFIER:
-            self._block_manager.unref_block(block_id)
+    def _request_previous_if_not_already_requested(self, blkw):
+        if blkw.previous_block_id not in self._incomplete_blocks:
+            self._incomplete_blocks[blkw.previous_block_id] = [blkw]
+        elif blkw not in \
+                self._incomplete_blocks[blkw.previous_block_id]:
+            self._incomplete_blocks[blkw.previous_block_id] += [blkw]
+
+        # We have already requested the block, do not do so again
+        if blkw.previous_block_id in self._requested:
+            return None
+
+        LOGGER.debug(
+            "Request missing predecessor: %s",
+            blkw.previous_block_id)
+        self._requested[blkw.previous_block_id] = None
+        self._gossip.broadcast_block_request(blkw.previous_block_id)
+        return None
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -147,43 +167,16 @@ class Completer:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
-        previous_block_in_block_manager = None
-        try:
-            # Create Ref-A: Hold the previous block until we determine whether
-            # the new block is complete. If the block is not complete yet,
-            # unref the previous block. If the block is complete, first put the
-            # new block in, incrementing the internal reference count of the
-            # previous block, and then unref the previous block.
-            self._ref_block(block.previous_block_id)
-            previous_block_in_block_manager = True
-        except UnknownBlock:
-            previous_block_in_block_manager = False
-
-        if not previous_block_in_block_manager:
-            if block.previous_block_id not in self._incomplete_blocks:
-                self._incomplete_blocks[block.previous_block_id] = [block]
-            elif block not in \
-                    self._incomplete_blocks[block.previous_block_id]:
-                self._incomplete_blocks[block.previous_block_id] += [block]
-
-            # We have already requested the block, do not do so again
-            if block.previous_block_id in self._requested:
-                return None
-
-            LOGGER.debug(
-                "Request missing predecessor: %s",
-                block.previous_block_id)
-            self._requested[block.previous_block_id] = None
-            self._gossip.broadcast_block_request(block.previous_block_id)
-            return None
+        # NOTE: We cannot assume that if the previous block _is_ in the block
+        # manager, that it will still be in there when this block is complete.
+        if block.previous_block_id not in self._block_manager:
+            return self._request_previous_if_not_already_requested(block)
 
         # Check for same number of batch_ids and batches
         # If different starting building batch list, Otherwise there is a batch
         # that does not belong, block should be dropped.
         if len(block.batches) > len(block.header.batch_ids):
             LOGGER.debug("Block has extra batches. Dropping %s", block)
-            # Drop Ref-A
-            self._unref_block(block.previous_block_id)
             return None
 
         # used to supplement batch_cache, contains batches already in block
@@ -205,8 +198,6 @@ class Completer:
 
                     # We have already requested the batch, do not do so again
                     if batch_id in self._requested:
-                        # Drop Ref-A
-                        self._unref_block(block.previous_block_id)
                         return None
                     self._requested[batch_id] = None
                     self._gossip.broadcast_batch_by_batch_id_request(batch_id)
@@ -214,8 +205,6 @@ class Completer:
 
             # The block cannot be completed.
             if not building:
-                # Drop Ref-A
-                self._unref_block(block.previous_block_id)
                 return None
 
             batches = self._finalize_batch_list(block, temp_batches)
@@ -225,11 +214,7 @@ class Completer:
             if block.header_signature in self._requested:
                 del self._requested[block.header_signature]
 
-            # Create Ref-B
-            self._block_manager.put([block.block])
-            # Drop Ref-A
-            self._unref_block(block.previous_block_id)
-            return block
+            return self._put_or_request_if_missing_predecessor(block)
 
         batch_id_list = [x.header_signature for x in block.batches]
         # Check to see if batchs are in the correct order.
@@ -237,11 +222,8 @@ class Completer:
             if block.header_signature in self._requested:
                 del self._requested[block.header_signature]
 
-            # Create Ref-B
-            self._block_manager.put([block.block])
-            # Drop Ref-A
-            self._unref_block(block.previous_block_id)
-            return block
+            return self._put_or_request_if_missing_predecessor(block)
+
         # Check to see if the block has all batch_ids and they can be put
         # in the correct order
         if sorted(batch_id_list) == sorted(list(block.header.batch_ids)):
@@ -252,23 +234,15 @@ class Completer:
             if batches is not None:
                 block.batches.extend(batches)
             else:
-                # Drop Ref-A
-                self._unref_block(block.previous_block_id)
                 return None
 
             if block.header_signature in self._requested:
                 del self._requested[block.header_signature]
 
-            # Create Ref-B
-            self._block_manager.put([block.block])
-            # Drop Ref-A
-            self._unref_block(block.previous_block_id)
-            return block
+            return self._put_or_request_if_missing_predecessor(block)
 
         LOGGER.debug("Block.header.batch_ids does not match set of "
                      "batches in block.batches Dropping %s", block)
-        # Drop Ref-A
-        self._unref_block(block.previous_block_id)
         return None
 
     def _finalize_batch_list(self, block, temp_batches):
