@@ -45,15 +45,9 @@ impl BatchMap {
 
     // Idempotent method for adding a BatchList
     pub fn add(&mut self, batchlist: BatchList) {
-        batchlist
-            .batches
-            .last()
-            .map(|b| b.header_signature.clone())
-            .map(|batch_id| {
-                if !self.batches_by_id.contains_key(batch_id.as_str()) {
-                    self.batches_by_id.insert(batch_id, batchlist);
-                }
-            });
+        if let Some(batch_id) = batchlist.batches.last().map(|b| b.header_signature.clone()) {
+            self.batches_by_id.entry(batch_id).or_insert(batchlist);
+        }
     }
 }
 
