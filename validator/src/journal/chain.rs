@@ -544,16 +544,13 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         cache.insert(result);
     }
 
-    fn get_block_unchecked(&self, block_id: String) -> Block {
+    fn get_block_unchecked(&self, block_id: &str) -> Block {
         let state = self
             .state
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        let block_id = block_id.as_str();
-        let block_ids = [block_id];
-
-        let block = state.block_manager.get(&block_ids).next();
+        let block = state.block_manager.get(&[block_id]).next();
         let errstr = "The caller must guarantee that the block is known to the block manager";
         block.expect(errstr).expect(errstr)
     }
@@ -571,15 +568,37 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         }
     }
 
-    fn on_block_validated(&self, block: &Block) {
+    fn on_block_validated(&self, block: &Block, result: BlockValidationResult) {
         let mut blocks_considered_count =
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
 
-        // Transfer Ref-C: The block has been validated and ownership of the ext. ref. is passed
-        // to the consensus engine. The consensus engine is responsible for rendering an opinion of
-        // either commit, fail, or ignore, at which time the ext. ref. will be accounted for.
-        self.consensus_notifier.notify_block_new(block);
+        match result.status {
+            BlockStatus::Valid => {
+                // Transfer Ref-C: The block has been validated and ownership of the ext. ref. is
+                // passed to the consensus engine. The consensus engine is responsible for
+                // rendering an opinion of either commit, fail, or ignore, at which time the ext.
+                // ref. will be accounted for.
+                self.consensus_notifier.notify_block_new(block);
+            }
+            BlockStatus::Invalid => {
+                let state = self
+                    .state
+                    .read()
+                    .expect("No lock holder should have poisoned the lock");
+
+                // Drop Ref-C: The block has been found to be invalid, and we are no longer
+                // interested in it. The invalid result will be cached for a period.
+                state
+                    .block_manager
+                    .unref_block(&block.header_signature)
+                    .expect("Failed to unref block in on_block_validated");
+            }
+            _ => error!(
+                "on_block_validated() called for block {}, but result was {:?}",
+                block.header_signature, result.status,
+            ),
+        }
 
         match self.notify_block_validation_results_received(&block) {
             Ok(_) => (),
@@ -902,8 +921,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     result_thread_controller
                         .set_block_validation_result(block_validation_result.clone());
                     let block = result_thread_controller
-                        .get_block_unchecked(block_validation_result.block_id);
-                    result_thread_controller.on_block_validated(&block);
+                        .get_block_unchecked(&block_validation_result.block_id);
+                    result_thread_controller.on_block_validated(&block, block_validation_result);
                 } else {
                     break;
                 }
