@@ -393,7 +393,7 @@ impl TransactionContext {
         let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
-            Message_MessageType::TP_RECEIPT_ADD_DATA_REQUEST,
+            Message_MessageType::TP_EVENT_ADD_REQUEST,
             &generate_correlation_id(),
             x,
         )?;
