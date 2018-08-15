@@ -217,15 +217,11 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn get_block_by_block_id(&self, block_id: &str) -> Option<Block> {
-        self.block_by_block_id.get(block_id).cloned()
-    }
-
     fn get_block_from_main_cache_or_blockstore_name<'a>(
         &'a self,
         block_id: &str,
     ) -> BlockLocation<'a> {
-        let block = self.get_block_by_block_id(block_id);
+        let block = self.block_by_block_id.get(block_id).cloned();
         if block.is_some() {
             BlockLocation::MainCache(block.unwrap())
         } else {
