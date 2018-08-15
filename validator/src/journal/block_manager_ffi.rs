@@ -144,6 +144,10 @@ pub unsafe extern "C" fn block_manager_persist(
     (*(block_manager as *mut BlockManager))
         .persist(block_id, name)
         .map(|_| ErrorCode::Success)
+        .map_err(|err| {
+            error!("Unexpected error calling BlockManager.persist: {:?}", err);
+            err
+        })
         .unwrap_or(ErrorCode::Error)
 }
 

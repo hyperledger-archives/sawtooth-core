@@ -429,8 +429,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 // block.
                 if let Err(err) = state.block_manager.ref_block(&block_id) {
                     error!(
-                        "Unable to ref block received from block manager; ignoring: {:?}",
-                        err
+                        "Unable to ref block {} received from completer; ignoring: {:?}",
+                        &block_id, err
                     );
                     None
                 } else {
@@ -615,13 +615,35 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 .expect("No lock holder should have poisoned the lock");
 
             loop {
-                let chain_head = state.chain_reader.chain_head()?.expect(
-                    "Attempting to handle block commit before a genesis block has been committed",
-                );
-                let result = state.build_fork(block, &chain_head)?;
+                let chain_head = state
+                    .chain_reader
+                    .chain_head()
+                    .map_err(|err| {
+                        error!("Error reading chain head: {:?}", err);
+                        err
+                    })?
+                    .expect(
+                        "Attempting to handle block commit before a genesis block has been
+                        committed",
+                    );
+                let result = state.build_fork(block, &chain_head).map_err(|err| {
+                    error!(
+                        "Error occured while building fork resolution result: {:?}",
+                        err,
+                    );
+                    err
+                })?;
 
                 let mut chain_head_guard = self.chain_head_lock.acquire();
-                if state.check_chain_head_updated(&chain_head, block)? {
+                if state
+                    .check_chain_head_updated(&chain_head, block)
+                    .map_err(|err| {
+                        error!(
+                            "Error occured while checking if chain head updated: {:?}",
+                            err,
+                        );
+                        err
+                    })? {
                     continue;
                 }
 
@@ -653,10 +675,16 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                         .as_slice(),
                 );
 
-                state.block_manager.persist(
-                    &state.chain_head.as_ref().unwrap().header_signature,
-                    COMMIT_STORE,
-                )?;
+                state
+                    .block_manager
+                    .persist(
+                        &state.chain_head.as_ref().unwrap().header_signature,
+                        COMMIT_STORE,
+                    )
+                    .map_err(|err| {
+                        error!("Error persisting new chain head: {:?}", err);
+                        err
+                    })?;
 
                 // Drop Ref-C: This block is no longer the chain head, and we need to remove the
                 // ext. ref. from when it was.
