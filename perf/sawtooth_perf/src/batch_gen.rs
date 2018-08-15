@@ -129,7 +129,7 @@ impl<'a> SignedBatchProducer<'a> {
         SignedBatchProducer {
             transaction_source,
             max_batch_size,
-            signer: signer,
+            signer,
         }
     }
 }
@@ -200,8 +200,8 @@ impl<'a> SignedBatchIterator<'a> {
     ) -> Self {
         SignedBatchIterator {
             transaction_iterator: iterator,
-            max_batch_size: max_batch_size,
-            signer: signer,
+            max_batch_size,
+            signer,
         }
     }
 }
