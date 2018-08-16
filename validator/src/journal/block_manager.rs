@@ -112,25 +112,16 @@ struct BlockManagerState {
 }
 
 impl BlockManagerState {
-    fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
-        let block_by_block_id = self
-            .block_by_block_id
-            .read()
-            .expect("Acquiring block pool read lock; lock poisoned");
-        if block_by_block_id.contains_key(block_id) {
-            return Ok(true);
-        }
-        let blockstore_by_name = self
-            .blockstore_by_name
-            .read()
-            .expect("Acquiring blockstore read lock; lock poisoned");
-        for blockstore in blockstore_by_name.values() {
-            if blockstore.get(&[block_id])?.count() > 0 {
-                return Ok(true);
-            }
-        }
+    fn contains(
+        &self,
+        references_block_id: &HashMap<String, RefCount>,
+        block_id: &str,
+    ) -> Result<bool, BlockManagerError> {
+        let block_has_been_put = references_block_id.contains_key(block_id);
 
-        return Ok(block_id == NULL_BLOCK_IDENTIFIER);
+        let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
+
+        return Ok(block_has_been_put || block_is_null_block);
     }
 
     /// Checks that every block is preceded by the block referenced by block.previous_block_id except the
@@ -174,7 +165,7 @@ impl BlockManagerState {
             .expect("Acquiring reference write lock; lock poisoned");
         match branch.split_first() {
             Some((head, tail)) => {
-                if !self.contains(head.previous_block_id.as_str())? {
+                if !self.contains(&references_by_block_id, &head.previous_block_id)? {
                     return Err(BlockManagerError::MissingPredecessor(format!(
                         "During Put, missing predecessor of block {}: {}",
                         head.header_signature, head.previous_block_id
@@ -182,7 +173,7 @@ impl BlockManagerState {
                 }
 
                 self.check_predecessor_relationship(tail, head)?;
-                if !self.contains(&head.header_signature)? {
+                if !self.contains(&references_by_block_id, &head.header_signature)? {
                     references_by_block_id
                         .get_mut(&head.previous_block_id)
                         .map(|r| r.increase_internal_ref_count());
@@ -192,7 +183,7 @@ impl BlockManagerState {
         }
         let mut blocks_not_added_yet: Vec<Block> = Vec::new();
         for block in branch.into_iter() {
-            if !self.contains(block.header_signature.as_str())? {
+            if !self.contains(&references_by_block_id, &block.header_signature)? {
                 blocks_not_added_yet.push(block);
             }
         }
@@ -413,7 +404,12 @@ impl BlockManager {
     }
 
     pub fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
-        self.state.contains(block_id)
+        let references_by_block_id = self
+            .state
+            .references_by_block_id
+            .read()
+            .expect("Acquiring references read lock; lock poisoned");
+        self.state.contains(&references_by_block_id, block_id)
     }
 
     /// Put is idempotent, making the guarantee that after put is called with a
