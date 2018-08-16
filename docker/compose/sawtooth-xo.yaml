@@ -35,15 +35,6 @@ services:
     command: xo-tp-python -vv --connect tcp://validator:4004
     stop_signal: SIGKILL
 
-  xo-tp-go:
-    image: sawtooth-xo-tp-go:latest
-    volumes:
-      - ../../:/project/sawtooth-core
-    depends_on:
-      - validator
-    command: xo-tp-go -vv --connect tcp://validator:4004
-    stop_signal: SIGKILL
-
   validator:
     image: sawtooth-validator:latest
     volumes:

@@ -31,8 +31,6 @@
 /families/**/__pycache__/
 /families/settings/build/
 /families/settings/sawtooth_settings/protobuf/
-/families/smallbank/smallbank_go/src/protobuf/
-/families/smallbank/smallbank_go/bin/
 /families/block_info/sawtooth_block_info/protobuf
 /families/identity/sawtooth_identity/protobuf
 /families/smallbank/smallbank_rust/target/
@@ -75,11 +73,6 @@
 /sdk/examples/xo_java/dependency-reduced-pom.xml
 /sdk/examples/xo_java/target/
 /sdk/java/target/
-/sdk/go/src/sawtooth_sdk/protobuf/
-/sdk/go/src/mocks/
-/sdk/go/src/github.com/
-/sdk/go/bin/
-/sdk/examples/intkey_go/bin/
 /sdk/examples/intkey_rust/target/
 /sdk/examples/intkey_rust/Cargo.lock
 /sdk/examples/intkey_rust/bin/
@@ -89,11 +82,6 @@
 /sdk/examples/xo_rust/target/
 /sdk/examples/xo_rust/Cargo.lock
 /sdk/examples/xo_rust/bin/
-/sdk/examples/xo_go/bin/
-/sdk/examples/noop_go/bin/
-/sdk/go/pkg/
-/sdk/go/src/golang.org/
-/sdk/go/src/gopkg.in/
 /sdk/rust/target
 /sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs

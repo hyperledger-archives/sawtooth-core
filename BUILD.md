@@ -240,10 +240,10 @@ You must have Docker images that were built with the
 as described above.
 
 To run the automated tests for Python components, while excluding
-Go, and Rust components:
+Rust components:
 
 ```bash
-  $ bin/run_tests -x go_sdk -x rust_sdk
+  $ bin/run_tests -x rust_sdk
 ```
 
 **Note:** The `run_tests` command provides the ``-x`` flag to allow you to exclude

@@ -161,50 +161,6 @@ services:
     image: sawtooth-identity-tp:${ISOLATION_ID}
     container_name: sawtooth-identity-tp-default
 
-  smallbank-tp-go:
-    build:
-      context: .
-      dockerfile: families/smallbank/smallbank_go/Dockerfile-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-smallbank-tp-go-default
-
-  sawtooth-intkey-tp-go:
-    build:
-      context: .
-      dockerfile: sdk/examples/intkey_go/Dockerfile-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tp-go-default
-
-  sawtooth-noop-tp-go:
-    build:
-      context: .
-      dockerfile: sdk/examples/noop_go/Dockerfile-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-noop-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-noop-tp-go-default
-
-  sawtooth-xo-tp-go:
-    build:
-      context: .
-      dockerfile: sdk/examples/xo_go/Dockerfile-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-xo-tp-go:${ISOLATION_ID}
-    container_name: sawtooth-xo-tp-go-default
-
   python-sdk:
     build:
       context: .

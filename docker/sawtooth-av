@@ -38,12 +38,10 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial univ
     python3-sawtooth-cli \
     python3-sawtooth-block-info \
     python3-sawtooth-identity \
-    sawtooth-intkey-tp-go \
     python3-sawtooth-intkey \
     python3-sawtooth-poet-families \
     python3-sawtooth-rest-api \
     python3-sawtooth-settings \
-    sawtooth-smallbank-tp-go \
     python3-sawtooth-xo  \
     clamav\
  && apt-get clean \

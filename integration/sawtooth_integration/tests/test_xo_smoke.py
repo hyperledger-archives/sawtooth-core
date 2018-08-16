@@ -148,6 +148,6 @@ def _send_cmd(cmd_str):
 
 
 def _tp_supports_delete():
-    supported_langs = 'python', 'go'
+    supported_langs = 'python'
 
     return os.getenv('TP_LANG', None) in supported_langs

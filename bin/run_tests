@@ -139,9 +139,6 @@ main() {
                 validator)
                     test_validator
                     ;;
-                go_sdk)
-                    test_go_sdk
-                    ;;
                 python_sdk)
                     test_python_sdk
                     ;;
@@ -208,17 +205,6 @@ test_validator() {
     copy_coverage .coverage.namespace_restriction
     run_docker_test test_state_verifier --timeout 30
     run_docker_test ./validator/tests/unit_rust_validator.yaml
-}
-
-test_go_sdk() {
-    run_docker_test ./sdk/go/tests/unit_go_client.yaml
-    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_go.yaml
-    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_go.yaml
-    copy_coverage .coverage.go_sdk
-    run_docker_test test_xo_smoke_go
-    copy_coverage .coverage.test_xo_smoke_go
-    run_docker_test test_intkey_smoke_go
-    copy_coverage .coverage.test_intkey_smoke_go
 }
 
 test_python_sdk() {
