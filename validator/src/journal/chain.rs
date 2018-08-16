@@ -732,12 +732,11 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     })
                 });
 
+                let mut cache = self
+                    .block_validation_results
+                    .write()
+                    .expect("Unable to acquire read lock, due to poisoning");
                 for blk in result.new_chain.iter().rev() {
-                    let mut cache = self
-                        .block_validation_results
-                        .write()
-                        .expect("Unable to acquire read lock, due to poisoning");
-
                     match cache.find(|result| &blk.header_signature == &result.block_id) {
                         Some(validation_results) => {
                             let receipts: Vec<TransactionReceipt> = validation_results
