@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 
@@ -35,6 +36,10 @@ class DuplicateBatch(Exception):
         self.batch_id = batch_id
 
 
+class BlockStoreUpdated(Exception):
+    pass
+
+
 class ChainCommitState:
     """Checking to see if a batch or transaction in a block has already been
     committed is somewhat difficult because of the presence of forks. While
@@ -44,7 +49,7 @@ class ChainCommitState:
     if that block were to be committed and only checking the batches and
     transactions contained within. ChainCommitState abstracts this process.
     """
-    def __init__(self, head_id, block_cache, block_store):
+    def __init__(self, head_id, block_manager, block_store):
         """The constructor should be passed the previous block id of the block
         being validated."""
         uncommitted_block_ids = list()
@@ -55,8 +60,9 @@ class ChainCommitState:
         # store. Batches and transactions that are in a block that is in the
         # block store and that has a greater block number than this block must
         # be ignored.
+
         if head_id != NULL_BLOCK_IDENTIFIER:
-            head = block_cache[head_id]
+            head = next(block_manager.get([head_id]))
             ancestor = head
             while ancestor.header_signature not in block_store:
                 # For every block not in the block store, we need to track all
@@ -70,16 +76,23 @@ class ChainCommitState:
 
                 uncommitted_block_ids.append(ancestor.header_signature)
 
-                previous_block_id = ancestor.previous_block_id
+                ancestor_header = BlockHeader()
+                ancestor_header.ParseFromString(ancestor.header)
+                previous_block_id = ancestor_header.previous_block_id
+
                 if previous_block_id == NULL_BLOCK_IDENTIFIER:
                     break
 
-                ancestor = block_cache[previous_block_id]
+                ancestor = next(block_manager.get([previous_block_id]))
         else:
             ancestor = None
 
         self.block_store = block_store
-        self.common_ancestor = ancestor
+        ancestor_header = None
+        if ancestor:
+            ancestor_header = BlockHeader()
+            ancestor_header.ParseFromString(ancestor.header)
+        self.common_ancestor = ancestor_header
         self.uncommitted_block_ids = uncommitted_block_ids
         self.uncommitted_batch_ids = uncommitted_batch_ids
         self.uncommitted_txn_ids = uncommitted_txn_ids
@@ -115,8 +128,14 @@ class ChainCommitState:
                 raise DuplicateTransaction(txn_id)
 
             if self.block_store.has_transaction(txn_id):
-                committed_block =\
-                    self.block_store.get_block_by_transaction_id(txn_id)
+                try:
+                    committed_block =\
+                        self.block_store.get_block_by_transaction_id(txn_id)
+                except ValueError:
+                    raise BlockStoreUpdated(
+                        "The BlockStore updated while checking for duplicate"
+                        " transactions."
+                    )
 
                 if self._block_in_chain(committed_block):
                     raise DuplicateTransaction(txn_id)
@@ -140,8 +159,14 @@ class ChainCommitState:
 
             # Check if the batch is in one of the committed blocks
             if self.block_store.has_batch(batch_id):
-                committed_block =\
-                    self.block_store.get_block_by_batch_id(batch_id)
+                try:
+                    committed_block =\
+                        self.block_store.get_block_by_batch_id(batch_id)
+                except ValueError:
+                    raise BlockStoreUpdated(
+                        "The BlockStore updated while checking for duplicate"
+                        " transactions."
+                    )
 
                 # This is only a duplicate batch if the batch is in a block
                 # that would stay committed if this block were committed. This

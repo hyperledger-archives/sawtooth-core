@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 
 class MockGossip():
@@ -42,7 +41,7 @@ class MockCompleter():
         self.store = {}
 
     def add_block(self, block):
-        self.store[block.header_signature] = BlockWrapper(block)
+        self.store[block.header_signature] = block
 
     def add_batch(self, batch):
         self.store[batch.header_signature] = batch

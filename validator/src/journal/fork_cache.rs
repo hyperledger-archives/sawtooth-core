@@ -25,39 +25,36 @@ use std::time::{Duration, Instant};
 /// 1. A new fork is inserted with a `previous` equal to an existing fork
 /// 2. The cache is purged and a fork has been in the cache longer than `keep_time`
 ///
-pub struct ForkCache<F: Fn(String)> {
+pub struct ForkCache {
     keep_time: Duration,
-    on_expired: F,
     cache: HashMap<String, Instant>,
 }
 
-impl<F: Fn(String)> ForkCache<F> {
+impl ForkCache {
     /// Create a new ForkCache which will call `on_expired` whenever a Fork expires from the cache.
-    pub fn new(keep_time: Duration, on_expired: F) -> Self {
+    pub fn new(keep_time: Duration) -> Self {
         ForkCache {
             keep_time,
-            on_expired,
             cache: HashMap::new(),
         }
     }
 
-    /// Insert a new fork. If `previous` is not None and it exists, it is removed and `on_expired`
-    /// is called with it. Inserting the same `head` twice has no affect.
-    pub fn insert(&mut self, head: &str, previous: Option<&str>) {
+    /// Insert a new fork. If `previous` is not None and it exists, it is removed and returned.
+    /// Inserting the same `head` twice has no affect.
+    pub fn insert(&mut self, head: &str, previous: Option<&str>) -> Option<String> {
         if self.cache.get(head).is_some() {
-            return;
+            return None;
         }
 
         let expired = self.take_previous_if_some(previous);
 
         self.insert_new_fork(head);
 
-        self.call_on_expired_if_some(expired);
+        expired
     }
 
-    /// Remove all forks that have been in the cache longer than `keep_time` and call `on_expired`
-    /// with the it.
-    pub fn purge(&mut self) {
+    /// Remove and return all forks that have been in the cache longer than `keep_time`.
+    pub fn purge(&mut self) -> Vec<String> {
         let mut cache = HashMap::with_capacity(self.cache.len());
         mem::swap(&mut self.cache, &mut cache);
 
@@ -69,9 +66,7 @@ impl<F: Fn(String)> ForkCache<F> {
             self.cache.insert(head, timestamp);
         }
 
-        for (head, _) in expired {
-            (self.on_expired)(head);
-        }
+        expired.into_iter().map(|(key, _)| key).collect()
     }
 
     // Private helper methods
@@ -88,12 +83,6 @@ impl<F: Fn(String)> ForkCache<F> {
         }
         None
     }
-
-    fn call_on_expired_if_some(&self, expired: Option<String>) {
-        if let Some(expired) = expired {
-            (self.on_expired)(expired);
-        }
-    }
 }
 
 #[cfg(test)]
@@ -103,22 +92,18 @@ mod tests {
     use std::rc::Rc;
 
     // Setup a cache and a vector for expired items to be sent to
-    fn setup(keep_time: Duration) -> (ForkCache<impl Fn(String)>, Rc<RefCell<Vec<String>>>) {
-        let expired = Rc::new(RefCell::new(Vec::new()));
-        let expired_cloned = Rc::clone(&expired);
-        let cache = ForkCache::new(keep_time, move |id| expired_cloned.borrow_mut().push(id));
-        (cache, expired)
+    fn setup() -> ForkCache {
+        ForkCache::new(Duration::from_secs(0))
     }
 
     // Check that inserted items are purged after their timestamp expires
     #[test]
     fn test_simple_insert_and_purge() {
-        let (mut cache, expired) = setup(Duration::from_secs(0));
+        let mut cache = setup();
 
-        cache.insert("a", None);
-        cache.purge();
+        assert_eq!(None, cache.insert("a", None));
+        let expired = cache.purge();
 
-        let expired = expired.borrow();
         assert_eq!(1, expired.len());
         assert!(expired.contains(&String::from("a")));
     }
@@ -126,34 +111,25 @@ mod tests {
     // Check that inserting an item twice has no effect
     #[test]
     fn test_idempotent() {
-        let (mut cache, expired) = setup(Duration::from_secs(0));
+        let mut cache = setup();
 
-        cache.insert("a", None);
-        cache.insert("a", None);
+        assert_eq!(None, cache.insert("a", None));
+        assert_eq!(None, cache.insert("a", None));
 
-        let expired = expired.borrow();
-        assert_eq!(0, expired.len());
+        let expired = cache.purge();
+        assert_eq!(1, expired.len());
+        assert!(expired.contains(&String::from("a")));
     }
 
     // Check that inserted items with a previous field replace their predecessors
     #[test]
     fn test_previous_replaces() {
-        let (mut cache, expired) = setup(Duration::from_secs(0));
+        let mut cache = setup();
 
-        cache.insert("b", None);
-        cache.insert("c", Some("b"));
+        assert_eq!(None, cache.insert("b", None));
+        assert_eq!(Some(String::from("b")), cache.insert("c", Some("b")));
 
-        {
-            // Need to drop the RefCell borrow
-            let mut expired = expired.borrow_mut();
-            assert_eq!(1, expired.len());
-            assert!(expired.contains(&String::from("b")));
-            expired.clear();
-        }
-
-        cache.purge();
-
-        let expired = expired.borrow();
+        let expired = cache.purge();
         assert_eq!(1, expired.len());
         assert!(expired.contains(&String::from("c")));
     }
@@ -162,23 +138,15 @@ mod tests {
     // to be called only once
     #[test]
     fn test_multiple_extending_single() {
-        let (mut cache, expired) = setup(Duration::from_secs(0));
+        let mut cache = setup();
 
-        cache.insert("a", None);
-        cache.insert("b", Some("a"));
-        cache.insert("c", Some("a"));
-        cache.insert("d", Some("a"));
+        assert_eq!(None, cache.insert("a", None));
+        assert_eq!(Some(String::from("a")), cache.insert("b", Some("a")));
+        assert_eq!(None, cache.insert("c", Some("a")));
+        assert_eq!(None, cache.insert("d", Some("a")));
 
-        {
-            // Need to drop the RefCell borrow
-            let mut expired = expired.borrow_mut();
-            assert_eq!(vec![String::from("a")], *expired);
-            expired.clear();
-        }
+        let expired = cache.purge();
 
-        cache.purge();
-
-        let expired = expired.borrow();
         assert_eq!(3, expired.len());
         assert!(expired.contains(&String::from("b")));
         assert!(expired.contains(&String::from("c")));

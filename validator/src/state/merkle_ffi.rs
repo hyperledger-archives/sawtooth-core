@@ -120,14 +120,16 @@ pub unsafe extern "C" fn merkle_db_get_merkle_root(
     merkle_db: *mut c_void,
     merkle_root: *mut *const u8,
     merkle_root_len: *mut usize,
+    merkle_root_cap: *mut usize,
 ) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
     let state_root = (*(merkle_db as *mut MerkleDatabase)).get_merkle_root();
-    *merkle_root = state_root.as_ptr();
-    *merkle_root_len = state_root.as_bytes().len();
+    *merkle_root_cap = state_root.capacity();
+    *merkle_root_len = state_root.len();
+    *merkle_root = state_root.as_str().as_ptr();
 
     mem::forget(state_root);
 
@@ -205,6 +207,7 @@ pub unsafe extern "C" fn merkle_db_get(
     address: *const c_char,
     bytes: *mut *const u8,
     bytes_len: *mut usize,
+    bytes_cap: *mut usize,
 ) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
@@ -220,12 +223,12 @@ pub unsafe extern "C" fn merkle_db_get(
 
     match (*(merkle_db as *mut MerkleDatabase)).get(address_str) {
         Ok(Some(data_vec)) => {
-            let data = data_vec.into_boxed_slice();
-            *bytes_len = data.len();
-            *bytes = data.as_ptr();
+            *bytes_cap = data_vec.capacity();
+            *bytes_len = data_vec.len();
+            *bytes = data_vec.as_slice().as_ptr();
 
             // It will be up to the callee to cleanup this memory
-            mem::forget(data);
+            mem::forget(data_vec);
 
             ErrorCode::Success
         }
@@ -250,6 +253,7 @@ pub unsafe extern "C" fn merkle_db_set(
     data_len: usize,
     merkle_root: *mut *const u8,
     merkle_root_len: *mut usize,
+    merkle_root_cap: *mut usize,
 ) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
@@ -271,8 +275,9 @@ pub unsafe extern "C" fn merkle_db_set(
 
     match (*(merkle_db as *mut MerkleDatabase)).set(address_str, data) {
         Ok(state_root) => {
-            *merkle_root = state_root.as_ptr();
-            *merkle_root_len = state_root.as_bytes().len();
+            *merkle_root_cap = state_root.capacity();
+            *merkle_root_len = state_root.len();
+            *merkle_root = state_root.as_str().as_ptr();
 
             mem::forget(state_root);
 
@@ -295,6 +300,7 @@ pub unsafe extern "C" fn merkle_db_delete(
     address: *const c_char,
     merkle_root: *mut *const u8,
     merkle_root_len: *mut usize,
+    merkle_root_cap: *mut usize,
 ) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
@@ -310,8 +316,9 @@ pub unsafe extern "C" fn merkle_db_delete(
 
     match (*(merkle_db as *mut MerkleDatabase)).delete(address_str) {
         Ok(state_root) => {
-            *merkle_root = state_root.as_ptr();
-            *merkle_root_len = state_root.as_bytes().len();
+            *merkle_root_cap = state_root.capacity();
+            *merkle_root_len = state_root.len();
+            *merkle_root = state_root.as_str().as_ptr();
 
             mem::forget(state_root);
 
@@ -339,6 +346,7 @@ pub unsafe extern "C" fn merkle_db_update(
     virtual_write: bool,
     merkle_root: *mut *const u8,
     merkle_root_len: *mut usize,
+    merkle_root_cap: *mut usize,
 ) -> ErrorCode {
     if merkle_db.is_null() {
         return ErrorCode::NullPointerProvided;
@@ -403,8 +411,9 @@ pub unsafe extern "C" fn merkle_db_update(
         virtual_write,
     ) {
         Ok(state_root) => {
-            *merkle_root = state_root.as_ptr();
-            *merkle_root_len = state_root.as_bytes().len();
+            *merkle_root_cap = state_root.capacity();
+            *merkle_root_len = state_root.len();
+            *merkle_root = state_root.as_str().as_ptr();
 
             mem::forget(state_root);
 
@@ -529,8 +538,10 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
     iterator: *mut c_void,
     address: *mut *const u8,
     address_len: *mut usize,
+    address_cap: *mut usize,
     bytes: *mut *const u8,
     bytes_len: *mut usize,
+    bytes_cap: *mut usize,
 ) -> ErrorCode {
     if iterator.is_null() {
         return ErrorCode::NullPointerProvided;
@@ -538,16 +549,16 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
 
     match (*(iterator as *mut MerkleLeafIterator)).next() {
         Some(Ok((entry_addr, entry_bytes))) => {
-            let address_bytes = entry_addr.into_bytes().into_boxed_slice();
-            *address_len = address_bytes.len();
-            *address = address_bytes.as_ptr();
+            *address_cap = entry_addr.capacity();
+            *address_len = entry_addr.len();
+            *address = entry_addr.as_str().as_ptr();
 
-            let data = entry_bytes.into_boxed_slice();
-            *bytes_len = data.len();
-            *bytes = data.as_ptr();
+            *bytes_cap = entry_bytes.capacity();
+            *bytes_len = entry_bytes.len();
+            *bytes = entry_bytes.as_slice().as_ptr();
 
-            mem::forget(address_bytes);
-            mem::forget(data);
+            mem::forget(entry_addr);
+            mem::forget(entry_bytes);
 
             ErrorCode::Success
         }

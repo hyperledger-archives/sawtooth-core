@@ -123,10 +123,10 @@ class BlockResponderHandler(Handler):
                     self._responder.add_request(block_id, connection_id)
         else:
             LOGGER.debug("Responding to block requests: %s",
-                         block.get_block().header_signature)
+                         block.header_signature)
 
             block_response = network_pb2.GossipBlockResponse(
-                content=block.get_block().SerializeToString())
+                content=block.SerializeToString())
 
             self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
                               block_response.SerializeToString(),

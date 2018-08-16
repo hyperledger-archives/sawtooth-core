@@ -16,25 +16,20 @@
  */
 
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, ToPyObject};
 
 use journal::block_wrapper::BlockStatus;
 use journal::block_wrapper::BlockWrapper;
 
 use batch::Batch;
-use block::Block;
 use transaction::Transaction;
 
 use protobuf;
-use protobuf::Message;
 
 use proto::batch::Batch as ProtoBatch;
 use proto::batch::BatchHeader;
-use proto::block::Block as ProtoBlock;
-use proto::block::BlockHeader;
 use proto::transaction::Transaction as ProtoTxn;
 use proto::transaction::TransactionHeader;
-use pylogger;
 
 lazy_static! {
     static ref PY_BLOCK_WRAPPER: PyObject = Python::acquire_gil()
@@ -142,30 +137,5 @@ fn proto_txn_to_txn(proto_txn: &mut ProtoTxn) -> Transaction {
         nonce: txn_header.take_nonce(),
         payload_sha512: txn_header.take_payload_sha512(),
         signer_public_key: txn_header.take_signer_public_key(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use block::Block;
-    use cpython::{FromPyObject, PyObject, Python, ToPyObject};
-    use journal::block_wrapper::{BlockStatus, BlockWrapper};
-
-    #[test]
-    fn to_from_python() {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        let block_wrapper = BlockWrapper {
-            py_block_wrapper: PY_BLOCK_WRAPPER
-                .call(py, (Block::default(), 0, BlockStatus::Valid), None)
-                .unwrap(),
-        };
-
-        let py_block_wrapper = block_wrapper.to_py_object(py);
-        let round_trip_obj: BlockWrapper = py_block_wrapper.extract(py).unwrap();
-
-        assert_eq!(BlockStatus::Valid, round_trip_obj.status());
     }
 }

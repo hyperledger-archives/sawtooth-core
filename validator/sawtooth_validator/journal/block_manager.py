@@ -17,6 +17,7 @@ import ctypes
 from enum import IntEnum
 
 from sawtooth_validator.ffi import OwnedPointer
+from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator import ffi
 
 
@@ -43,10 +44,22 @@ class ErrorCode(IntEnum):
     MissingPredecessorInBranch = 0x03
     MissingInput = 0x04
     UnknownBlock = 0x05
-    InvalidBlockStoreName = 0x06
+    InvalidInputString = 0x06
     Error = 0x07
     InvalidPythonObject = 0x0F
     StopIteration = 0x11
+
+
+class _PutEntry(ctypes.Structure):
+    _fields_ = [('block_bytes', ctypes.c_char_p),
+                ('block_bytes_len', ctypes.c_size_t)]
+
+    @staticmethod
+    def new(block_bytes):
+        return _PutEntry(
+            block_bytes,
+            len(block_bytes)
+        )
 
 
 class BlockManager(OwnedPointer):
@@ -63,10 +76,44 @@ class BlockManager(OwnedPointer):
                    ctypes.py_object(block_store))
 
     def put(self, branch):
+        c_put_items = (ctypes.POINTER(_PutEntry) * len(branch))()
+        for (i, block) in enumerate(branch):
+            c_put_items[i] = ctypes.pointer(_PutEntry.new(
+                block.SerializeToString(),
+            ))
 
         _libexec("block_manager_put",
                  self.pointer,
-                 ctypes.py_object(branch))
+                 c_put_items, ctypes.c_size_t(len(branch)))
+
+    # Raises UnknownBlock if the block is not found
+    def ref_block(self, block_id):
+        _libexec(
+            "block_manager_ref_block",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()))
+
+    # Raises UnknownBlock if the block is not found
+    def unref_block(self, block_id):
+        _libexec(
+            "block_manager_unref_block",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()))
+
+    def persist(self, block_id, store_name):
+        _libexec("block_manager_persist",
+                 self.pointer,
+                 ctypes.c_char_p(block_id.encode()),
+                 ctypes.c_char_p(store_name.encode()))
+
+    def __contains__(self, block_id):
+        contains = ctypes.c_bool(False)
+        _libexec(
+            "block_manager_contains",
+            self.pointer,
+            ctypes.c_char_p(block_id.encode()),
+            ctypes.byref(contains))
+        return contains
 
     def get(self, block_ids):
         return _GetBlockIterator(self.pointer, block_ids)
@@ -103,7 +150,7 @@ def _exec(library, name, *args):
         raise MissingInput("Missing input to put method")
     elif res == ErrorCode.UnknownBlock:
         raise UnknownBlock("Block was unknown")
-    elif res == ErrorCode.InvalidBlockStoreName:
+    elif res == ErrorCode.InvalidInputString:
         raise TypeError("Invalid block store name provided")
     else:
         raise Exception("There was an unknown error: {}".format(res))
@@ -122,16 +169,23 @@ class _BlockIterator:
         if not self._c_iter_ptr:
             raise StopIteration()
 
-        block = ctypes.py_object()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
 
-        _pylibexec("{}_next".format(self.name),
-                   self._c_iter_ptr,
-                   ctypes.byref(block))
+        _libexec("{}_next".format(self.name),
+                 self._c_iter_ptr,
+                 ctypes.byref(vec_ptr),
+                 ctypes.byref(vec_len),
+                 ctypes.byref(vec_cap))
 
-        if block.value is None:
+        # Check if NULL
+        if not vec_ptr:
             raise StopIteration()
 
-        return block.value
+        payload = ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+        block = Block()
+        block.ParseFromString(payload)
+
+        return block
 
 
 class _GetBlockIterator(_BlockIterator):

@@ -23,7 +23,8 @@ use std::slice;
 use cpython::{PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
-use journal::block_wrapper::BlockWrapper;
+use block::Block;
+use journal::block_manager::BlockManager;
 use journal::publisher::{
     BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
@@ -38,6 +39,7 @@ pub enum ErrorCode {
     BlockNotInitialized = 0x04,
     BlockEmpty = 0x05,
     BlockNotInProgress = 0x06,
+    MissingPredecessor = 0x07,
 }
 
 macro_rules! check_null {
@@ -48,8 +50,8 @@ macro_rules! check_null {
 
 #[no_mangle]
 pub extern "C" fn block_publisher_new(
+    block_manager_ptr: *const c_void,
     transaction_executor_ptr: *mut py_ffi::PyObject,
-    get_block_ptr: *mut py_ffi::PyObject,
     batch_committed_ptr: *mut py_ffi::PyObject,
     transaction_committed_ptr: *mut py_ffi::PyObject,
     state_view_factory_ptr: *mut py_ffi::PyObject,
@@ -66,8 +68,8 @@ pub extern "C" fn block_publisher_new(
     block_publisher_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
+        block_manager_ptr,
         transaction_executor_ptr,
-        get_block_ptr,
         batch_committed_ptr,
         transaction_committed_ptr,
         state_view_factory_ptr,
@@ -85,8 +87,8 @@ pub extern "C" fn block_publisher_new(
 
     let py = unsafe { Python::assume_gil_acquired() };
 
+    let block_manager = unsafe { (*(block_manager_ptr as *mut BlockManager)).clone() };
     let transaction_executor = unsafe { PyObject::from_borrowed_ptr(py, transaction_executor_ptr) };
-    let get_block = unsafe { PyObject::from_borrowed_ptr(py, get_block_ptr) };
     let batch_committed = unsafe { PyObject::from_borrowed_ptr(py, batch_committed_ptr) };
     let transaction_committed =
         unsafe { PyObject::from_borrowed_ptr(py, transaction_committed_ptr) };
@@ -128,14 +130,6 @@ pub extern "C" fn block_publisher_new(
         )
         .expect("Unable to create BatchPublisher");
 
-    let block_wrapper_mod = py
-        .import("sawtooth_validator.journal.block_wrapper")
-        .expect("Unable to import 'sawtooth_validator.journal.block_wrapper'");
-
-    let block_wrapper_class = block_wrapper_mod
-        .get(py, "BlockWrapper")
-        .expect("Unable to import BlockWrapper from 'sawtooth_validator.journal.block_wrapper'");
-
     let block_header_class = py
         .import("sawtooth_validator.protobuf.block_pb2")
         .expect("Unable to import 'sawtooth_validator.protobuf.block_pb2'")
@@ -155,8 +149,8 @@ pub extern "C" fn block_publisher_new(
         .expect("Unable to import SettingsView from 'sawtooth_validator.state.settings_view'");
 
     let publisher = BlockPublisher::new(
+        block_manager,
         transaction_executor,
-        get_block,
         batch_committed,
         transaction_committed,
         state_view_factory,
@@ -170,7 +164,6 @@ pub extern "C" fn block_publisher_new(
         permission_verifier,
         batch_observers,
         batch_injector_factory,
-        block_wrapper_class,
         block_header_class,
         block_builder_class,
         settings_view_class,
@@ -268,13 +261,14 @@ pub extern "C" fn block_publisher_initialize_block(
     let py = gil.python();
     let block = unsafe {
         PyObject::from_borrowed_ptr(py, previous_block)
-            .extract::<BlockWrapper>(py)
+            .extract::<Block>(py)
             .unwrap()
     };
 
     let publisher = unsafe { (*(publisher as *mut BlockPublisher)).clone() };
     py.allow_threads(move || match publisher.initialize_block(block) {
         Err(InitializeBlockError::BlockInProgress) => ErrorCode::BlockInProgress,
+        Err(InitializeBlockError::MissingPredecessor) => ErrorCode::MissingPredecessor,
         Ok(_) => ErrorCode::Success,
     })
 }
@@ -333,7 +327,7 @@ pub fn convert_on_chain_updated_args(
     chain_head_ptr: *mut py_ffi::PyObject,
     committed_batches_ptr: *mut py_ffi::PyObject,
     uncommitted_batches_ptr: *mut py_ffi::PyObject,
-) -> (BlockWrapper, Vec<Batch>, Vec<Batch>) {
+) -> (Block, Vec<Batch>, Vec<Batch>) {
     let chain_head = unsafe { PyObject::from_borrowed_ptr(py, chain_head_ptr) };
     let py_committed_batches = unsafe { PyObject::from_borrowed_ptr(py, committed_batches_ptr) };
     let committed_batches: Vec<Batch> = if py_committed_batches == Python::None(py) {

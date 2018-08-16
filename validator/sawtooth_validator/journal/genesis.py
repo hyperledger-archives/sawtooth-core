@@ -26,7 +26,6 @@ from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
@@ -42,6 +41,7 @@ class GenesisController:
                  context_manager,
                  transaction_executor,
                  completer,
+                 block_manager,
                  block_store,
                  state_view_factory,
                  identity_signer,
@@ -71,6 +71,7 @@ class GenesisController:
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
         self._completer = completer
+        self._block_manager = block_manager
         self._block_store = block_store
         self._state_view_factory = state_view_factory
         self._identity_signer = identity_signer
@@ -196,12 +197,13 @@ class GenesisController:
 
         block = block_builder.build_block()
 
-        blkw = BlockWrapper(block=block, status=BlockStatus.Valid)
+        blkw = BlockWrapper(block=block)
 
         LOGGER.info('Genesis block created: %s', blkw)
 
         self._completer.add_block(block)
-        self._block_store.update_chain([blkw])
+        self._block_manager.put([blkw.block])
+        self._block_manager.persist(blkw.identifier, "commit_store")
 
         self._chain_id_manager.save_block_chain_id(block.header_signature)
 

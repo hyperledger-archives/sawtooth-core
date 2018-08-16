@@ -17,10 +17,14 @@
 
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{FromPyObject, NoArgs, ObjectProtocol, PyList, PyObject, Python, ToPyObject};
+use cpython::{
+    FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, ToPyObject,
+};
+use protobuf::{self, Message};
 use py_ffi;
 use pylogger;
 
@@ -29,6 +33,7 @@ use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
 use journal::block_store::{BlockStore, BlockStoreError};
+use proto;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -39,7 +44,7 @@ pub enum ErrorCode {
     MissingPredecessorInBranch = 0x03,
     MissingInput = 0x04,
     UnknownBlock = 0x05,
-    InvalidBlockStoreName = 0x06,
+    InvalidInputString = 0x06,
     Error = 0x07,
     InvalidPythonObject = 0x10,
     StopIteration = 0x11,
@@ -68,6 +73,31 @@ pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> Error
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn block_manager_contains(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+    result: *mut bool,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).contains(block_id) {
+        Ok(contains) => {
+            *result = contains;
+            ErrorCode::Success
+        }
+        Err(err) => {
+            error!("Unexpected error calling BlockManager.contains: {:?}", err);
+            ErrorCode::Error
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn block_manager_add_store(
     block_manager: *mut c_void,
     block_store_name: *const c_char,
@@ -81,45 +111,131 @@ pub unsafe extern "C" fn block_manager_add_store(
 
     let name = match CStr::from_ptr(block_store_name).to_str() {
         Ok(s) => s,
-        Err(_) => return ErrorCode::InvalidBlockStoreName,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    let block_manager = (*(block_manager as *mut BlockManager)).clone();
+
+    py.allow_threads(move || {
+        block_manager
+            .add_store(name, Box::new(py_block_store))
+            .map(|_| ErrorCode::Success)
+            .unwrap_or(ErrorCode::Error)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_persist(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+    store_name: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id, store_name);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+    let name = match CStr::from_ptr(store_name).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
     };
 
     (*(block_manager as *mut BlockManager))
-        .add_store(name, Box::new(py_block_store))
+        .persist(block_id, name)
         .map(|_| ErrorCode::Success)
+        .map_err(|err| {
+            error!("Unexpected error calling BlockManager.persist: {:?}", err);
+            err
+        })
         .unwrap_or(ErrorCode::Error)
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct PutEntry {
+    block_bytes: *mut u8,
+    block_bytes_len: usize,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_put(
     block_manager: *mut c_void,
-    branch: *mut py_ffi::PyObject,
+    branch: *const *const c_void,
+    branch_len: usize,
 ) -> ErrorCode {
     check_null!(block_manager, branch);
 
-    let gil = Python::acquire_gil();
-    let py = gil.python();
+    let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
+        .into_iter()
+        .map(|ptr| {
+            let entry = *ptr as *const PutEntry;
+            let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
+            let proto_block: proto::block::Block =
+                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
-    let py_branch = PyObject::from_borrowed_ptr(py, branch);
-
-    let branch: Vec<Block> = py_branch
-        .extract::<PyList>(py)
-        .expect("Failed to extract PyList from Branch")
-        .iter(py)
-        .map(|b| {
-            b.extract::<Block>(py)
-                .expect("Unable to extract Block in PyList, py_branch")
+            Ok(Block::from(proto_block))
         })
         .collect();
 
-    match (*(block_manager as *mut BlockManager)).put(branch) {
-        Err(BlockManagerError::MissingPredecessor(_)) => ErrorCode::MissingPredecessor,
-        Err(BlockManagerError::MissingInput) => ErrorCode::MissingInput,
-        Err(BlockManagerError::MissingPredecessorInBranch(_)) => {
-            ErrorCode::MissingPredecessorInBranch
+    match branch_result {
+        Ok(branch) => match (*(block_manager as *mut BlockManager)).put(branch) {
+            Err(BlockManagerError::MissingPredecessor(_)) => ErrorCode::MissingPredecessor,
+            Err(BlockManagerError::MissingInput) => ErrorCode::MissingInput,
+            Err(BlockManagerError::MissingPredecessorInBranch(_)) => {
+                ErrorCode::MissingPredecessorInBranch
+            }
+            Err(_) => ErrorCode::Error,
+            Ok(_) => ErrorCode::Success,
+        },
+        Err(err) => {
+            error!("Error processing branch: {:?}", err);
+            ErrorCode::Error
         }
-        Err(_) => ErrorCode::Error,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_ref_block(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).ref_block(block_id) {
+        Ok(()) => ErrorCode::Success,
+        Err(BlockManagerError::UnknownBlock) => ErrorCode::UnknownBlock,
+        Err(err) => {
+            error!("Unexpected error while ref'ing block: {:?}", err);
+            ErrorCode::Error
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_manager_unref_block(
+    block_manager: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(block_manager, block_id);
+
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidInputString,
+    };
+
+    match (*(block_manager as *mut BlockManager)).unref_block(block_id) {
         Ok(_) => ErrorCode::Success,
+        Err(BlockManagerError::UnknownBlock) => ErrorCode::UnknownBlock,
+        Err(err) => {
+            error!("Unexpected error while unref'ing block: {:?}", err);
+            ErrorCode::Error
+        }
     }
 }
 
@@ -158,20 +274,28 @@ pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) 
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut GetBlockIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
+    if let Some(Some(block)) = (*(iterator as *mut GetBlockIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
 
-    ErrorCode::Success
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 #[no_mangle]
@@ -186,8 +310,12 @@ pub unsafe extern "C" fn block_manager_branch_iterator_new(
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidPythonObject,
     };
+    match (*(block_manager as *mut BlockManager)).branch(tip) {
+        Ok(branch) => *iterator = Box::into_raw(branch) as *const c_void,
+        Err(BlockManagerError::UnknownBlock) => return ErrorCode::UnknownBlock,
+        Err(_) => return ErrorCode::Error,
+    }
 
-    *iterator = Box::into_raw((*(block_manager as *mut BlockManager)).branch(tip)) as *const c_void;
     ErrorCode::Success
 }
 
@@ -201,19 +329,28 @@ pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_voi
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut BranchIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
-    ErrorCode::Success
+    if let Some(block) = (*(iterator as *mut BranchIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
+
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 #[no_mangle]
@@ -234,9 +371,11 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidPythonObject,
     };
-
-    *iterator = Box::into_raw((*(block_manager as *mut BlockManager)).branch_diff(tip, exclude))
-        as *const c_void;
+    match (*(block_manager as *mut BlockManager)).branch_diff(tip, exclude) {
+        Ok(branch_diff) => *iterator = Box::into_raw(branch_diff) as *const c_void,
+        Err(BlockManagerError::UnknownBlock) => return ErrorCode::UnknownBlock,
+        Err(_) => return ErrorCode::Error,
+    }
 
     ErrorCode::Success
 }
@@ -253,19 +392,28 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     iterator: *mut c_void,
-    block: *mut *const py_ffi::PyObject,
+    block_bytes: *mut *const u8,
+    block_len: *mut usize,
+    block_cap: *mut usize,
 ) -> ErrorCode {
     check_null!(iterator);
 
-    *block = match (*(iterator as *mut BranchDiffIterator)).next() {
-        Some(b) => {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            b.to_py_object(py).steal_ptr()
-        }
-        None => return ErrorCode::StopIteration,
-    };
-    ErrorCode::Success
+    if let Some(block) = (*(iterator as *mut BranchDiffIterator)).next() {
+        let proto_block: proto::block::Block = block.into();
+        let bytes = proto_block
+            .write_to_bytes()
+            .expect("Failed to serialize proto Block");
+
+        *block_cap = bytes.capacity();
+        *block_len = bytes.len();
+        *block_bytes = bytes.as_slice().as_ptr();
+
+        mem::forget(bytes);
+
+        return ErrorCode::Success;
+    }
+
+    ErrorCode::StopIteration
 }
 
 struct PyBlockStore {
@@ -381,6 +529,16 @@ impl BlockStore for PyBlockStore {
     }
 }
 
+impl Clone for PyBlockStore {
+    fn clone(&self) -> Self {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        PyBlockStore {
+            py_block_store: self.py_block_store.clone_ref(py),
+        }
+    }
+}
+
 fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
     block_wrapper
         .getattr(py, "block")
@@ -442,7 +600,7 @@ mod test {
     use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
-    use cpython::{NoArgs, ObjectProtocol, PyObject, Python};
+    use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 
     use protobuf;
     use protobuf::Message;
@@ -460,7 +618,12 @@ mod test {
     #[test]
     fn py_block_store() {
         run_test(|db_path| {
-            let mut store = PyBlockStore::new(create_block_store(db_path));
+            let py_block_store = create_block_store(db_path);
+            let mut store = {
+                let gil_guard = Python::acquire_gil();
+                let py = gil_guard.python();
+                PyBlockStore::new(py_block_store.clone_ref(py))
+            };
 
             let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
             let block_b = create_block("B", 2, "A");
@@ -480,7 +643,52 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
+            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
+
+            let chain_head = get_chain_head(&py_block_store);
+
+            assert_eq!(block_b, chain_head);
+        })
+    }
+
+    #[test]
+    fn persist_to_py_block_store() {
+        run_test(|db_path| {
+            let py_block_store = create_block_store(db_path);
+            let mut store = {
+                let gil_guard = Python::acquire_gil();
+                let py = gil_guard.python();
+                PyBlockStore::new(py_block_store.clone_ref(py))
+            };
+
+            let block_manager = BlockManager::new();
+            block_manager.add_store("commit_store", Box::new(store.clone()));
+
+            let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
+            let block_b = create_block("B", 2, "A");
+            let block_c = create_block("C", 3, "B");
+
+            block_manager
+                .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
+                .unwrap();
+            block_manager
+                .persist(&block_c.header_signature, "commit_store")
+                .unwrap();
+
+            assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
+
+            {
+                let mut iterator = store.iter().unwrap();
+
+                assert_eq!(iterator.next().unwrap(), block_c);
+                assert_eq!(iterator.next().unwrap(), block_b);
+                assert_eq!(iterator.next().unwrap(), block_a);
+                assert_eq!(iterator.next(), None);
+            }
+
+            let chain_head = get_chain_head(&py_block_store);
+
+            assert_eq!(block_c, chain_head);
         })
     }
 
@@ -532,6 +740,19 @@ mod test {
             .unwrap();
 
         block_store.call(py, (db_instance,), None).unwrap()
+    }
+
+    fn get_chain_head(py_block_store: &PyObject) -> Block {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        py_block_store
+            .getattr(py, "chain_head")
+            .map_err(|py_err| py_err.print(py))
+            .unwrap()
+            .getattr(py, "block")
+            .unwrap()
+            .extract(py)
+            .unwrap()
     }
 
     fn run_test<T>(test: T) -> ()

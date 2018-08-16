@@ -60,6 +60,13 @@ pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
             .value_of("state_pruning_block_depth")
             .and_then(|s| s.parse::<u32>().ok()),
     )?;
+    pydict.set_item(
+        py,
+        "fork_cache_keep_time",
+        matches
+            .value_of("fork_cache_keep_time")
+            .and_then(|s| s.parse::<u32>().ok()),
+    )?;
 
     Ok(pydict)
 }
@@ -200,6 +207,13 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                     "set the block depth below which state roots are \
                      pruned from the global state database.",
                 ),
+        )
+        .arg(
+            Arg::with_name("fork_cache_keep_time")
+                .long("fork-cache-keep-time")
+                .takes_value(true)
+                .validator(is_non_zero_integer)
+                .help("set the time in seconds to keep uncommitted forks."),
         );
 
     app.get_matches()
@@ -209,6 +223,13 @@ fn is_positive_integer(arg_value: String) -> Result<(), String> {
     match arg_value.parse::<u32>() {
         Ok(i) if i > 0 => Ok(()),
         _ => Err("The value must be a positive number, greater than 0".into()),
+    }
+}
+
+fn is_non_zero_integer(arg_value: String) -> Result<(), String> {
+    match arg_value.parse::<u32>() {
+        Ok(_) => Ok(()),
+        _ => Err("The value must be a non-zero number.".into()),
     }
 }
 

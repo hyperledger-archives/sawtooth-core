@@ -156,10 +156,9 @@ class GossipMessageDuplicateHandler(Handler):
 
 
 class GossipBlockResponseHandler(Handler):
-    def __init__(self, completer, responder, chain_controller_has_block):
+    def __init__(self, completer, responder):
         self._completer = completer
         self._responder = responder
-        self._chain_controller_has_block = chain_controller_has_block
 
     def handle(self, connection_id, message_content):
         block, _ = message_content
@@ -182,8 +181,7 @@ class GossipBlockResponseHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
     def _has_block(self, block_id):
-        return (self._completer.get_block(block_id) is not None
-                or self._chain_controller_has_block(block_id))
+        return self._completer.get_block(block_id) is not None
 
     def _has_open_requests(self, block_id):
         return self._responder.get_request(block_id)

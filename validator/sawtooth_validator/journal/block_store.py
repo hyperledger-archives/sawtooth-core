@@ -16,7 +16,6 @@
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
-from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
@@ -86,7 +85,6 @@ class BlockStore(MutableMapping):
         block = Block()
         block.ParseFromString(value)
         return BlockWrapper(
-            status=BlockStatus.Valid,
             block=block)
 
     @staticmethod
@@ -115,9 +113,13 @@ class BlockStore(MutableMapping):
         :return:
         None
         """
-        add_pairs = [(blkw.header_signature, blkw) for blkw in new_chain]
+
+        new_chain = [BlockWrapper.wrap(b) for b in new_chain]
         if old_chain:
-            del_keys = [blkw.header_signature for blkw in old_chain]
+            old_chain = [BlockWrapper.wrap(b) for b in old_chain]
+        add_pairs = [(blkw.identifier, blkw) for blkw in new_chain]
+        if old_chain:
+            del_keys = [blkw.identifier for blkw in old_chain]
         else:
             del_keys = []
 

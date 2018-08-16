@@ -26,9 +26,9 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 use batch::Batch;
+use block::Block;
 use transaction::Transaction;
 
-use journal::block_wrapper::BlockWrapper;
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::validation_rule_enforcer;
 
@@ -50,7 +50,7 @@ pub struct FinalizeBlockResult {
 }
 
 pub struct CandidateBlock {
-    previous_block: BlockWrapper,
+    previous_block: Block,
     batch_committed: cpython::PyObject,
     transaction_committed: cpython::PyObject,
     scheduler: Box<Scheduler>,
@@ -73,7 +73,7 @@ pub struct CandidateBlock {
 
 impl CandidateBlock {
     pub fn new(
-        previous_block: BlockWrapper,
+        previous_block: Block,
         batch_committed: cpython::PyObject,
         transaction_committed: cpython::PyObject,
         scheduler: Box<Scheduler>,
@@ -108,7 +108,7 @@ impl CandidateBlock {
     }
 
     pub fn previous_block_id(&self) -> String {
-        self.previous_block.header_signature().clone()
+        self.previous_block.header_signature.clone()
     }
 
     pub fn last_batch(&self) -> Option<&Batch> {

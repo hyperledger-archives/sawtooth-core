@@ -29,6 +29,7 @@ from sawtooth_validator.database.dict_database import DictDatabase
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -100,6 +101,9 @@ class BlockTreeManager:
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
 
+        self.block_manager = BlockManager()
+        self.block_manager.add_store("commit_store", self.block_store)
+
         # add the mock reference to the consensus
         consensus_setting_addr = SettingsView.setting_address(
             'sawtooth.consensus.algorithm')
@@ -117,12 +121,15 @@ class BlockTreeManager:
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()
-            self.set_chain_head(self.genesis_block)
             chain_head = self.genesis_block
+            self.block_manager.put([chain_head.block])
+            self.block_manager.persist(
+                chain_head.block.header_signature,
+                "commit_store")
 
         self.block_publisher = BlockPublisher(
+            block_manager=self.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            get_block=lambda block: self.block_cache[block],
             transaction_committed=self.block_store.has_transaction,
             batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
@@ -131,7 +138,7 @@ class BlockTreeManager:
             ),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
-            chain_head=chain_head,
+            chain_head=chain_head.block,
             identity_signer=self.identity_signer,
             data_dir=None,
             config_dir=None,
@@ -141,9 +148,6 @@ class BlockTreeManager:
     @property
     def chain_head(self):
         return self.block_store.chain_head
-
-    def set_chain_head(self, block):
-        self.block_store.update_chain([block], [])
 
     def generate_block(self, previous_block=None,
                        add_to_store=False,
@@ -210,6 +214,7 @@ class BlockTreeManager:
 
         block_wrapper.status = status
 
+        self.block_manager.put([block_wrapper.block])
         if add_to_cache:
             self.block_cache[block_wrapper.identifier] = block_wrapper
 

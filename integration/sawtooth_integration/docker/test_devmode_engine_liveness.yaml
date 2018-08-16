@@ -141,6 +141,7 @@ services:
             --bind consensus:tcp://eth0:5005 \
             --peering dynamic \
             --scheduler parallel \
+            --fork-cache-keep-time 0 \
     \""
     stop_signal: SIGKILL
 
@@ -165,6 +166,7 @@ services:
             --peering dynamic \
             --seeds tcp://validator-0:8800 \
             --scheduler parallel \
+            --fork-cache-keep-time 0 \
     \""
     stop_signal: SIGKILL
 
@@ -189,6 +191,7 @@ services:
             --peering dynamic \
             --seeds tcp://validator-0:8800 \
             --scheduler parallel \
+            --fork-cache-keep-time 0 \
     \""
     stop_signal: SIGKILL
 
@@ -213,6 +216,7 @@ services:
             --peering dynamic \
             --seeds tcp://validator-0:8800 \
             --scheduler parallel \
+            --fork-cache-keep-time 0 \
     \""
     stop_signal: SIGKILL
 
@@ -237,6 +241,7 @@ services:
             --peering dynamic \
             --seeds tcp://validator-0:8800 \
             --scheduler parallel \
+            --fork-cache-keep-time 0 \
     \""
     stop_signal: SIGKILL
 

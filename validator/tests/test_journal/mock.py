@@ -28,8 +28,11 @@ from sawtooth_validator.execution.scheduler import TxnExecutionResult
 from sawtooth_validator.journal.batch_sender import BatchSender
 from sawtooth_validator.journal.block_sender import BlockSender
 from sawtooth_validator.journal.block_validator import BlockValidator
+from sawtooth_validator.journal.block_validator import \
+    BlockValidationResult
 from sawtooth_validator.journal.batch_injector import BatchInjectorFactory
 from sawtooth_validator.journal.batch_injector import BatchInjector
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
@@ -327,7 +330,8 @@ class MockBatchInjector(BatchInjector):
 
 class MockBlockValidator(BlockValidator):
     def __init__(self,
-                 block_cache,
+                 block_manager,
+                 block_store,
                  state_view_factory,
                  transaction_executor,
                  identity_signer,
@@ -339,14 +343,15 @@ class MockBlockValidator(BlockValidator):
         self._submitted_blocks = None
         self._has_block = has_block
         super().__init__(
-            block_cache,
-            state_view_factory,
-            transaction_executor,
-            identity_signer,
-            data_dir,
-            config_dir,
-            permission_verifier,
-            thread_pool)
+            block_manager=block_manager,
+            state_view_factory=state_view_factory,
+            transaction_executor=transaction_executor,
+            identity_signer=identity_signer,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier,
+            thread_pool=thread_pool,
+            block_store=block_store)
 
     def has_block(self, block_id):
         return self._has_block
@@ -354,6 +359,13 @@ class MockBlockValidator(BlockValidator):
     def submit_blocks_for_verification(self, blocks, callback):
         self._submitted_blocks = blocks
         super().submit_blocks_for_verification(blocks, callback)
+
+    def validate_block(self, block):
+        return BlockValidationResult(
+            execution_results=[],
+            block_id=block.header_signature,
+            num_transactions=0,
+            status=BlockStatus.Valid)
 
     @property
     def submitted_blocks(self):

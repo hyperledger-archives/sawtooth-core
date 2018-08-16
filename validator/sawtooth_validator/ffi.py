@@ -66,24 +66,47 @@ LIBRARY.call("pylogger_init", LOGGER.getEffectiveLevel())
 PY_LIBRARY = Library(ctypes.PyDLL)
 
 
-def prepare_byte_result():
+def prepare_string_result():
     """Returns pair of byte pointer and size value for use as return parameters
     in a LIBRARY call
     """
-    return (ctypes.POINTER(ctypes.c_uint8)(), ctypes.c_size_t(0))
+    return (
+        ctypes.POINTER(ctypes.c_uint8)(),
+        ctypes.c_size_t(0),
+        ctypes.c_size_t(0),
+    )
 
 
-def from_c_bytes(c_data, c_data_len, reclaim=True):
-    """Takes a byte pointer and a length and converts it into a python bytes
-    value. The bytes are reclaimed using Rust FFI code if reclaim is True.
-    """
+def from_rust_string(string_ptr, string_len, string_cap):
     # pylint: disable=invalid-slice-index
-    py_bytes = bytes(c_data[:c_data_len.value])
-    if reclaim:
-        LIBRARY.call(
-            "ffi_reclaim_bytes",
-            ctypes.byref(c_data),
-            ctypes.byref(c_data_len))
+    py_bytes = bytes(string_ptr[:string_len.value])
+    LIBRARY.call(
+        "ffi_reclaim_string",
+        string_ptr,
+        string_len,
+        string_cap)
+    return py_bytes
+
+
+def prepare_vec_result():
+    """Returns pair of byte pointer and size value for use as return parameters
+    in a LIBRARY call
+    """
+    return (
+        ctypes.POINTER(ctypes.c_uint8)(),
+        ctypes.c_size_t(0),
+        ctypes.c_size_t(0),
+    )
+
+
+def from_rust_vec(vec_ptr, vec_len, vec_cap):
+    # pylint: disable=invalid-slice-index
+    py_bytes = bytes(vec_ptr[:vec_len.value])
+    LIBRARY.call(
+        "ffi_reclaim_vec",
+        vec_ptr,
+        vec_len,
+        vec_cap)
     return py_bytes
 
 

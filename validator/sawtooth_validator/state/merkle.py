@@ -80,12 +80,16 @@ class MerkleDatabase(ffi.OwnedPointer):
         return c_result.value
 
     def get_merkle_root(self):
-        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_get_merkle_root', self.pointer,
-                 ctypes.byref(c_merkle_root), ctypes.byref(c_merkle_root_len))
+        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
+        _libexec(
+            'merkle_db_get_merkle_root',
+            self.pointer,
+            ctypes.byref(string_ptr),
+            ctypes.byref(string_len),
+            ctypes.byref(string_cap))
 
-        return ffi.from_c_bytes(
-            c_merkle_root, c_merkle_root_len).decode()
+        return ffi.from_rust_string(
+            string_ptr, string_len, string_cap).decode()
 
     def set_merkle_root(self, merkle_root):
         c_root = ctypes.c_char_p(merkle_root.encode())
@@ -96,12 +100,18 @@ class MerkleDatabase(ffi.OwnedPointer):
 
     def get(self, address):
         c_address = ctypes.c_char_p(address.encode())
-        (c_data, c_data_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
 
-        _libexec('merkle_db_get', self.pointer, c_address,
-                 ctypes.byref(c_data), ctypes.byref(c_data_len))
+        _libexec(
+            'merkle_db_get',
+            self.pointer,
+            c_address,
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        return _decode(ffi.from_c_bytes(c_data, c_data_len))
+        return _decode(ffi.from_rust_vec(
+            vec_ptr, vec_len, vec_cap))
 
     def __setitem__(self, address, value):
         return self.set(address, value)
@@ -109,26 +119,37 @@ class MerkleDatabase(ffi.OwnedPointer):
     def set(self, address, value):
         c_address = ctypes.c_char_p(address.encode())
 
-        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
+        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
 
         data = _encode(value)
-        _libexec('merkle_db_set', self.pointer, c_address,
-                 data, len(data),
-                 ctypes.byref(c_merkle_root),
-                 ctypes.byref(c_merkle_root_len))
+        _libexec(
+            'merkle_db_set',
+            self.pointer,
+            c_address,
+            data,
+            len(data),
+            ctypes.byref(string_ptr),
+            ctypes.byref(string_len),
+            ctypes.byref(string_cap))
 
-        return ffi.from_c_bytes(
-            c_merkle_root, c_merkle_root_len).decode()
+        return ffi.from_rust_string(
+            string_ptr, string_len, string_cap).decode()
 
     def delete(self, address):
         c_address = ctypes.c_char_p(address.encode())
-        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_delete', self.pointer, c_address,
-                 ctypes.byref(c_merkle_root),
-                 ctypes.byref(c_merkle_root_len))
 
-        return ffi.from_c_bytes(
-            c_merkle_root, c_merkle_root_len).decode()
+        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
+
+        _libexec(
+            'merkle_db_delete',
+            self.pointer,
+            c_address,
+            ctypes.byref(string_ptr),
+            ctypes.byref(string_len),
+            ctypes.byref(string_cap))
+
+        return ffi.from_rust_string(
+            string_ptr, string_len, string_cap).decode()
 
     def update(self, set_items, delete_items=None, virtual=True):
         """
@@ -152,16 +173,21 @@ class MerkleDatabase(ffi.OwnedPointer):
         for (i, address) in enumerate(delete_items):
             c_delete_items[i] = ctypes.c_char_p(address.encode())
 
-        (c_merkle_root, c_merkle_root_len) = ffi.prepare_byte_result()
-        _libexec('merkle_db_update', self.pointer,
-                 c_set_items, ctypes.c_size_t(len(set_items)),
-                 c_delete_items, ctypes.c_size_t(len(delete_items)),
-                 virtual,
-                 ctypes.byref(c_merkle_root),
-                 ctypes.byref(c_merkle_root_len))
+        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
+        _libexec(
+            'merkle_db_update',
+            self.pointer,
+            c_set_items,
+            ctypes.c_size_t(len(set_items)),
+            c_delete_items,
+            ctypes.c_size_t(len(delete_items)),
+            virtual,
+            ctypes.byref(string_ptr),
+            ctypes.byref(string_len),
+            ctypes.byref(string_cap))
 
-        return ffi.from_c_bytes(
-            c_merkle_root, c_merkle_root_len).decode()
+        return ffi.from_rust_string(
+            string_ptr, string_len, string_cap).decode()
 
     def addresses(self):
         addresses = []
@@ -233,17 +259,22 @@ class _LeafIterator:
         if not self._c_iter_ptr:
             raise StopIteration()
 
-        (c_address, c_address_len) = ffi.prepare_byte_result()
-        (c_value, c_value_len) = ffi.prepare_byte_result()
+        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
 
-        _libexec('merkle_db_leaf_iterator_next', self._c_iter_ptr,
-                 ctypes.byref(c_address),
-                 ctypes.byref(c_address_len),
-                 ctypes.byref(c_value),
-                 ctypes.byref(c_value_len))
+        _libexec(
+            'merkle_db_leaf_iterator_next',
+            self._c_iter_ptr,
+            ctypes.byref(string_ptr),
+            ctypes.byref(string_len),
+            ctypes.byref(string_cap),
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        address = ffi.from_c_bytes(c_address, c_address_len).decode()
-        value = _decode(ffi.from_c_bytes(c_value, c_value_len))
+        address = ffi.from_rust_string(
+            string_ptr, string_len, string_cap).decode()
+        value = _decode(ffi.from_rust_vec(vec_ptr, vec_len, vec_cap))
 
         return (address, value)
 

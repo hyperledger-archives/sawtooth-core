@@ -38,21 +38,16 @@ class BlockWrapper:
     stored in the Block Cache.
     """
 
-    def __init__(self, block, weight=0, status=BlockStatus.Unknown):
+    def __init__(self, block):
         self.block = block
         self._block_header = None
-        self.weight = weight  # the block weight calculated by the
-        # consensus algorithm.
-        self.status = status  # One of the BlockStatus types.
-        self.execution_results = []
-        self.num_transactions = 0
 
     @staticmethod
-    def wrap(block, weight=0, status=BlockStatus.Unknown):
+    def wrap(block):
         if isinstance(block, BlockWrapper):
             return block
 
-        return BlockWrapper(block, weight=weight, status=status)
+        return BlockWrapper(block)
 
     @property
     def batches(self):

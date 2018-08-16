@@ -28,6 +28,7 @@ from sawtooth_validator.ffi import OwnedPointer
 from sawtooth_validator.consensus.handlers import BlockEmpty
 from sawtooth_validator.consensus.handlers import BlockInProgress
 from sawtooth_validator.consensus.handlers import BlockNotInitialized
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -124,8 +125,8 @@ class BlockPublisher(OwnedPointer):
     """
 
     def __init__(self,
+                 block_manager,
                  transaction_executor,
-                 get_block,
                  batch_committed,
                  transaction_committed,
                  state_view_factory,
@@ -143,9 +144,9 @@ class BlockPublisher(OwnedPointer):
         Initialize the BlockPublisher object
 
         Args:
+            block_manager (:obj:`BlockManager`): A BlockManager instance
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
-            get_block (fn(block_id) -> Block): A function for getting blocks
             batch_committed (fn(batch_id) -> bool): A function for checking if
                 a batch is committed.
             transaction_committed (fn(transaction_id) -> bool): A function for
@@ -167,17 +168,23 @@ class BlockPublisher(OwnedPointer):
         """
         super(BlockPublisher, self).__init__('block_publisher_drop')
 
+        if chain_head is not None:
+            chain_head = BlockWrapper.wrap(chain_head)
+            chain_head_block = chain_head.block
+        else:
+            chain_head_block = None
+
         self._to_exception(PY_LIBRARY.call(
             'block_publisher_new',
+            block_manager.pointer,
             ctypes.py_object(transaction_executor),
-            ctypes.py_object(get_block),
             ctypes.py_object(batch_committed),
             ctypes.py_object(transaction_committed),
             ctypes.py_object(state_view_factory),
             ctypes.py_object(settings_cache),
             ctypes.py_object(block_sender),
             ctypes.py_object(batch_sender),
-            ctypes.py_object(chain_head),
+            ctypes.py_object(chain_head_block),
             ctypes.py_object(identity_signer),
             ctypes.py_object(data_dir),
             ctypes.py_object(config_dir),
@@ -284,23 +291,27 @@ class BlockPublisher(OwnedPointer):
         self._py_call('initialize_block', ctypes.py_object(block))
 
     def summarize_block(self, force=False):
-        (c_result, c_result_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
         self._call(
             'summarize_block',
             ctypes.c_bool(force),
-            ctypes.byref(c_result), ctypes.byref(c_result_len))
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        return ffi.from_c_bytes(c_result, c_result_len)
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
     def finalize_block(self, consensus=None, force=False):
-        (c_result, c_result_len) = ffi.prepare_byte_result()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
         self._call(
             'finalize_block',
             consensus, len(consensus),
             ctypes.c_bool(force),
-            ctypes.byref(c_result), ctypes.byref(c_result_len))
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
 
-        return ffi.from_c_bytes(c_result, c_result_len).decode('utf-8')
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap).decode('utf-8')
 
     def cancel_block(self):
         self._call("cancel_block")

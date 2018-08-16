@@ -286,7 +286,7 @@ def add(
     # GOSSIP_BLOCK_RESPONSE 1) Check for duplicate responses
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
-        GossipBlockResponseHandler(completer, responder, has_block),
+        GossipBlockResponseHandler(completer, responder),
         thread_pool)
 
     # GOSSIP_MESSAGE 2) Verify Network Permissions
