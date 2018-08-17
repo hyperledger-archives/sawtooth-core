@@ -39,7 +39,7 @@ pub enum ErrorCode {
 }
 
 #[no_mangle]
-pub extern "C" fn incoming_batch_sender_send(
+pub unsafe extern "C" fn incoming_batch_sender_send(
     sender_ptr: *mut c_void,
     pyobj_ptr: *mut py_ffi::PyObject,
 ) -> ErrorCode {
@@ -48,7 +48,7 @@ pub extern "C" fn incoming_batch_sender_send(
     let gil = Python::acquire_gil();
     let py = gil.python();
     let batch: Batch = {
-        let pyobj = unsafe { PyObject::from_borrowed_ptr(py, pyobj_ptr) };
+        let pyobj = PyObject::from_borrowed_ptr(py, pyobj_ptr);
 
         match pyobj.extract(py) {
             Ok(batch) => batch,
@@ -58,7 +58,7 @@ pub extern "C" fn incoming_batch_sender_send(
         }
     };
 
-    let mut sender = unsafe { (*(sender_ptr as *mut IncomingBatchSender)).clone() };
+    let mut sender = (*(sender_ptr as *mut IncomingBatchSender)).clone();
 
     py.allow_threads(move || match sender.put(batch) {
         Ok(()) => ErrorCode::Success,
@@ -67,35 +67,34 @@ pub extern "C" fn incoming_batch_sender_send(
 }
 
 #[no_mangle]
-pub extern "C" fn incoming_batch_sender_has_batch(
+pub unsafe extern "C" fn incoming_batch_sender_has_batch(
     sender_ptr: *mut c_void,
     batch_id: *const c_char,
     has: *mut bool,
 ) -> ErrorCode {
     check_null!(sender_ptr, batch_id);
 
-    let batch_id = match unsafe { CStr::from_ptr(batch_id).to_str() } {
+    let batch_id = match CStr::from_ptr(batch_id).to_str() {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidInput,
     };
-    unsafe {
-        *has = (*(sender_ptr as *mut IncomingBatchSender))
-            .has_batch(batch_id)
-            .unwrap_or_else(|e| {
-                warn!("Unable to check for batch {:?}", e);
-                false
-            });
-    }
+
+    *has = (*(sender_ptr as *mut IncomingBatchSender))
+        .has_batch(batch_id)
+        .unwrap_or_else(|e| {
+            warn!("Unable to check for batch {:?}", e);
+            false
+        });
 
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn incoming_batch_sender_drop(sender_ptr: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn incoming_batch_sender_drop(sender_ptr: *mut c_void) -> ErrorCode {
     if sender_ptr.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    unsafe { Box::from_raw(sender_ptr as *mut IncomingBatchSender) };
+    Box::from_raw(sender_ptr as *mut IncomingBatchSender);
     ErrorCode::Success
 }
