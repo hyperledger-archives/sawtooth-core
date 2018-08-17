@@ -26,7 +26,7 @@ This procedure walks you through the following tasks:
  * Stopping Sawtooth and deleting the Kubernetes cluster
 
 After completing this procedure, you will have the environment required for
-for the other tutorials in this guide, :doc:`intro_xo_transaction_family` and
+the other tutorials in this guide, :doc:`intro_xo_transaction_family` and
 :doc:`using_the_sdks`.
 
 
@@ -52,7 +52,7 @@ running a :term:`validator`, a :term:`REST API`, and three
 .. figure:: ../images/appdev-environment-one-node-3TPs-kube.*
    :width: 100%
    :align: center
-   :alt: Docker application environment environment for Sawtooth
+   :alt: Docker application environment for Sawtooth
 
 The Kubernetes cluster has one pod with a container for each Sawtooth component.
 After the container is running, you can use the `Kubernetes dashboard
