@@ -304,7 +304,7 @@ pub unsafe extern "C" fn block_publisher_summarize_block(
             *result = consensus.as_ptr();
             *result_len = consensus.as_slice().len();
 
-            mem::forget(result);
+            mem::forget(consensus);
 
             ErrorCode::Success
         }
