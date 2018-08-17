@@ -24,7 +24,7 @@ extern crate sawtooth_sdk;
 
 mod playlist;
 mod smallbank;
-mod smallbank_tranformer;
+mod smallbank_transformer;
 
 use std::error::Error;
 use std::fs::File;
@@ -49,7 +49,7 @@ use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 
 use playlist::SmallbankGeneratingIter;
-use smallbank_tranformer::SBPayloadTransformer;
+use smallbank_transformer::SBPayloadTransformer;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
