@@ -34,7 +34,7 @@ pub enum ErrorCode {
 }
 
 #[no_mangle]
-pub extern "C" fn lmdb_database_new(
+pub unsafe extern "C" fn lmdb_database_new(
     path: *const c_char,
     file_size: usize,
     indexes_ptr: *mut py_ffi::PyObject,
@@ -44,7 +44,7 @@ pub extern "C" fn lmdb_database_new(
         return ErrorCode::NullPointerProvided;
     }
 
-    let indexes: Vec<String> = unsafe {
+    let indexes: Vec<String> = {
         let py = Python::assume_gil_acquired();
         let py_obj = PyObject::from_borrowed_ptr(py, indexes_ptr);
         let py_list: PyList = py_obj.extract(py).unwrap();
@@ -54,11 +54,9 @@ pub extern "C" fn lmdb_database_new(
             .collect()
     };
 
-    let db_path = unsafe {
-        match CStr::from_ptr(path).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidFilePath,
-        }
+    let db_path = match CStr::from_ptr(path).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidFilePath,
     };
 
     let ctx = match LmdbContext::new(Path::new(&db_path), indexes.len(), Some(file_size)) {
@@ -74,9 +72,8 @@ pub extern "C" fn lmdb_database_new(
 
     match LmdbDatabase::new(ctx, &indexes) {
         Ok(db) => {
-            unsafe {
-                *db_ptr = Box::into_raw(Box::new(db)) as *const c_void;
-            }
+            *db_ptr = Box::into_raw(Box::new(db)) as *const c_void;
+
             ErrorCode::Success
         }
         Err(err) => {
@@ -87,11 +84,11 @@ pub extern "C" fn lmdb_database_new(
 }
 
 #[no_mangle]
-pub extern "C" fn lmdb_database_drop(lmdb_database: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn lmdb_database_drop(lmdb_database: *mut c_void) -> ErrorCode {
     if lmdb_database.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    unsafe { Box::from_raw(lmdb_database as *mut LmdbDatabase) };
+    Box::from_raw(lmdb_database as *mut LmdbDatabase);
     ErrorCode::Success
 }
