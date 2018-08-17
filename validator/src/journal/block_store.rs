@@ -38,7 +38,19 @@ pub trait BlockStore: Sync + Send {
     fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
-#[derive(Default)]
+pub trait BatchIndex {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
+}
+
+pub trait TransactionIndex {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
+}
+
+#[derive(Clone, Default)]
 pub struct InMemoryBlockStore {
     block_by_block_id: HashMap<String, Block>,
     chain_head_num: u64,
@@ -110,6 +122,40 @@ impl BlockStore for InMemoryBlockStore {
         Ok(Box::new(InMemoryIter {
             blockstore: self,
             head: &self.chain_head_id,
+        }))
+    }
+}
+
+impl BatchIndex for InMemoryBlockStore {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .flat_map(|block| block.batches)
+            .any(|batch| &batch.header_signature == id))
+    }
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .find(|block| block.batch_ids.contains(&id.into())))
+    }
+}
+
+impl TransactionIndex for InMemoryBlockStore {
+    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
+        Ok(self
+            .iter()?
+            .flat_map(|block| block.batches)
+            .flat_map(|batch| batch.transactions)
+            .any(|txn| &txn.header_signature == id))
+    }
+
+    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
+        Ok(self.iter()?.find(|block| {
+            block
+                .batches
+                .iter()
+                .any(|batch| batch.transaction_ids.contains(&id.into()))
         }))
     }
 }
