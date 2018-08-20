@@ -205,3 +205,241 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         blocks_pending.set_value(self.pending.len())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use journal::NULL_BLOCK_IDENTIFIER;
+    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn test_block_scheduler_simple() {
+        let block_manager = BlockManager::new();
+        let block_status_store = MockStore::new();
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let block_a1 = create_block("A1", "A", 1);
+        let block_a2 = create_block("A2", "A", 1);
+        let block_b2 = create_block("B2", "A2", 2);
+
+        let block_unknown = create_block("UNKNOWN", "A", 1);
+        let block_b = create_block("B", "UNKNOWN", 2);
+        block_manager
+            .put(vec![block_a.clone(), block_unknown.clone()])
+            .expect("The block manager failed to `put` a branch");
+
+        let block_scheduler = BlockScheduler::new(block_manager, block_status_store);
+
+        assert_eq!(
+            block_scheduler.schedule(vec![
+                block_a.clone(),
+                block_a1.clone(),
+                block_a2.clone(),
+                block_b2.clone(),
+            ]),
+            vec![block_a.clone()]
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_a.header_signature),
+            vec![block_a1, block_a2]
+        );
+
+        assert_eq!(block_scheduler.schedule(vec![block_b]), vec![block_unknown]);
+    }
+
+    #[test]
+    fn test_block_scheduler_multiple_forks() {
+        let block_manager = BlockManager::new();
+        let block_status_store: Arc<Mutex<HashMap<String, BlockStatus>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let block_b = create_block("B", "A", 1);
+        let block_c1 = create_block("C1", "B", 2);
+        let block_c2 = create_block("C2", "B", 2);
+        let block_c3 = create_block("C3", "B", 2);
+        let block_d1 = create_block("D11", "C1", 3);
+        let block_d2 = create_block("D12", "C1", 3);
+        let block_d3 = create_block("D13", "C1", 3);
+
+        block_manager
+            .put(vec![
+                block_a.clone(),
+                block_b.clone(),
+                block_c1.clone(),
+                block_d1.clone(),
+            ])
+            .expect("The block manager failed to `put` a branch");
+        block_manager
+            .put(vec![block_b.clone(), block_c2.clone()])
+            .expect("The block manager failed to put a branch");
+
+        block_manager
+            .put(vec![block_b.clone(), block_c3.clone()])
+            .expect("The block manager failed to put a block");
+
+        block_manager
+            .put(vec![block_c1.clone(), block_d2.clone()])
+            .expect("The block manager failed to `put` a branch");
+
+        block_manager
+            .put(vec![block_c1.clone(), block_d3.clone()])
+            .expect("The block manager failed to put a branch");
+
+        let block_scheduler = BlockScheduler::new(block_manager, block_status_store);
+
+        assert_eq!(
+            block_scheduler.schedule(vec![block_a.clone()]),
+            vec![block_a.clone()],
+            "The genesis block's predecessor does not need to be validated"
+        );
+
+        assert_eq!(
+            block_scheduler.schedule(vec![
+                block_b.clone(),
+                block_c1.clone(),
+                block_c2.clone(),
+                block_c3.clone(),
+            ]),
+            vec![],
+            "Block A has not been validated yet"
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_a.header_signature),
+            vec![block_b.clone()],
+            "Marking Block A as complete, makes Block B available"
+        );
+
+        assert_eq!(
+            block_scheduler.schedule(vec![block_d1.clone(), block_d2.clone(), block_d3.clone()]),
+            vec![],
+            "None of Blocks D1, D2, D3 are available"
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_b.header_signature),
+            vec![block_c1.clone(), block_c2.clone(), block_c3.clone()],
+            "Marking Block B as complete, makes Block C1, C2, C3 available"
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_c2.header_signature),
+            vec![],
+            "No Blocks are available"
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_c3.header_signature),
+            vec![],
+            "No Blocks are available"
+        );
+
+        assert_eq!(
+            block_scheduler.done(&block_c1.header_signature),
+            vec![block_d1.clone(), block_d2.clone(), block_d3.clone()],
+            "Blocks D1, D2, D3 are available"
+        );
+    }
+
+    #[test]
+    fn test_cache_misses() {
+        let block_manager = BlockManager::new();
+        let block_status_store: Arc<Mutex<HashMap<String, BlockStatus>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
+        let block_b = create_block("B", "A", 1);
+        let block_c1 = create_block("C1", "B", 2);
+        let block_c2 = create_block("C2", "B", 2);
+        let block_c3 = create_block("C3", "B", 2);
+
+        block_manager
+            .put(vec![block_a.clone(), block_b.clone(), block_c1.clone()])
+            .expect("Block manager errored trying to put a branch");
+
+        block_manager
+            .put(vec![block_b.clone(), block_c2.clone()])
+            .expect("Block manager errored trying to put a branch");
+
+        block_manager
+            .put(vec![block_b.clone(), block_c3.clone()])
+            .expect("Block manager errored trying to put a branch");
+
+        let block_scheduler = BlockScheduler::new(block_manager, Arc::clone(&block_status_store));
+
+        assert_eq!(
+            block_scheduler.schedule(vec![block_a.clone(), block_b.clone()]),
+            vec![block_a.clone()],
+            "Block A is ready, but block b is not"
+        );
+
+        block_status_store
+            .lock()
+            .expect("Mutex was poisoned")
+            .insert(block_a.header_signature.clone(), BlockStatus::Valid);
+
+        assert_eq!(
+            block_scheduler.done(&block_a.header_signature),
+            vec![block_b.clone()],
+            "Now Block B is ready"
+        );
+
+        // We are not inserting a status for block b so there will be a later miss
+
+        assert_eq!(
+            block_scheduler.done(&block_b.header_signature),
+            vec![],
+            "Block B is done and there are no further blocks"
+        );
+
+        // Now a cache miss
+
+        assert_eq!(
+            block_scheduler.schedule(vec![block_c1.clone(), block_c2.clone(), block_c3.clone()]),
+            vec![block_b.clone()],
+            "Since there was a cache miss, block b must be scheduled again"
+        );
+    }
+
+    fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
+        Block {
+            header_signature: header_signature.into(),
+            batches: vec![],
+            state_root_hash: "".into(),
+            consensus: vec![],
+            batch_ids: vec![],
+            signer_public_key: "".into(),
+            previous_block_id: previous_block_id.into(),
+            block_num,
+            header_bytes: vec![],
+        }
+    }
+
+    impl BlockStatusStore for Arc<Mutex<HashMap<String, BlockStatus>>> {
+        fn status(&self, block_id: &str) -> BlockStatus {
+            self.lock()
+                .expect("Mutex was poisoned")
+                .get(block_id)
+                .cloned()
+                .unwrap_or(BlockStatus::Unknown)
+        }
+    }
+
+    struct MockStore {}
+
+    impl MockStore {
+        fn new() -> Self {
+            MockStore {}
+        }
+    }
+
+    impl BlockStatusStore for MockStore {
+        fn status(&self, block_id: &str) -> BlockStatus {
+            if block_id == "UNKNOWN" {
+                return BlockStatus::Unknown;
+            }
+            BlockStatus::Valid
+        }
+    }
+}
