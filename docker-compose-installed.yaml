@@ -292,3 +292,10 @@ services:
         - no_proxy
     image: sawtooth-devmode-rust:${ISOLATION_ID}
     container_name: sawtooth-devmode-rust
+
+  sawtooth-meta:
+    build:
+      context: .
+      dockerfile: ci/sawtooth-meta
+    image: sawtooth-meta:${ISOLATION_ID}
+    container_name: sawtooth-meta

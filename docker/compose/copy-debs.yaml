@@ -213,3 +213,12 @@ services:
       bash -c "
         cp /tmp/*.deb /build/debs
       "
+
+  sawtooth-meta:
+    image: sawtooth-meta:${ISOLATION_ID}
+    volumes:
+      - ../../build/debs:/build/debs
+    command: |
+      bash -c "
+        cp /tmp/*.deb /build/debs
+      "
