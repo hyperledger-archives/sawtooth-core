@@ -223,9 +223,9 @@ pub fn create_smallbank_playlist(
     };
 
     let iter = SmallbankGeneratingIter {
-        num_accounts: num_accounts,
+        num_accounts,
         current_account: 0,
-        rng: rng,
+        rng,
     };
 
     Box::new(iter.take(num_transactions))
@@ -271,7 +271,7 @@ pub struct SmallbankGeneratingIter {
 impl SmallbankGeneratingIter {
     pub fn new(num_accounts: usize, seed: &[usize]) -> Self {
         SmallbankGeneratingIter {
-            num_accounts: num_accounts,
+            num_accounts,
             current_account: 0,
             rng: SeedableRng::from_seed(seed),
         }

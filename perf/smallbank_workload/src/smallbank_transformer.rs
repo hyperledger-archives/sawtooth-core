@@ -42,7 +42,7 @@ pub struct SBPayloadTransformer<'a> {
 impl<'a> SBPayloadTransformer<'a> {
     pub fn new(signer: &'a signing::Signer) -> Self {
         SBPayloadTransformer {
-            signer: signer,
+            signer,
             dependencies: SignatureTracker::new(),
         }
     }
