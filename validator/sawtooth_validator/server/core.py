@@ -50,6 +50,7 @@ from sawtooth_validator.state.settings_cache import SettingsObserver
 from sawtooth_validator.state.settings_cache import SettingsCache
 from sawtooth_validator.state.identity_view import IdentityViewFactory
 from sawtooth_validator.state.state_view import StateViewFactory
+from sawtooth_validator.state.state_view import NativeStateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
 from sawtooth_validator.gossip.identity_observer import IdentityObserver
@@ -122,6 +123,7 @@ class Validator:
             global_state_db_filename,
             indexes=MerkleDatabase.create_index_configuration())
         state_view_factory = StateViewFactory(global_state_db)
+        native_state_view_factory = NativeStateViewFactory(global_state_db)
 
         # -- Setup Receipt Store -- #
         receipt_db_filename = os.path.join(
@@ -300,8 +302,7 @@ class Validator:
             transaction_executor=transaction_executor,
             transaction_committed=block_store.has_transaction,
             batch_committed=block_store.has_batch,
-            state_view_factory=state_view_factory,
-            settings_cache=settings_cache,
+            state_view_factory=native_state_view_factory,
             block_sender=block_sender,
             batch_sender=batch_sender,
             chain_head=block_store.chain_head,

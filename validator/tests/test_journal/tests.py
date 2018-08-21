@@ -74,8 +74,7 @@ from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.state.settings_view import SettingsViewFactory
-from sawtooth_validator.state.settings_cache import SettingsCache
+from sawtooth_validator.state.state_view import NativeStateViewFactory
 
 from test_journal.block_tree_manager import BlockTreeManager
 
@@ -166,10 +165,6 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head.block,
@@ -343,10 +338,6 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head.block,
@@ -388,10 +379,6 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head.block,
@@ -449,10 +436,6 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head.block,
@@ -501,10 +484,6 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head.block,
@@ -977,10 +956,11 @@ class TestChainController(unittest.TestCase):
             indexes=MerkleDatabase.create_index_configuration(),
             _size=120 * 1024 * 1024)
 
+        self.state_view_factory = NativeStateViewFactory(self.state_database)
+
         self.block_tree_manager = BlockTreeManager()
         self.permission_verifier = MockPermissionVerifier()
-        self.state_view_factory = MockStateViewFactory(
-            self.block_tree_manager.state_db)
+
         self.transaction_executor = MockTransactionExecutor(
             batch_execution_result=None)
         self.executor = SynchronousExecutor()
@@ -1007,10 +987,6 @@ class TestChainController(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
             block_sender=MockBlockSender(),
             batch_sender=MockBatchSender(),
             chain_head=self.block_tree_manager.chain_head.block,
@@ -1175,6 +1151,10 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             os.path.join(self.dir, 'merkle.lmdb'),
             indexes=MerkleDatabase.create_index_configuration(),
             _size=120 * 1024 * 1024)
+
+        self.native_state_view_factory = NativeStateViewFactory(
+            self.state_database)
+
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.consensus_notifier = MockConsensusNotifier()
@@ -1186,12 +1166,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
                 self.block_tree_manager.block_store.has_transaction
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
-            state_view_factory=MockStateViewFactory(
-                self.block_tree_manager.state_db),
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            state_view_factory=self.native_state_view_factory,
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.block_store.chain_head.block,
@@ -1326,10 +1301,6 @@ class TestJournal(unittest.TestCase):
                 transaction_committed=btm.block_store.has_transaction,
                 batch_committed=btm.block_store.has_batch,
                 state_view_factory=MockStateViewFactory(btm.state_db),
-                settings_cache=SettingsCache(
-                    SettingsViewFactory(
-                        btm.state_view_factory),
-                ),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
                 chain_head=btm.block_store.chain_head.block,
