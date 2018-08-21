@@ -21,9 +21,6 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use protobuf;
 
-use database::lmdb::LmdbDatabase;
-
-use state::merkle::MerkleDatabase;
 use state::StateDatabaseError;
 use state::StateReader;
 
@@ -58,24 +55,6 @@ impl From<protobuf::ProtobufError> for SettingsViewError {
 impl From<ParseIntError> for SettingsViewError {
     fn from(err: ParseIntError) -> Self {
         SettingsViewError::ParseIntError(err)
-    }
-}
-
-pub struct SettingsViewFactory {
-    state_db: LmdbDatabase,
-}
-
-impl SettingsViewFactory {
-    pub fn new(state_db: LmdbDatabase) -> Self {
-        SettingsViewFactory { state_db }
-    }
-
-    pub fn create_settings_view<S: Into<String>>(
-        &mut self,
-        merkle_root: S,
-    ) -> Result<SettingsView<MerkleDatabase>, StateDatabaseError> {
-        let merkle_db = MerkleDatabase::new(self.state_db.clone(), Some(&merkle_root.into()))?;
-        Ok(SettingsView::new(merkle_db))
     }
 }
 
