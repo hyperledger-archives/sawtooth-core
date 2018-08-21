@@ -31,6 +31,7 @@ use transaction::Transaction;
 
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::validation_rule_enforcer;
+use state::settings_view::SettingsView;
 
 use pylogger;
 
@@ -58,7 +59,7 @@ pub struct CandidateBlock {
     block_builder: cpython::PyObject,
     batch_injectors: Vec<cpython::PyObject>,
     identity_signer: cpython::PyObject,
-    settings_view: cpython::PyObject,
+    settings_view: SettingsView,
 
     summary: Option<Vec<u8>>,
     /// Batches remaining after the summary has been computed
@@ -82,7 +83,7 @@ impl CandidateBlock {
         max_batches: usize,
         batch_injectors: Vec<cpython::PyObject>,
         identity_signer: cpython::PyObject,
-        settings_view: cpython::PyObject,
+        settings_view: SettingsView,
     ) -> Self {
         CandidateBlock {
             previous_block,
