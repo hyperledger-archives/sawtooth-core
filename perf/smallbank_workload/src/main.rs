@@ -23,7 +23,7 @@ extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 
 mod playlist;
-mod smallbank;
+mod protos;
 mod smallbank_transformer;
 
 use std::error::Error;

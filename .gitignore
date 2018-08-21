@@ -101,7 +101,6 @@
 /perf/sawtooth_perf/target/
 /perf/sawtooth_workload/Cargo.lock
 /perf/sawtooth_workload/target/
-/perf/smallbank_workload/src/smallbank.rs
 /perf/smallbank_workload/Cargo.lock
 /perf/smallbank_workload/target/
 /perf/smallbank_workload/bin/
