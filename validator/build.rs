@@ -18,19 +18,18 @@
 extern crate glob;
 extern crate protoc_rust;
 
+use std::env;
 use std::error::Error;
 use std::fs;
-use std::io::prelude::*;
+use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
 use protoc_rust::Customize;
 
 const PROTO_FILES_DIR: &str = "../protos";
-const PROTOBUF_TARGET_DIR: &str = "src/proto";
+const PROTO_DIR_NAME: &str = "proto";
 const GENERATED_SOURCE_HEADER: &str = r#"
-#![cfg_attr(rustfmt, rustfmt_skip)]
-
 /*
  * THIS IS A GENERATED FILE: DO NOT MODIFY
  *
@@ -62,11 +61,14 @@ fn main() {
         },
     );
 
+    let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
+    let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
+
     if latest_change > last_build_time {
         println!("{:?}", proto_src_files);
-        fs::create_dir_all(PROTOBUF_TARGET_DIR).unwrap();
+        fs::create_dir_all(&dest_path).unwrap();
         protoc_rust::run(protoc_rust::Args {
-            out_dir: PROTOBUF_TARGET_DIR,
+            out_dir: &dest_path.to_str().expect("Invalid proto destination path"),
             input: &proto_src_files
                 .iter()
                 .map(|proto_file| proto_file.file_path.as_ref())
@@ -77,7 +79,7 @@ fn main() {
             },
         }).expect("unable to run protoc");
 
-        let mod_file_name = format!("{}/mod.rs", PROTOBUF_TARGET_DIR);
+        let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
         let mut file = match fs::File::create(&mod_file_path) {
             Err(err) => panic!(
@@ -142,12 +144,13 @@ fn protofile_info(path: &Path) -> ProtoFile {
 }
 
 fn read_last_build_time() -> Duration {
-    let mod_file_name = format!("{}/mod.rs", PROTOBUF_TARGET_DIR);
-    match fs::File::open(Path::new(&mod_file_name)) {
+    let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
+    let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME).join("mod.rs");
+    match fs::File::open(Path::new(&dest_path.to_str().unwrap())) {
         Err(err) => {
             println!(
-                "unable to open {}: {}; defaulting to 0",
-                mod_file_name,
+                "unable to open {:?}: {}; defaulting to 0",
+                dest_path,
                 err.description()
             );
             Duration::new(0, 0)
