@@ -42,6 +42,10 @@ pub trait BlockValidator: Sync + Send + Clone {
     fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>);
 }
 
+pub trait BlockStatusStore {
+    fn status(&self, block_id: &str) -> BlockStatus;
+}
+
 #[derive(Clone, Debug)]
 pub struct BlockValidationResult {
     pub block_id: String,
