@@ -58,7 +58,7 @@ def auto_version(default, strict):
             parts[0] = default
 
     if len(parts) > 1:
-        parts[0] = ".dev".join([parts[0], parts[1].replace("-", ".")])
+        parts[0] = "-dev".join([parts[0], parts[1].replace("-", ".")])
         if len(parts) == 4:
             parts[0] = parts[0] + "-" + parts[3]
         return parts[0]
@@ -75,7 +75,7 @@ def version(default):
         else:
             version = os.environ['VERSION']
     else:
-        version = default + ".dev1"
+        version = default + "-dev1"
     return version
 
 
