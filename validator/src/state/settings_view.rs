@@ -117,7 +117,11 @@ impl SettingsView {
                 };
             }
         }
-        let bytes_opt = self.state_reader.get(&setting_address(key))?;
+        let bytes_opt = match self.state_reader.get(&setting_address(key)) {
+            Ok(opt) => opt,
+            Err(StateDatabaseError::NotFound(_)) => return Ok(default_value),
+            Err(err) => return Err(SettingsViewError::from(err)),
+        };
         let setting_opt = if let Some(bytes) = bytes_opt {
             Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
         } else {
@@ -304,7 +308,10 @@ mod tests {
 
     impl StateReader for MockStateReader {
         fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
-            Ok(self.state.get(address).cloned())
+            match self.state.get(address).cloned() {
+                Some(s) => Ok(Some(s)),
+                None => Err(StateDatabaseError::NotFound(address.into())),
+            }
         }
 
         fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
