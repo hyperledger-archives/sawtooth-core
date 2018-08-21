@@ -31,7 +31,7 @@ use sawtooth_sdk::signing;
 
 use playlist::bytes_to_hex_str;
 use playlist::make_addresses;
-use smallbank::{SmallbankTransactionPayload, SmallbankTransactionPayload_PayloadType};
+use protos::smallbank::{SmallbankTransactionPayload, SmallbankTransactionPayload_PayloadType};
 
 /// Transforms SmallbankTransactionPayloads into Sawtooth Transactions.
 pub struct SBPayloadTransformer<'a> {

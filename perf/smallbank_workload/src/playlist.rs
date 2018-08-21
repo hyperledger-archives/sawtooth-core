@@ -38,9 +38,9 @@ use self::yaml_rust::Yaml;
 use self::yaml_rust::YamlEmitter;
 use self::yaml_rust::YamlLoader;
 
-use smallbank;
-use smallbank::SmallbankTransactionPayload;
-use smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
+use protos::smallbank;
+use protos::smallbank::SmallbankTransactionPayload;
+use protos::smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
 
 use protobuf;
 use protobuf::Message;
