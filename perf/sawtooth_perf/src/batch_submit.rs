@@ -313,7 +313,7 @@ pub struct InfiniteBatchListIterator<'a> {
 
 impl<'a> InfiniteBatchListIterator<'a> {
     pub fn new(batches: &'a mut Iterator<Item = BatchResult>) -> Self {
-        InfiniteBatchListIterator { batches: batches }
+        InfiniteBatchListIterator { batches }
     }
 }
 
