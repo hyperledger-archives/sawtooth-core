@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# docker build -f sdk/examples/devmode_rust/Dockerfile-installed -t sawtooth-devmode-rust .
+
 # -------------=== sawtooth devmode rust build ===-------------
 FROM ubuntu:xenial as devmode-rust-builder
 
@@ -22,9 +24,11 @@ RUN apt-get update \
  && apt-get install -y \
  curl \
  gcc \
+ git \
  libssl-dev \
  libzmq3-dev \
  pkg-config \
+ python3 \
  unzip
 
 # For Building Protobufs
@@ -40,6 +44,7 @@ COPY . /project
 
 WORKDIR /project/sdk/examples/devmode_rust
 
+RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
 # -------------=== devmode rust docker build ===-------------
