@@ -38,7 +38,6 @@
 /families/smallbank/smallbank_rust/target/
 /families/smallbank/smallbank_rust/Cargo.lock
 /families/smallbank/smallbank_rust/bin/
-/families/smallbank/smallbank_rust/src/smallbank.rs
 
 /coverage
 /coverage/html

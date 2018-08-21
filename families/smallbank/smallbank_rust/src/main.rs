@@ -26,7 +26,7 @@ extern crate rustc_serialize;
 extern crate sawtooth_sdk;
 
 mod handler;
-mod smallbank;
+mod protos;
 
 use log::LogLevelFilter;
 use log4rs::append::console::ConsoleAppender;
