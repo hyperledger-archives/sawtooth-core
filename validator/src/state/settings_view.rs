@@ -62,6 +62,11 @@ pub struct SettingsView {
     state_reader: Box<StateReader>,
 }
 
+// Given that this is not threadsafe, but can be members of objects that can
+// be moved between threads (themselves guarded by mutexes/rwlocks), we can
+// safely implement sync.
+unsafe impl Sync for SettingsView {}
+
 impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
     pub fn new(state_reader: Box<StateReader>) -> Self {
