@@ -22,6 +22,7 @@ pub mod merkle_ffi;
 pub mod settings_view;
 pub mod state_pruning_manager;
 pub mod state_view_factory;
+pub mod state_view_ffi;
 
 use state::error::StateDatabaseError;
 
