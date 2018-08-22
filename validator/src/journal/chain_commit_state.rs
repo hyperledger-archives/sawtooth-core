@@ -36,9 +36,9 @@ pub enum ChainCommitStateError {
     Error(String),
 }
 
-pub struct ChainCommitState<B: BatchIndex, T: TransactionIndex> {
-    batch_index: B,
-    transaction_index: T,
+pub struct ChainCommitState<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> {
+    batch_index: &'b B,
+    transaction_index: &'t T,
     ancestor: Option<Block>,
     uncommitted_batch_ids: Vec<String>,
     uncommitted_txn_ids: Vec<String>,
@@ -53,13 +53,13 @@ fn check_no_duplicates(ids: &[String]) -> Option<String> {
     None
 }
 
-impl<B: BatchIndex, T: TransactionIndex> ChainCommitState<B, T> {
+impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 't, B, T> {
     pub fn new<BS: BlockStore>(
         branch_head_id: &str,
         block_manager: &BlockManager,
-        batch_index: B,
-        transaction_index: T,
-        block_store: BS,
+        batch_index: &'b B,
+        transaction_index: &'t T,
+        block_store: &BS,
     ) -> Result<Self, ChainCommitStateError> {
         let current_chain_head_id = block_store
             .iter()
@@ -399,9 +399,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -426,9 +426,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -453,9 +453,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-3",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -476,9 +476,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -500,9 +500,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -524,9 +524,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -548,9 +548,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -572,9 +572,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -603,9 +603,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -627,9 +627,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -651,9 +651,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-4",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -677,9 +677,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -698,9 +698,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             NULL_BLOCK_IDENTIFIER,
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store.clone(),
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -718,9 +718,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store.clone(),
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -739,9 +739,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B3",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -822,7 +822,7 @@ mod test {
         }
     }
 
-    fn setup_state() -> (BlockManager, Box<InMemoryBlockStore>) {
+    fn setup_state() -> (BlockManager, InMemoryBlockStore) {
         let mut block_manager = BlockManager::new();
 
         for branch in create_chains_to_put_in_block_manager() {
@@ -835,7 +835,7 @@ mod test {
             .add_store("commit", block_store.clone())
             .expect("The block manager failed to add a blockstore");
 
-        (block_manager, block_store)
+        (block_manager, *block_store)
     }
 
 }
