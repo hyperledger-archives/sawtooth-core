@@ -1,4 +1,4 @@
-# Copyright 2018 Cargill Incorporated
+# Copyright 2018 Bitwise IO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,38 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f families/battleship/Dockerfile -t sawtooth-battleship-tp-local .
-
-# -------------===  build ===-------------
+# docker build -f families/battleship/Dockerfile -t sawtooth-battleship-local .
 
 FROM ubuntu:bionic
 
 RUN apt-get update \
- && apt-get install gnupg -y
+ && apt-get install -y \
+ curl \
+ gcc \
+ libssl-dev \
+ libzmq3-dev \
+ pkg-config \
+ unzip
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update
+# For Building Protobufs
+RUN curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
+ && unzip protoc-3.5.1-linux-x86_64.zip -d protoc3 \
+ && rm protoc-3.5.1-linux-x86_64.zip
 
-RUN apt-get install -y -q \
-    git \
-    python3 \
-    python3-stdeb
 
-RUN apt-get install -y -q \
-    python3-grpcio \
-    python3-grpcio-tools \
-    python3-protobuf
+ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
+    CARGO_INCREMENTAL=0
 
-RUN apt-get install -y -q \
-    python3-colorlog \
-    python3-toml \
-    python3-yaml \
-    python3-zmq
-
-RUN mkdir -p /var/log/sawtooth
-
-ENV PATH=$PATH:/project/sawtooth-core/bin
+RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
+ && chmod +x /usr/bin/rustup-init \
+ && rustup-init -y
 
 WORKDIR /project/sawtooth-core
+
+CMD cd families/battleship \
+ && echo "\033[0;32m--- Building battleship ---\n\033[0m" \
+ && cargo build --release \
+ && cp ./target/release/battleship-tp /project/sawtooth-core/bin/battleship-tp \
+ && cp ./target/release/battleship-cli /project/sawtooth-core/bin/battleship

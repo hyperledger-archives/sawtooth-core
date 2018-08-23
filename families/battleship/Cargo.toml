@@ -1,0 +1,49 @@
+# Copyright 2018 Bitwise IO, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[package]
+name = "battleship"
+version = "0.1.0"
+authors = ["Bitwise IO, Inc."]
+
+[[example]]
+name = "play"
+
+[[bin]]
+name = "battleship-tp"
+path = "src/bin/processor.rs"
+
+[[bin]]
+name = "battleship-cli"
+path = "src/bin/cli.rs"
+
+[dependencies]
+base64 = "0.9"
+clap = "2.32"
+config = "0.9"
+dirs = "1.0"
+failure = "0.1"
+json = "0.11"
+log = "0.4"
+log4rs = "0.8"
+prettytable-rs = "0.7"
+protobuf = "2.0"
+rand = "0.5"
+reqwest = "0.8"
+rust-crypto = "0.2"
+sawtooth-sdk = { path = "../../sdk/rust" }
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+users = "0.7"

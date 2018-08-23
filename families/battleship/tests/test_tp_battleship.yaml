@@ -30,7 +30,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: battleship-tp-python -vv -C tcp://test-tp-battleship:4004
+    command: "bash -c \"\
+         cd families/battleship && \
+         cargo run --bin battleship-tp -- -vvvv -C tcp://test-tp-battleship:4004
+         \""
     stop_signal: SIGKILL
 
   test-tp-battleship:

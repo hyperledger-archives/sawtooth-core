@@ -50,7 +50,8 @@
 /families/identity/sawtooth_identity/target/
 /families/identity/sawtooth_identity/Cargo.lock
 /families/identity/sawtooth_identity/protobuf/
-
+/families/battleship/target
+/families/battleship/Cargo.lock
 
 /coverage
 /coverage/html

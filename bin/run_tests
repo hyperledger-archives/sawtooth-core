@@ -24,6 +24,7 @@ MODULE_LIST="
     settings
     identity
     block_info
+    battleship
     validator
     python_sdk
     rust_sdk
@@ -135,6 +136,9 @@ main() {
                     ;;
                 block_info)
                     test_block_info
+                    ;;
+                battleship)
+                    test_battleship
                     ;;
                 validator)
                     test_validator
