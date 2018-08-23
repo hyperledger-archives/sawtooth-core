@@ -59,7 +59,7 @@ macro_rules! check_null {
 }
 
 #[no_mangle]
-pub extern "C" fn chain_controller_new(
+pub unsafe extern "C" fn chain_controller_new(
     block_store: *mut py_ffi::PyObject,
     block_manager: *const c_void,
     block_validator: *mut py_ffi::PyObject,
@@ -83,21 +83,18 @@ pub extern "C" fn chain_controller_new(
         data_directory
     );
 
-    let data_dir = unsafe {
-        match CStr::from_ptr(data_directory).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidDataDir,
-        }
+    let data_dir = match CStr::from_ptr(data_directory).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidDataDir,
     };
 
-    let py = unsafe { Python::assume_gil_acquired() };
+    let py = Python::assume_gil_acquired();
 
-    let py_block_store_reader = unsafe { PyObject::from_borrowed_ptr(py, block_store) };
-    let py_block_validator = unsafe { PyObject::from_borrowed_ptr(py, block_validator) };
-    let py_observers = unsafe { PyObject::from_borrowed_ptr(py, observers) };
-    let chain_head_lock_ref =
-        unsafe { (chain_head_lock as *const ChainHeadLock).as_ref().unwrap() };
-    let py_consensus_notifier = unsafe { PyObject::from_borrowed_ptr(py, consensus_notifier) };
+    let py_block_store_reader = PyObject::from_borrowed_ptr(py, block_store);
+    let py_block_validator = PyObject::from_borrowed_ptr(py, block_validator);
+    let py_observers = PyObject::from_borrowed_ptr(py, observers);
+    let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
+    let py_consensus_notifier = PyObject::from_borrowed_ptr(py, consensus_notifier);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -109,8 +106,8 @@ pub extern "C" fn chain_controller_new(
         return ErrorCode::InvalidPythonObject;
     };
 
-    let block_manager = unsafe { (*(block_manager as *const BlockManager)).clone() };
-    let state_database = unsafe { (*(state_database as *const LmdbDatabase)).clone() };
+    let block_manager = (*(block_manager as *const BlockManager)).clone();
+    let state_database = (*(state_database as *const LmdbDatabase)).clone();
 
     let state_pruning_manager = StatePruningManager::new(state_database);
 
@@ -127,28 +124,24 @@ pub extern "C" fn chain_controller_new(
         Duration::from_secs(fork_cache_keep_time as u64),
     );
 
-    unsafe {
-        *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
-    }
+    *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
 
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    unsafe { Box::from_raw(chain_controller as *mut ChainController<PyBlockValidator>) };
+    Box::from_raw(chain_controller as *mut ChainController<PyBlockValidator>);
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockValidator>)).start();
-    }
+    (*(chain_controller as *mut ChainController<PyBlockValidator>)).start();
 
     ErrorCode::Success
 }
@@ -175,12 +168,11 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
 }
 
 #[no_mangle]
-pub extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
+pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockValidator>)).stop();
-    }
+    (*(chain_controller as *mut ChainController<PyBlockValidator>)).stop();
+
     ErrorCode::Success
 }
 
@@ -218,22 +210,18 @@ chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &blo
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
 
 #[no_mangle]
-pub extern "C" fn chain_controller_queue_block(
+pub unsafe extern "C" fn chain_controller_queue_block(
     chain_controller: *mut c_void,
     block_id: *const c_char,
 ) -> ErrorCode {
     check_null!(chain_controller, block_id);
 
-    let block_id = unsafe {
-        match CStr::from_ptr(block_id).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidBlockId,
-        }
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    unsafe {
-        (*(chain_controller as *mut ChainController<PyBlockValidator>)).queue_block(block_id);
-    }
+    (*(chain_controller as *mut ChainController<PyBlockValidator>)).queue_block(block_id);
 
     ErrorCode::Success
 }
@@ -241,26 +229,22 @@ pub extern "C" fn chain_controller_queue_block(
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
 #[no_mangle]
-pub extern "C" fn chain_controller_on_block_received(
+pub unsafe extern "C" fn chain_controller_on_block_received(
     chain_controller: *mut c_void,
     block_id: *const c_char,
 ) -> ErrorCode {
     check_null!(chain_controller, block_id);
 
-    let block_id = unsafe {
-        match CStr::from_ptr(block_id).to_str() {
-            Ok(s) => s,
-            Err(_) => return ErrorCode::InvalidBlockId,
-        }
+    let block_id = match CStr::from_ptr(block_id).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    unsafe {
-        if let Err(err) = (*(chain_controller as *mut ChainController<PyBlockValidator>))
-            .on_block_received(block_id.into())
-        {
-            error!("ChainController.on_block_received error: {:?}", err);
-            return ErrorCode::Unknown;
-        }
+    if let Err(err) = (*(chain_controller as *mut ChainController<PyBlockValidator>))
+        .on_block_received(block_id.into())
+    {
+        error!("ChainController.on_block_received error: {:?}", err);
+        return ErrorCode::Unknown;
     }
 
     ErrorCode::Success
@@ -301,16 +285,16 @@ pub unsafe extern "C" fn chain_controller_chain_head(
 }
 
 #[no_mangle]
-pub extern "C" fn sender_drop(sender: *const c_void) -> ErrorCode {
+pub unsafe extern "C" fn sender_drop(sender: *const c_void) -> ErrorCode {
     check_null!(sender);
 
-    unsafe { Box::from_raw(sender as *mut Sender<BlockWrapper>) };
+    Box::from_raw(sender as *mut Sender<BlockWrapper>);
 
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern "C" fn sender_send(
+pub unsafe extern "C" fn sender_send(
     sender: *const c_void,
     validation_result: *mut py_ffi::PyObject,
 ) -> ErrorCode {
@@ -319,19 +303,17 @@ pub extern "C" fn sender_send(
     let gil_guard = Python::acquire_gil();
     let py = gil_guard.python();
 
-    let py_result = unsafe { PyObject::from_borrowed_ptr(py, validation_result) };
+    let py_result = PyObject::from_borrowed_ptr(py, validation_result);
     let result: BlockValidationResult = py_result.extract(py).expect("Unable to extract block");
 
-    unsafe {
-        let sender = (*(sender as *mut Sender<BlockValidationResult>)).clone();
-        py.allow_threads(move || match sender.send(result) {
-            Ok(_) => ErrorCode::Success,
-            Err(err) => {
-                error!("Unable to send validation result: {:?}", err);
-                ErrorCode::Unknown
-            }
-        })
-    }
+    let sender = (*(sender as *mut Sender<BlockValidationResult>)).clone();
+    py.allow_threads(move || match sender.send(result) {
+        Ok(_) => ErrorCode::Success,
+        Err(err) => {
+            error!("Unable to send validation result: {:?}", err);
+            ErrorCode::Unknown
+        }
+    })
 }
 
 struct PyBlockValidator {
