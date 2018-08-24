@@ -124,8 +124,8 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                 && self.block_status_store.status(&block.previous_block_id) == BlockStatus::Unknown
             {
                 info!(
-                    "During block scheduling, predecessor of block {} status is unknown. Scheduling all blocks since last predecessor with known status",
-                    &block.header_signature);
+                    "During block scheduling, predecessor of block {}, {}, status is unknown. Scheduling all blocks since last predecessor with known status",
+                    &block.header_signature, &block.previous_block_id);
 
                 let blocks_previous_to_previous = self.block_manager
                         .branch(&block.previous_block_id)
