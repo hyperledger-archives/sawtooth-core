@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{self, ObjectProtocol};
+use cpython::{self, ObjectProtocol, PyClone};
 
 use batch::Batch;
 use transaction::Transaction;
@@ -55,5 +55,14 @@ impl PermissionVerifier for PyPermissionVerifier {
             .expect("PermissionVerifier has no method `is_batch_signer_authorized`")
             .extract(py)
             .expect("Unable to extract bool from `is_batch_signer_authorized`")
+    }
+}
+
+impl Clone for PyPermissionVerifier {
+    fn clone(&self) -> Self {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        PyPermissionVerifier::new(self.verifier.clone_ref(py))
     }
 }
