@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::sync::{Arc, Mutex};
+
 use std::collections::HashMap;
 
 use block::Block;
@@ -52,9 +54,7 @@ pub trait TransactionIndex {
 
 #[derive(Clone, Default)]
 pub struct InMemoryBlockStore {
-    block_by_block_id: HashMap<String, Block>,
-    chain_head_num: u64,
-    chain_head_id: String,
+    state: Arc<Mutex<InMemoryBlockStoreState>>,
 }
 
 impl InMemoryBlockStore {
@@ -62,8 +62,12 @@ impl InMemoryBlockStore {
         InMemoryBlockStore::default()
     }
 
-    fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
-        self.block_by_block_id.get(block_id)
+    fn get_block_by_block_id(&self, block_id: &str) -> Option<Block> {
+        self.state
+            .lock()
+            .expect("The mutex is not poisoned")
+            .get_block_by_block_id(block_id)
+            .cloned()
     }
 }
 
@@ -72,17 +76,56 @@ impl BlockStore for InMemoryBlockStore {
         &'a self,
         block_ids: &[&str],
     ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
-        let iterator: InMemoryGetBlockIterator = InMemoryGetBlockIterator::new(
-            self,
-            block_ids
-                .iter()
-                .map(|block_id| (*block_id).to_string())
-                .collect(),
-        );
-
-        Ok(Box::new(iterator))
+        let block_ids_owned = block_ids.into_iter().map(|id| (*id).into()).collect();
+        Ok(Box::new(InMemoryGetBlockIterator::new(
+            self.clone(),
+            block_ids_owned,
+        )))
     }
 
+    fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
+        self.state
+            .lock()
+            .expect("The mutex is poisoned")
+            .delete(block_ids)
+    }
+
+    fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError> {
+        self.state
+            .lock()
+            .expect("The mutex is poisoned")
+            .put(blocks)
+    }
+
+    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        let chain_head = self
+            .state
+            .lock()
+            .expect("The mutex is poisoned")
+            .chain_head_id
+            .clone();
+        Ok(Box::new(InMemoryIter::new(self.clone(), chain_head)))
+    }
+}
+
+#[derive(Default)]
+pub struct InMemoryBlockStoreState {
+    block_by_block_id: HashMap<String, Block>,
+    chain_head_num: u64,
+    chain_head_id: String,
+}
+
+impl InMemoryBlockStoreState {
+    fn new() -> Self {
+        InMemoryBlockStoreState::default()
+    }
+
+    fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
+        self.block_by_block_id.get(block_id)
+    }
+}
+
+impl InMemoryBlockStoreState {
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
         if block_ids
             .iter()
@@ -116,13 +159,6 @@ impl BlockStore for InMemoryBlockStore {
                 .insert(block.header_signature.clone(), block);
         });
         Ok(())
-    }
-
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
-        Ok(Box::new(InMemoryIter {
-            blockstore: self,
-            head: &self.chain_head_id,
-        }))
     }
 }
 
@@ -160,17 +196,14 @@ impl TransactionIndex for InMemoryBlockStore {
     }
 }
 
-struct InMemoryGetBlockIterator<'a> {
-    blockstore: &'a InMemoryBlockStore,
+struct InMemoryGetBlockIterator {
+    blockstore: InMemoryBlockStore,
     block_ids: Vec<String>,
     index: usize,
 }
 
-impl<'a> InMemoryGetBlockIterator<'a> {
-    fn new(
-        blockstore: &'a InMemoryBlockStore,
-        block_ids: Vec<String>,
-    ) -> InMemoryGetBlockIterator<'a> {
+impl InMemoryGetBlockIterator {
+    fn new(blockstore: InMemoryBlockStore, block_ids: Vec<String>) -> InMemoryGetBlockIterator {
         InMemoryGetBlockIterator {
             blockstore,
             block_ids,
@@ -179,7 +212,7 @@ impl<'a> InMemoryGetBlockIterator<'a> {
     }
 }
 
-impl<'a> Iterator for InMemoryGetBlockIterator<'a> {
+impl Iterator for InMemoryGetBlockIterator {
     type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -188,24 +221,30 @@ impl<'a> Iterator for InMemoryGetBlockIterator<'a> {
             None => None,
         };
         self.index += 1;
-        block.cloned()
+        block
     }
 }
 
-struct InMemoryIter<'a> {
-    blockstore: &'a InMemoryBlockStore,
-    head: &'a str,
+struct InMemoryIter {
+    blockstore: InMemoryBlockStore,
+    head: String,
 }
 
-impl<'a> Iterator for InMemoryIter<'a> {
+impl InMemoryIter {
+    fn new(blockstore: InMemoryBlockStore, head: String) -> Self {
+        InMemoryIter { blockstore, head }
+    }
+}
+
+impl Iterator for InMemoryIter {
     type Item = Block;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let block = self.blockstore.get_block_by_block_id(self.head);
-        if let Some(b) = block {
-            self.head = &b.previous_block_id;
+        let block = self.blockstore.get_block_by_block_id(&self.head);
+        if let Some(ref b) = block {
+            self.head = b.previous_block_id.clone();
         }
-        block.cloned()
+        block
     }
 }
 
