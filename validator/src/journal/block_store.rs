@@ -40,13 +40,13 @@ pub trait BlockStore: Sync + Send {
     fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
-pub trait BatchIndex {
+pub trait BatchIndex: Sync + Send {
     fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
 
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
 }
 
-pub trait TransactionIndex {
+pub trait TransactionIndex: Sync + Send {
     fn contains(&self, id: &str) -> Result<bool, BlockStoreError>;
 
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;

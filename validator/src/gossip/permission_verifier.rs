@@ -20,7 +20,7 @@ use cpython::{self, ObjectProtocol};
 use batch::Batch;
 use transaction::Transaction;
 
-pub trait PermissionVerifier {
+pub trait PermissionVerifier: Sync + Send {
     fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str, from_state: bool)
         -> bool;
 }
