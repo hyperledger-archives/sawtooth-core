@@ -33,13 +33,15 @@ use std::thread;
 use std::time::Duration;
 
 use protobuf;
-use uluru;
 
 use batch::Batch;
 use block::Block;
 use journal;
 use journal::block_manager::{BlockManager, BlockManagerError};
-use journal::block_validator::{BlockValidationResult, BlockValidator, ValidationError};
+use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
+use journal::block_validator::{
+    BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
+};
 use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
@@ -51,7 +53,6 @@ use proto::transaction_receipt::TransactionReceipt;
 use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
-const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
 
 const COMMIT_STORE: &str = "commit_store";
 
@@ -147,9 +148,6 @@ struct ForkResolutionResult<'a> {
 /// Indication that an error occured during fork resolution.
 #[derive(Debug)]
 struct ForkResolutionError(String);
-
-type BlockValidationResultCache =
-    uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
 
 struct ChainControllerState {
     block_manager: BlockManager,
@@ -251,8 +249,8 @@ pub struct ChainController<BV: BlockValidator> {
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
     consensus_notifier: Arc<ConsensusNotifier>,
-    block_validator: BV,
-    block_validation_results: Arc<RwLock<BlockValidationResultCache>>,
+    block_validator: BlockValidator<TEP, PV, BS, B, T>,
+    block_validation_results: BlockValidationResultStore,
 
     // Queues
     block_queue_sender: Option<Sender<String>>,
@@ -269,6 +267,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
         block_validator: BV,
         chain_reader: Box<ChainReader>,
         chain_head_lock: ChainHeadLock,
+        block_validation_results: BlockValidationResultStore,
         consensus_notifier: Box<ConsensusNotifier>,
         data_dir: String,
         state_pruning_block_depth: u32,
@@ -287,7 +286,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                 fork_cache: ForkCache::new(fork_cache_keep_time),
             })),
             block_validator,
-            block_validation_results: Arc::new(RwLock::new(BlockValidationResultCache::default())),
+            block_validation_results: block_validation_results,
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             commit_queue_sender: None,
@@ -312,16 +311,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     }
 
     pub fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
-        let block_validation_result = {
-            let mut cache = self
-                .block_validation_results
-                .write()
-                .expect("Unable to acquire read lock, due to poisoning");
-
-            cache.find(|result| &result.block_id == block_id).cloned()
-        };
-
-        block_validation_result.or_else(|| {
+        self.block_validation_results.get(block_id).or_else(|| {
             if self
                 .state
                 .read()
@@ -512,14 +502,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     }
 
     pub fn fail_block(&self, block: &Block) {
-        let mut cache = self
-            .block_validation_results
-            .write()
-            .expect("Unable to acquire read lock, due to poisoning");
-
-        cache
-            .find(|result| &result.block_id == &block.header_signature)
-            .map(|result| result.status = BlockStatus::Invalid);
+        self.block_validation_results
+            .fail_block(&block.header_signature);
 
         let state = self
             .state
@@ -536,12 +520,7 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
     }
 
     fn set_block_validation_result(&self, result: BlockValidationResult) {
-        let mut cache = self
-            .block_validation_results
-            .write()
-            .expect("Unable to acquire read lock, due to poisoning");
-
-        cache.insert(result);
+        self.block_validation_results.insert(result)
     }
 
     fn get_block_unchecked(&self, block_id: &str) -> Block {
@@ -732,12 +711,8 @@ impl<BV: BlockValidator + 'static> ChainController<BV> {
                     })
                 });
 
-                let mut cache = self
-                    .block_validation_results
-                    .write()
-                    .expect("Unable to acquire read lock, due to poisoning");
                 for blk in result.new_chain.iter().rev() {
-                    match cache.find(|result| &blk.header_signature == &result.block_id) {
+                    match self.block_validation_results.get(&blk.header_signature) {
                         Some(validation_results) => {
                             let receipts: Vec<TransactionReceipt> = validation_results
                                 .execution_results

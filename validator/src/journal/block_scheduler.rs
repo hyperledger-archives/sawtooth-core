@@ -425,7 +425,7 @@ mod tests {
                 .unwrap_or(BlockStatus::Unknown)
         }
     }
-
+    #[derive(Clone)]
     struct MockStore {}
 
     impl MockStore {
