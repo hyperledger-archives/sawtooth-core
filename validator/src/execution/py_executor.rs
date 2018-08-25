@@ -35,8 +35,8 @@ impl PyExecutor {
 
 impl ExecutionPlatform for PyExecutor {
     fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr> {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         let scheduler = self
             .executor
             .call_method(py, "create_scheduler", (state_hash,), None)
