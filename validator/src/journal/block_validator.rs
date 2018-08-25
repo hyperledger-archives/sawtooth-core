@@ -223,7 +223,7 @@ where
         view_factory: StateViewFactory,
     ) -> Self {
         let mut channels = vec![];
-        for i in 1..BLOCK_VALIDATOR_THREAD_NUM {
+        for _ in 1..BLOCK_VALIDATOR_THREAD_NUM {
             let (tx, rx) = channel();
             channels.push((tx, Some(rx)));
         }

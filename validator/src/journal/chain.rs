@@ -56,7 +56,7 @@ use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
-const COMMIT_STORE: &str = "commit_store";
+pub const COMMIT_STORE: &str = "commit_store";
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =

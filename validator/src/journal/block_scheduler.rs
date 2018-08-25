@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 use block::Block;
 use journal::block_validator::BlockStatusStore;
 use journal::block_wrapper::BlockStatus;
+use journal::chain::COMMIT_STORE;
 use journal::{block_manager::BlockManager, NULL_BLOCK_IDENTIFIER};
 use metrics;
 
@@ -121,7 +122,7 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
             }
 
             if &block.previous_block_id != NULL_BLOCK_IDENTIFIER
-                && self.block_status_store.status(&block.previous_block_id) == BlockStatus::Unknown
+                && self.block_validity(&block.previous_block_id) == BlockStatus::Unknown
             {
                 info!(
                     "During block scheduling, predecessor of block {}, {}, status is unknown. Scheduling all blocks since last predecessor with known status",
@@ -162,6 +163,25 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         }
         self.update_gauges();
         ready
+    }
+
+    fn block_validity(&self, block_id: &str) -> BlockStatus {
+        let status = self.block_status_store.status(block_id);
+        if status == BlockStatus::Unknown {
+            match self
+                .block_manager
+                .get_from_blockstore(block_id, COMMIT_STORE)
+            {
+                Err(err) => {
+                    warn!("Error during checking block validity: {:?}", err);
+                    BlockStatus::Unknown
+                }
+                Ok(None) => BlockStatus::Unknown,
+                Ok(Some(_)) => BlockStatus::Valid,
+            }
+        } else {
+            status
+        }
     }
 
     fn done(&mut self, block_id: &str) -> Vec<Block> {
