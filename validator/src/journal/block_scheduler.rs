@@ -135,13 +135,21 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 
                 let mut to_be_scheduled = vec![];
                 for predecessor in blocks_previous_to_previous {
-                    eprintln!("{}", &predecessor.header_signature);
                     if self
                         .block_status_store
                         .status(&predecessor.header_signature)
                         != BlockStatus::Unknown
                     {
                         break;
+                    }
+                    match self.block_manager.ref_block(&predecessor.header_signature) {
+                        Ok(_) => (),
+                        Err(err) => {
+                            warn!(
+                                "Failed to ref block {} during cache-miss block rescheduling: {:?}",
+                                &predecessor.header_signature, err
+                            );
+                        }
                     }
                     to_be_scheduled.push(predecessor);
                 }
