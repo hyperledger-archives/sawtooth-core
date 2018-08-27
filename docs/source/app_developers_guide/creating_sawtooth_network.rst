@@ -914,8 +914,8 @@ functionality. If you have problems, see the Kubernetes document
 Step 3: Download the Sawtooth Configuration File
 ------------------------------------------------
 
-Download the Kubernetes configuration (kubeconfig) file
-``sawtooth-kubernetes-default-poet.yaml``.
+Download the Kubernetes configuration (kubeconfig) file for a Sawtooth network,
+`sawtooth-kubernetes-default-poet.yaml <./sawtooth-kubernetes-default-poet.yaml>`_.
 
 This kubeconfig file creates a Sawtooth network with five pods, each running a
 Sawtooth validator node. The pods are numbered from 0 to 4.
