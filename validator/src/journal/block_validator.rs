@@ -492,3 +492,37 @@ impl BlockValidation for OnChainRulesValidation {
         Ok(())
     }
 }
+
+struct ChainHeadCheck<BS: BlockStore> {
+    block_store: BS,
+}
+
+impl<BS: BlockStore> ChainHeadCheck<BS> {
+    fn new(block_store: BS) -> Self {
+        ChainHeadCheck { block_store }
+    }
+}
+
+impl<BS: BlockStore> BlockStoreUpdatedCheck for ChainHeadCheck<BS> {
+    fn check_chain_head_updated(
+        &self,
+        original_chain_head: Option<&String>,
+    ) -> Result<bool, ValidationError> {
+        let chain_head = self
+            .block_store
+            .iter()
+            .map_err(|err| {
+                ValidationError::BlockValidationError(format!(
+                    "There was an error reading from the BlockStore: {:?}",
+                    err
+                ))
+            })?
+            .next()
+            .map(|b| b.header_signature.clone());
+
+        if chain_head.as_ref() != original_chain_head {
+            return Ok(true);
+        }
+        Ok(false)
+    }
+}
