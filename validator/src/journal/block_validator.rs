@@ -19,6 +19,7 @@ use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
 
 use block::Block;
+use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use std::sync::mpsc::Sender;
@@ -187,5 +188,120 @@ impl<
 
         self.state_validation
             .validate_block(&block, previous_blocks_state_hash.as_ref())
+    }
+}
+
+/// Validate that all the batches are valid and all the transactions produce
+/// the expected state hash.
+struct BatchesInBlockValidation<TEP: ExecutionPlatform> {
+    transaction_executor: TEP,
+}
+
+impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
+    type ReturnValue = BlockValidationResult;
+
+    fn validate_block(
+        &self,
+        block: &Block,
+        previous_state_root: Option<&String>,
+    ) -> Result<BlockValidationResult, ValidationError> {
+        let ending_state_hash = &block.state_root_hash;
+        let null_state_hash = NULL_STATE_HASH.into();
+        let state_root = previous_state_root.unwrap_or(&null_state_hash);
+        let mut scheduler = self
+            .transaction_executor
+            .create_scheduler(state_root)
+            .map_err(|err| {
+                ValidationError::BlockValidationError(format!(
+                    "Error during validation of block {} batches: {:?}",
+                    &block.header_signature, err,
+                ))
+            })?;
+
+        let greatest_batch_index = block.batches.len() - 1;
+        let mut index = 0;
+        for batch in &block.batches {
+            if index < greatest_batch_index {
+                scheduler
+                    .add_batch(batch.clone(), None, false)
+                    .map_err(|err| {
+                        ValidationError::BlockValidationError(format!(
+                            "While adding a batch to the schedule: {:?}",
+                            err
+                        ))
+                    })?;
+            } else {
+                scheduler
+                    .add_batch(batch.clone(), Some(ending_state_hash), false)
+                    .map_err(|err| {
+                        ValidationError::BlockValidationError(format!(
+                            "While adding the last batch to the schedule: {:?}",
+                            err
+                        ))
+                    })?;
+            }
+            index += 1;
+        }
+        scheduler.finalize(false).map_err(|err| {
+            ValidationError::BlockValidationError(format!(
+                "During call to scheduler.finalize: {:?}",
+                err
+            ))
+        })?;
+        let execution_results = scheduler
+            .complete(true)
+            .map_err(|err| {
+                ValidationError::BlockValidationError(format!(
+                    "During call to scheduler.complete: {:?}",
+                    err
+                ))
+            })?
+            .ok_or(ValidationError::BlockValidationFailure(format!(
+                "Block {} failed validation: no execution results produced",
+                &block.header_signature
+            )))?;
+
+        if let Some(ref actual_ending_state_hash) = execution_results.ending_state_hash {
+            if ending_state_hash != actual_ending_state_hash {
+                return Err(ValidationError::BlockValidationFailure(format!(
+                "Block {} failed validation: expected state hash {}, validation found state hash {}",
+                &block.header_signature,
+                ending_state_hash,
+                actual_ending_state_hash
+            )));
+            }
+        } else {
+            return Err(ValidationError::BlockValidationFailure(format!(
+                "Block {} failed validation: no ending state hash was produced",
+                &block.header_signature
+            )));
+        }
+
+        let mut results = vec![];
+        for (batch_id, transaction_execution_results) in execution_results.batch_results {
+            if let Some(txn_results) = transaction_execution_results {
+                for r in txn_results {
+                    if !r.is_valid {
+                        return Err(ValidationError::BlockValidationFailure(format!(
+                            "Block {} failed validation: batch {} was invalid due to transaction {}",
+                            &block.header_signature,
+                            &batch_id,
+                            &r.signature)));
+                    }
+                    results.push(r);
+                }
+            } else {
+                return Err(ValidationError::BlockValidationFailure(format!(
+                    "Block {} failed validation: batch {} did not have transaction results",
+                    &block.header_signature, &batch_id
+                )));
+            }
+        }
+        Ok(BlockValidationResult {
+            block_id: block.header_signature.clone(),
+            num_transactions: results.len() as u64,
+            execution_results: results,
+            status: BlockStatus::Valid,
+        })
     }
 }
