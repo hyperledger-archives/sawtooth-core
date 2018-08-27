@@ -208,13 +208,13 @@ Step 4: Confirm Network Functionality
         }
 
 #. (Optional) You can also connect to a validator container, such as
-   ``sawtooth-validator-default-0``, and run the following Sawtooth commands to
-   show the other nodes on the network.
+    ``sawtooth-validator-default-0``, and run the following Sawtooth commands to
+    show the other nodes on the network.
 
-   a. Use ``sawtooth peer list`` to show the peers of a particular node.
+   a. Run ``sawtooth peer list`` to show the peers of a particular node.
 
-   b. Use ``sawnet peers list`` to display a complete graph of peers on the
-      network.
+   b. Run ``sawnet peers list`` to display a complete graph of peers on the
+      network (available in Sawtooth release 1.1 and later).
 
 #. Submit a transaction to the REST API on the first validator node. This
    example sets a key named ``MyKey`` to the value 999.
@@ -700,13 +700,13 @@ Step 4: Confirm Network Functionality
           "link": "http://rest-api:8008/peers"
         }
 
-#. (Optional) You can also run Sawtooth commands on a validator node to show
-   the other nodes on the network, called `peers`.
+#. (Optional) You can also run the following Sawtooth commands on a validator
+   node to show the other nodes on the network.
 
    a. Run ``sawtooth peer list`` to show the peers of a particular node.
 
    b. Run ``sawnet peers list`` to display a complete graph of peers on the
-      network.
+      network (available in Sawtooth release 1.1 and later).
 
 #. Submit a transaction to the REST API on the first validator node. This
    example sets a key named ``MyKey`` to the value 999.
@@ -1064,13 +1064,12 @@ Step 5: Confirm Network and Blockchain Functionality
         $ kubectl exec -it $(kubectl get pods | awk '/sawtooth-N/{print $1}') --container sawtooth-shell -- bash
 
 #. (Optional) You can also connect to the shell container of any pod, and
-   run the following Sawtooth commands to show the other nodes on the network.
+    run the following Sawtooth commands to show the other nodes on the network.
 
    a. Run ``sawtooth peer list`` to show the peers of a particular node.
 
-
    b. Run ``sawnet peers list`` to display a complete graph of peers on the
-      network.
+      network (available in Sawtooth release 1.1 and later).
 
 #. You can submit a transaction on one Sawtooth node, then look for the results
    of that transaction on another node.
