@@ -20,6 +20,7 @@ use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
 
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use gossip::permission_verifier::PermissionVerifier;
 use journal::block_store::{BatchIndex, TransactionIndex};
 use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
@@ -398,6 +399,49 @@ impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
             arr
         });
         chain_commit_state.validate_transaction_dependencies(&transactions)?;
+        Ok(())
+    }
+}
+
+struct PermissionValidation<PV: PermissionVerifier> {
+    permission_verifier: PV,
+}
+
+impl<PV: PermissionVerifier> PermissionValidation<PV> {
+    fn new(permission_verifier: PV) -> Self {
+        PermissionValidation {
+            permission_verifier,
+        }
+    }
+}
+
+impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
+    type ReturnValue = ();
+
+    fn validate_block(
+        &self,
+        block: &Block,
+        prev_state_root: Option<&String>,
+    ) -> Result<(), ValidationError> {
+        if block.block_num != 0 {
+            let state_root = prev_state_root
+                .ok_or(
+                    ValidationError::BlockValidationError(
+                        format!("During permission check of block {} block_num is {} but missing a previous state root",
+                            &block.header_signature, block.block_num)))?;
+            for batch in &block.batches {
+                let batch_id = &batch.header_signature;
+                if !self
+                    .permission_verifier
+                    .is_batch_signer_authorized(batch, state_root, true)
+                {
+                    return Err(ValidationError::BlockValidationError(
+                            format!("Block {} failed permission verification: batch {} signer is not authorized",
+                            &block.header_signature,
+                            batch_id)));
+                }
+            }
+        }
         Ok(())
     }
 }
