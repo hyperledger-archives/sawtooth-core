@@ -106,6 +106,12 @@ impl Secp256k1Context {
     }
 }
 
+impl Default for Secp256k1Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Context for Secp256k1Context {
     fn get_algorithm_name(&self) -> &str {
         "secp256k1"
