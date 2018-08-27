@@ -203,7 +203,7 @@ pub fn register(
                     ConsensusRegisterResponse_Status::NOT_READY => {
                         thread::sleep(retry_delay);
                         if retry_delay < MAX_RETRY_DELAY {
-                            retry_delay = retry_delay * 2;
+                            retry_delay *= 2;
                             if retry_delay > MAX_RETRY_DELAY {
                                 retry_delay = MAX_RETRY_DELAY;
                             }
