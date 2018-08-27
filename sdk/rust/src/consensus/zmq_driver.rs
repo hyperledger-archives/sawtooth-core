@@ -128,7 +128,7 @@ fn driver_loop(
     loop {
         match validator_receiver.recv_timeout(Duration::from_millis(100)) {
             Err(RecvTimeoutError::Timeout) => {
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
@@ -146,7 +146,7 @@ fn driver_loop(
                 if let Err(err) = handle_update(&msg, &mut validator_sender, &mut update_sender) {
                     break Err(err);
                 }
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
