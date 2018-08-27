@@ -342,7 +342,7 @@ impl From<ProtobufError> for Error {
             IoError(err) => Error::EncodingError(format!("{}", err)),
             WireError(err) => Error::EncodingError(format!("{:?}", err)),
             Utf8(err) => Error::EncodingError(format!("{}", err)),
-            MessageNotInitialized { message: err } => Error::EncodingError(format!("{}", err)),
+            MessageNotInitialized { message: err } => Error::EncodingError(err.to_string()),
         }
     }
 }
