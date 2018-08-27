@@ -90,6 +90,22 @@ pub struct BlockValidationResult {
     pub status: BlockStatus,
 }
 
+impl BlockValidationResult {
+    fn new(
+        block_id: String,
+        execution_results: Vec<TxnExecutionResult>,
+        num_transactions: u64,
+        status: BlockStatus,
+    ) -> Self {
+        BlockValidationResult {
+            block_id,
+            execution_results,
+            num_transactions,
+            status,
+        }
+    }
+}
+
 impl<'source> FromPyObject<'source> for BlockValidationResult {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
         let status: BlockStatus = obj.getattr(py, "status")?.extract(py)?;
@@ -524,5 +540,260 @@ impl<BS: BlockStore> BlockStoreUpdatedCheck for ChainHeadCheck<BS> {
             return Ok(true);
         }
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use journal::{block_store::BlockStoreError, NULL_BLOCK_IDENTIFIER};
+    use std::sync::Mutex;
+
+    #[test]
+    fn test_validation_processor_genesis() {
+        let block_manager = BlockManager::new();
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
+
+        let block_store = Mock1::new(None);
+
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
+
+        let dependent_validations = vec![dependent_validation];
+
+        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(Mock2::new(Ok(()), Ok(())));
+        let independent_validations = vec![independent_validation];
+        let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
+            "".into(),
+            vec![],
+            0,
+            BlockStatus::Valid,
+        )));
+
+        let check = Mock2::new(Ok(true), Ok(false));
+
+        let validation_processor = BlockValidationProcessor::new(
+            block_store,
+            block_manager,
+            dependent_validations,
+            independent_validations,
+            state_block_validation,
+            check,
+        );
+        assert!(validation_processor.validate_block(&block_a).is_ok());
+    }
+
+    #[test]
+    fn test_validation_processor_chain_head_updated() {
+        let block_manager = BlockManager::new();
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
+        let block_b = create_block("B", "A", vec![]);
+
+        block_manager
+            .put(vec![block_a.clone()])
+            .expect("Block manager errored on `put`");
+        let block_store = Mock1::new(Some(block_a));
+
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
+
+        let dependent_validations = vec![dependent_validation];
+
+        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(Mock2::new(Ok(()), Ok(())));
+        let independent_validations = vec![independent_validation];
+        let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
+            "".into(),
+            vec![],
+            0,
+            BlockStatus::Valid,
+        )));
+
+        let check = Mock2::new(Ok(true), Ok(false));
+
+        let validation_processor = BlockValidationProcessor::new(
+            block_store,
+            block_manager,
+            dependent_validations,
+            independent_validations,
+            state_block_validation,
+            check,
+        );
+        assert!(validation_processor.validate_block(&block_b).is_ok());
+    }
+
+    #[test]
+    fn test_check_chain_head_updated_false() {
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
+
+        let original_chain_head = Some(block_a.header_signature.clone());
+
+        let block_store = Mock1::new(Some(block_a.clone()));
+
+        let check = ChainHeadCheck::new(block_store);
+
+        assert_eq!(
+            check.check_chain_head_updated(original_chain_head.as_ref()),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn test_check_chain_head_updated_true() {
+        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
+        let block_b = create_block("B", "A", vec![]);
+
+        let original_chain_head = Some(block_a.header_signature.clone());
+
+        let block_store = Mock1::new(Some(block_b));
+
+        let check = ChainHeadCheck::new(block_store);
+
+        assert_eq!(
+            check.check_chain_head_updated(original_chain_head.as_ref()),
+            Ok(true)
+        );
+    }
+
+    /*
+     * Test mocks that are stand-ins for the individual validation handlers
+     */
+
+    struct Mock1<R>
+    where
+        R: Clone,
+    {
+        result: R,
+    }
+
+    impl<R: Clone> Mock1<R> {
+        fn new(result: R) -> Self {
+            Mock1 { result }
+        }
+    }
+
+    impl BlockStoreUpdatedCheck for Mock1<Result<bool, ValidationError>> {
+        fn check_chain_head_updated(
+            &self,
+            expected_chain_head_id: Option<&String>,
+        ) -> Result<bool, ValidationError> {
+            self.result.clone()
+        }
+    }
+
+    impl BlockValidation for Mock1<Result<BlockValidationResult, ValidationError>> {
+        type ReturnValue = BlockValidationResult;
+
+        fn validate_block(
+            &self,
+            block: &Block,
+            previous_state_root: Option<&String>,
+        ) -> Result<BlockValidationResult, ValidationError> {
+            self.result.clone()
+        }
+    }
+
+    impl BlockValidation for Mock1<Result<(), ValidationError>> {
+        type ReturnValue = ();
+
+        fn validate_block(
+            &self,
+            block: &Block,
+            previous_state_root: Option<&String>,
+        ) -> Result<(), ValidationError> {
+            self.result.clone()
+        }
+    }
+
+    struct Mock2<R>
+    where
+        R: Clone,
+    {
+        first: R,
+        every_other: R,
+        called: Mutex<bool>,
+    }
+
+    impl<R: Clone> Mock2<R> {
+        fn new(first: R, every_other: R) -> Self {
+            Mock2 {
+                first,
+                every_other,
+                called: Mutex::new(false),
+            }
+        }
+    }
+
+    impl BlockStoreUpdatedCheck for Mock2<Result<bool, ValidationError>> {
+        fn check_chain_head_updated(
+            &self,
+            expected_chain_head_id: Option<&String>,
+        ) -> Result<bool, ValidationError> {
+            if *self.called.lock().expect("Error acquiring Mock2 lock") {
+                return self.every_other.clone();
+            }
+            {
+                let mut called = self.called.lock().expect("Error acquiring Mock2 lock");
+                *called = true;
+            }
+            self.first.clone()
+        }
+    }
+
+    impl BlockValidation for Mock2<Result<(), ValidationError>> {
+        type ReturnValue = ();
+
+        fn validate_block(
+            &self,
+            block: &Block,
+            previous_state_root: Option<&String>,
+        ) -> Result<(), ValidationError> {
+            if *self.called.lock().expect("Error acquiring Mock2 lock") {
+                return self.every_other.clone();
+            }
+            {
+                let mut called = self.called.lock().expect("Error acquiring Mock2 lock");
+                *called = true;
+            }
+            self.first.clone()
+        }
+    }
+
+    impl BlockStore for Mock1<Option<Block>> {
+        fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
+            Ok(Box::new(self.result.clone().into_iter()))
+        }
+
+        fn get<'a>(
+            &'a self,
+            block_ids: &[&str],
+        ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+            unimplemented!();
+        }
+
+        fn put(&mut self, block: Vec<Block>) -> Result<(), BlockStoreError> {
+            unimplemented!();
+        }
+
+        fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
+            unimplemented!();
+        }
+    }
+
+    fn create_block(block_id: &str, previous_id: &str, batches: Vec<Batch>) -> Block {
+        let batch_ids = batches.iter().map(|b| b.header_signature.clone()).collect();
+        Block {
+            header_signature: block_id.into(),
+            batches,
+            state_root_hash: "".into(),
+            consensus: vec![],
+            batch_ids,
+            signer_public_key: "".into(),
+            previous_block_id: previous_id.into(),
+            block_num: 0,
+            header_bytes: vec![],
+        }
     }
 }
