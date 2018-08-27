@@ -20,6 +20,8 @@ use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
 
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use journal::block_store::{BatchIndex, TransactionIndex};
+use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use std::sync::mpsc::Sender;
@@ -29,6 +31,33 @@ pub enum ValidationError {
     BlockValidationFailure(String),
     BlockValidationError(String),
     BlockStoreUpdated,
+}
+
+impl From<ChainCommitStateError> for ValidationError {
+    fn from(other: ChainCommitStateError) -> Self {
+        match other {
+            ChainCommitStateError::DuplicateBatch(ref batch_id) => {
+                ValidationError::BlockValidationFailure(format!(
+                    "Validation failure, duplicate batch {}",
+                    batch_id
+                ))
+            }
+            ChainCommitStateError::DuplicateTransaction(ref txn_id) => {
+                ValidationError::BlockValidationFailure(format!(
+                    "Validation failure, duplicate transaction {}",
+                    txn_id
+                ))
+            }
+            ChainCommitStateError::MissingDependency(ref txn_id) => {
+                ValidationError::BlockValidationFailure(format!(
+                    "Validation failure, missing dependency {}",
+                    txn_id
+                ))
+            }
+            ChainCommitStateError::Error(reason) => ValidationError::BlockValidationError(reason),
+            ChainCommitStateError::BlockStoreUpdated => ValidationError::BlockStoreUpdated,
+        }
+    }
 }
 
 pub trait BlockValidator: Sync + Send + Clone {
@@ -303,5 +332,72 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
             execution_results: results,
             status: BlockStatus::Valid,
         })
+    }
+}
+
+struct DuplicatesAndDependenciesValidation<B: BatchIndex, T: TransactionIndex, BS: BlockStore> {
+    batch_index: B,
+    transaction_index: T,
+    block_store: BS,
+    block_manager: BlockManager,
+}
+
+impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore>
+    DuplicatesAndDependenciesValidation<B, T, BS>
+{
+    fn new(
+        batch_index: B,
+        transaction_index: T,
+        block_store: BS,
+        block_manager: BlockManager,
+    ) -> Self {
+        DuplicatesAndDependenciesValidation {
+            batch_index,
+            transaction_index,
+            block_store,
+            block_manager,
+        }
+    }
+}
+
+impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
+    for DuplicatesAndDependenciesValidation<B, T, BS>
+{
+    type ReturnValue = ();
+
+    fn validate_block(&self, block: &Block, _: Option<&String>) -> Result<(), ValidationError> {
+        let chain_commit_state = ChainCommitState::new(
+            &block.previous_block_id,
+            &self.block_manager,
+            &self.batch_index,
+            &self.transaction_index,
+            &self.block_store,
+        )?;
+
+        let batch_ids = block
+            .batches
+            .iter()
+            .map(|b| b.header_signature.clone())
+            .collect();
+
+        chain_commit_state.validate_no_duplicate_batches(batch_ids)?;
+
+        let txn_ids = block.batches.iter().fold(vec![], |mut arr, b| {
+            for txn in &b.transactions {
+                arr.push(txn.header_signature.clone());
+            }
+            arr
+        });
+
+        chain_commit_state.validate_no_duplicate_transactions(txn_ids)?;
+
+        let transactions = block.batches.iter().fold(vec![], |mut arr, b| {
+            for txn in &b.transactions {
+                arr.push(txn.clone());
+            }
+            arr
+        });
+        chain_commit_state.validate_transaction_dependencies(&transactions)?;
+        Ok(())
     }
 }
