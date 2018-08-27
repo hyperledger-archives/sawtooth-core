@@ -179,7 +179,7 @@ impl TransactionContext {
     pub fn new(context_id: &str, sender: ZmqMessageSender) -> TransactionContext {
         TransactionContext {
             context_id: String::from(context_id),
-            sender: sender,
+            sender,
         }
     }
 
