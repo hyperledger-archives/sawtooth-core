@@ -181,7 +181,8 @@ functionality. If you have problems, see the Kubernetes document
 Step 3: Download the Sawtooth Configuration File
 ================================================
 
-Download the Kubernetes configuration file ``sawtooth-kubernetes-default.yaml``.
+Download the Kubernetes configuration file for a single-node environment:
+`sawtooth-kubernetes-default.yaml <./sawtooth-kubernetes-default.yaml>`_.
 
 This file defines the process for constructing a one-node Sawtooth environment
 with following containers:
