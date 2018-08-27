@@ -18,13 +18,16 @@
 use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
 
+use batch::Batch;
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
 use journal::block_store::{BatchIndex, TransactionIndex};
 use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
+use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
+use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 use std::sync::mpsc::Sender;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -440,6 +443,50 @@ impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
                             &block.header_signature,
                             batch_id)));
                 }
+            }
+        }
+        Ok(())
+    }
+}
+
+struct OnChainRulesValidation {
+    view_factory: StateViewFactory,
+}
+
+impl OnChainRulesValidation {
+    fn new(view_factory: StateViewFactory) -> Self {
+        OnChainRulesValidation { view_factory }
+    }
+}
+
+impl BlockValidation for OnChainRulesValidation {
+    type ReturnValue = ();
+
+    fn validate_block(
+        &self,
+        block: &Block,
+        prev_state_root: Option<&String>,
+    ) -> Result<(), ValidationError> {
+        if block.block_num != 0 {
+            let state_root = prev_state_root
+                .ok_or(
+                    ValidationError::BlockValidationError(
+                        format!("During check of on-chain rules for block {}, block num was {}, but missing a previous state root",
+                            &block.header_signature,
+                            block.block_num)))?;
+            let settings_view: SettingsView =
+                self.view_factory.create_view(state_root).map_err(|err| {
+                    ValidationError::BlockValidationError(format!(
+                        "During validate_on_chain_rules, error creating settings view: {:?}",
+                        err
+                    ))
+                })?;
+            let batches: Vec<&Batch> = block.batches.iter().collect();
+            if !enforce_validation_rules(&settings_view, &block.signer_public_key, &batches) {
+                return Err(ValidationError::BlockValidationFailure(format!(
+                    "Block {} failed validation rules",
+                    &block.header_signature
+                )));
             }
         }
         Ok(())
