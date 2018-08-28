@@ -253,12 +253,6 @@ Family
 - family_name: "sawtooth_settings"
 - family_version: "1.0"
 
-Encoding
---------
-
-The encoding field must be set to "application/protobuf".
-
-
 Execution
 =========
 

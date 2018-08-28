@@ -146,10 +146,6 @@ Dependencies
 ------------
 None.
 
-Encoding
---------
-The encoding field must be set to 'application/protobuf'
-
 Execution
 =========
 

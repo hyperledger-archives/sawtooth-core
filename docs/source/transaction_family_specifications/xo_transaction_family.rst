@@ -86,11 +86,6 @@ Family
 * family_version: "1.0"
 
 
-Encoding
---------
-
-* payload_encoding: "csv-utf8"
-
 Execution
 =========
 

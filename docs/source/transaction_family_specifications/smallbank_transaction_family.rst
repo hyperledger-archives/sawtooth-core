@@ -216,10 +216,6 @@ Family
 - family_name: "smallbank"
 - family_version: "1.0"
 
-Encoding
---------
-- payload_encoding: "application/protobuf"
-
 Execution
 =========
 
