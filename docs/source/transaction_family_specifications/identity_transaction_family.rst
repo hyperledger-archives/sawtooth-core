@@ -182,11 +182,6 @@ Family
 - family_name: "sawtooth_identity"
 - family_version: "1.0"
 
-Encoding
---------
-
-The encoding field must be set to "application/protobuf".
-
 Execution
 =========
 Initially, the transaction processor gets the current values of

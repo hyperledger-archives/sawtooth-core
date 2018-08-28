@@ -101,19 +101,6 @@ Family
 - family_name: "intkey"
 - family_version: "1.0"
 
-Encoding
---------
-- payload_encoding: "application/cbor"
-
-.. note:: The CBOR encoding map used by IntegerKey is a definite map. For example, a transaction payload is encoded as follows:
-
-    .. code-block:: pycon
-
-        >>> cbor.dumps({'Verb':'verb', 'Name':'name', 'Value':1234})
-        b'\xa3dVerbdverbdNamednameeValue\x19\x04\xd2'
-
-    CBOR Specification: `RFC 7049 - Concise Binary Object Representation (CBOR) <https://tools.ietf.org/html/rfc7049>`_
-
 Execution
 =========
 
