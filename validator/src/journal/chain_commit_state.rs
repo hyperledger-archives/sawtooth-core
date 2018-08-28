@@ -36,9 +36,9 @@ pub enum ChainCommitStateError {
     Error(String),
 }
 
-pub struct ChainCommitState<B: BatchIndex, T: TransactionIndex> {
-    batch_index: B,
-    transaction_index: T,
+pub struct ChainCommitState<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> {
+    batch_index: &'b B,
+    transaction_index: &'t T,
     ancestor: Option<Block>,
     uncommitted_batch_ids: Vec<String>,
     uncommitted_txn_ids: Vec<String>,
@@ -53,69 +53,55 @@ fn check_no_duplicates(ids: &[String]) -> Option<String> {
     None
 }
 
-impl<B: BatchIndex, T: TransactionIndex> ChainCommitState<B, T> {
+impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 't, B, T> {
     pub fn new<BS: BlockStore>(
         branch_head_id: &str,
         block_manager: &BlockManager,
-        batch_index: B,
-        transaction_index: T,
-        block_store: BS,
+        batch_index: &'b B,
+        transaction_index: &'t T,
+        block_store: &BS,
     ) -> Result<Self, ChainCommitStateError> {
-        let current_chain_head_id = block_store
-            .iter()
-            .map_err(|err| {
+        let mut uncommitted_batch_ids = vec![];
+        let mut uncommitted_txn_ids = vec![];
+        let mut common_ancestor = None;
+        if branch_head_id != NULL_BLOCK_IDENTIFIER {
+            for block in block_manager.branch(branch_head_id).map_err(|err| {
                 ChainCommitStateError::Error(format!(
-                    "Getting chain head in ChainCommitState: {:?}",
+                    "Error getting branch from block manager: {:?}",
                     err
                 ))
-            })?
-            .nth(0)
-            .map(|block| block.header_signature.clone());
+            })? {
+                if block_store
+                    .get(&[&block.header_signature])
+                    .map_err(|err| {
+                        ChainCommitStateError::Error(format!(
+                            "Error getting block from blockstore: {:?}",
+                            err
+                        ))
+                    })?
+                    .next()
+                    .is_some()
+                {
+                    common_ancestor = Some(block);
+                    break;
+                } else {
+                    for batch in &block.batches {
+                        uncommitted_batch_ids.push(batch.header_signature.clone());
 
-        let (batch_ids, txn_ids, common_ancestor) = if branch_head_id != NULL_BLOCK_IDENTIFIER {
-            if let Some(ref chain_head_id) = current_chain_head_id {
-                let uncommitted_branch = block_manager
-                    .branch_diff(branch_head_id, chain_head_id)
-                    .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?;
-
-                Self::return_ids_for_blocks_batches_txns(uncommitted_branch)
-            } else {
-                let uncommitted_branch = block_manager
-                    .branch(branch_head_id)
-                    .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?;
-                let (batch_ids, txn_ids, _) =
-                    Self::return_ids_for_blocks_batches_txns(uncommitted_branch);
-                (batch_ids, txn_ids, None)
+                        for transaction in &batch.transactions {
+                            uncommitted_txn_ids.push(transaction.header_signature.clone());
+                        }
+                    }
+                }
             }
-        } else {
-            (vec![], vec![], None)
-        };
+        }
         Ok(ChainCommitState {
             batch_index,
             transaction_index,
             ancestor: common_ancestor,
-            uncommitted_batch_ids: batch_ids,
-            uncommitted_txn_ids: txn_ids,
+            uncommitted_batch_ids,
+            uncommitted_txn_ids,
         })
-    }
-
-    fn return_ids_for_blocks_batches_txns(
-        uncommitted_branch: Box<Iterator<Item = Block>>,
-    ) -> (Vec<String>, Vec<String>, Option<Block>) {
-        let mut batch_ids = vec![];
-        let mut txn_ids = vec![];
-        let mut blocks = vec![];
-        for block in uncommitted_branch {
-            for batch in &block.batches {
-                batch_ids.push(batch.header_signature.clone());
-                for transaction in &batch.transactions {
-                    txn_ids.push(transaction.header_signature.clone());
-                }
-            }
-            blocks.push(block);
-        }
-        let last_block = blocks.last().cloned();
-        (batch_ids, txn_ids, last_block)
     }
 
     fn block_in_chain(&self, block: &Block) -> bool {
@@ -308,50 +294,58 @@ mod test {
     ///
     fn create_chains_to_put_in_block_manager() -> Vec<Vec<Block>> {
         let mut previous_block_id = ::journal::NULL_BLOCK_IDENTIFIER;
+        let mut block_num = 0;
         let chain0 = ["B0", "B1", "B2", "B3", "B4", "B5"]
             .iter()
             .map(|ref mut block_id| {
-                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
+                block_num += 1;
                 block
             })
             .collect();
 
         let mut previous_block_id = "B1";
+        let mut block_num = 2;
         let chain1 = ["B2-1", "B3-1", "B4-1", "B5-1"]
             .iter()
             .map(|ref mut block_id| {
-                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
+                block_num += 1;
                 block
             })
             .collect();
 
         let mut previous_block_id = "B3-1";
+        let mut block_num = 4;
         let chain4 = ["B4-4", "B5-4"]
             .iter()
             .map(|ref mut block_id| {
-                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
+                block_num += 1;
                 block
             })
             .collect();
 
         let mut previous_block_id = "B2";
+        let mut block_num = 3;
         let chain2 = ["B3-2", "B4-2", "B5-2"]
             .iter()
             .map(|ref mut block_id| {
-                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
             })
             .collect();
 
         let mut previous_block_id = "B3-2";
+        let mut block_num = 4;
         let chain3 = ["B4-3", "B5-3"]
             .iter()
             .map(|ref mut block_id| {
-                let block = create_block_w_batches_txns(previous_block_id, block_id);
+                let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
             })
@@ -399,9 +393,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -426,9 +420,36 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
+        ).expect("There was no error creating ChainCommitState");
+
+        assert_eq!(
+            chain_commit_state.validate_transaction_dependencies(&transactions),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_dependency_in_chain_chain_head_greater() {
+        let (block_manager, block_store) = setup_state();
+
+        let transactions: Vec<Transaction> = ["B3-1b0t0", "B3-1b0t1", "B3-1b0t2"]
+            .into_iter()
+            .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
+            .collect();
+
+        block_manager
+            .persist("B5", "commit")
+            .expect("The block manager is able to persist all blocks known to it");
+
+        let chain_commit_state = ChainCommitState::new(
+            "B2",
+            &block_manager,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -453,9 +474,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-3",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -476,9 +497,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -500,9 +521,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -524,9 +545,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -548,9 +569,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -572,9 +593,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -603,9 +624,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -627,9 +648,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -651,9 +672,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-4",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -677,9 +698,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B5-1",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -698,9 +719,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             NULL_BLOCK_IDENTIFIER,
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store.clone(),
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -718,9 +739,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B2",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store.clone(),
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -739,9 +760,9 @@ mod test {
         let chain_commit_state = ChainCommitState::new(
             "B3",
             &block_manager,
-            *block_store.clone(),
-            *block_store.clone(),
-            *block_store,
+            &block_store,
+            &block_store,
+            &block_store,
         ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
@@ -754,7 +775,11 @@ mod test {
         );
     }
 
-    fn create_block_w_batches_txns(previous_block_id: &str, block_id: &str) -> Block {
+    fn create_block_w_batches_txns(
+        block_id: &str,
+        previous_block_id: &str,
+        block_num: u64,
+    ) -> Block {
         let batches = vec!["b0", "b1"]
             .into_iter()
             .map(|batch_id: &str| {
@@ -770,12 +795,17 @@ mod test {
             })
             .collect();
 
-        let block = create_block(block_id, previous_block_id, batches);
+        let block = create_block(block_id, previous_block_id, block_num, batches);
 
         block
     }
 
-    fn create_block(block_id: &str, previous_id: &str, batches: Vec<Batch>) -> Block {
+    fn create_block(
+        block_id: &str,
+        previous_id: &str,
+        block_num: u64,
+        batches: Vec<Batch>,
+    ) -> Block {
         let batch_ids = batches.iter().map(|b| b.header_signature.clone()).collect();
         Block {
             header_signature: block_id.into(),
@@ -785,7 +815,7 @@ mod test {
             batch_ids,
             signer_public_key: "".into(),
             previous_block_id: previous_id.into(),
-            block_num: 0,
+            block_num: block_num,
             header_bytes: vec![],
         }
     }
@@ -822,7 +852,7 @@ mod test {
         }
     }
 
-    fn setup_state() -> (BlockManager, Box<InMemoryBlockStore>) {
+    fn setup_state() -> (BlockManager, InMemoryBlockStore) {
         let mut block_manager = BlockManager::new();
 
         for branch in create_chains_to_put_in_block_manager() {
@@ -835,7 +865,7 @@ mod test {
             .add_store("commit", block_store.clone())
             .expect("The block manager failed to add a blockstore");
 
-        (block_manager, block_store)
+        (block_manager, *block_store)
     }
 
 }
