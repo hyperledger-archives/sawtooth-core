@@ -83,7 +83,7 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    fn register(&mut self, mut sender: ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
+    fn register(&mut self, sender: ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
@@ -134,7 +134,7 @@ impl<'a> TransactionProcessor<'a> {
         true
     }
 
-    fn unregister(&mut self, mut sender: ZmqMessageSender) {
+    fn unregister(&mut self, sender: ZmqMessageSender) {
         let request = TpUnregisterRequest::new();
         info!("sending TpUnregisterRequest");
         let serialized = match request.write_to_bytes() {
