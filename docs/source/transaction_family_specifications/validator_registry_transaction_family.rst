@@ -133,7 +133,7 @@ set like this:
   '6a43722aee5b550a3cbd1595f4de10049ee805bc035b5e232dfacfc31cc6275170b30d'
 
 The map of the current registered validator_id should be stored at the
- following address:
+following address:
 
 
 .. code-block:: pycon
