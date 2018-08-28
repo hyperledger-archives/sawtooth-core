@@ -140,7 +140,7 @@ helper functions.
         super(XO_FAMILY, ['1.0'], [XO_NAMESPACE])
       }
 
-      apply (transactionProcessRequest, stateStore) {
+      apply (transactionProcessRequest, context) {
         //
 
 Note that the ``XOHandler`` class extends the ``TransactionHandler`` class defined in the
