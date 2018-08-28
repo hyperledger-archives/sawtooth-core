@@ -19,13 +19,16 @@
 
 import logging
 import hashlib
+import os
 import random
 import string
+import tempfile
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
 from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
 from sawtooth_validator.journal.block_cache import BlockCache
@@ -43,15 +46,13 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.state.settings_view import SettingsView
-from sawtooth_validator.state.settings_view import SettingsViewFactory
-from sawtooth_validator.state.settings_cache import SettingsCache
+from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.state_view import NativeStateViewFactory
 
 from test_journal import mock_consensus
 
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
-from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
 
@@ -99,18 +100,16 @@ class BlockTreeManager:
         self.block_store = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
         self.block_cache = BlockCache(self.block_store)
-        self.state_db = {}
+        self.dir = tempfile.mkdtemp()
+        self.state_db = NativeLmdbDatabase(
+            os.path.join(self.dir, "merkle.lmdb"),
+            MerkleDatabase.create_index_configuration())
+
+        self.state_view_factory = NativeStateViewFactory(self.state_db)
 
         self.block_manager = BlockManager()
         self.block_manager.add_store("commit_store", self.block_store)
 
-        # add the mock reference to the consensus
-        consensus_setting_addr = SettingsView.setting_address(
-            'sawtooth.consensus.algorithm')
-        self.state_db[consensus_setting_addr] = _setting_entry(
-            'sawtooth.consensus.algorithm', 'test_journal.mock_consensus')
-
-        self.state_view_factory = MockStateViewFactory(self.state_db)
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
@@ -133,9 +132,6 @@ class BlockTreeManager:
             transaction_committed=self.block_store.has_transaction,
             batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(self.state_view_factory),
-            ),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
             chain_head=chain_head.block,

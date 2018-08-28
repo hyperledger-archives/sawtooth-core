@@ -15,9 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyObject, Python};
-
 use batch::Batch;
+use state::settings_view::SettingsView;
 use transaction::Transaction;
 
 /// Retrieve the validation rules stored in state and check that the
@@ -36,11 +35,13 @@ use transaction::Transaction;
 ///     expected_signer (str): the public key used to use for local signing
 ///     batches (:list:Batch): the list of batches to validate
 pub fn enforce_validation_rules(
-    settings_view: &PyObject,
+    settings_view: &SettingsView,
     expected_signer: &str,
     batches: &[&Batch],
 ) -> bool {
-    let rules = get_setting(settings_view, "sawtooth.validator.block_validation_rules");
+    let rules = settings_view
+        .get_setting_str("sawtooth.validator.block_validation_rules", None)
+        .expect("Unable to get setting");
     enforce_rules(rules, expected_signer, batches)
 }
 
@@ -224,17 +225,6 @@ fn parse_rule(rule: &str) -> Option<(&str, Vec<&str>)> {
     let rule_type = rule_parts.pop().unwrap();
 
     Some((rule_type.trim(), rule_args))
-}
-
-fn get_setting(settings_view: &PyObject, key: &'static str) -> Option<String> {
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-
-    settings_view
-        .call_method(py, "get_setting", (key,), None)
-        .expect("setting view has no method 'get_setting'")
-        .extract(py)
-        .expect("Unable to extract string")
 }
 
 #[cfg(test)]

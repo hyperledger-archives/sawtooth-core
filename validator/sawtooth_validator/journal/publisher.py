@@ -130,7 +130,6 @@ class BlockPublisher(OwnedPointer):
                  batch_committed,
                  transaction_committed,
                  state_view_factory,
-                 settings_cache,
                  block_sender,
                  batch_sender,
                  chain_head,
@@ -151,8 +150,8 @@ class BlockPublisher(OwnedPointer):
                 a batch is committed.
             transaction_committed (fn(transaction_id) -> bool): A function for
                 checking if a transaction is committed.
-            state_view_factory (:obj:`StateViewFactory`): StateViewFactory for
-                read-only state views.
+            state_view_factory (:obj:`NativeStateViewFactory`):
+                NativeStateViewFactory for read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
             batch_sender (:obj:`BatchSender`): The BatchSender instance.
             chain_head (:obj:`BlockWrapper`): The initial chain head.
@@ -180,8 +179,7 @@ class BlockPublisher(OwnedPointer):
             ctypes.py_object(transaction_executor),
             ctypes.py_object(batch_committed),
             ctypes.py_object(transaction_committed),
-            ctypes.py_object(state_view_factory),
-            ctypes.py_object(settings_cache),
+            state_view_factory.pointer,
             ctypes.py_object(block_sender),
             ctypes.py_object(batch_sender),
             ctypes.py_object(chain_head_block),

@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import ctypes
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
+
+from sawtooth_validator import ffi
 
 
 class StateViewFactory:
@@ -51,6 +54,16 @@ class StateViewFactory:
                                    merkle_root=state_root_hash)
 
         return StateView(merkle_db)
+
+
+class NativeStateViewFactory(ffi.OwnedPointer):
+    """A StateViewFactory, which wraps a native Rust instance, which can be
+    passed to other rust objects."""
+    def __init__(self, database):
+        super(NativeStateViewFactory, self).__init__('state_view_factory_drop')
+        ffi.LIBRARY.call('state_view_factory_new',
+                         database.pointer,
+                         ctypes.byref(self.pointer))
 
 
 class StateView:

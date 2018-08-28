@@ -35,6 +35,8 @@ use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
+use state::settings_view::SettingsView;
+use state::state_view_factory::StateViewFactory;
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
@@ -108,11 +110,9 @@ pub struct SyncBlockPublisher {
     batch_injector_factory: PyObject,
     block_header_class: PyObject,
     block_builder_class: PyObject,
-    settings_view_class: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
-    state_view_factory: PyObject,
-    settings_cache: PyObject,
+    state_view_factory: StateViewFactory,
     block_sender: PyObject,
     batch_publisher: PyObject,
     identity_signer: PyObject,
@@ -141,11 +141,9 @@ impl Clone for SyncBlockPublisher {
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
             block_header_class: self.block_header_class.clone_ref(py),
             block_builder_class: self.block_builder_class.clone_ref(py),
-            settings_view_class: self.settings_view_class.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
-            state_view_factory: self.state_view_factory.clone_ref(py),
-            settings_cache: self.settings_cache.clone_ref(py),
+            state_view_factory: self.state_view_factory.clone(),
             block_sender: self.block_sender.clone_ref(py),
             batch_publisher: self.batch_publisher.clone_ref(py),
             identity_signer: self.identity_signer.clone_ref(py),
@@ -204,12 +202,6 @@ impl SyncBlockPublisher {
         );
     }
 
-    fn get_state_view(&self, py: Python, previous_block: &Block) -> PyObject {
-        self.state_view_factory
-            .call_method(py, "create_view", (&previous_block.state_root_hash,), None)
-            .expect("BlockWrapper, unable to call state_view_for_block")
-    }
-
     fn load_injectors(&self, py: Python, state_root: &str) -> Vec<PyObject> {
         self.batch_injector_factory
             .call_method(py, "create_injectors", (state_root,), None)
@@ -243,27 +235,19 @@ impl SyncBlockPublisher {
                 })?;
         }
         let mut candidate_block = {
+            let settings_view: SettingsView = self
+                .state_view_factory
+                .create_view(&previous_block.state_root_hash)
+                .expect("Failed to get state view for previous block");
+
+            let max_batches = settings_view
+                .get_setting_u32("sawtooth.publisher.max_batches_per_block", Some(0u32))
+                .expect("Unable to get value from settings view")
+                .expect("Failed to return expected default") as usize;
+
             let gil = Python::acquire_gil();
             let py = gil.python();
 
-            let kwargs = PyDict::new(py);
-            kwargs.set_item(py, "default_value", 0).unwrap();
-            let max_batches = self
-                .settings_cache
-                .call_method(
-                    py,
-                    "get_setting",
-                    (
-                        "sawtooth.publisher.max_batches_per_block",
-                        &previous_block.state_root_hash,
-                    ),
-                    Some(&kwargs),
-                )
-                .expect("settings_cache has no method get_setting")
-                .extract::<usize>(py)
-                .unwrap();
-
-            let state_view = self.get_state_view(py, previous_block);
             let public_key = self.get_public_key(py);
             let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash);
 
@@ -294,11 +278,6 @@ impl SyncBlockPublisher {
 
             let committed_txn_cache =
                 TransactionCommitCache::new(self.transaction_committed.clone_ref(py));
-
-            let settings_view = self
-                .settings_view_class
-                .call(py, (state_view,), None)
-                .expect("SettingsView could not be constructed");
 
             CandidateBlock::new(
                 previous_block.clone(),
@@ -526,8 +505,7 @@ impl BlockPublisher {
         transaction_executor: PyObject,
         batch_committed: PyObject,
         transaction_committed: PyObject,
-        state_view_factory: PyObject,
-        settings_cache: PyObject,
+        state_view_factory: StateViewFactory,
         block_sender: PyObject,
         batch_publisher: PyObject,
         chain_head: Option<Block>,
@@ -539,7 +517,6 @@ impl BlockPublisher {
         batch_injector_factory: PyObject,
         block_header_class: PyObject,
         block_builder_class: PyObject,
-        settings_view_class: PyObject,
     ) -> Self {
         let tep = Box::new(PyExecutor::new(transaction_executor).unwrap());
 
@@ -556,7 +533,6 @@ impl BlockPublisher {
             batch_committed,
             transaction_committed,
             state_view_factory,
-            settings_cache,
             block_sender,
             batch_publisher,
             identity_signer,
@@ -567,7 +543,6 @@ impl BlockPublisher {
             batch_injector_factory,
             block_header_class,
             block_builder_class,
-            settings_view_class,
             exit: Arc::new(Exit::new()),
         };
 

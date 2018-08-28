@@ -14,6 +14,8 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
@@ -21,9 +23,6 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use protobuf;
 
-use database::lmdb::LmdbDatabase;
-
-use state::merkle::MerkleDatabase;
 use state::StateDatabaseError;
 use state::StateReader;
 
@@ -61,38 +60,23 @@ impl From<ParseIntError> for SettingsViewError {
     }
 }
 
-pub struct SettingsViewFactory {
-    state_db: LmdbDatabase,
+pub struct SettingsView {
+    state_reader: Box<StateReader>,
+    cache: RefCell<HashMap<String, Option<String>>>,
 }
 
-impl SettingsViewFactory {
-    pub fn new(state_db: LmdbDatabase) -> Self {
-        SettingsViewFactory { state_db }
-    }
+// Given that this is not threadsafe, but can be members of objects that can
+// be moved between threads (themselves guarded by mutexes/rwlocks), we can
+// safely implement sync.
+unsafe impl Sync for SettingsView {}
 
-    pub fn create_settings_view<S: Into<String>>(
-        &mut self,
-        merkle_root: S,
-    ) -> Result<SettingsView<MerkleDatabase>, StateDatabaseError> {
-        let merkle_db = MerkleDatabase::new(self.state_db.clone(), Some(&merkle_root.into()))?;
-        Ok(SettingsView::new(merkle_db))
-    }
-}
-
-pub struct SettingsView<R>
-where
-    R: StateReader,
-{
-    state_reader: R,
-}
-
-impl<R> SettingsView<R>
-where
-    R: StateReader,
-{
+impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
-    pub fn new(state_reader: R) -> Self {
-        SettingsView { state_reader }
+    pub fn new(state_reader: Box<StateReader>) -> Self {
+        SettingsView {
+            state_reader,
+            cache: RefCell::new(HashMap::new()),
+        }
     }
 
     pub fn get_setting_str(
@@ -122,27 +106,53 @@ where
     where
         F: FnOnce(&str) -> Result<T, SettingsViewError>,
     {
-        self.state_reader
-            .get(&setting_address(key))
-            .map_err(SettingsViewError::from)
-            .and_then(|bytes_opt: Option<Vec<u8>>| {
-                Ok(if let Some(bytes) = bytes_opt {
-                    Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+        {
+            let cache = self.cache.borrow();
+            if cache.contains_key(key) {
+                eprintln!("{} in cache", key);
+                return if let Some(str_value) = cache.get(key).unwrap() {
+                    Ok(Some(value_parser(&str_value)?))
                 } else {
-                    None
-                })
-            })
-            .and_then(|setting_opt: Option<Setting>| {
-                if let Some(setting) = setting_opt {
-                    for setting_entry in setting.get_entries() {
-                        if setting_entry.get_key() == key {
-                            let parsed_value = value_parser(&setting_entry.get_value())?;
-                            return Ok(Some(parsed_value));
-                        }
-                    }
-                }
-                Ok(default_value)
-            })
+                    Ok(default_value)
+                };
+            }
+        }
+        let bytes_opt = match self.state_reader.get(&setting_address(key)) {
+            Ok(opt) => opt,
+            Err(StateDatabaseError::NotFound(_)) => return Ok(default_value),
+            Err(err) => return Err(SettingsViewError::from(err)),
+        };
+        let setting_opt = if let Some(bytes) = bytes_opt {
+            Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+        } else {
+            None
+        };
+
+        let optional_str_value: Option<String> = setting_opt.and_then(|setting| {
+            setting
+                .get_entries()
+                .iter()
+                .find(|entry| entry.key == key)
+                .map(|entry| entry.get_value().to_string())
+        });
+
+        {
+            // cache it:
+            let mut cache = self.cache.borrow_mut();
+            cache.insert(key.to_string(), optional_str_value.clone());
+        }
+
+        if let Some(str_value) = optional_str_value.as_ref() {
+            Ok(Some(value_parser(str_value)?))
+        } else {
+            Ok(default_value)
+        }
+    }
+}
+
+impl From<Box<StateReader>> for SettingsView {
+    fn from(state_reader: Box<StateReader>) -> Self {
+        SettingsView::new(state_reader)
     }
 }
 
@@ -203,7 +213,7 @@ mod tests {
             setting_entry("my.other.list", "13;14;15"),
         ]);
 
-        let settings_view = SettingsView::new(mock_reader);
+        let settings_view = SettingsView::new(Box::new(mock_reader));
 
         // Test not founds
         assert_eq!(
@@ -298,7 +308,10 @@ mod tests {
 
     impl StateReader for MockStateReader {
         fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
-            Ok(self.state.get(address).cloned())
+            match self.state.get(address).cloned() {
+                Some(s) => Ok(Some(s)),
+                None => Err(StateDatabaseError::NotFound(address.into())),
+            }
         }
 
         fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
