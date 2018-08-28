@@ -146,6 +146,13 @@ Dependencies
 ------------
 None.
 
+Family
+------
+
+- family_name: "block_info"
+- family_version: "1.0"
+
+
 Execution
 =========
 
