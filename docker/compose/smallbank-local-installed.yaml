@@ -25,11 +25,11 @@ services:
     entrypoint: settings-tp -vv --connect tcp://validator:4004
 
   smallbank-tp-go:
-    image: sawtooth-smallbank-tp-go:latest
-    container_name: sawtooth-smallbank-tp-go-default
+    image: sawtooth-smallbank-tp-rust:latest
+    container_name: sawtooth-smallbank-tp-rust-default
     depends_on:
       - validator
-    entrypoint: smallbank-tp-go -vv tcp://validator:4004
+    entrypoint: smallbank_rust -vv tcp://validator:4004
 
   validator:
     image: sawtooth-validator:latest
