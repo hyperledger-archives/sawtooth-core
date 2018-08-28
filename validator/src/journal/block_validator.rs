@@ -15,6 +15,14 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
+    Arc, Mutex,
+};
+use std::thread;
+use std::time::Duration;
+
 use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
 use uluru;
@@ -23,13 +31,17 @@ use batch::Batch;
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
+use journal::block_scheduler::BlockScheduler;
 use journal::block_store::{BatchIndex, TransactionIndex};
 use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
 use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
-use std::sync::mpsc::Sender;
+
+const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
+
+const BLOCK_VALIDATOR_THREAD_NUM: u64 = 2;
 
 const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
 
@@ -117,20 +129,6 @@ impl From<ChainCommitStateError> for ValidationError {
     }
 }
 
-pub trait BlockValidator: Sync + Send + Clone {
-    fn has_block(&self, block_id: &str) -> bool;
-
-    fn validate_block(&self, block: Block) -> Result<(), ValidationError>;
-
-    fn submit_blocks_for_verification(
-        &self,
-        blocks: &[Block],
-        response_sender: Sender<BlockValidationResult>,
-    );
-
-    fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>);
-}
-
 pub trait BlockStatusStore: Clone + Send + Sync {
     fn status(&self, block_id: &str) -> BlockStatus;
 }
@@ -176,10 +174,330 @@ impl<'source> FromPyObject<'source> for BlockValidationResult {
     }
 }
 
+type InternalSender = Sender<(Block, Sender<BlockValidationResult>)>;
+type InternalReceiver = Receiver<(Block, Sender<BlockValidationResult>)>;
+
+pub struct BlockValidator<
+    TEP: ExecutionPlatform,
+    PV: PermissionVerifier,
+    BS: BlockStore,
+    B: BatchIndex,
+    T: TransactionIndex,
+> {
+    channels: Vec<(InternalSender, Option<InternalReceiver>)>,
+    index: Arc<Mutex<usize>>,
+    validation_thread_exit: Arc<AtomicBool>,
+    block_scheduler: BlockScheduler<BlockValidationResultStore>,
+    block_status_store: BlockValidationResultStore,
+    block_manager: BlockManager,
+    block_store: BS,
+    batch_index: B,
+    transaction_executor: TEP,
+    transaction_index: T,
+    view_factory: StateViewFactory,
+    permission_verifier: PV,
+}
+
+impl<
+        TEP: ExecutionPlatform + 'static,
+        PV: PermissionVerifier + 'static,
+        BS: BlockStore + 'static,
+        B: BatchIndex + 'static,
+        T: TransactionIndex + 'static,
+    > BlockValidator<TEP, PV, BS, B, T>
+where
+    TEP: Clone,
+    PV: Clone,
+    BS: Clone,
+    B: Clone,
+    T: Clone,
+{
+    pub fn new(
+        block_manager: BlockManager,
+        transaction_executor: TEP,
+        block_status_store: BlockValidationResultStore,
+        permission_verifier: PV,
+        block_store: BS,
+        batch_index: B,
+        transaction_index: T,
+        view_factory: StateViewFactory,
+    ) -> Self {
+        let mut channels = vec![];
+        for i in 1..BLOCK_VALIDATOR_THREAD_NUM {
+            let (tx, rx) = channel();
+            channels.push((tx, Some(rx)));
+        }
+        BlockValidator {
+            channels,
+            index: Arc::new(Mutex::new(0)),
+            transaction_executor,
+            validation_thread_exit: Arc::new(AtomicBool::new(false)),
+            block_scheduler: BlockScheduler::new(block_manager.clone(), block_status_store.clone()),
+            block_status_store,
+            block_manager,
+            block_store,
+            batch_index,
+            transaction_index,
+            view_factory,
+            permission_verifier,
+        }
+    }
+
+    pub fn stop(&self) {
+        self.validation_thread_exit.store(true, Ordering::Relaxed);
+    }
+
+    fn setup_thread(
+        &self,
+        rcv: Receiver<(Block, Sender<BlockValidationResult>)>,
+        error_return_sender: Sender<(Block, Sender<BlockValidationResult>)>,
+    ) {
+        let backgroundthread = thread::Builder::new();
+
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(DuplicatesAndDependenciesValidation::new(
+                self.batch_index.clone(),
+                self.transaction_index.clone(),
+                self.block_store.clone(),
+                self.block_manager.clone(),
+            ));
+
+        let dependent_validations = vec![dependent_validation];
+
+        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
+
+        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(PermissionValidation::new(self.permission_verifier.clone()));
+
+        let independent_validations = vec![independent_validation1, independent_validation2];
+
+        let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
+
+        let check = ChainHeadCheck::new(self.block_store.clone());
+
+        let block_validations = BlockValidationProcessor::new(
+            self.block_store.clone(),
+            self.block_manager.clone(),
+            dependent_validations,
+            independent_validations,
+            state_validation,
+            check,
+        );
+
+        let exit = self.validation_thread_exit.clone();
+        backgroundthread
+            .spawn(move || loop {
+                let (block, results_sender) = match rcv
+                    .recv_timeout(Duration::from_millis(BLOCKVALIDATION_QUEUE_RECV_TIMEOUT))
+                {
+                    Err(RecvTimeoutError::Timeout) => {
+                        if exit.load(Ordering::Relaxed) {
+                            break;
+                        }
+                        continue;
+                    }
+                    Err(err) => {
+                        error!("BlockValidation queue shut down unexpectedly: {}", err);
+                        break;
+                    }
+                    Ok(b) => b,
+                };
+
+                if exit.load(Ordering::Relaxed) {
+                    break;
+                }
+                let block_id = block.header_signature.clone();
+
+                match block_validations.validate_block(&block) {
+                    Ok(result) => {
+                        info!("Block {} passed validation", block_id);
+                        match results_sender.send(result) {
+                            Err(err) => {
+                                warn!("During handling valid block: {:?}", err);
+                                exit.store(true, Ordering::Relaxed);
+                            }
+                            _ => (),
+                        }
+                    }
+                    Err(ValidationError::BlockValidationFailure(ref reason)) => {
+                        warn!("Block {} failed validation: {}", &block_id, reason);
+                        match results_sender.send(BlockValidationResult {
+                            block_id: block_id,
+                            execution_results: vec![],
+                            num_transactions: 0,
+                            status: BlockStatus::Invalid,
+                        }) {
+                            Err(err) => {
+                                warn!("During handling block failure: {:?}", err);
+                                exit.store(true, Ordering::Relaxed);
+                            }
+                            _ => (),
+                        }
+                    }
+                    Err(err) => {
+                        warn!("Error during block validation: {:?}", err);
+                        match error_return_sender.send((block, results_sender)) {
+                            Err(err) => {
+                                warn!("During handling retry after an error: {:?}", err);
+                                exit.store(true, Ordering::Relaxed);
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+            })
+            .expect("The background thread had an error");
+    }
+
+    pub fn start(&mut self) {
+        let mut channels = vec![];
+        {
+            for (tx, rx) in &mut self.channels {
+                let receiver = rx
+                    .take()
+                    .expect("For a single call of start, there will always be receivers to take");
+                channels.push((receiver, tx.clone()));
+            }
+        }
+        for (rx, tx) in channels {
+            self.setup_thread(rx, tx);
+        }
+    }
+
+    pub fn has_block(&self, block_id: &str) -> bool {
+        self.block_scheduler.contains(block_id)
+    }
+
+    fn return_sender(&self) -> InternalSender {
+        let mut index = self.index.lock().expect("The mutex is not poisoned");
+        let (ref tx, _) = self.channels[*index];
+
+        if *index >= self.channels.len() - 1 {
+            *index = 0;
+        } else {
+            *index += 1;
+        }
+        tx.clone()
+    }
+
+    pub fn submit_blocks_for_verification(
+        &self,
+        blocks: &[Block],
+        response_sender: Sender<BlockValidationResult>,
+    ) {
+        for block in self.block_scheduler.schedule(blocks.to_vec()) {
+            let tx = self.return_sender();
+            match tx.send((block, response_sender.clone())) {
+                Err(err) => {
+                    warn!("During submit blocks for validation: {:?}", err);
+                    self.validation_thread_exit.store(true, Ordering::Relaxed);
+                }
+                _ => (),
+            }
+        }
+    }
+
+    pub fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>) {
+        for block in self.block_scheduler.done(&block.header_signature) {
+            let tx = self.return_sender();
+            match tx.send((block, response_sender.clone())) {
+                Err(err) => {
+                    warn!("During process pending: {:?}", err);
+                    self.validation_thread_exit.store(true, Ordering::Relaxed);
+                }
+                _ => (),
+            }
+        }
+    }
+
+    pub fn validate_block(&self, block: Block) -> Result<(), ValidationError> {
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(DuplicatesAndDependenciesValidation::new(
+                self.batch_index.clone(),
+                self.transaction_index.clone(),
+                self.block_store.clone(),
+                self.block_manager.clone(),
+            ));
+
+        let dependent_validations = vec![dependent_validation];
+
+        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
+
+        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+            Box::new(PermissionValidation::new(self.permission_verifier.clone()));
+
+        let independent_validations = vec![independent_validation1, independent_validation2];
+
+        let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
+
+        let check = ChainHeadCheck::new(self.block_store.clone());
+
+        let block_validations = BlockValidationProcessor::new(
+            self.block_store.clone(),
+            self.block_manager.clone(),
+            dependent_validations,
+            independent_validations,
+            state_validation,
+            check,
+        );
+
+        let result = block_validations.validate_block(&block)?;
+        self.block_status_store.insert(result);
+
+        Ok(())
+    }
+}
+
+impl<
+        TEP: ExecutionPlatform + Clone,
+        PV: PermissionVerifier + Clone,
+        BS: BlockStore + Clone,
+        B: BatchIndex + Clone,
+        T: TransactionIndex + Clone,
+    > Clone for BlockValidator<TEP, PV, BS, B, T>
+{
+    fn clone(&self) -> Self {
+        let transaction_executor = self.transaction_executor.clone();
+        let validation_thread_exit = Arc::clone(&self.validation_thread_exit);
+        let index = Arc::clone(&self.index);
+
+        BlockValidator {
+            channels: self
+                .channels
+                .iter()
+                .map(|s| {
+                    let (tx, _) = s;
+                    (tx.clone(), None)
+                })
+                .collect(),
+            index,
+            transaction_executor,
+            validation_thread_exit,
+            block_scheduler: self.block_scheduler.clone(),
+            block_status_store: self.block_status_store.clone(),
+            block_manager: self.block_manager.clone(),
+            block_store: self.block_store.clone(),
+            batch_index: self.batch_index.clone(),
+            transaction_index: self.transaction_index.clone(),
+            permission_verifier: self.permission_verifier.clone(),
+            view_factory: self.view_factory.clone(),
+        }
+    }
+}
+
+trait StateBlockValidation {
+    fn validate_block(
+        &self,
+        block: Block,
+        previous_state_root: Option<&String>,
+    ) -> Result<BlockValidationResult, ValidationError>;
+}
 /// A generic block validation. Returns a ValidationError::BlockValidationFailure on
 /// validation failure. It is a dependent validation if it can return
 /// ValidationError::BlockStoreUpdated and is an independent validation otherwise
-trait BlockValidation {
+trait BlockValidation: Send {
     type ReturnValue;
 
     fn validate_block(
@@ -297,6 +615,14 @@ impl<
 /// the expected state hash.
 struct BatchesInBlockValidation<TEP: ExecutionPlatform> {
     transaction_executor: TEP,
+}
+
+impl<TEP: ExecutionPlatform> BatchesInBlockValidation<TEP> {
+    fn new(transaction_executor: TEP) -> Self {
+        BatchesInBlockValidation {
+            transaction_executor,
+        }
+    }
 }
 
 impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
