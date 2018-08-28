@@ -520,7 +520,7 @@ about what kinds of transactions it can handle.
 
     class XOHandler extends TransactionHandler {
       constructor () {
-        super(XO_FAMILY, '1.0', [XO_NAMESPACE])
+        super(XO_FAMILY, ['1.0'], [XO_NAMESPACE])
       }
 
       apply (transactionProcessRequest, stateStore) {
