@@ -70,9 +70,10 @@ macro_rules! check_null {
 pub unsafe extern "C" fn chain_controller_new(
     block_store: *mut py_ffi::PyObject,
     block_manager: *const c_void,
-    block_validator: *mut py_ffi::PyObject,
+    block_validator: *const c_void,
     state_database: *const c_void,
     chain_head_lock: *const c_void,
+    block_validation_result_cache: *const c_void,
     consensus_notifier: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
@@ -99,7 +100,16 @@ pub unsafe extern "C" fn chain_controller_new(
     let py = Python::assume_gil_acquired();
 
     let py_block_store_reader = PyObject::from_borrowed_ptr(py, block_store);
-    let py_block_validator = PyObject::from_borrowed_ptr(py, block_validator);
+
+    let block_validator = (*(block_validator
+        as *const BlockValidator<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).clone();
+
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
     let py_consensus_notifier = PyObject::from_borrowed_ptr(py, consensus_notifier);
@@ -116,14 +126,17 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let block_manager = (*(block_manager as *const BlockManager)).clone();
     let state_database = (*(state_database as *const LmdbDatabase)).clone();
+    let results_cache =
+        (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
 
     let state_pruning_manager = StatePruningManager::new(state_database);
 
     let chain_controller = ChainController::new(
         block_manager,
-        PyBlockValidator::new(py_block_validator),
+        block_validator,
         Box::new(PyBlockStore::new(py_block_store_reader)),
         chain_head_lock_ref.clone(),
+        results_cache,
         Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
         data_dir.into(),
         state_pruning_block_depth,
@@ -141,7 +154,16 @@ pub unsafe extern "C" fn chain_controller_new(
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    Box::from_raw(chain_controller as *mut ChainController<PyBlockValidator>);
+    Box::from_raw(
+        chain_controller
+            as *mut ChainController<
+                PyExecutor,
+                PyPermissionVerifier,
+                PyBlockStore,
+                PyBlockStore,
+                PyBlockStore,
+            >,
+    );
     ErrorCode::Success
 }
 
@@ -149,7 +171,14 @@ pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) ->
 pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller as *mut ChainController<PyBlockValidator>)).start();
+    (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).start();
 
     ErrorCode::Success
 }
@@ -165,8 +194,14 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    let status = match (*(chain_controller as *mut ChainController<PyBlockValidator>))
-        .block_validation_result(block_id)
+    let status = match (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).block_validation_result(block_id)
     {
         Some(r) => r.status,
         None => BlockStatus::Unknown,
@@ -179,7 +214,14 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
 pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller as *mut ChainController<PyBlockValidator>)).stop();
+    (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).stop();
 
     ErrorCode::Success
 }
@@ -206,7 +248,7 @@ macro_rules! chain_controller_block_ffi {
                 proto_block.into()
             };
 
-            (*(chain_controller as *mut ChainController<PyBlockValidator>)).$cc_fn_name($($block_args)*);
+            (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier, PyBlockStore, PyBlockStore, PyBlockStore>)).$cc_fn_name($($block_args)*);
 
             ErrorCode::Success
         }
@@ -229,7 +271,14 @@ pub unsafe extern "C" fn chain_controller_queue_block(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    (*(chain_controller as *mut ChainController<PyBlockValidator>)).queue_block(block_id);
+    (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).queue_block(block_id);
 
     ErrorCode::Success
 }
@@ -248,8 +297,14 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    if let Err(err) = (*(chain_controller as *mut ChainController<PyBlockValidator>))
-        .on_block_received(block_id.into())
+    if let Err(err) = (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).on_block_received(block_id.into())
     {
         error!("ChainController.on_block_received error: {:?}", err);
         return ErrorCode::Unknown;
@@ -267,7 +322,14 @@ pub unsafe extern "C" fn chain_controller_chain_head(
 ) -> ErrorCode {
     check_null!(chain_controller);
 
-    let controller = (*(chain_controller as *mut ChainController<PyBlockValidator>)).light_clone();
+    let controller = (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >)).light_clone();
 
     if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
         match chain_head.write_to_bytes() {
@@ -324,156 +386,7 @@ pub unsafe extern "C" fn sender_send(
     })
 }
 
-struct PyBlockValidator {
-    py_block_validator: PyObject,
-    ctypes_c_void: PyObject,
-    py_validation_response_sender: PyObject,
-    py_callback_maker: PyObject,
-}
-
-impl PyBlockValidator {
-    fn new(py_block_validator: PyObject) -> Self {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        let ctypes_module = py.import("ctypes").expect("Unable to import ctypes");
-
-        let ctypes_c_void = ctypes_module
-            .get(py, "c_void_p")
-            .expect("Unable to get c_void_p");
-
-        let chain_module = py
-            .import("sawtooth_validator.journal.chain")
-            .expect("Unable to import sawtooth_validator.journal.chain");
-        let py_validation_response_sender = chain_module
-            .get(py, "ValidationResponseSender")
-            .expect("Unable to get ValidationResponseSender");
-
-        let ffi_module = py
-            .import("sawtooth_validator.ffi")
-            .expect("Unable to import sawtooth_validator.ffi");
-        let py_callback_maker = ffi_module
-            .get(py, "python_to_sender_callback")
-            .expect("Unable to get python_to_sender_callback");
-
-        PyBlockValidator {
-            py_block_validator,
-            ctypes_c_void,
-            py_validation_response_sender,
-            py_callback_maker,
-        }
-    }
-}
-
-impl Clone for PyBlockValidator {
-    fn clone(&self) -> Self {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        PyBlockValidator::new(self.py_block_validator.clone_ref(py))
-    }
-}
-
-impl BlockValidator for PyBlockValidator {
-    fn has_block(&self, block_id: &str) -> bool {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        match self
-            .py_block_validator
-            .call_method(py, "has_block", (block_id,), None)
-        {
-            Err(_) => {
-                // Presumably a KeyError, so no
-                false
-            }
-            Ok(py_bool) => py_bool.extract(py).expect("Unable to extract boolean"),
-        }
-    }
-
-    fn validate_block(&self, block: Block) -> Result<(), ValidationError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_validator
-            .call_method(py, "validate_block", (block,), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                ValidationError::BlockValidationFailure(py_err.get_type(py).name(py).into_owned())
-            })
-    }
-
-    fn submit_blocks_for_verification(
-        &self,
-        blocks: &[Block],
-        response_sender: Sender<BlockValidationResult>,
-    ) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        let sender_ptr = Box::into_raw(Box::new(response_sender)) as u64;
-
-        let sender_c_void = self
-            .ctypes_c_void
-            .call(py, (sender_ptr,), None)
-            .expect("unable to create ctypes.c_void_p");
-
-        let py_sender = self
-            .py_validation_response_sender
-            .call(py, (sender_c_void,), None)
-            .expect("unable to create ValidationResponseSender");
-
-        let py_callback = self
-            .py_callback_maker
-            .call(py, (py_sender,), None)
-            .expect("Unable to create py_callback");
-
-        self.py_block_validator
-            .call_method(
-                py,
-                "submit_blocks_for_verification",
-                (blocks, py_callback),
-                None,
-            )
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(py, "Unable to call submit_blocks_for_verification", py_err);
-                ()
-            })
-            .unwrap_or(());
-    }
-
-    fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        let sender_ptr = Box::into_raw(Box::new(response_sender)) as u64;
-
-        let sender_c_void = self
-            .ctypes_c_void
-            .call(py, (sender_ptr,), None)
-            .expect("unable to create ctypes.c_void_p");
-
-        let py_sender = self
-            .py_validation_response_sender
-            .call(py, (sender_c_void,), None)
-            .expect("unable to create ValidationResponseSender");
-
-        let py_callback = self
-            .py_callback_maker
-            .call(py, (py_sender,), None)
-            .expect("Unable to create py_callback");
-
-        match self
-            .py_block_validator
-            .call_method(py, "process_pending", (block, py_callback), None)
-        {
-            Ok(_) => (),
-            Err(py_err) => warn!("During call to process_pending: {:?}", py_err),
-        }
-    }
-}
-
-struct PyBlockStore {
+pub struct PyBlockStore {
     py_block_store: PyObject,
 }
 

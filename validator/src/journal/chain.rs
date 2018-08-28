@@ -36,6 +36,8 @@ use protobuf;
 
 use batch::Batch;
 use block::Block;
+use execution::execution_platform::ExecutionPlatform;
+use gossip::permission_verifier::PermissionVerifier;
 use journal;
 use journal::block_manager::{BlockManager, BlockManagerError};
 use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
@@ -244,7 +246,13 @@ impl ChainControllerState {
 }
 
 #[derive(Clone)]
-pub struct ChainController<BV: BlockValidator> {
+pub struct ChainController<
+    TEP: ExecutionPlatform + Clone,
+    PV: PermissionVerifier + Clone,
+    BS: BlockStore + Clone,
+    B: BatchIndex + Clone,
+    T: TransactionIndex + Clone,
+> {
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
@@ -261,10 +269,17 @@ pub struct ChainController<BV: BlockValidator> {
     chain_head_lock: ChainHeadLock,
 }
 
-impl<BV: BlockValidator + 'static> ChainController<BV> {
+impl<
+        TEP: ExecutionPlatform + Clone + 'static,
+        PV: PermissionVerifier + Clone + 'static,
+        BS: BlockStore + Clone + 'static,
+        B: BatchIndex + Clone + 'static,
+        T: TransactionIndex + Clone + 'static,
+    > ChainController<TEP, PV, BS, B, T>
+{
     pub fn new(
         block_manager: BlockManager,
-        block_validator: BV,
+        block_validator: BlockValidator<TEP, PV, BS, B, T>,
         chain_reader: Box<ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
@@ -1000,8 +1015,14 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     }
 }
 
-struct ChainThread<BV: BlockValidator> {
-    chain_controller: ChainController<BV>,
+struct ChainThread<
+    TEP: ExecutionPlatform + Clone,
+    PV: PermissionVerifier + Clone,
+    BS: BlockStore + Clone,
+    B: BatchIndex + Clone,
+    T: TransactionIndex + Clone,
+> {
+    chain_controller: ChainController<TEP, PV, BS, B, T>,
     block_queue: Receiver<String>,
     exit: Arc<AtomicBool>,
 }
@@ -1010,9 +1031,16 @@ trait StopHandle: Clone {
     fn stop(&self);
 }
 
-impl<BV: BlockValidator + 'static> ChainThread<BV> {
+impl<
+        TEP: ExecutionPlatform + Clone + 'static,
+        PV: PermissionVerifier + Clone + 'static,
+        BS: BlockStore + Clone + 'static,
+        B: BatchIndex + Clone + 'static,
+        T: TransactionIndex + Clone + 'static,
+    > ChainThread<TEP, PV, BS, B, T>
+{
     fn new(
-        chain_controller: ChainController<BV>,
+        chain_controller: ChainController<TEP, PV, BS, B, T>,
         block_queue: Receiver<String>,
         exit_flag: Arc<AtomicBool>,
     ) -> Self {
