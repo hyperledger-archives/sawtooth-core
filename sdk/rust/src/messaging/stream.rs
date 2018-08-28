@@ -27,14 +27,14 @@ use std::time::Duration;
 /// A message
 pub trait MessageSender {
     fn send(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
     ) -> Result<MessageFuture, SendError>;
 
     fn reply(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
