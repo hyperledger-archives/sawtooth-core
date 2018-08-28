@@ -520,7 +520,7 @@ about what kinds of transactions it can handle.
 
     class XOHandler extends TransactionHandler {
       constructor () {
-        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+        super(XO_FAMILY, '1.0', [XO_NAMESPACE])
       }
 
       apply (transactionProcessRequest, stateStore) {
@@ -590,10 +590,6 @@ about what kinds of transactions it can handle.
         @property
         def family_versions(self):
             return ['1.0']
-
-        @property
-        def encodings(self):
-            return ['csv-utf8']
 
         @property
         def namespaces(self):
