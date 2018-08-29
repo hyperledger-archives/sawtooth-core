@@ -35,7 +35,7 @@ impl XoPayload {
             }
         };
 
-        let items: Vec<&str> = payload_string.split(",").collect();
+        let items: Vec<&str> = payload_string.split(',').collect();
 
         if items.len() != 3 {
             return Err(ApplyError::InvalidTransaction(String::from(
@@ -57,7 +57,7 @@ impl XoPayload {
             )));
         }
 
-        if name.contains("|") {
+        if name.contains('|') {
             return Err(ApplyError::InvalidTransaction(String::from(
                 "Name cannot contain |",
             )));

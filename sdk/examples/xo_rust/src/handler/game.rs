@@ -155,7 +155,7 @@ impl Game {
             return Ok(());
         }
 
-        if !self.board.contains("-") {
+        if !self.board.contains('-') {
             self.game_state = String::from("TIE");
             return Ok(());
         }
