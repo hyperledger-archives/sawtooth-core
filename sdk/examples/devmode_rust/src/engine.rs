@@ -148,7 +148,7 @@ impl DevmodeService {
 
         self.service
             .send_to(
-                &PeerId::from(block.signer_id),
+                &block.signer_id,
                 "received",
                 Vec::from(block.block_id),
             )
