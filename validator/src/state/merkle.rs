@@ -35,7 +35,7 @@ use crypto::sha2::Sha512;
 use protobuf;
 use protobuf::Message;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 use database::lmdb::DatabaseReader;
 use database::lmdb::LmdbDatabase;
 use database::lmdb::LmdbDatabaseWriter;
@@ -780,7 +780,7 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::database::DatabaseError;
+    use database::error::DatabaseError;
     use database::lmdb::DatabaseReader;
     use database::lmdb::LmdbContext;
     use database::lmdb::LmdbDatabase;
