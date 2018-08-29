@@ -58,11 +58,11 @@ impl<'a> IntKeyTransformer<'a> {
         unnecessary: f32,
     ) -> IntKeyTransformer<'a> {
         IntKeyTransformer {
-            unsatisfiable: unsatisfiable,
-            wildcard: wildcard,
-            num_names: num_names,
-            unnecessary: unnecessary,
-            signer: signer,
+            unsatisfiable,
+            wildcard,
+            num_names,
+            unnecessary,
+            signer,
             rng: SeedableRng::from_seed(seed),
             addresser: IntKeyAddresser::new(),
             txn_id_by_name: HashMap::new(),

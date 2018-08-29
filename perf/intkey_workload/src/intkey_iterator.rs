@@ -68,8 +68,8 @@ pub struct IntKeyIterator {
 impl IntKeyIterator {
     pub fn new(num_names: usize, invalid: f32, seed: &[usize]) -> IntKeyIterator {
         IntKeyIterator {
-            num_names: num_names,
-            invalid: invalid,
+            num_names,
+            invalid,
 
             rng: SeedableRng::from_seed(seed),
 
@@ -109,7 +109,7 @@ impl Iterator for IntKeyIterator {
                 let name = self.gen_name();
                 self.names.insert(name.clone(), 0);
                 Some(IntKeyPayload {
-                    name: name,
+                    name,
                     verb: "set".to_string(),
                     value: self.set_value,
                 })
