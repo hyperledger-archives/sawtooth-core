@@ -182,7 +182,7 @@ impl BlockManagerState {
             None => return Err(BlockManagerError::MissingInput),
         }
         let mut blocks_not_added_yet: Vec<Block> = Vec::new();
-        for block in branch.into_iter() {
+        for block in branch {
             if !self.contains(&references_by_block_id, &block.header_signature)? {
                 blocks_not_added_yet.push(block);
             }

@@ -209,7 +209,7 @@ impl CandidateBlock {
         let mut batches = vec![];
         let gil = Python::acquire_gil();
         let py = gil.python();
-        for injector in self.batch_injectors.iter() {
+        for injector in &self.batch_injectors {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {

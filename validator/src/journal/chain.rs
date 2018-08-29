@@ -734,7 +734,7 @@ impl<
                                 .iter()
                                 .map(TransactionReceipt::from)
                                 .collect();
-                            for observer in state.observers.iter_mut() {
+                            for observer in &mut state.observers {
                                 observer.chain_update(&block, receipts.as_slice());
                             }
                         }
