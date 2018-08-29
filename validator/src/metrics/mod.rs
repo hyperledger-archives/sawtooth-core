@@ -34,9 +34,7 @@ pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
 
 #[derive(Copy, Clone)]
 pub enum Level {
-    Debug,
     Info,
-    Perf,
 }
 
 impl Default for Level {
@@ -48,9 +46,7 @@ impl Default for Level {
 fn into_level_str(level: Level) -> &'static str {
     use self::Level::*;
     match level {
-        Debug => "DEBUG",
         Info => "INFO",
-        Perf => "PERF",
     }
 }
 
