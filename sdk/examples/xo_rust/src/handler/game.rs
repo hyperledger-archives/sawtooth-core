@@ -64,8 +64,8 @@ impl Game {
         fields.join(",")
     }
 
-    fn from_string(game_string: String) -> Option<Game> {
-        let items: Vec<&str> = game_string.split(",").collect();
+    fn from_string(game_string: &str) -> Option<Game> {
+        let items: Vec<&str> = game_string.split(',').collect();
         if items.len() != 5 {
             return None;
         }
@@ -92,11 +92,11 @@ impl Game {
         game_strings.join("|")
     }
 
-    pub fn deserialize_games(games_string: String) -> Option<HashMap<String, Game>> {
+    pub fn deserialize_games(games_string: &str) -> Option<HashMap<String, Game>> {
         let mut ret: HashMap<String, Game> = HashMap::new();
-        let game_string_list: Vec<&str> = games_string.split("|").collect();
+        let game_string_list: Vec<&str> = games_string.split('|').collect();
         for g in game_string_list {
-            let game = Game::from_string(g.to_string());
+            let game = Game::from_string(g);
             match game {
                 Some(game_item) => ret.insert(game_item.name.clone(), game_item),
                 None => return None,
