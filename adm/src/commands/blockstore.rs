@@ -146,8 +146,8 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
 fn print_block_store_list_header() {
     println!(
-        "{:<5} {:<128} {:<5} {:<5} {}",
-        "NUM", "BLOCK_ID", "BATS", "TXNS", "SIGNER"
+        "{:<5} {:<128} {:<5} {:<5} SIGNER",
+        "NUM", "BLOCK_ID", "BATS", "TXNS",
     );
 }
 
