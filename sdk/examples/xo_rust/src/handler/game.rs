@@ -178,7 +178,7 @@ impl Game {
 
     pub fn is_win(&self, letter: &str) -> bool {
         let letter = letter.to_string();
-        for (i1, i2, i3) in POSSIBLE_WINS.iter() {
+        for (i1, i2, i3) in &POSSIBLE_WINS {
             let board_chars: Vec<char> = self.board.chars().collect();
             if board_chars[*i1 - 1].to_string() == letter
                 && board_chars[*i2 - 1].to_string() == letter
