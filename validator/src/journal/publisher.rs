@@ -341,7 +341,7 @@ impl SyncBlockPublisher {
                             );
 
                             Some(Ok(
-                                self.publish_block(block, finalize_result.injected_batch_ids)
+                                self.publish_block(&block, finalize_result.injected_batch_ids)
                             ))
                         }
                         None => None,
@@ -406,7 +406,7 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn publish_block(&self, block: PyObject, injected_batches: Vec<String>) -> String {
+    fn publish_block(&self, block: &PyObject, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let block: Block = block
