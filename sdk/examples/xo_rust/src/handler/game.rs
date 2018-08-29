@@ -16,7 +16,6 @@
  */
 
 use std::collections::HashMap;
-
 use sawtooth_sdk::processor::handler::ApplyError;
 
 const POSSIBLE_WINS: [(usize, usize, usize); 8] = [

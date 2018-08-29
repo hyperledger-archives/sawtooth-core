@@ -15,15 +15,14 @@
  * -----------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
-
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
+use handler::game::Game;
 use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
-
-use handler::game::Game;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::str::from_utf8;
 
 pub fn get_xo_prefix() -> String {
     let mut sha = Sha512::new();
