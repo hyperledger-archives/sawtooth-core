@@ -53,8 +53,8 @@ impl DevmodeService {
             .expect("Failed to get chain head")
     }
 
-    fn get_block(&mut self, block_id: BlockId) -> Block {
-        debug!("Getting block {:?}", block_id);
+    fn get_block(&mut self, block_id: &BlockId) -> Block {
+        debug!("Getting block {:?}", &block_id);
         self.service
             .get_blocks(vec![block_id.clone()])
             .expect("Failed to get block")
@@ -154,7 +154,7 @@ impl DevmodeService {
             ).expect("Failed to send block received");
     }
 
-    fn send_block_ack(&mut self, sender_id: PeerId, block_id: BlockId) {
+    fn send_block_ack(&mut self, sender_id: &PeerId, block_id: BlockId) {
         self.service
             .send_to(&sender_id, "ack", Vec::from(block_id))
             .expect("Failed to send block ack");
@@ -255,7 +255,7 @@ impl Engine for DevmodeEngine {
                         }
 
                         Update::BlockValid(block_id) => {
-                            let block = service.get_block(block_id.clone());
+                            let block = service.get_block(&block_id);
 
                             service.send_block_received(&block);
 
@@ -276,7 +276,7 @@ impl Engine for DevmodeEngine {
                             } else if block.block_num < chain_head.block_num {
                                 let mut chain_block = chain_head;
                                 loop {
-                                    chain_block = service.get_block(chain_block.previous_id);
+                                    chain_block = service.get_block(&chain_block.previous_id);
                                     if chain_block.block_num == block.block_num {
                                         break;
                                     }
@@ -311,32 +311,30 @@ impl Engine for DevmodeEngine {
                             service.initialize_block();
                         }
 
-                        Update::PeerMessage(message, sender_id) => {
-                            match DevmodeMessage::from_str(message.message_type.as_ref()).unwrap() {
-                                DevmodeMessage::Published => {
-                                    let block_id = BlockId::from(message.content);
-                                    info!(
-                                        "Received block published message from {:?}: {:?}",
-                                        sender_id, block_id
-                                    );
-                                }
+                        Update::PeerMessage(message, sender_id) => match DevmodeMessage::from_str(
+                            message.message_type.as_ref(),
+                        ).unwrap()
+                        {
+                            DevmodeMessage::Published => {
+                                let block_id = BlockId::from(message.content);
+                                info!(
+                                    "Received block published message from {:?}: {:?}",
+                                    &sender_id, block_id
+                                );
+                            }
 
-                                DevmodeMessage::Received => {
-                                    let block_id = BlockId::from(message.content);
-                                    info!(
-                                        "Received block received message from {:?}: {:?}",
-                                        sender_id, block_id
-                                    );
-                                    service.send_block_ack(sender_id, block_id);
-                                }
+                            DevmodeMessage::Received => {
+                                let block_id = BlockId::from(message.content);
+                                info!(
+                                    "Received block received message from {:?}: {:?}",
+                                    &sender_id, block_id
+                                );
+                                service.send_block_ack(&sender_id, block_id);
+                            }
 
-                                DevmodeMessage::Ack => {
-                                    let block_id = BlockId::from(message.content);
-                                    info!(
-                                        "Received ack message from {:?}: {:?}",
-                                        sender_id, block_id
-                                    );
-                                }
+                            DevmodeMessage::Ack => {
+                                let block_id = BlockId::from(message.content);
+                                info!("Received ack message from {:?}: {:?}", &sender_id, block_id);
                             }
                         }
 
