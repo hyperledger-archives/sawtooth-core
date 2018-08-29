@@ -14,21 +14,23 @@ State
 =====
 
 An XO state entry consists of the UTF-8 encoding of a string with
-exactly four commas formatted as follows:
+exactly four commas, which is formatted as follows:
 
 ``<name>,<board>,<game-state>,<player-key-1>,<player-key-2>``
 
-where
+* ``<name>`` is the game name as a non-empty string not containing the
+  character ``|``
+* ``<board>`` represents the game board as a string of length 9 containing only
+  `O`, `X`, or `-`
+* ``<game-state>`` is one of the following: `P1-NEXT`, `P2-NEXT`, `P1-WIN`,
+  `P2-WIN`, or `TIE`
+* ``<player-key-1>`` and ``<player-key-2>`` are the (possibly empty) public keys
+  associated with the game's players
 
-* <name> is a nonempty string not containing `|`,
-* <board> is a string of length 9 containing only `O`, `X`, or `-`,
-* <game-state> is one of the following: `P1-NEXT`, `P2-NEXT`, `P1-WIN`, `P2-WIN`, or `TIE`, and
-* <player-key-1> and <player-key-2> are the (possibly empty) public keys associated with the game's players.
-
-In the event of a hash collision (i.e. two or more state entries
+In the event of a hash collision (two or more state entries
 sharing the same address), the colliding state entries will stored as
 the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
-<a-entry>, <b-entry>,... are sorted alphabetically.
+the entries are sorted alphabetically.
 
 
 Addressing
@@ -54,15 +56,15 @@ Transaction Payload
 ===================
 
 An XO transaction request payload consists of the UTF-8 encoding of a
-string with exactly two commas formatted as follows:
+string with exactly two commas, which is formatted as follows:
 
 ``<name>,<action>,<space>``
 
-where
-
-* <name> is a nonempty string not containing `|`,
-* <action> is either `take` or `create`, and
-* <space> is an integer strictly between 0 and 10 if <action> is `take`.
+* ``<name>`` is the game name as a non-empty string not containing the character
+  ``|``. If ``<action>`` is `create`, the new name must be unique.
+* ``<action>`` is the game action: `create`, `take`, or `delete`
+* ``<space>`` is the location on the board, as an integer between 1-9
+  (inclusive), if ``<action>`` is `take`
 
 
 Transaction Header
@@ -97,20 +99,22 @@ The XO transaction processor receives a transaction request and a
 state dictionary. If it is valid, the transaction request payload will
 have a game name, an action, and, if the action is `take`, a space.
 
-1. If the action is `create`, then the transaction is invalid if the
-   game name is already in state dictionary. Otherwise, the TP will
-   store a new state entry with board `---------` (i.e. a blank
+1. If the action is `create`, the transaction is invalid if the
+   game name is already in state dictionary. Otherwise, the transaction
+   processor will store a new state entry with board `---------` (i.e. a blank
    board), game state `P1-NEXT`, and empty strings for both player
    keys.
 
-2. If the action is `take`, then the transaction is invalid if the
+#. If the action is `take`, the transaction is invalid if the
    game name is not in the state dictionary. Otherwise, there is a
    state entry under the game name with a board, game state, player-1
    key, and player-2 key. The transaction is invalid if:
 
    * the game state is `P1-WIN`, `P2-WIN`, or `TIE`, or
-   * the game state is `P1-NEXT` and the player-1 key is not null and different from the transaction signing key, or
-   * the game state is `P2-NEXT` and the player-2 key is nonnull and different from the transaction signing key, or
+   * the game state is `P1-NEXT` and the player-1 key is not null and different
+     from the transaction signing key, or
+   * the game state is `P2-NEXT` and the player-2 key is nonnull and different
+     from the transaction signing key, or
    * the space-th character in the board-string is not `-`.
 
    Otherwise, the transaction processor will update the state entry
@@ -140,10 +144,19 @@ have a game name, an action, and, if the action is `take`, a space.
       character of the second row and the first character of the third
       row are the same, that character has a win on the board.
 
-      - If `X` has a win on the board and `O` doesn't, the updated state will be `P1-WINS`.
-      - If `O` has a win on the board and `X` doesn't, the updated state will be `P2-WINS`.
-      - Otherwise, if the updated board doesn't contain `-` (if the board has no empty spaces), the updated state will be `TIE`.
-      - Otherwise, the updated state will be `P2-NEXT` if the initial state is `P1-NEXT` and `P1-NEXT` and if the initial state is `P2-NEXT`.
+      - If `X` has a win on the board and `O` doesn't, the updated state will be
+        `P1-WINS`.
+      - If `O` has a win on the board and `X` doesn't, the updated state will be
+        `P2-WINS`.
+      - Otherwise, if the updated board doesn't contain `-` (if the board has no
+        empty spaces), the updated state will be `TIE`.
+      - Otherwise, the updated state will be `P2-NEXT` if the initial state is
+        `P1-NEXT` and `P1-NEXT` and if the initial state is `P2-NEXT`.
+
+#. If the action is `delete`, the transaction is invalid if the game name is not
+   in the state dictionary. Otherwise, the transaction processor will delete the
+   state entry for the game.
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
