@@ -763,8 +763,9 @@ impl<
                 committed_transactions_gauge.set_value(total_committed_txns);
 
                 let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num;
-                if chain_head_block_num + 1 > self.state_pruning_block_depth as u64 {
-                    let prune_at = chain_head_block_num - (self.state_pruning_block_depth as u64);
+                if chain_head_block_num + 1 > u64::from(self.state_pruning_block_depth) {
+                    let prune_at =
+                        chain_head_block_num - (u64::from(self.state_pruning_block_depth));
                     match state.chain_reader.get_block_by_block_num(prune_at) {
                         Ok(Some(block)) => state
                             .state_pruning_manager

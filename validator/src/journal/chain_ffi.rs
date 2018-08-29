@@ -143,7 +143,7 @@ pub unsafe extern "C" fn chain_controller_new(
         state_pruning_block_depth,
         observer_wrappers,
         state_pruning_manager,
-        Duration::from_secs(fork_cache_keep_time as u64),
+        Duration::from_secs(u64::from(fork_cache_keep_time)),
     );
 
     *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
