@@ -203,7 +203,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            num_to_consider,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -222,7 +223,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
         );
     }
 
@@ -244,7 +245,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -263,7 +265,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 
@@ -284,7 +286,8 @@ mod tests {
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
-        assert!(
+        assert_eq!(
+            num_to_consider,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -301,7 +304,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
         );
     }
 
@@ -322,7 +325,8 @@ mod tests {
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -339,7 +343,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 
@@ -361,7 +365,8 @@ mod tests {
 
         let num_to_consider = num_names;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            num_to_consider - 1, // The first txn will have 0 dependencies since there is no prior txn.
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -376,7 +381,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider - 1 // The first txn will have 0 dependencies since there is no prior txn.
+                })
         );
     }
 
@@ -398,7 +403,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -413,7 +419,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 }

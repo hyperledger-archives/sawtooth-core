@@ -199,14 +199,15 @@ mod tests {
         let intkey_iterator =
             IntKeyIterator::new(2, 1.0, &[2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45]);
 
-        assert!(
+        assert_eq!(
+            INCS_AND_DECS_PER_SET,
             intkey_iterator
                 .take(INCS_AND_DECS_PER_SET)
                 .fold(0, |acc, p| if p.verb == "invalid".to_string() {
                     acc + 1
                 } else {
                     acc
-                }) == INCS_AND_DECS_PER_SET
+                })
         );
     }
 }
