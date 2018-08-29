@@ -219,6 +219,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
     app.get_matches()
 }
 
+#[allow(needless_pass_by_value)]
 fn is_positive_integer(arg_value: String) -> Result<(), String> {
     match arg_value.parse::<u32>() {
         Ok(i) if i > 0 => Ok(()),
@@ -226,6 +227,7 @@ fn is_positive_integer(arg_value: String) -> Result<(), String> {
     }
 }
 
+#[allow(needless_pass_by_value)]
 fn is_non_zero_integer(arg_value: String) -> Result<(), String> {
     match arg_value.parse::<u32>() {
         Ok(_) => Ok(()),

@@ -593,7 +593,7 @@ fn get_ref_count(
 ) -> Result<u64, StateDatabaseError> {
     Ok(
         if let Some(ref_count) = db_writer.index_get(DUPLICATE_LOG_INDEX, key)? {
-            from_bytes(ref_count)
+            from_bytes(&ref_count)
         } else {
             0
         },
@@ -604,7 +604,7 @@ fn to_bytes(num: u64) -> [u8; 8] {
     unsafe { ::std::mem::transmute(num.to_le()) }
 }
 
-fn from_bytes(bytes: Vec<u8>) -> u64 {
+fn from_bytes(bytes: &[u8]) -> u64 {
     let mut num_bytes = [0u8; 8];
     num_bytes.copy_from_slice(&bytes);
     u64::from_le(unsafe { ::std::mem::transmute(num_bytes) })
