@@ -139,9 +139,9 @@ impl IntkeyPayload {
         }
 
         let intkey_payload = IntkeyPayload {
-            verb: verb,
+            verb,
             name: name_raw,
-            value: value,
+            value,
         };
         Ok(Some(intkey_payload))
     }
@@ -167,7 +167,7 @@ pub struct IntkeyState<'a> {
 impl<'a> IntkeyState<'a> {
     pub fn new(context: &'a mut TransactionContext) -> IntkeyState {
         IntkeyState {
-            context: context,
+            context,
             get_cache: HashMap::new(),
         }
     }
