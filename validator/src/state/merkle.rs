@@ -44,13 +44,15 @@ use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
 
 use state::error::StateDatabaseError;
-use state::StateReader;
+use state::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
 pub const CHANGE_LOG_INDEX: &str = "change_log";
 pub const DUPLICATE_LOG_INDEX: &str = "duplicate_log";
 pub const INDEXES: [&'static str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
+
+type StateHash = Vec<u8>;
 
 /// Merkle Database
 #[derive(Clone)]
@@ -96,7 +98,7 @@ impl MerkleDatabase {
         } else if change_log.get_successors().is_empty() {
             // deleting the tip of a trie lineage
 
-            let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
+            let (deletion_candidates, duplicates) =
                 MerkleDatabase::remove_duplicate_hashes(
                     &mut db_writer,
                     change_log.take_additions(),
@@ -159,17 +161,14 @@ impl MerkleDatabase {
     fn remove_duplicate_hashes(
         db_writer: &mut LmdbDatabaseWriter,
         deletions: protobuf::RepeatedField<Vec<u8>>,
-    ) -> Result<(Vec<Vec<u8>>, Vec<Vec<u8>>), StateDatabaseError> {
-        let (deletion_candidates, decrements): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
-            deletions.into_iter().partition(|key| {
-                if let Ok(count) = get_ref_count(db_writer, &key) {
-                    count == 0
-                } else {
-                    false
-                }
-            });
-
-        Ok((deletion_candidates, decrements))
+    ) -> Result<(Vec<StateHash>, Vec<StateHash>), StateDatabaseError> {
+        Ok(deletions.into_iter().partition(|key| {
+            if let Ok(count) = get_ref_count(db_writer, &key) {
+                count == 0
+            } else {
+                false
+            }
+        }))
     }
 
     /// Returns the current merkle root for this MerkleDatabase
@@ -461,13 +460,7 @@ impl StateReader for MerkleDatabase {
         Ok(self.get_by_address(address)?.value)
     }
 
-    fn leaves(
-        &self,
-        prefix: Option<&str>,
-    ) -> Result<
-        Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
-        StateDatabaseError,
-    > {
+    fn leaves(&self, prefix: Option<&str>) -> Result<Box<StateIter>, StateDatabaseError> {
         Ok(Box::new(MerkleLeafIterator::new(self.clone(), prefix)?))
     }
 }
