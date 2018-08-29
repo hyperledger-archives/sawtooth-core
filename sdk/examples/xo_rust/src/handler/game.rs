@@ -43,7 +43,7 @@ pub struct Game {
 impl Game {
     pub fn new(name: String) -> Game {
         Game {
-            name: name,
+            name,
             board: "-".repeat(9),
             game_state: String::from("P1-NEXT"),
             player1: String::from(""),

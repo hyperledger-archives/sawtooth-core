@@ -38,7 +38,7 @@ pub struct XoState<'a> {
 impl<'a> XoState<'a> {
     pub fn new(context: &'a mut TransactionContext) -> XoState {
         XoState {
-            context: context,
+            context,
             address_map: HashMap::new(),
         }
     }
