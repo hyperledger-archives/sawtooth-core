@@ -110,10 +110,10 @@ impl Game {
             "P1-NEXT" => "X",
             "P2-NEXT" => "O",
             other_state => {
-                return Err(ApplyError::InvalidTransaction(String::from(format!(
+                return Err(ApplyError::InvalidTransaction(format!(
                     "Invalid state {}",
                     other_state
-                ))))
+                )))
             }
         };
 
@@ -169,10 +169,10 @@ impl Game {
             return Ok(());
         }
 
-        Err(ApplyError::InvalidTransaction(String::from(format!(
+        Err(ApplyError::InvalidTransaction(format!(
             "Unhandled state: {}",
             self.game_state
-        ))))
+        )))
     }
 
     pub fn is_win(&self, letter: &str) -> bool {
