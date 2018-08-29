@@ -28,30 +28,22 @@ mod intkey_addresser;
 mod intkey_iterator;
 mod intkey_transformer;
 
+use clap::{App, Arg, ArgMatches};
+use intkey_iterator::IntKeyIterator;
+use intkey_transformer::IntKeyTransformer;
+use rand::{Rng, StdRng};
+use sawtooth_perf::batch_gen::SignedBatchIterator;
+use sawtooth_perf::batch_submit::{run_workload, InfiniteBatchListIterator};
+use sawtooth_sdk::signing;
+use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
+use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::convert::From;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
-use std::num::ParseFloatError;
-use std::num::ParseIntError;
+use std::num::{ParseFloatError, ParseIntError};
 use std::str::Split;
-
-use clap::{App, Arg, ArgMatches};
-
-use rand::{Rng, StdRng};
-
-use sawtooth_perf::batch_gen::SignedBatchIterator;
-use sawtooth_perf::batch_submit::run_workload;
-use sawtooth_perf::batch_submit::InfiniteBatchListIterator;
-
-use sawtooth_sdk::signing;
-use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
-
-use simplelog::{Config, LevelFilter, SimpleLogger};
-
-use intkey_iterator::IntKeyIterator;
-use intkey_transformer::IntKeyTransformer;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");

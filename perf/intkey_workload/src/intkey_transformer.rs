@@ -15,27 +15,17 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
-use std::error::Error;
-
 use cbor::GenericEncoder;
-
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
-use protobuf::Message;
-use protobuf::RepeatedField;
-
-use rand::Rng;
-use rand::SeedableRng;
-use rand::StdRng;
-
-use sawtooth_sdk::messages::transaction::Transaction;
-use sawtooth_sdk::messages::transaction::TransactionHeader;
-use sawtooth_sdk::signing;
-
 use intkey_addresser::IntKeyAddresser;
 use intkey_iterator::IntKeyPayload;
+use protobuf::{Message, RepeatedField};
+use rand::{Rng, SeedableRng, StdRng};
+use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
+use sawtooth_sdk::signing;
+use std::collections::HashMap;
+use std::error::Error;
 
 const UNNECESSARY_TXNS_NUM: usize = 1_000;
 
@@ -190,13 +180,10 @@ impl<'a> IntKeyTransformer<'a> {
 #[cfg(test)]
 mod tests {
     use super::IntKeyTransformer;
-
+    use intkey_iterator::IntKeyIterator;
     use protobuf::Message;
-
     use sawtooth_sdk::messages::transaction::TransactionHeader;
     use sawtooth_sdk::signing;
-
-    use intkey_iterator::IntKeyIterator;
 
     #[test]
     fn test_unsatisfiable() {
