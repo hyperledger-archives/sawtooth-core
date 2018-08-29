@@ -558,7 +558,8 @@ fn write_change_log(
     root_hash: &[u8],
     change_log: &ChangeLogEntry,
 ) -> Result<(), StateDatabaseError> {
-    Ok(db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?)
+    db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?;
+    Ok(())
 }
 
 fn increment_ref_count(
