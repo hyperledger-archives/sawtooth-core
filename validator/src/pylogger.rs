@@ -41,6 +41,8 @@ pub fn set_up_logger(verbosity: u64, py: Python) {
 }
 
 #[no_mangle]
+#[allow(unused)]
+#[allow(private_no_mangle_fns)]
 pub extern "C" fn pylogger_init(verbosity: usize) {
     let gil = Python::acquire_gil();
     let py = gil.python();
