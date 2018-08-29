@@ -98,15 +98,11 @@ impl StatePruningManager {
     pub fn execute(&mut self, at_depth: u64) {
         let mut prune_candidates = vec![];
 
-        loop {
-            if let Some(candidate) = self.state_root_prune_queue.pop() {
-                if candidate.0 <= at_depth {
-                    prune_candidates.push(candidate);
-                } else {
-                    self.state_root_prune_queue.push(candidate);
-                    break;
-                }
+        while let Some(candidate) = self.state_root_prune_queue.pop() {
+            if candidate.0 <= at_depth {
+                prune_candidates.push(candidate);
             } else {
+                self.state_root_prune_queue.push(candidate);
                 break;
             }
         }
