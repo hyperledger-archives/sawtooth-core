@@ -38,6 +38,7 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::{c_char, c_void};
+use std::ptr;
 use std::slice;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -348,7 +349,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
             }
         }
     } else {
-        *block = 0 as *const u8;
+        *block = ptr::null();
         *block_len = 0;
         ErrorCode::Success
     }
