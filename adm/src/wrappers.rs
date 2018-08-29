@@ -74,7 +74,7 @@ impl Block {
                     .map(|batch| Batch::try_from(batch.clone()))
                     .collect::<Result<Vec<Batch>, Error>>()
                     .map(move |batches| Block {
-                        batches: batches,
+                        batches,
                         block_num: block_header.get_block_num(),
                         consensus: Vec::from(block_header.get_consensus()),
                         header_signature: String::from(block.get_header_signature()),
@@ -110,7 +110,7 @@ impl Batch {
                     .map(move |transactions| Batch {
                         header_signature: String::from(batch.get_header_signature()),
                         signer_public_key: String::from(batch_header.get_signer_public_key()),
-                        transactions: transactions,
+                        transactions,
                     })
             })
     }
