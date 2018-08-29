@@ -98,11 +98,10 @@ impl MerkleDatabase {
         } else if change_log.get_successors().is_empty() {
             // deleting the tip of a trie lineage
 
-            let (deletion_candidates, duplicates) =
-                MerkleDatabase::remove_duplicate_hashes(
-                    &mut db_writer,
-                    change_log.take_additions(),
-                )?;
+            let (deletion_candidates, duplicates) = MerkleDatabase::remove_duplicate_hashes(
+                &mut db_writer,
+                change_log.take_additions(),
+            )?;
 
             for hash in &deletion_candidates {
                 let hash_hex = ::hex::encode(hash);
@@ -419,16 +418,17 @@ impl MerkleDatabase {
             let node = {
                 // this is safe to unwrap, because we've just inserted the path in the previous loop
                 let child_address = &nodes[&path].children.get(&token.to_string());
-                if !new_branch && child_address.is_some() {
-                    get_node_by_hash(&self.db, child_address.unwrap())?
-                } else {
-                    if strict {
+
+                match (!new_branch && child_address.is_some(), strict) {
+                    (true, _) => get_node_by_hash(&self.db, child_address.unwrap())?,
+                    (false, true) => {
                         return Err(StateDatabaseError::NotFound(format!(
                             "invalid address {} from root {}",
                             tokens.join(""),
                             self.root_hash
-                        )));
-                    } else {
+                        )))
+                    }
+                    (false, false) => {
                         new_branch = true;
                         Node::default()
                     }
