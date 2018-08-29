@@ -177,8 +177,8 @@ impl DevmodeService {
 
         let wait_time = if let Ok(settings) = settings_result {
             let ints: Vec<u64> = vec![
-                settings.get("sawtooth.consensus.min_wait_time").unwrap(),
-                settings.get("sawtooth.consensus.max_wait_time").unwrap(),
+                &settings["sawtooth.consensus.min_wait_time"],
+                &settings["sawtooth.consensus.max_wait_time"],
             ].iter()
                 .map(|string| string.parse::<u64>())
                 .map(|result| result.unwrap_or(0))
