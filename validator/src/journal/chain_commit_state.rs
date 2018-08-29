@@ -123,9 +123,11 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 return Err(ChainCommitStateError::DuplicateBatch((*id).into()));
             }
 
-            if self.batch_index.contains(&id).map_err(|err| {
+            let batch_is_contained = self.batch_index.contains(&id).map_err(|err| {
                 ChainCommitStateError::Error(format!("Reading contains on BatchIndex: {:?}", err))
-            })? {
+            });
+
+            if batch_is_contained? {
                 if let Some(ref block) = self
                     .batch_index
                     .get_block_by_id(&id)
