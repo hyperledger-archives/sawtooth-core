@@ -32,6 +32,7 @@ pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum Level {
     Debug,
     Info,
