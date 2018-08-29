@@ -596,10 +596,10 @@ impl BlockPublisher {
         ChainHeadLock::new(self.publisher.clone())
     }
 
-    pub fn initialize_block(&self, previous_block: Block) -> Result<(), InitializeBlockError> {
+    pub fn initialize_block(&self, previous_block: &Block) -> Result<(), InitializeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock was poisoned");
         self.publisher
-            .initialize_block(&mut state, &previous_block, true)
+            .initialize_block(&mut state, previous_block, true)
     }
 
     pub fn finalize_block(
