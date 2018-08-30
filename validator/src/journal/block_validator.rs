@@ -316,37 +316,30 @@ where
                 match block_validations.validate_block(&block) {
                     Ok(result) => {
                         info!("Block {} passed validation", block_id);
-                        match results_sender.send(result) {
-                            Err(err) => {
-                                warn!("During handling valid block: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                        if let Err(err) = results_sender.send(result) {
+
+                            warn!("During handling valid block: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
+
                     }
                     Err(ValidationError::BlockValidationFailure(ref reason)) => {
                         warn!("Block {} failed validation: {}", &block_id, reason);
-                        match results_sender.send(BlockValidationResult {
+                        if let Err(err) = results_sender.send(BlockValidationResult {
                             block_id: block_id,
                             execution_results: vec![],
                             num_transactions: 0,
                             status: BlockStatus::Invalid,
                         }) {
-                            Err(err) => {
-                                warn!("During handling block failure: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                            warn!("During handling block failure: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
                     }
                     Err(err) => {
                         warn!("Error during block validation: {:?}", err);
-                        match error_return_sender.send((block, results_sender)) {
-                            Err(err) => {
-                                warn!("During handling retry after an error: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                        if let Err(err) = error_return_sender.send((block, results_sender)) {
+                            warn!("During handling retry after an error: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
                     }
                 }
@@ -392,12 +385,9 @@ where
     ) {
         for block in self.block_scheduler.schedule(blocks.to_vec()) {
             let tx = self.return_sender();
-            match tx.send((block, response_sender.clone())) {
-                Err(err) => {
-                    warn!("During submit blocks for validation: {:?}", err);
-                    self.validation_thread_exit.store(true, Ordering::Relaxed);
-                }
-                _ => (),
+            if let Err(err) = tx.send((block, response_sender.clone())) {
+                warn!("During submit blocks for validation: {:?}", err);
+                self.validation_thread_exit.store(true, Ordering::Relaxed);
             }
         }
     }
@@ -405,12 +395,9 @@ where
     pub fn process_pending(&self, block: &Block, response_sender: &Sender<BlockValidationResult>) {
         for block in self.block_scheduler.done(&block.header_signature) {
             let tx = self.return_sender();
-            match tx.send((block, response_sender.clone())) {
-                Err(err) => {
-                    warn!("During process pending: {:?}", err);
-                    self.validation_thread_exit.store(true, Ordering::Relaxed);
-                }
-                _ => (),
+            if let Err(err) = tx.send((block, response_sender.clone())) {
+                warn!("During process pending: {:?}", err);
+                self.validation_thread_exit.store(true, Ordering::Relaxed);
             }
         }
     }
