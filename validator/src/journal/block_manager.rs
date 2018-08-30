@@ -226,7 +226,7 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn get_block_from_main_cache_or_blockstore_name<'a>(&self, block_id: &str) -> BlockLocation {
+    fn get_block_from_main_cache_or_blockstore_name(&self, block_id: &str) -> BlockLocation {
         let block_by_block_id = self
             .block_by_block_id
             .read()
