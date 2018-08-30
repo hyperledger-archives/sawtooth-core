@@ -55,16 +55,14 @@ pub enum ValidationError {
 type BlockValidationResultCache =
     uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BlockValidationResultStore {
     validation_result_cache: Arc<Mutex<BlockValidationResultCache>>,
 }
 
 impl BlockValidationResultStore {
     pub fn new() -> Self {
-        BlockValidationResultStore {
-            validation_result_cache: Arc::new(Mutex::new(BlockValidationResultCache::default())),
-        }
+        Self::default()
     }
 
     pub fn insert(&self, result: BlockValidationResult) {
