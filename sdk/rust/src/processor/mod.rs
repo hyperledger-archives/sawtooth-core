@@ -169,6 +169,7 @@ impl<'a> TransactionProcessor<'a> {
     /// Connects the transaction processor to a validator and starts
     /// listening for requests and routing them to an appropriate
     /// transaction handler.
+    #[allow(cyclomatic_complexity)]
     pub fn start(&mut self) {
         let unregister = Arc::new(AtomicBool::new(false));
         let r = unregister.clone();
