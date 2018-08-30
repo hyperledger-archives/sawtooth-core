@@ -131,7 +131,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 if let Some(ref block) = self
                     .batch_index
                     .get_block_by_id(&id)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         return Err(ChainCommitStateError::DuplicateBatch(id));
@@ -164,7 +164,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 if let Some(ref block) = self
                     .transaction_index
                     .get_block_by_id(&id)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         return Err(ChainCommitStateError::DuplicateTransaction(id));
@@ -208,7 +208,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 if let Some(ref block) = self
                     .transaction_index
                     .get_block_by_id(&dep)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         continue;

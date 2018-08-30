@@ -25,9 +25,7 @@ use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_store::{BatchIndex, BlockStore, BlockStoreError, TransactionIndex};
-use journal::block_validator::{
-    BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
-};
+use journal::block_validator::{BlockValidationResult, BlockValidationResultStore, BlockValidator};
 use journal::block_wrapper::{BlockStatus, BlockWrapper};
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
@@ -41,7 +39,6 @@ use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::time::Duration;
 
 use protobuf::{self, Message};
@@ -606,10 +603,6 @@ impl<T> PyIteratorWrapper<T>
 where
     for<'source> T: FromPyObject<'source>,
 {
-    fn new(py_iter: PyObject) -> Self {
-        PyIteratorWrapper::with_xform(py_iter, Box::new(|_, obj| obj))
-    }
-
     fn with_xform(py_iter: PyObject, xform: Box<Fn(Python, PyObject) -> PyObject>) -> Self {
         PyIteratorWrapper {
             py_iter,

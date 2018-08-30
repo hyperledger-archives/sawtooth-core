@@ -143,6 +143,7 @@ pub struct BlockValidationResult {
 }
 
 impl BlockValidationResult {
+    #[allow(dead_code)]
     fn new(
         block_id: String,
         execution_results: Vec<TxnExecutionResult>,

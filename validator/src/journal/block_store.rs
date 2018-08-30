@@ -116,10 +116,6 @@ pub struct InMemoryBlockStoreState {
 }
 
 impl InMemoryBlockStoreState {
-    fn new() -> Self {
-        InMemoryBlockStoreState::default()
-    }
-
     fn get_block_by_block_id(&self, block_id: &str) -> Option<&Block> {
         self.block_by_block_id.get(block_id)
     }

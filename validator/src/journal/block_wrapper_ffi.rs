@@ -21,16 +21,6 @@ use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, ToPyObjec
 use journal::block_wrapper::BlockStatus;
 use journal::block_wrapper::BlockWrapper;
 
-use batch::Batch;
-use transaction::Transaction;
-
-use protobuf;
-
-use proto::batch::Batch as ProtoBatch;
-use proto::batch::BatchHeader;
-use proto::transaction::Transaction as ProtoTxn;
-use proto::transaction::TransactionHeader;
-
 lazy_static! {
     static ref PY_BLOCK_WRAPPER: PyObject = Python::acquire_gil()
         .python()
@@ -89,7 +79,7 @@ impl ToPyObject for BlockWrapper {
         self.py_block_wrapper.clone_ref(py)
     }
 
-    fn into_py_object(self, py: Python) -> PyObject {
+    fn into_py_object(self, _: Python) -> PyObject {
         self.py_block_wrapper
     }
 }
@@ -99,43 +89,5 @@ impl<'source> FromPyObject<'source> for BlockWrapper {
         Ok(BlockWrapper {
             py_block_wrapper: obj.clone_ref(py),
         })
-    }
-}
-
-fn proto_batch_to_batch(proto_batch: &mut ProtoBatch) -> Batch {
-    let mut batch_header: BatchHeader = protobuf::parse_from_bytes(proto_batch.get_header())
-        .expect("Unable to parse protobuf bytes from python protobuf object");
-    Batch {
-        header_signature: proto_batch.take_header_signature(),
-        header_bytes: proto_batch.take_header(),
-        signer_public_key: batch_header.take_signer_public_key(),
-        transaction_ids: batch_header.take_transaction_ids().into_vec(),
-        trace: proto_batch.get_trace(),
-
-        transactions: proto_batch
-            .take_transactions()
-            .iter_mut()
-            .map(proto_txn_to_txn)
-            .collect(),
-    }
-}
-
-fn proto_txn_to_txn(proto_txn: &mut ProtoTxn) -> Transaction {
-    let mut txn_header: TransactionHeader = protobuf::parse_from_bytes(proto_txn.get_header())
-        .expect("Unable to parse protobuf bytes from python protobuf object");
-
-    Transaction {
-        header_signature: proto_txn.take_header_signature(),
-        header_bytes: proto_txn.take_header(),
-        payload: proto_txn.take_payload(),
-        batcher_public_key: txn_header.take_batcher_public_key(),
-        dependencies: txn_header.take_dependencies().into_vec(),
-        family_name: txn_header.take_family_name(),
-        family_version: txn_header.take_family_version(),
-        inputs: txn_header.take_inputs().into_vec(),
-        outputs: txn_header.take_outputs().into_vec(),
-        nonce: txn_header.take_nonce(),
-        payload_sha512: txn_header.take_payload_sha512(),
-        signer_public_key: txn_header.take_signer_public_key(),
     }
 }
