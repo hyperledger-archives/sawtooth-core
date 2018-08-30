@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use clap::{App, Arg, ArgMatches};
 use cpython::{PyDict, PyResult, Python};
 
