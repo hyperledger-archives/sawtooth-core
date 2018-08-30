@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use protobuf;
 use protobuf::{Message as ProtobufMessage, ProtobufError};
 use rand;
