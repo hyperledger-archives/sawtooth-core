@@ -224,13 +224,12 @@ impl ChainControllerState {
         block: &Block,
     ) -> Result<bool, ChainControllerError> {
         let actual_chain_head = self.chain_reader.chain_head()?;
-        if actual_chain_head
-            .as_ref()
-            .map(|actual_chain_head| {
-                actual_chain_head.header_signature != expected_chain_head.header_signature
-            })
-            .unwrap_or(false)
-        {
+
+        let chain_head_updated = actual_chain_head.as_ref().map(|actual_chain_head| {
+            actual_chain_head.header_signature != expected_chain_head.header_signature
+        });
+
+        if chain_head_updated.unwrap_or(false) {
             warn!(
                 "Chain head updated from {} to {} while resolving \
                  fork for block {}. Reprocessing resolution.",
@@ -630,7 +629,7 @@ impl<
                 })?;
 
                 let mut chain_head_guard = self.chain_head_lock.acquire();
-                if state
+                let chain_head_updated = state
                     .check_chain_head_updated(&chain_head, block)
                     .map_err(|err| {
                         error!(
@@ -638,7 +637,8 @@ impl<
                             err,
                         );
                         err
-                    })? {
+                    })?;
+                if chain_head_updated {
                     continue;
                 }
 

@@ -71,7 +71,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                     err
                 ))
             })? {
-                if block_store
+                let chain_head = block_store
                     .get(&[&block.header_signature])
                     .map_err(|err| {
                         ChainCommitStateError::Error(format!(
@@ -79,9 +79,9 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                             err
                         ))
                     })?
-                    .next()
-                    .is_some()
-                {
+                    .next();
+
+                if chain_head.is_some() {
                     common_ancestor = Some(block);
                     break;
                 } else {
