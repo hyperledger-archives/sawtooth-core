@@ -121,8 +121,8 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                 continue;
             }
 
-            if &block.previous_block_id != NULL_BLOCK_IDENTIFIER
-                && self.block_validity(&block.previous_block_id) == BlockStatus::Unknown
+            if block.previous_block_id != NULL_BLOCK_IDENTIFIER
+                && self.block_status_store.status(&block.previous_block_id) == BlockStatus::Unknown
             {
                 info!(
                     "During block scheduling, predecessor of block {}, {}, status is unknown. Scheduling all blocks since last predecessor with known status",

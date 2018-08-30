@@ -167,7 +167,7 @@ impl BatchIndex for InMemoryBlockStore {
         Ok(self
             .iter()?
             .flat_map(|block| block.batches)
-            .any(|batch| &batch.header_signature == id))
+            .any(|batch| batch.header_signature == id))
     }
 
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
@@ -183,7 +183,7 @@ impl TransactionIndex for InMemoryBlockStore {
             .iter()?
             .flat_map(|block| block.batches)
             .flat_map(|batch| batch.transactions)
-            .any(|txn| &txn.header_signature == id))
+            .any(|txn| txn.header_signature == id))
     }
 
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {

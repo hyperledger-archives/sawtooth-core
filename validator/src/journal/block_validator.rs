@@ -78,7 +78,7 @@ impl BlockValidationResultStore {
         self.validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
+            .find(|r| r.block_id == block_id)
             .cloned()
     }
 
@@ -86,7 +86,7 @@ impl BlockValidationResultStore {
         self.validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
+            .find(|r| r.block_id == block_id)
             .map(|r| r.status = BlockStatus::Invalid);
     }
 }
@@ -96,7 +96,7 @@ impl BlockStatusStore for BlockValidationResultStore {
         self.validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
+            .find(|r| r.block_id == block_id)
             .map(|r| r.status.clone())
             .unwrap_or(BlockStatus::Unknown)
     }
