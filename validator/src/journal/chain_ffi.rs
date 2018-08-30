@@ -520,7 +520,7 @@ impl BlockStore for PyBlockStore {
                 .and_then(|blkw| blkw.getattr(py, "block"))
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to get blocks"))
+                    BlockStoreError::Error("Unable to get blocks".into())
                 })?
                 .extract(py)
                 .expect("Unable to convert block from python");
@@ -529,7 +529,7 @@ impl BlockStore for PyBlockStore {
                 .call_method(py, "__delitem__", (block_id,), None)
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to delete blocks"))
+                    BlockStoreError::Error("Unable to delete blocks".into())
                 })?;
 
             deleted_blocks.push(block);
@@ -562,7 +562,7 @@ impl BlockStore for PyBlockStore {
                 )
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to put blocks"))
+                    BlockStoreError::Error("Unable to put blocks".into())
                 })?;
         }
 
@@ -584,7 +584,7 @@ impl BlockStore for PyBlockStore {
             .map_err(|py_err| {
                 let py = unsafe { Python::assume_gil_acquired() };
                 pylogger::exception(py, "Unable to call iter(block_store)", py_err);
-                BlockStoreError::Error(format!("Unable to iterate block store"))
+                BlockStoreError::Error("Unable to iterate block store".into())
             })
     }
 }
