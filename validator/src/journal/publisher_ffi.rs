@@ -266,7 +266,7 @@ pub unsafe extern "C" fn block_publisher_finalize_block(
     result_len: *mut usize,
 ) -> ErrorCode {
     check_null!(publisher, consensus);
-    let consensus = slice::from_raw_parts(consensus, consensus_len).to_vec();
+    let consensus = slice::from_raw_parts(consensus, consensus_len);
     match (*(publisher as *mut BlockPublisher)).finalize_block(consensus, force) {
         Err(FinalizeBlockError::BlockNotInitialized) => ErrorCode::BlockNotInitialized,
         Err(FinalizeBlockError::BlockEmpty) => ErrorCode::BlockEmpty,

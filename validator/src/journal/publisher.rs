@@ -308,7 +308,7 @@ impl SyncBlockPublisher {
     fn finalize_block(
         &self,
         state: &mut BlockPublisherState,
-        consensus_data: Vec<u8>,
+        consensus_data: &[u8],
         force: bool,
     ) -> Result<String, FinalizeBlockError> {
         let mut option_result = None;
@@ -605,7 +605,7 @@ impl BlockPublisher {
 
     pub fn finalize_block(
         &self,
-        consensus_data: Vec<u8>,
+        consensus_data: &[u8],
         force: bool,
     ) -> Result<String, FinalizeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock is poisoned");

@@ -292,7 +292,7 @@ impl<
     ) -> Self {
         let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
-                block_manager: block_manager.clone(),
+                block_manager: block_manager,
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
                 observers,
@@ -369,7 +369,7 @@ impl<
                     block.header_signature
                 );
             } else {
-                self.block_validator.validate_block(block.clone())?;
+                self.block_validator.validate_block(&block)?;
 
                 if chain_id.is_none() {
                     state
@@ -389,7 +389,7 @@ impl<
         Ok(())
     }
 
-    pub fn on_block_received(&mut self, block_id: String) -> Result<(), ChainControllerError> {
+    pub fn on_block_received(&mut self, block_id: &str) -> Result<(), ChainControllerError> {
         // Only need a read lock to check duplicates, but need to upgrade to write lock for
         // updating chain head.
         {
@@ -413,13 +413,9 @@ impl<
             }
         }
 
-        let sender = self
-            .validation_result_sender
-            .as_ref()
-            .expect(
-                "Attempted to submit blocks for validation before starting the chain controller",
-            )
-            .clone();
+        let sender = self.validation_result_sender.as_ref().expect(
+            "Attempted to submit blocks for validation before starting the chain controller",
+        );
 
         let block = {
             let mut state = self
@@ -440,7 +436,7 @@ impl<
                     None
                 } else {
                     self.block_validator
-                        .submit_blocks_for_verification(&[block.clone()], sender);
+                        .submit_blocks_for_verification(&[block.clone()], &sender);
                     Some(block)
                 }
             } else {
@@ -562,7 +558,7 @@ impl<
         }
     }
 
-    fn on_block_validated(&self, block: &Block, result: BlockValidationResult) {
+    fn on_block_validated(&self, block: &Block, result: &BlockValidationResult) {
         let mut blocks_considered_count =
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
@@ -818,10 +814,9 @@ impl<
         let sender = self
             .validation_result_sender
             .as_ref()
-            .expect("Unable to ref validation_result_sender")
-            .clone();
+            .expect("Unable to ref validation_result_sender");
 
-        self.block_validator.process_pending(block, sender);
+        self.block_validator.process_pending(block, &sender);
         Ok(())
     }
 
@@ -941,7 +936,7 @@ impl<
                         .set_block_validation_result(block_validation_result.clone());
                     let block = result_thread_controller
                         .get_block_unchecked(&block_validation_result.block_id);
-                    result_thread_controller.on_block_validated(&block, block_validation_result);
+                    result_thread_controller.on_block_validated(&block, &block_validation_result);
                 } else {
                     break;
                 }
@@ -1069,7 +1064,7 @@ impl<
                 Err(_) => break Err(ChainControllerError::BrokenQueue),
                 Ok(block_id) => block_id,
             };
-            self.chain_controller.on_block_received(block_id)?;
+            self.chain_controller.on_block_received(&block_id)?;
 
             if self.exit.load(Ordering::Relaxed) {
                 break Ok(());

@@ -305,7 +305,7 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).on_block_received(block_id.into())
+        >)).on_block_received(block_id)
     {
         error!("ChainController.on_block_received error: {:?}", err);
         return ErrorCode::Unknown;

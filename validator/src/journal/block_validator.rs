@@ -388,7 +388,7 @@ where
     pub fn submit_blocks_for_verification(
         &self,
         blocks: &[Block],
-        response_sender: Sender<BlockValidationResult>,
+        response_sender: &Sender<BlockValidationResult>,
     ) {
         for block in self.block_scheduler.schedule(blocks.to_vec()) {
             let tx = self.return_sender();
@@ -402,7 +402,7 @@ where
         }
     }
 
-    pub fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>) {
+    pub fn process_pending(&self, block: &Block, response_sender: &Sender<BlockValidationResult>) {
         for block in self.block_scheduler.done(&block.header_signature) {
             let tx = self.return_sender();
             match tx.send((block, response_sender.clone())) {
@@ -415,7 +415,7 @@ where
         }
     }
 
-    pub fn validate_block(&self, block: Block) -> Result<(), ValidationError> {
+    pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
         let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(DuplicatesAndDependenciesValidation::new(
                 self.batch_index.clone(),
@@ -447,7 +447,7 @@ where
             check,
         );
 
-        let result = block_validations.validate_block(&block)?;
+        let result = block_validations.validate_block(block)?;
         self.block_status_store.insert(result);
 
         Ok(())
