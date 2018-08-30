@@ -83,11 +83,14 @@ impl BlockValidationResultStore {
     }
 
     pub fn fail_block(&self, block_id: &str) {
-        self.validation_result_cache
+        if let Some(ref mut result) = self
+            .validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
             .find(|r| r.block_id == block_id)
-            .map(|r| r.status = BlockStatus::Invalid);
+        {
+            result.status = BlockStatus::Invalid
+        }
     }
 }
 

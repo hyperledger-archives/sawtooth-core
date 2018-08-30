@@ -174,9 +174,9 @@ impl BlockManagerState {
 
                 self.check_predecessor_relationship(tail, head)?;
                 if !self.contains(&references_by_block_id, &head.header_signature)? {
-                    references_by_block_id
-                        .get_mut(&head.previous_block_id)
-                        .map(|r| r.increase_internal_ref_count());
+                    if let Some(r) = references_by_block_id.get_mut(&head.previous_block_id) {
+                        r.increase_internal_ref_count();
+                    }
                 }
             }
             None => return Err(BlockManagerError::MissingInput),

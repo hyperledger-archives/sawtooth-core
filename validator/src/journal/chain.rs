@@ -716,16 +716,16 @@ impl<
                     result.uncommitted_batches,
                 );
 
-                state.chain_head.as_ref().map(|block| {
-                    block.batches.iter().for_each(|batch| {
+                if let Some(chain_head) = state.chain_head.as_ref() {
+                    chain_head.batches.iter().for_each(|batch| {
                         if batch.trace {
                             debug!(
                                 "TRACE: {}: ChainController.on_block_validated",
                                 batch.header_signature
                             )
                         }
-                    })
-                });
+                    });
+                }
 
                 for blk in result.new_chain.iter().rev() {
                     match self.block_validation_results.get(&blk.header_signature) {
