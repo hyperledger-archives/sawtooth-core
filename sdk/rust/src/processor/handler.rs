@@ -15,6 +15,8 @@
  * -----------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 extern crate protobuf;
 extern crate rand;
 extern crate zmq;
