@@ -16,7 +16,7 @@
  */
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
     Arc, Mutex,
 };
@@ -188,7 +188,7 @@ pub struct BlockValidator<
     T: TransactionIndex,
 > {
     channels: Vec<(InternalSender, Option<InternalReceiver>)>,
-    index: Arc<Mutex<usize>>,
+    index: Arc<AtomicUsize>,
     validation_thread_exit: Arc<AtomicBool>,
     block_scheduler: BlockScheduler<BlockValidationResultStore>,
     block_status_store: BlockValidationResultStore,
@@ -233,7 +233,7 @@ where
         }
         BlockValidator {
             channels,
-            index: Arc::new(Mutex::new(0)),
+            index: Arc::new(AtomicUsize::new(0)),
             transaction_executor,
             validation_thread_exit: Arc::new(AtomicBool::new(false)),
             block_scheduler: BlockScheduler::new(block_manager.clone(), block_status_store.clone()),
@@ -365,13 +365,13 @@ where
     }
 
     fn return_sender(&self) -> InternalSender {
-        let mut index = self.index.lock().expect("The mutex is not poisoned");
-        let (ref tx, _) = self.channels[*index];
+        let index = self.index.load(Ordering::Relaxed);
+        let (ref tx, _) = self.channels[index];
 
-        if *index >= self.channels.len() - 1 {
-            *index = 0;
+        if index >= self.channels.len() - 1 {
+            self.index.store(0, Ordering::Relaxed);
         } else {
-            *index += 1;
+            self.index.store(index + 1, Ordering::Relaxed);
         }
         tx.clone()
     }
