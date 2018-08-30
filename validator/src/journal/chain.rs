@@ -277,6 +277,7 @@ impl<
         T: TransactionIndex + Clone + 'static,
     > ChainController<TEP, PV, BS, B, T>
 {
+    #![allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV, BS, B, T>,

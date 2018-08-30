@@ -73,6 +73,7 @@ pub struct CandidateBlock {
 }
 
 impl CandidateBlock {
+    #![allow(too_many_arguments)]
     pub fn new(
         previous_block: Block,
         batch_committed: cpython::PyObject,

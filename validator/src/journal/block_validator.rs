@@ -212,6 +212,7 @@ where
     B: Clone,
     T: Clone,
 {
+    #[allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: TEP,
