@@ -317,11 +317,9 @@ where
                     Ok(result) => {
                         info!("Block {} passed validation", block_id);
                         if let Err(err) = results_sender.send(result) {
-
                             warn!("During handling valid block: {:?}", err);
                             exit.store(true, Ordering::Relaxed);
                         }
-
                     }
                     Err(ValidationError::BlockValidationFailure(ref reason)) => {
                         warn!("Block {} failed validation: {}", &block_id, reason);
@@ -675,10 +673,12 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     err
                 ))
             })?
-            .ok_or(ValidationError::BlockValidationFailure(format!(
-                "Block {} failed validation: no execution results produced",
-                &block.header_signature
-            )))?;
+            .ok_or_else(|| {
+                ValidationError::BlockValidationFailure(format!(
+                    "Block {} failed validation: no execution results produced",
+                    &block.header_signature
+                ))
+            })?;
 
         if let Some(ref actual_ending_state_hash) = execution_results.ending_state_hash {
             if ending_state_hash != actual_ending_state_hash {
@@ -813,11 +813,11 @@ impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
         prev_state_root: Option<&String>,
     ) -> Result<(), ValidationError> {
         if block.block_num != 0 {
-            let state_root = prev_state_root
-                .ok_or(
-                    ValidationError::BlockValidationError(
+            let state_root = prev_state_root.ok_or_else(|| {
+                ValidationError::BlockValidationError(
                         format!("During permission check of block {} block_num is {} but missing a previous state root",
-                            &block.header_signature, block.block_num)))?;
+                            &block.header_signature, block.block_num))
+            })?;
             for batch in &block.batches {
                 let batch_id = &batch.header_signature;
                 if !self
@@ -854,12 +854,12 @@ impl BlockValidation for OnChainRulesValidation {
         prev_state_root: Option<&String>,
     ) -> Result<(), ValidationError> {
         if block.block_num != 0 {
-            let state_root = prev_state_root
-                .ok_or(
-                    ValidationError::BlockValidationError(
+            let state_root = prev_state_root.ok_or_else(|| {
+                ValidationError::BlockValidationError(
                         format!("During check of on-chain rules for block {}, block num was {}, but missing a previous state root",
                             &block.header_signature,
-                            block.block_num)))?;
+                            block.block_num))
+            })?;
             let settings_view: SettingsView =
                 self.view_factory.create_view(state_root).map_err(|err| {
                     ValidationError::BlockValidationError(format!(
