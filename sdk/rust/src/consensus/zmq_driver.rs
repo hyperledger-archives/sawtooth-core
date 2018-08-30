@@ -119,6 +119,7 @@ impl Stop {
     }
 }
 
+#[allow(needless_pass_by_value)]
 fn driver_loop(
     mut update_sender: Sender<Update>,
     stop_receiver: Receiver<()>,

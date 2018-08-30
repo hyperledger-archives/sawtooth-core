@@ -190,6 +190,7 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
+    #[allow(needless_pass_by_value)]
     pub fn get_state(&mut self, addresses: Vec<String>) -> Result<Option<Vec<u8>>, ContextError> {
         let mut request = TpStateGetRequest::new();
         request.set_context_id(self.context_id.clone());
@@ -238,6 +239,7 @@ impl TransactionContext {
     ///
     /// * `address` - address of where to store the data
     /// * `paylaod` - payload is the data to store at the address
+    #[allow(needless_pass_by_value)]
     pub fn set_state(&mut self, entries: HashMap<String, Vec<u8>>) -> Result<(), ContextError> {
         let state_entries: Vec<TpStateEntry> = entries
             .iter()
@@ -283,6 +285,7 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
+    #[allow(needless_pass_by_value)]
     pub fn delete_state(
         &mut self,
         addresses: Vec<String>,
