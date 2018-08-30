@@ -197,7 +197,7 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         let ready = self
             .descendants_by_previous_id
             .remove(block_id)
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
 
         for blk in &ready {
             self.pending.remove(&blk.header_signature);
