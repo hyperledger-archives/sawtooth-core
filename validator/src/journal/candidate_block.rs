@@ -472,10 +472,11 @@ impl CandidateBlock {
         consensus_data: &[u8],
         force: bool,
     ) -> Result<FinalizeBlockResult, CandidateBlockError> {
-        let mut summary = self.summary.clone();
-        if self.summary.is_none() {
-            summary = self.summarize(force)?;
-        }
+        let summary = if self.summary.is_none() {
+            self.summarize(force)?
+        } else {
+            self.summary.clone()
+        };
         if summary.is_none() {
             return self.build_result(None);
         }

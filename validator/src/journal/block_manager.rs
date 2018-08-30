@@ -292,9 +292,7 @@ impl BlockManagerState {
 
         let mut optional_new_tip = None;
 
-        let mut dropped = false;
-
-        if external_ref_count == 0 && internal_ref_count == 0 {
+        let dropped = if external_ref_count == 0 && internal_ref_count == 0 {
             if let Some(block_id) = block_id {
                 let (mut predecesors_to_remove, new_tip) = self
                     .find_block_ids_for_blocks_with_refcount_1_or_less(
@@ -310,8 +308,10 @@ impl BlockManagerState {
                 references_by_block_id.remove(tip);
                 optional_new_tip = new_tip;
             }
-            dropped = true;
-        }
+            true
+        } else {
+            false
+        };
 
         COLLECTOR
             .counter("BlockManager.expired", None, None)
