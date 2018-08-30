@@ -475,6 +475,7 @@ impl BlockManager {
         self.state.add_store(store_name, store)
     }
 
+    #[allow(needless_pass_by_value)]
     fn remove_blocks_from_blockstore(
         &self,
         to_be_removed: Vec<Block>,

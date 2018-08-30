@@ -589,6 +589,7 @@ impl BlockStore for PyBlockStore {
     }
 }
 
+#[allow(needless_pass_by_value)]
 fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
     block_wrapper
         .getattr(py, "block")
