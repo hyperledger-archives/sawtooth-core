@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::io;
 use std::marker::Send;
 use std::marker::Sync;

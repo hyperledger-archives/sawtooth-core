@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use block::Block;
 use cpython::{
     self, FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject,

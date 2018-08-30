@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},

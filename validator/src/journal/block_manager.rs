@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
