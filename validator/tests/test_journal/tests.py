@@ -20,7 +20,7 @@
 # pylint: disable=arguments-differ
 
 import logging
-import unittest
+import unittest.mock
 
 from sawtooth_validator.consensus.handlers import BlockInProgress
 from sawtooth_validator.consensus.handlers import BlockEmpty
