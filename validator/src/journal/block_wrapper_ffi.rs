@@ -53,17 +53,17 @@ impl ToPyObject for BlockStatus {
     type ObjectType = cpython::PyObject;
 
     fn to_py_object(&self, py: Python) -> cpython::PyObject {
-        match self {
-            &BlockStatus::Unknown => PY_BLOCK_STATUS
+        match *self {
+            BlockStatus::Unknown => PY_BLOCK_STATUS
                 .getattr(py, "Unknown")
                 .expect("No BlockStatus.Unknown"),
-            &BlockStatus::Invalid => PY_BLOCK_STATUS
+            BlockStatus::Invalid => PY_BLOCK_STATUS
                 .getattr(py, "Invalid")
                 .expect("No BlockStatus.Invalid"),
-            &BlockStatus::Valid => PY_BLOCK_STATUS
+            BlockStatus::Valid => PY_BLOCK_STATUS
                 .getattr(py, "Valid")
                 .expect("No BlockStatus.Valid"),
-            &BlockStatus::Missing => PY_BLOCK_STATUS
+            BlockStatus::Missing => PY_BLOCK_STATUS
                 .getattr(py, "Missing")
                 .expect("No BlockStatus.Missing"),
         }
