@@ -16,24 +16,19 @@
  */
 
 use std::ffi::CStr;
-use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use block::Block;
-use cpython::{
-    FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, ToPyObject,
-};
+use cpython::{PyObject, Python};
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::block_store::{BatchIndex, BlockStore, BlockStoreError, TransactionIndex};
 use journal::chain_ffi::PyBlockStore;
 use proto;
 use protobuf::{self, Message};
 use py_ffi;
-use pylogger;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -420,6 +415,7 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 mod test {
     use super::*;
     use block::Block;
+    use journal::block_store::BlockStore;
     use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 

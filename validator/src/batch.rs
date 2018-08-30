@@ -16,7 +16,7 @@
  */
 
 use proto;
-use protobuf::{self, Message};
+use protobuf;
 
 use transaction::Transaction;
 

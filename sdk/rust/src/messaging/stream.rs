@@ -136,7 +136,7 @@ pub struct MessageFuture {
 impl MessageFuture {
     pub fn new(inner: Receiver<MessageResult>) -> Self {
         MessageFuture {
-            inner: inner,
+            inner,
             result: None,
         }
     }

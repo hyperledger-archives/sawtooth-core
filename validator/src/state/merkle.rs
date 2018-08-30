@@ -35,7 +35,7 @@ use crypto::sha2::Sha512;
 use protobuf;
 use protobuf::Message;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 use database::lmdb::DatabaseReader;
 use database::lmdb::LmdbDatabase;
 use database::lmdb::LmdbDatabaseWriter;
@@ -44,13 +44,15 @@ use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
 
 use state::error::StateDatabaseError;
-use state::StateReader;
+use state::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
 pub const CHANGE_LOG_INDEX: &str = "change_log";
 pub const DUPLICATE_LOG_INDEX: &str = "duplicate_log";
-pub const INDEXES: [&'static str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
+pub const INDEXES: [&str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
+
+type StateHash = Vec<u8>;
 
 /// Merkle Database
 #[derive(Clone)]
@@ -96,11 +98,10 @@ impl MerkleDatabase {
         } else if change_log.get_successors().is_empty() {
             // deleting the tip of a trie lineage
 
-            let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
-                MerkleDatabase::remove_duplicate_hashes(
-                    &mut db_writer,
-                    change_log.take_additions(),
-                )?;
+            let (deletion_candidates, duplicates) = MerkleDatabase::remove_duplicate_hashes(
+                &mut db_writer,
+                change_log.take_additions(),
+            )?;
 
             for hash in &deletion_candidates {
                 let hash_hex = ::hex::encode(hash);
@@ -159,17 +160,14 @@ impl MerkleDatabase {
     fn remove_duplicate_hashes(
         db_writer: &mut LmdbDatabaseWriter,
         deletions: protobuf::RepeatedField<Vec<u8>>,
-    ) -> Result<(Vec<Vec<u8>>, Vec<Vec<u8>>), StateDatabaseError> {
-        let (deletion_candidates, decrements): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
-            deletions.into_iter().partition(|key| {
-                if let Ok(count) = get_ref_count(db_writer, &key) {
-                    count == 0
-                } else {
-                    false
-                }
-            });
-
-        Ok((deletion_candidates, decrements))
+    ) -> Result<(Vec<StateHash>, Vec<StateHash>), StateDatabaseError> {
+        Ok(deletions.into_iter().partition(|key| {
+            if let Ok(count) = get_ref_count(db_writer, &key) {
+                count == 0
+            } else {
+                false
+            }
+        }))
     }
 
     /// Returns the current merkle root for this MerkleDatabase
@@ -420,16 +418,17 @@ impl MerkleDatabase {
             let node = {
                 // this is safe to unwrap, because we've just inserted the path in the previous loop
                 let child_address = &nodes[&path].children.get(&token.to_string());
-                if !new_branch && child_address.is_some() {
-                    get_node_by_hash(&self.db, child_address.unwrap())?
-                } else {
-                    if strict {
+
+                match (!new_branch && child_address.is_some(), strict) {
+                    (true, _) => get_node_by_hash(&self.db, child_address.unwrap())?,
+                    (false, true) => {
                         return Err(StateDatabaseError::NotFound(format!(
                             "invalid address {} from root {}",
                             tokens.join(""),
                             self.root_hash
-                        )));
-                    } else {
+                        )))
+                    }
+                    (false, false) => {
                         new_branch = true;
                         Node::default()
                     }
@@ -461,13 +460,7 @@ impl StateReader for MerkleDatabase {
         Ok(self.get_by_address(address)?.value)
     }
 
-    fn leaves(
-        &self,
-        prefix: Option<&str>,
-    ) -> Result<
-        Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
-        StateDatabaseError,
-    > {
+    fn leaves(&self, prefix: Option<&str>) -> Result<Box<StateIter>, StateDatabaseError> {
         Ok(Box::new(MerkleLeafIterator::new(self.clone(), prefix)?))
     }
 }
@@ -558,7 +551,8 @@ fn write_change_log(
     root_hash: &[u8],
     change_log: &ChangeLogEntry,
 ) -> Result<(), StateDatabaseError> {
-    Ok(db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?)
+    db_writer.index_put(CHANGE_LOG_INDEX, root_hash, &change_log.write_to_bytes()?)?;
+    Ok(())
 }
 
 fn increment_ref_count(
@@ -592,7 +586,7 @@ fn get_ref_count(
 ) -> Result<u64, StateDatabaseError> {
     Ok(
         if let Some(ref_count) = db_writer.index_get(DUPLICATE_LOG_INDEX, key)? {
-            from_bytes(ref_count)
+            from_bytes(&ref_count)
         } else {
             0
         },
@@ -603,7 +597,7 @@ fn to_bytes(num: u64) -> [u8; 8] {
     unsafe { ::std::mem::transmute(num.to_le()) }
 }
 
-fn from_bytes(bytes: Vec<u8>) -> u64 {
+fn from_bytes(bytes: &[u8]) -> u64 {
     let mut num_bytes = [0u8; 8];
     num_bytes.copy_from_slice(&bytes);
     u64::from_le(unsafe { ::std::mem::transmute(num_bytes) })
@@ -786,7 +780,7 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::database::DatabaseError;
+    use database::error::DatabaseError;
     use database::lmdb::DatabaseReader;
     use database::lmdb::LmdbContext;
     use database::lmdb::LmdbDatabase;

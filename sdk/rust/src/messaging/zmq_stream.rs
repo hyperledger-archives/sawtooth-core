@@ -79,7 +79,7 @@ impl ZmqMessageSender {
     fn new(ctx: zmq::Context, address: String, router: InboundRouter) -> Self {
         ZmqMessageSender {
             context: ctx,
-            address: address,
+            address,
             inbound_router: router,
             outbound_sender: None,
         }
@@ -168,7 +168,7 @@ struct InboundRouter {
 impl InboundRouter {
     fn new(inbound_tx: SyncSender<MessageResult>) -> Self {
         InboundRouter {
-            inbound_tx: inbound_tx,
+            inbound_tx,
             expected_replies: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -240,10 +240,10 @@ impl SendReceiveStream {
 
         SendReceiveStream {
             address: String::from(address),
-            socket: socket,
-            outbound_recv: outbound_recv,
-            inbound_router: inbound_router,
-            monitor_socket: monitor_socket,
+            socket,
+            outbound_recv,
+            inbound_router,
+            monitor_socket,
         }
     }
 

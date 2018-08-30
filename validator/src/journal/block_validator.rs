@@ -15,8 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
     Arc, Mutex,
 };
@@ -55,16 +57,14 @@ pub enum ValidationError {
 type BlockValidationResultCache =
     uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BlockValidationResultStore {
     validation_result_cache: Arc<Mutex<BlockValidationResultCache>>,
 }
 
 impl BlockValidationResultStore {
     pub fn new() -> Self {
-        BlockValidationResultStore {
-            validation_result_cache: Arc::new(Mutex::new(BlockValidationResultCache::default())),
-        }
+        Self::default()
     }
 
     pub fn insert(&self, result: BlockValidationResult) {
@@ -78,16 +78,19 @@ impl BlockValidationResultStore {
         self.validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
+            .find(|r| r.block_id == block_id)
             .cloned()
     }
 
     pub fn fail_block(&self, block_id: &str) {
-        self.validation_result_cache
+        if let Some(ref mut result) = self
+            .validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
-            .map(|r| r.status = BlockStatus::Invalid);
+            .find(|r| r.block_id == block_id)
+        {
+            result.status = BlockStatus::Invalid
+        }
     }
 }
 
@@ -96,7 +99,7 @@ impl BlockStatusStore for BlockValidationResultStore {
         self.validation_result_cache
             .lock()
             .expect("The mutex is poisoned")
-            .find(|r| &r.block_id == block_id)
+            .find(|r| r.block_id == block_id)
             .map(|r| r.status.clone())
             .unwrap_or(BlockStatus::Unknown)
     }
@@ -142,6 +145,7 @@ pub struct BlockValidationResult {
 }
 
 impl BlockValidationResult {
+    #[allow(dead_code)]
     fn new(
         block_id: String,
         execution_results: Vec<TxnExecutionResult>,
@@ -185,7 +189,7 @@ pub struct BlockValidator<
     T: TransactionIndex,
 > {
     channels: Vec<(InternalSender, Option<InternalReceiver>)>,
-    index: Arc<Mutex<usize>>,
+    index: Arc<AtomicUsize>,
     validation_thread_exit: Arc<AtomicBool>,
     block_scheduler: BlockScheduler<BlockValidationResultStore>,
     block_status_store: BlockValidationResultStore,
@@ -212,6 +216,7 @@ where
     B: Clone,
     T: Clone,
 {
+    #[allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: TEP,
@@ -229,7 +234,7 @@ where
         }
         BlockValidator {
             channels,
-            index: Arc::new(Mutex::new(0)),
+            index: Arc::new(AtomicUsize::new(0)),
             transaction_executor,
             validation_thread_exit: Arc::new(AtomicBool::new(false)),
             block_scheduler: BlockScheduler::new(block_manager.clone(), block_status_store.clone()),
@@ -312,37 +317,28 @@ where
                 match block_validations.validate_block(&block) {
                     Ok(result) => {
                         info!("Block {} passed validation", block_id);
-                        match results_sender.send(result) {
-                            Err(err) => {
-                                warn!("During handling valid block: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                        if let Err(err) = results_sender.send(result) {
+                            warn!("During handling valid block: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
                     }
                     Err(ValidationError::BlockValidationFailure(ref reason)) => {
                         warn!("Block {} failed validation: {}", &block_id, reason);
-                        match results_sender.send(BlockValidationResult {
-                            block_id: block_id,
+                        if let Err(err) = results_sender.send(BlockValidationResult {
+                            block_id,
                             execution_results: vec![],
                             num_transactions: 0,
                             status: BlockStatus::Invalid,
                         }) {
-                            Err(err) => {
-                                warn!("During handling block failure: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                            warn!("During handling block failure: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
                     }
                     Err(err) => {
                         warn!("Error during block validation: {:?}", err);
-                        match error_return_sender.send((block, results_sender)) {
-                            Err(err) => {
-                                warn!("During handling retry after an error: {:?}", err);
-                                exit.store(true, Ordering::Relaxed);
-                            }
-                            _ => (),
+                        if let Err(err) = error_return_sender.send((block, results_sender)) {
+                            warn!("During handling retry after an error: {:?}", err);
+                            exit.store(true, Ordering::Relaxed);
                         }
                     }
                 }
@@ -370,13 +366,13 @@ where
     }
 
     fn return_sender(&self) -> InternalSender {
-        let mut index = self.index.lock().expect("The mutex is not poisoned");
-        let (ref tx, _) = self.channels[*index];
+        let index = self.index.load(Ordering::Relaxed);
+        let (ref tx, _) = self.channels[index];
 
-        if *index >= self.channels.len() - 1 {
-            *index = 0;
+        if index >= self.channels.len() - 1 {
+            self.index.store(0, Ordering::Relaxed);
         } else {
-            *index += 1;
+            self.index.store(index + 1, Ordering::Relaxed);
         }
         tx.clone()
     }
@@ -384,34 +380,28 @@ where
     pub fn submit_blocks_for_verification(
         &self,
         blocks: &[Block],
-        response_sender: Sender<BlockValidationResult>,
+        response_sender: &Sender<BlockValidationResult>,
     ) {
         for block in self.block_scheduler.schedule(blocks.to_vec()) {
             let tx = self.return_sender();
-            match tx.send((block, response_sender.clone())) {
-                Err(err) => {
-                    warn!("During submit blocks for validation: {:?}", err);
-                    self.validation_thread_exit.store(true, Ordering::Relaxed);
-                }
-                _ => (),
+            if let Err(err) = tx.send((block, response_sender.clone())) {
+                warn!("During submit blocks for validation: {:?}", err);
+                self.validation_thread_exit.store(true, Ordering::Relaxed);
             }
         }
     }
 
-    pub fn process_pending(&self, block: &Block, response_sender: Sender<BlockValidationResult>) {
+    pub fn process_pending(&self, block: &Block, response_sender: &Sender<BlockValidationResult>) {
         for block in self.block_scheduler.done(&block.header_signature) {
             let tx = self.return_sender();
-            match tx.send((block, response_sender.clone())) {
-                Err(err) => {
-                    warn!("During process pending: {:?}", err);
-                    self.validation_thread_exit.store(true, Ordering::Relaxed);
-                }
-                _ => (),
+            if let Err(err) = tx.send((block, response_sender.clone())) {
+                warn!("During process pending: {:?}", err);
+                self.validation_thread_exit.store(true, Ordering::Relaxed);
             }
         }
     }
 
-    pub fn validate_block(&self, block: Block) -> Result<(), ValidationError> {
+    pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
         let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(DuplicatesAndDependenciesValidation::new(
                 self.batch_index.clone(),
@@ -443,7 +433,7 @@ where
             check,
         );
 
-        let result = block_validations.validate_block(&block)?;
+        let result = block_validations.validate_block(block)?;
         self.block_status_store.insert(result);
 
         Ok(())
@@ -684,10 +674,12 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     err
                 ))
             })?
-            .ok_or(ValidationError::BlockValidationFailure(format!(
-                "Block {} failed validation: no execution results produced",
-                &block.header_signature
-            )))?;
+            .ok_or_else(|| {
+                ValidationError::BlockValidationFailure(format!(
+                    "Block {} failed validation: no execution results produced",
+                    &block.header_signature
+                ))
+            })?;
 
         if let Some(ref actual_ending_state_hash) = execution_results.ending_state_hash {
             if ending_state_hash != actual_ending_state_hash {
@@ -822,11 +814,11 @@ impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
         prev_state_root: Option<&String>,
     ) -> Result<(), ValidationError> {
         if block.block_num != 0 {
-            let state_root = prev_state_root
-                .ok_or(
-                    ValidationError::BlockValidationError(
+            let state_root = prev_state_root.ok_or_else(|| {
+                ValidationError::BlockValidationError(
                         format!("During permission check of block {} block_num is {} but missing a previous state root",
-                            &block.header_signature, block.block_num)))?;
+                            &block.header_signature, block.block_num))
+            })?;
             for batch in &block.batches {
                 let batch_id = &batch.header_signature;
                 if !self
@@ -863,12 +855,12 @@ impl BlockValidation for OnChainRulesValidation {
         prev_state_root: Option<&String>,
     ) -> Result<(), ValidationError> {
         if block.block_num != 0 {
-            let state_root = prev_state_root
-                .ok_or(
-                    ValidationError::BlockValidationError(
+            let state_root = prev_state_root.ok_or_else(|| {
+                ValidationError::BlockValidationError(
                         format!("During check of on-chain rules for block {}, block num was {}, but missing a previous state root",
                             &block.header_signature,
-                            block.block_num)))?;
+                            block.block_num))
+            })?;
             let settings_view: SettingsView =
                 self.view_factory.create_view(state_root).map_err(|err| {
                     ValidationError::BlockValidationError(format!(

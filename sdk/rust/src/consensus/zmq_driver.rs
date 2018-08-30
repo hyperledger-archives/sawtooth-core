@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use protobuf;
 use protobuf::{Message as ProtobufMessage, ProtobufError};
 use rand;
@@ -119,6 +121,7 @@ impl Stop {
     }
 }
 
+#[allow(needless_pass_by_value)]
 fn driver_loop(
     mut update_sender: Sender<Update>,
     stop_receiver: Receiver<()>,
@@ -128,7 +131,7 @@ fn driver_loop(
     loop {
         match validator_receiver.recv_timeout(Duration::from_millis(100)) {
             Err(RecvTimeoutError::Timeout) => {
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
@@ -146,7 +149,7 @@ fn driver_loop(
                 if let Err(err) = handle_update(&msg, &mut validator_sender, &mut update_sender) {
                     break Err(err);
                 }
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
@@ -203,7 +206,7 @@ pub fn register(
                     ConsensusRegisterResponse_Status::NOT_READY => {
                         thread::sleep(retry_delay);
                         if retry_delay < MAX_RETRY_DELAY {
-                            retry_delay = retry_delay * 2;
+                            retry_delay *= 2;
                             if retry_delay > MAX_RETRY_DELAY {
                                 retry_delay = MAX_RETRY_DELAY;
                             }
@@ -342,7 +345,7 @@ impl From<ProtobufError> for Error {
             IoError(err) => Error::EncodingError(format!("{}", err)),
             WireError(err) => Error::EncodingError(format!("{:?}", err)),
             Utf8(err) => Error::EncodingError(format!("{}", err)),
-            MessageNotInitialized { message: err } => Error::EncodingError(format!("{}", err)),
+            MessageNotInitialized { message: err } => Error::EncodingError(err.to_string()),
         }
     }
 }

@@ -192,7 +192,7 @@ impl Scheduler for PyScheduler {
                 .collect();
 
             Ok(Some(ExecutionResults {
-                beginning_state_hash: beginning_state_hash,
+                beginning_state_hash,
                 ending_state_hash,
                 batch_results: batch_txn_results,
             }))

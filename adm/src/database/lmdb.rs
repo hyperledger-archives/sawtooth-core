@@ -51,7 +51,7 @@ impl LmdbContext {
                 .open(filepath_str, flags, 0o600)
                 .map_err(|err| DatabaseError::InitError(format!("Database not found: {}", err)))
         }?;
-        Ok(LmdbContext { env: env })
+        Ok(LmdbContext { env })
     }
 }
 
@@ -83,8 +83,8 @@ impl<'e> LmdbDatabase<'e> {
             index_dbs.insert(String::from(*name), db);
         }
         Ok(LmdbDatabase {
-            ctx: ctx,
-            main: main,
+            ctx,
+            main,
             indexes: index_dbs,
         })
     }
@@ -93,14 +93,14 @@ impl<'e> LmdbDatabase<'e> {
         let txn = lmdb::ReadTransaction::new(&self.ctx.env).map_err(|err| {
             DatabaseError::ReaderError(format!("Failed to create reader: {}", err))
         })?;
-        Ok(LmdbDatabaseReader { db: self, txn: txn })
+        Ok(LmdbDatabaseReader { db: self, txn })
     }
 
     pub fn writer(&self) -> Result<LmdbDatabaseWriter, DatabaseError> {
         let txn = lmdb::WriteTransaction::new(&self.ctx.env).map_err(|err| {
             DatabaseError::WriterError(format!("Failed to create writer: {}", err))
         })?;
-        Ok(LmdbDatabaseWriter { db: self, txn: txn })
+        Ok(LmdbDatabaseWriter { db: self, txn })
     }
 }
 
@@ -134,10 +134,7 @@ impl<'a> LmdbDatabaseReader<'a> {
             .cursor(&self.db.main)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
         let access = self.txn.access();
-        Ok(LmdbDatabaseReaderCursor {
-            access: access,
-            cursor: cursor,
-        })
+        Ok(LmdbDatabaseReaderCursor { access, cursor })
     }
 
     pub fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
@@ -151,10 +148,7 @@ impl<'a> LmdbDatabaseReader<'a> {
             .cursor(index)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
         let access = self.txn.access();
-        Ok(LmdbDatabaseReaderCursor {
-            access: access,
-            cursor: cursor,
-        })
+        Ok(LmdbDatabaseReaderCursor { access, cursor })
     }
 
     pub fn count(&self) -> Result<usize, DatabaseError> {

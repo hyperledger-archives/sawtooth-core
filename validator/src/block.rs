@@ -17,7 +17,7 @@
 
 use batch::Batch;
 use proto;
-use protobuf::{self, Message};
+use protobuf;
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Default)]

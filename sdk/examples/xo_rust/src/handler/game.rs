@@ -16,7 +16,6 @@
  */
 
 use std::collections::HashMap;
-
 use sawtooth_sdk::processor::handler::ApplyError;
 
 const POSSIBLE_WINS: [(usize, usize, usize); 8] = [
@@ -44,7 +43,7 @@ pub struct Game {
 impl Game {
     pub fn new(name: String) -> Game {
         Game {
-            name: name,
+            name,
             board: "-".repeat(9),
             game_state: String::from("P1-NEXT"),
             player1: String::from(""),
@@ -65,8 +64,8 @@ impl Game {
         fields.join(",")
     }
 
-    fn from_string(game_string: String) -> Option<Game> {
-        let items: Vec<&str> = game_string.split(",").collect();
+    fn from_string(game_string: &str) -> Option<Game> {
+        let items: Vec<&str> = game_string.split(',').collect();
         if items.len() != 5 {
             return None;
         }
@@ -93,11 +92,11 @@ impl Game {
         game_strings.join("|")
     }
 
-    pub fn deserialize_games(games_string: String) -> Option<HashMap<String, Game>> {
+    pub fn deserialize_games(games_string: &str) -> Option<HashMap<String, Game>> {
         let mut ret: HashMap<String, Game> = HashMap::new();
-        let game_string_list: Vec<&str> = games_string.split("|").collect();
+        let game_string_list: Vec<&str> = games_string.split('|').collect();
         for g in game_string_list {
-            let game = Game::from_string(g.to_string());
+            let game = Game::from_string(g);
             match game {
                 Some(game_item) => ret.insert(game_item.name.clone(), game_item),
                 None => return None,
@@ -111,16 +110,17 @@ impl Game {
             "P1-NEXT" => "X",
             "P2-NEXT" => "O",
             other_state => {
-                return Err(ApplyError::InvalidTransaction(String::from(format!(
+                return Err(ApplyError::InvalidTransaction(format!(
                     "Invalid state {}",
                     other_state
-                ))))
+                )))
             }
         };
 
         let index = space - 1;
 
-        let board_vec: Vec<String> = self.board
+        let board_vec: Vec<String> = self
+            .board
             .chars()
             .enumerate()
             .map(|(i, ch)| {
@@ -155,7 +155,7 @@ impl Game {
             return Ok(());
         }
 
-        if !self.board.contains("-") {
+        if !self.board.contains('-') {
             self.game_state = String::from("TIE");
             return Ok(());
         }
@@ -170,15 +170,15 @@ impl Game {
             return Ok(());
         }
 
-        Err(ApplyError::InvalidTransaction(String::from(format!(
+        Err(ApplyError::InvalidTransaction(format!(
             "Unhandled state: {}",
             self.game_state
-        ))))
+        )))
     }
 
     pub fn is_win(&self, letter: &str) -> bool {
         let letter = letter.to_string();
-        for (i1, i2, i3) in POSSIBLE_WINS.iter() {
+        for (i1, i2, i3) in &POSSIBLE_WINS {
             let board_chars: Vec<char> = self.board.chars().collect();
             if board_chars[*i1 - 1].to_string() == letter
                 && board_chars[*i2 - 1].to_string() == letter
@@ -258,8 +258,10 @@ impl Game {
 
 impl PartialEq for Game {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.game_state == other.board
-            && self.game_state == other.game_state && self.player1 == other.player1
+        self.name == other.name
+            && self.game_state == other.board
+            && self.game_state == other.game_state
+            && self.player1 == other.player1
             && self.player2 == other.player2
     }
 }

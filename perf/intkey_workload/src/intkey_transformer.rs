@@ -15,27 +15,17 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
-use std::error::Error;
-
 use cbor::GenericEncoder;
-
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
-use protobuf::Message;
-use protobuf::RepeatedField;
-
-use rand::Rng;
-use rand::SeedableRng;
-use rand::StdRng;
-
-use sawtooth_sdk::messages::transaction::Transaction;
-use sawtooth_sdk::messages::transaction::TransactionHeader;
-use sawtooth_sdk::signing;
-
 use intkey_addresser::IntKeyAddresser;
 use intkey_iterator::IntKeyPayload;
+use protobuf::{Message, RepeatedField};
+use rand::{Rng, SeedableRng, StdRng};
+use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
+use sawtooth_sdk::signing;
+use std::collections::HashMap;
+use std::error::Error;
 
 const UNNECESSARY_TXNS_NUM: usize = 1_000;
 
@@ -68,11 +58,11 @@ impl<'a> IntKeyTransformer<'a> {
         unnecessary: f32,
     ) -> IntKeyTransformer<'a> {
         IntKeyTransformer {
-            unsatisfiable: unsatisfiable,
-            wildcard: wildcard,
-            num_names: num_names,
-            unnecessary: unnecessary,
-            signer: signer,
+            unsatisfiable,
+            wildcard,
+            num_names,
+            unnecessary,
+            signer,
             rng: SeedableRng::from_seed(seed),
             addresser: IntKeyAddresser::new(),
             txn_id_by_name: HashMap::new(),
@@ -190,13 +180,10 @@ impl<'a> IntKeyTransformer<'a> {
 #[cfg(test)]
 mod tests {
     use super::IntKeyTransformer;
-
+    use intkey_iterator::IntKeyIterator;
     use protobuf::Message;
-
     use sawtooth_sdk::messages::transaction::TransactionHeader;
     use sawtooth_sdk::signing;
-
-    use intkey_iterator::IntKeyIterator;
 
     #[test]
     fn test_unsatisfiable() {
@@ -216,7 +203,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            num_to_consider,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -235,7 +223,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
         );
     }
 
@@ -257,7 +245,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -276,7 +265,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 
@@ -297,7 +286,8 @@ mod tests {
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
-        assert!(
+        assert_eq!(
+            num_to_consider,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -314,7 +304,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
         );
     }
 
@@ -335,7 +325,8 @@ mod tests {
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -352,7 +343,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 
@@ -374,7 +365,8 @@ mod tests {
 
         let num_to_consider = num_names;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            num_to_consider - 1, // The first txn will have 0 dependencies since there is no prior txn.
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -389,7 +381,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider - 1 // The first txn will have 0 dependencies since there is no prior txn.
+                })
         );
     }
 
@@ -411,7 +403,8 @@ mod tests {
 
         let num_to_consider = 1_000;
         let mut transactions = Vec::new();
-        assert!(
+        assert_eq!(
+            0,
             transaction_iterator
                 .take(num_to_consider)
                 .fold(0, |acc, transaction| {
@@ -426,7 +419,7 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
         );
     }
 }

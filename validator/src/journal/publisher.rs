@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use batch::Batch;
 use block::Block;
 
@@ -97,8 +99,7 @@ impl BlockPublisherState {
 
     pub fn get_previous_block_id(&self) -> Option<String> {
         let candidate_block = self.candidate_block.as_ref();
-        let optional_block_id = candidate_block.map(|cb| cb.previous_block_id());
-        optional_block_id
+        candidate_block.map(|cb| cb.previous_block_id())
     }
 }
 
@@ -308,7 +309,7 @@ impl SyncBlockPublisher {
     fn finalize_block(
         &self,
         state: &mut BlockPublisherState,
-        consensus_data: Vec<u8>,
+        consensus_data: &[u8],
         force: bool,
     ) -> Result<String, FinalizeBlockError> {
         let mut option_result = None;
@@ -321,7 +322,7 @@ impl SyncBlockPublisher {
                 Ok(finalize_result) => {
                     state.pending_batches.update(
                         finalize_result.remaining_batches.clone(),
-                        finalize_result.last_batch.clone(),
+                        &finalize_result.last_batch,
                     );
 
                     let previous_block_id = &state
@@ -341,7 +342,7 @@ impl SyncBlockPublisher {
                             );
 
                             Some(Ok(
-                                self.publish_block(block, finalize_result.injected_batch_ids)
+                                self.publish_block(&block, finalize_result.injected_batch_ids)
                             ))
                         }
                         None => None,
@@ -406,7 +407,7 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn publish_block(&self, block: PyObject, injected_batches: Vec<String>) -> String {
+    fn publish_block(&self, block: &PyObject, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let block: Block = block
@@ -500,6 +501,7 @@ pub struct BlockPublisher {
 }
 
 impl BlockPublisher {
+    #![allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: PyObject,
@@ -596,15 +598,15 @@ impl BlockPublisher {
         ChainHeadLock::new(self.publisher.clone())
     }
 
-    pub fn initialize_block(&self, previous_block: Block) -> Result<(), InitializeBlockError> {
+    pub fn initialize_block(&self, previous_block: &Block) -> Result<(), InitializeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock was poisoned");
         self.publisher
-            .initialize_block(&mut state, &previous_block, true)
+            .initialize_block(&mut state, previous_block, true)
     }
 
     pub fn finalize_block(
         &self,
-        consensus_data: Vec<u8>,
+        consensus_data: &[u8],
         force: bool,
     ) -> Result<String, FinalizeBlockError> {
         let mut state = self.publisher.state.write().expect("RwLock is poisoned");
@@ -635,7 +637,7 @@ impl BlockPublisher {
             .state
             .read()
             .expect("RwLock was poisoned during a write lock");
-        return state.pending_batches.contains(batch_id);
+        state.pending_batches.contains(batch_id)
     }
 }
 
@@ -750,6 +752,10 @@ impl PendingBatchesPool {
         self.batches.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn iter(&self) -> Iter<Batch> {
         self.batches.iter()
     }
@@ -811,7 +817,7 @@ impl PendingBatchesPool {
         self.gauge.set_value(self.batches.len());
     }
 
-    pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: Batch) {
+    pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: &Batch) {
         let last_index = self
             .batches
             .iter()

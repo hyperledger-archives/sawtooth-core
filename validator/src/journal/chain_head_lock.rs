@@ -1,8 +1,5 @@
 use batch::Batch;
 use block::Block;
-use cpython;
-use cpython::ToPyObject;
-use journal::block_wrapper::BlockWrapper;
 use journal::publisher::{BlockPublisherState, SyncBlockPublisher};
 use std::sync::RwLockWriteGuard;
 

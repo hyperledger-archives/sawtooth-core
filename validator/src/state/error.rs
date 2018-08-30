@@ -21,7 +21,7 @@ use cbor::decoder::DecodeError;
 use cbor::encoder::EncodeError;
 use protobuf::ProtobufError;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 
 #[derive(Debug)]
 pub enum StateDatabaseError {

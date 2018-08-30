@@ -28,7 +28,7 @@ pub struct Blockstore<'a> {
 
 impl<'a> Blockstore<'a> {
     pub fn new(db: LmdbDatabase<'a>) -> Self {
-        Blockstore { db: db }
+        Blockstore { db }
     }
 
     pub fn get(&self, block_id: &str) -> Result<Block, DatabaseError> {

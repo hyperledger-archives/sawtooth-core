@@ -15,15 +15,14 @@
  * -----------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
-
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
+use handler::game::Game;
 use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
-
-use handler::game::Game;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::str::from_utf8;
 
 pub fn get_xo_prefix() -> String {
     let mut sha = Sha512::new();
@@ -39,7 +38,7 @@ pub struct XoState<'a> {
 impl<'a> XoState<'a> {
     pub fn new(context: &'a mut TransactionContext) -> XoState {
         XoState {
-            context: context,
+            context,
             address_map: HashMap::new(),
         }
     }
@@ -103,45 +102,34 @@ impl<'a> XoState<'a> {
 
     fn _load_games(&mut self, game_name: &str) -> Result<HashMap<String, Game>, ApplyError> {
         let address = XoState::calculate_address(game_name);
-        let mut games = HashMap::new();
 
-        if self.address_map.contains_key(&address) {
-            if let Some(ref serialized_games) = self.address_map[&address] {
-                let t = Game::deserialize_games((*serialized_games).clone());
-                match t {
-                    Some(g) => games = g,
-                    None => {
-                        return Err(ApplyError::InvalidTransaction(String::from(
-                            "Invalid serialization of game state",
-                        )))
-                    }
+        Ok(match self.address_map.entry(address.clone()) {
+            Entry::Occupied(entry) => match entry.get() {
+                Some(addr) => Game::deserialize_games(addr).ok_or_else(|| {
+                    ApplyError::InvalidTransaction("Invalid serialization of game state".into())
+                })?,
+                None => HashMap::new(),
+            },
+            Entry::Vacant(entry) => match self.context.get_state(vec![address])? {
+                Some(state_bytes) => {
+                    let state_string = from_utf8(&state_bytes).map_err(|e| {
+                        ApplyError::InvalidTransaction(format!(
+                            "Invalid serialization of game state: {}",
+                            e
+                        ))
+                    })?;
+
+                    entry.insert(Some(state_string.to_string()));
+
+                    Game::deserialize_games(state_string).ok_or_else(|| {
+                        ApplyError::InvalidTransaction("Invalid serialization of game state".into())
+                    })?
                 }
-            }
-        } else {
-            if let Some(state_bytes) = self.context.get_state(vec![address.to_string()])? {
-                let state_string = match ::std::str::from_utf8(&state_bytes) {
-                    Ok(s) => s,
-                    Err(_) => {
-                        return Err(ApplyError::InvalidTransaction(String::from(
-                            "Invalid serialization of game state",
-                        )))
-                    }
-                };
-                self.address_map
-                    .insert(address, Some(state_string.to_string()));
-                let t = Game::deserialize_games(state_string.to_string());
-                match t {
-                    Some(g) => games = g,
-                    None => {
-                        return Err(ApplyError::InvalidTransaction(String::from(
-                            "Invalid serialization of game state",
-                        )))
-                    }
+                None => {
+                    entry.insert(None);
+                    HashMap::new()
                 }
-            } else {
-                self.address_map.insert(address, None);
-            }
-        }
-        Ok(games)
+            },
+        })
     }
 }

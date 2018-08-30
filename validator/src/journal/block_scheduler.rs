@@ -121,7 +121,7 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                 continue;
             }
 
-            if &block.previous_block_id != NULL_BLOCK_IDENTIFIER
+            if block.previous_block_id != NULL_BLOCK_IDENTIFIER
                 && self.block_validity(&block.previous_block_id) == BlockStatus::Unknown
             {
                 info!(
@@ -197,7 +197,7 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         let ready = self
             .descendants_by_previous_id
             .remove(block_id)
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
 
         for blk in &ready {
             self.pending.remove(&blk.header_signature);

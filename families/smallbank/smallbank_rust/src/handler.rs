@@ -97,7 +97,7 @@ impl TransactionHandler for SmallbankTransactionHandler {
                 apply_amalgamate(&payload.take_amalgamate(), context)
             }
             SmallbankTransactionPayload_PayloadType::PAYLOAD_TYPE_UNSET => Err(
-                ApplyError::InvalidTransaction(String::from("Transaction type unset")),
+                ApplyError::InvalidTransaction("Transaction type unset".into()),
             ),
         }
     }
@@ -123,16 +123,16 @@ fn apply_create_account(
     match load_account(create_account_data.get_customer_id(), context)? {
         Some(_) => {
             warn!("Invalid transaction: during CREATE_ACCOUNT, Customer Name must be set");
-            Err(ApplyError::InvalidTransaction(format!(
-                "Customer Name must be set"
-            )))
+            Err(ApplyError::InvalidTransaction(
+                "Customer Name must be set".into(),
+            ))
         }
         None => {
             if create_account_data.get_customer_name().is_empty() {
                 warn!("Invalid transaction: during CREATE_ACCOUNT, Customer Name must be set");
-                Err(ApplyError::InvalidTransaction(format!(
-                    "Customer Name must be set"
-                )))
+                Err(ApplyError::InvalidTransaction(
+                    "Customer Name must be set".into(),
+                ))
             } else {
                 let mut new_account = Account::new();
                 new_account.set_customer_id(create_account_data.get_customer_id());
@@ -153,9 +153,7 @@ fn apply_deposit_checking(
     match load_account(deposit_checking_data.get_customer_id(), context)? {
         None => {
             warn!("Invalid transaction: during DEPOSIT_CHECKING, Account must exist");
-            Err(ApplyError::InvalidTransaction(format!(
-                "Account must exist"
-            )))
+            Err(ApplyError::InvalidTransaction("Account must exist".into()))
         }
         Some(mut account) => {
             let balance = account.get_checking_balance() + deposit_checking_data.get_amount();
@@ -172,9 +170,7 @@ fn apply_write_check(
     match load_account(write_check_data.get_customer_id(), context)? {
         None => {
             warn!("Invalid transaction: during WRITE_CHECK, Account must exist");
-            Err(ApplyError::InvalidTransaction(format!(
-                "Account must exist"
-            )))
+            Err(ApplyError::InvalidTransaction("Account must exist".into()))
         }
         Some(mut account) => {
             let balance = account.get_checking_balance() - write_check_data.get_amount();
@@ -191,18 +187,16 @@ fn apply_transact_savings(
     match load_account(transact_savings_data.get_customer_id(), context)? {
         None => {
             warn!("Invalid transaction: during TRANSACT_SAVINGS, Account must exist");
-            Err(ApplyError::InvalidTransaction(format!(
-                "Account must exist"
-            )))
+            Err(ApplyError::InvalidTransaction("Account must exist".into()))
         }
         Some(mut account) => {
             if transact_savings_data.get_amount() < 0
                 && (-transact_savings_data.get_amount() as u32) > account.get_savings_balance()
             {
                 warn!("Invalid transaction: during TRANSACT_SAVINGS, Insufficient funds in source savings account");
-                return Err(ApplyError::InvalidTransaction(format!(
-                    "Insufficient funds in source savings account"
-                )));
+                return Err(ApplyError::InvalidTransaction(
+                    "Insufficient funds in source savings account".into(),
+                ));
             }
 
             let balance = {
@@ -225,7 +219,7 @@ fn apply_send_payment(
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
         warn!("Invalid transaction: during SEND_PAYMENT, both source and dest accounts must exist");
-        ApplyError::InvalidTransaction(String::from("Both source and dest accounts must exist"))
+        ApplyError::InvalidTransaction("Both source and dest accounts must exist".into())
     }
 
     let mut source_account =
@@ -235,9 +229,9 @@ fn apply_send_payment(
 
     if source_account.get_checking_balance() < send_payment_data.get_amount() {
         warn!("Invalid transaction: during SEND_PAYMENT, Insufficient funds in source checking account");
-        Err(ApplyError::InvalidTransaction(String::from(
-            "Insufficient funds in source checking account",
-        )))
+        Err(ApplyError::InvalidTransaction(
+            "Insufficient funds in source checking account".into(),
+        ))
     } else {
         let source_balance = source_account.get_checking_balance() - send_payment_data.get_amount();
         source_account.set_checking_balance(source_balance);
@@ -253,7 +247,7 @@ fn apply_amalgamate(
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
         warn!("Invalid transaction: during AMALGAMATE, both source and dest accounts must exist");
-        ApplyError::InvalidTransaction(String::from("Both source and dest accounts must exist"))
+        ApplyError::InvalidTransaction("Both source and dest accounts must exist".into())
     }
 
     let mut source_account =

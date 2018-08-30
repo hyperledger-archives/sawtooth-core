@@ -34,7 +34,7 @@ use err::CliError;
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let genesis_file_path = if args.is_present("output") {
         args.value_of("output")
-            .ok_or_else(|| CliError::ArgumentError(format!("Failed to read `output` arg")))
+            .ok_or_else(|| CliError::ArgumentError("Failed to read `output` arg".into()))
             .map(|pathstr| Path::new(pathstr).to_path_buf())
     } else {
         Ok(config::get_path_config().data_dir.join("genesis.batch"))

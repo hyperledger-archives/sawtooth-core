@@ -15,16 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-
-use cbor::value::Key;
-use cbor::value::Text;
-use cbor::value::Value;
-
-use rand::Rng;
-use rand::SeedableRng;
-use rand::StdRng;
+use cbor::value::{Key, Text, Value};
+use rand::{Rng, SeedableRng, StdRng};
+use std::collections::{BTreeMap, HashMap};
 
 const HALF_MAX_VALUE: u32 = 2_147_483_647;
 const INCS_AND_DECS_PER_SET: usize = 200_000;
@@ -75,8 +68,8 @@ pub struct IntKeyIterator {
 impl IntKeyIterator {
     pub fn new(num_names: usize, invalid: f32, seed: &[usize]) -> IntKeyIterator {
         IntKeyIterator {
-            num_names: num_names,
-            invalid: invalid,
+            num_names,
+            invalid,
 
             rng: SeedableRng::from_seed(seed),
 
@@ -116,7 +109,7 @@ impl Iterator for IntKeyIterator {
                 let name = self.gen_name();
                 self.names.insert(name.clone(), 0);
                 Some(IntKeyPayload {
-                    name: name,
+                    name,
                     verb: "set".to_string(),
                     value: self.set_value,
                 })
@@ -167,9 +160,7 @@ fn wrap_in_cbor_value_u32(value: u32) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::IntKeyIterator;
-    use super::HALF_MAX_VALUE;
-    use super::INCS_AND_DECS_PER_SET;
+    use super::{IntKeyIterator, HALF_MAX_VALUE, INCS_AND_DECS_PER_SET};
 
     const MAX_VALUE: u32 = 4_294_967_295;
 
@@ -208,14 +199,15 @@ mod tests {
         let intkey_iterator =
             IntKeyIterator::new(2, 1.0, &[2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45]);
 
-        assert!(
+        assert_eq!(
+            INCS_AND_DECS_PER_SET,
             intkey_iterator
                 .take(INCS_AND_DECS_PER_SET)
                 .fold(0, |acc, p| if p.verb == "invalid".to_string() {
                     acc + 1
                 } else {
                     acc
-                }) == INCS_AND_DECS_PER_SET
+                })
         );
     }
 }

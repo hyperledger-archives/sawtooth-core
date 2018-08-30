@@ -15,7 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
+#![allow(unknown_lints)]
+
 use std::io;
 use std::marker::Send;
 use std::marker::Sync;
@@ -194,7 +195,7 @@ impl ChainControllerState {
         });
 
         let result = ForkResolutionResult {
-            block: block,
+            block,
             chain_head: Some(chain_head),
             new_chain,
             current_chain,
@@ -224,13 +225,12 @@ impl ChainControllerState {
         block: &Block,
     ) -> Result<bool, ChainControllerError> {
         let actual_chain_head = self.chain_reader.chain_head()?;
-        if actual_chain_head
-            .as_ref()
-            .map(|actual_chain_head| {
-                actual_chain_head.header_signature != expected_chain_head.header_signature
-            })
-            .unwrap_or(false)
-        {
+
+        let chain_head_updated = actual_chain_head.as_ref().map(|actual_chain_head| {
+            actual_chain_head.header_signature != expected_chain_head.header_signature
+        });
+
+        if chain_head_updated.unwrap_or(false) {
             warn!(
                 "Chain head updated from {} to {} while resolving \
                  fork for block {}. Reprocessing resolution.",
@@ -241,7 +241,7 @@ impl ChainControllerState {
             return Ok(true);
         }
 
-        return Ok(false);
+        Ok(false)
     }
 }
 
@@ -277,6 +277,7 @@ impl<
         T: TransactionIndex + Clone + 'static,
     > ChainController<TEP, PV, BS, B, T>
 {
+    #![allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV, BS, B, T>,
@@ -292,7 +293,7 @@ impl<
     ) -> Self {
         let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
-                block_manager: block_manager.clone(),
+                block_manager,
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
                 observers,
@@ -301,7 +302,7 @@ impl<
                 fork_cache: ForkCache::new(fork_cache_keep_time),
             })),
             block_validator,
-            block_validation_results: block_validation_results,
+            block_validation_results,
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             commit_queue_sender: None,
@@ -369,7 +370,7 @@ impl<
                     block.header_signature
                 );
             } else {
-                self.block_validator.validate_block(block.clone())?;
+                self.block_validator.validate_block(&block)?;
 
                 if chain_id.is_none() {
                     state
@@ -389,7 +390,7 @@ impl<
         Ok(())
     }
 
-    pub fn on_block_received(&mut self, block_id: String) -> Result<(), ChainControllerError> {
+    pub fn on_block_received(&mut self, block_id: &str) -> Result<(), ChainControllerError> {
         // Only need a read lock to check duplicates, but need to upgrade to write lock for
         // updating chain head.
         {
@@ -413,13 +414,9 @@ impl<
             }
         }
 
-        let sender = self
-            .validation_result_sender
-            .as_ref()
-            .expect(
-                "Attempted to submit blocks for validation before starting the chain controller",
-            )
-            .clone();
+        let sender = self.validation_result_sender.as_ref().expect(
+            "Attempted to submit blocks for validation before starting the chain controller",
+        );
 
         let block = {
             let mut state = self
@@ -440,7 +437,7 @@ impl<
                     None
                 } else {
                     self.block_validator
-                        .submit_blocks_for_verification(&[block.clone()], sender);
+                        .submit_blocks_for_verification(&[block.clone()], &sender);
                     Some(block)
                 }
             } else {
@@ -562,7 +559,7 @@ impl<
         }
     }
 
-    fn on_block_validated(&self, block: &Block, result: BlockValidationResult) {
+    fn on_block_validated(&self, block: &Block, result: &BlockValidationResult) {
         let mut blocks_considered_count =
             COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
         blocks_considered_count.inc();
@@ -629,7 +626,7 @@ impl<
                 })?;
 
                 let mut chain_head_guard = self.chain_head_lock.acquire();
-                if state
+                let chain_head_updated = state
                     .check_chain_head_updated(&chain_head, block)
                     .map_err(|err| {
                         error!(
@@ -637,7 +634,8 @@ impl<
                             err,
                         );
                         err
-                    })? {
+                    })?;
+                if chain_head_updated {
                     continue;
                 }
 
@@ -715,16 +713,16 @@ impl<
                     result.uncommitted_batches,
                 );
 
-                state.chain_head.as_ref().map(|block| {
-                    block.batches.iter().for_each(|batch| {
+                if let Some(chain_head) = state.chain_head.as_ref() {
+                    chain_head.batches.iter().for_each(|batch| {
                         if batch.trace {
                             debug!(
                                 "TRACE: {}: ChainController.on_block_validated",
                                 batch.header_signature
                             )
                         }
-                    })
-                });
+                    });
+                }
 
                 for blk in result.new_chain.iter().rev() {
                     match self.block_validation_results.get(&blk.header_signature) {
@@ -734,7 +732,7 @@ impl<
                                 .iter()
                                 .map(TransactionReceipt::from)
                                 .collect();
-                            for observer in state.observers.iter_mut() {
+                            for observer in &mut state.observers {
                                 observer.chain_update(&block, receipts.as_slice());
                             }
                         }
@@ -763,8 +761,9 @@ impl<
                 committed_transactions_gauge.set_value(total_committed_txns);
 
                 let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num;
-                if chain_head_block_num + 1 > self.state_pruning_block_depth as u64 {
-                    let prune_at = chain_head_block_num - (self.state_pruning_block_depth as u64);
+                if chain_head_block_num + 1 > u64::from(self.state_pruning_block_depth) {
+                    let prune_at =
+                        chain_head_block_num - (u64::from(self.state_pruning_block_depth));
                     match state.chain_reader.get_block_by_block_num(prune_at) {
                         Ok(Some(block)) => state
                             .state_pruning_manager
@@ -816,10 +815,9 @@ impl<
         let sender = self
             .validation_result_sender
             .as_ref()
-            .expect("Unable to ref validation_result_sender")
-            .clone();
+            .expect("Unable to ref validation_result_sender");
 
-        self.block_validator.process_pending(block, sender);
+        self.block_validator.process_pending(block, &sender);
         Ok(())
     }
 
@@ -939,7 +937,7 @@ impl<
                         .set_block_validation_result(block_validation_result.clone());
                     let block = result_thread_controller
                         .get_block_unchecked(&block_validation_result.block_id);
-                    result_thread_controller.on_block_validated(&block, block_validation_result);
+                    result_thread_controller.on_block_validated(&block, &block_validation_result);
                 } else {
                     break;
                 }
@@ -1067,7 +1065,7 @@ impl<
                 Err(_) => break Err(ChainControllerError::BrokenQueue),
                 Ok(block_id) => block_id,
             };
-            self.chain_controller.on_block_received(block_id)?;
+            self.chain_controller.on_block_received(&block_id)?;
 
             if self.exit.load(Ordering::Relaxed) {
                 break Ok(());

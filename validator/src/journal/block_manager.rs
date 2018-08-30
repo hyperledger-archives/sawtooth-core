@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
@@ -121,7 +123,7 @@ impl BlockManagerState {
 
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
 
-        return Ok(block_has_been_put || block_is_null_block);
+        Ok(block_has_been_put || block_is_null_block)
     }
 
     /// Checks that every block is preceded by the block referenced by block.previous_block_id except the
@@ -174,15 +176,15 @@ impl BlockManagerState {
 
                 self.check_predecessor_relationship(tail, head)?;
                 if !self.contains(&references_by_block_id, &head.header_signature)? {
-                    references_by_block_id
-                        .get_mut(&head.previous_block_id)
-                        .map(|r| r.increase_internal_ref_count());
+                    if let Some(r) = references_by_block_id.get_mut(&head.previous_block_id) {
+                        r.increase_internal_ref_count();
+                    }
                 }
             }
             None => return Err(BlockManagerError::MissingInput),
         }
         let mut blocks_not_added_yet: Vec<Block> = Vec::new();
-        for block in branch.into_iter() {
+        for block in branch {
             if !self.contains(&references_by_block_id, &block.header_signature)? {
                 blocks_not_added_yet.push(block);
             }
@@ -226,7 +228,7 @@ impl BlockManagerState {
         Ok(())
     }
 
-    fn get_block_from_main_cache_or_blockstore_name<'a>(&self, block_id: &str) -> BlockLocation {
+    fn get_block_from_main_cache_or_blockstore_name(&self, block_id: &str) -> BlockLocation {
         let block_by_block_id = self
             .block_by_block_id
             .read()
@@ -292,9 +294,7 @@ impl BlockManagerState {
 
         let mut optional_new_tip = None;
 
-        let mut dropped = false;
-
-        if external_ref_count == 0 && internal_ref_count == 0 {
+        let dropped = if external_ref_count == 0 && internal_ref_count == 0 {
             if let Some(block_id) = block_id {
                 let (mut predecesors_to_remove, new_tip) = self
                     .find_block_ids_for_blocks_with_refcount_1_or_less(
@@ -310,8 +310,10 @@ impl BlockManagerState {
                 references_by_block_id.remove(tip);
                 optional_new_tip = new_tip;
             }
-            dropped = true;
-        }
+            true
+        } else {
+            false
+        };
 
         COLLECTOR
             .counter("BlockManager.expired", None, None)
@@ -475,6 +477,7 @@ impl BlockManager {
         self.state.add_store(store_name, store)
     }
 
+    #[allow(needless_pass_by_value)]
     fn remove_blocks_from_blockstore(
         &self,
         to_be_removed: Vec<Block>,
@@ -554,14 +557,11 @@ impl BlockManager {
                 .blockstore_by_name
                 .read()
                 .expect("Acquiring blockstore read lock; lock poisoned");
-            let block_store = blockstore_by_name
+            let mut block_store_iter = blockstore_by_name
                 .get(store_name)
-                .expect("Blockstore removed during persist operation");
-            let head = block_store
-                .iter()?
-                .nth(0)
-                .map(|b| b.header_signature.clone());
-            head
+                .expect("Blockstore removed during persist operation")
+                .iter()?;
+            block_store_iter.nth(0).map(|b| b.header_signature.clone())
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();

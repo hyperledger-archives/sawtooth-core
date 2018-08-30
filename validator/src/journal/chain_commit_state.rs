@@ -71,7 +71,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                     err
                 ))
             })? {
-                if block_store
+                let chain_head = block_store
                     .get(&[&block.header_signature])
                     .map_err(|err| {
                         ChainCommitStateError::Error(format!(
@@ -79,9 +79,9 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                             err
                         ))
                     })?
-                    .next()
-                    .is_some()
-                {
+                    .next();
+
+                if chain_head.is_some() {
                     common_ancestor = Some(block);
                     break;
                 } else {
@@ -123,13 +123,15 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 return Err(ChainCommitStateError::DuplicateBatch((*id).into()));
             }
 
-            if self.batch_index.contains(&id).map_err(|err| {
+            let batch_is_contained = self.batch_index.contains(&id).map_err(|err| {
                 ChainCommitStateError::Error(format!("Reading contains on BatchIndex: {:?}", err))
-            })? {
+            });
+
+            if batch_is_contained? {
                 if let Some(ref block) = self
                     .batch_index
                     .get_block_by_id(&id)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         return Err(ChainCommitStateError::DuplicateBatch(id));
@@ -162,7 +164,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 if let Some(ref block) = self
                     .transaction_index
                     .get_block_by_id(&id)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         return Err(ChainCommitStateError::DuplicateTransaction(id));
@@ -206,7 +208,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                 if let Some(ref block) = self
                     .transaction_index
                     .get_block_by_id(&dep)
-                    .map_err(|err| ChainCommitStateError::BlockStoreUpdated)?
+                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
                 {
                     if self.block_in_chain(block) {
                         continue;
@@ -815,7 +817,7 @@ mod test {
             batch_ids,
             signer_public_key: "".into(),
             previous_block_id: previous_id.into(),
-            block_num: block_num,
+            block_num,
             header_bytes: vec![],
         }
     }

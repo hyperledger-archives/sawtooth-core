@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::collections::HashSet;
 
 use cpython;
@@ -73,6 +75,7 @@ pub struct CandidateBlock {
 }
 
 impl CandidateBlock {
+    #![allow(too_many_arguments)]
     pub fn new(
         previous_block: Block,
         batch_committed: cpython::PyObject,
@@ -209,7 +212,7 @@ impl CandidateBlock {
         let mut batches = vec![];
         let gil = Python::acquire_gil();
         let py = gil.python();
-        for injector in self.batch_injectors.iter() {
+        for injector in &self.batch_injectors {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {
@@ -340,7 +343,7 @@ impl CandidateBlock {
             return Ok(Some(summary.clone()));
         }
 
-        if !(force || !self.pending_batches.is_empty()) {
+        if !force && self.pending_batches.is_empty() {
             return Err(CandidateBlockError::BlockEmpty);
         }
 
@@ -468,13 +471,14 @@ impl CandidateBlock {
 
     pub fn finalize(
         &mut self,
-        consensus_data: Vec<u8>,
+        consensus_data: &[u8],
         force: bool,
     ) -> Result<FinalizeBlockResult, CandidateBlockError> {
-        let mut summary = self.summary.clone();
-        if self.summary.is_none() {
-            summary = self.summarize(force)?;
-        }
+        let summary = if self.summary.is_none() {
+            self.summarize(force)?
+        } else {
+            self.summary.clone()
+        };
         if summary.is_none() {
             return self.build_result(None);
         }
@@ -485,11 +489,7 @@ impl CandidateBlock {
         builder
             .getattr(py, "block_header")
             .expect("BlockBuilder has no attribute 'block_header'")
-            .setattr(
-                py,
-                "consensus",
-                cpython::PyBytes::new(py, consensus_data.as_slice()),
-            )
+            .setattr(py, "consensus", cpython::PyBytes::new(py, consensus_data))
             .expect("BlockHeader has no attribute 'consensus'");
 
         self.sign_block(builder);

@@ -15,13 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
 use lmdb_zero as lmdb;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 
 const DEFAULT_SIZE: usize = 1 << 40; // 1024 ** 4
 
@@ -220,6 +222,7 @@ impl<'a> LmdbDatabaseReaderCursor<'a> {
             .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
     }
 
+    #[allow(should_implement_trait)]
     pub fn next(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .next(&self.access)

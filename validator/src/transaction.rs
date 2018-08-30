@@ -16,7 +16,7 @@
  */
 
 use proto;
-use protobuf::{self, Message};
+use protobuf;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Transaction {

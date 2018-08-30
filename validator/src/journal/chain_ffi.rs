@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 use block::Block;
 use cpython::{
     self, FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject,
@@ -25,9 +27,7 @@ use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_store::{BatchIndex, BlockStore, BlockStoreError, TransactionIndex};
-use journal::block_validator::{
-    BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
-};
+use journal::block_validator::{BlockValidationResult, BlockValidationResultStore, BlockValidator};
 use journal::block_wrapper::{BlockStatus, BlockWrapper};
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
@@ -38,9 +38,9 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::{c_char, c_void};
+use std::ptr;
 use std::slice;
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::time::Duration;
 
 use protobuf::{self, Message};
@@ -142,7 +142,7 @@ pub unsafe extern "C" fn chain_controller_new(
         state_pruning_block_depth,
         observer_wrappers,
         state_pruning_manager,
-        Duration::from_secs(fork_cache_keep_time as u64),
+        Duration::from_secs(u64::from(fork_cache_keep_time)),
     );
 
     *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
@@ -304,7 +304,7 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).on_block_received(block_id.into())
+        >)).on_block_received(block_id)
     {
         error!("ChainController.on_block_received error: {:?}", err);
         return ErrorCode::Unknown;
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
             }
         }
     } else {
-        *block = 0 as *const u8;
+        *block = ptr::null();
         *block_len = 0;
         ErrorCode::Success
     }
@@ -519,7 +519,7 @@ impl BlockStore for PyBlockStore {
                 .and_then(|blkw| blkw.getattr(py, "block"))
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to get blocks"))
+                    BlockStoreError::Error("Unable to get blocks".into())
                 })?
                 .extract(py)
                 .expect("Unable to convert block from python");
@@ -528,7 +528,7 @@ impl BlockStore for PyBlockStore {
                 .call_method(py, "__delitem__", (block_id,), None)
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to delete blocks"))
+                    BlockStoreError::Error("Unable to delete blocks".into())
                 })?;
 
             deleted_blocks.push(block);
@@ -561,7 +561,7 @@ impl BlockStore for PyBlockStore {
                 )
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error(format!("Unable to put blocks"))
+                    BlockStoreError::Error("Unable to put blocks".into())
                 })?;
         }
 
@@ -583,11 +583,12 @@ impl BlockStore for PyBlockStore {
             .map_err(|py_err| {
                 let py = unsafe { Python::assume_gil_acquired() };
                 pylogger::exception(py, "Unable to call iter(block_store)", py_err);
-                BlockStoreError::Error(format!("Unable to iterate block store"))
+                BlockStoreError::Error("Unable to iterate block store".into())
             })
     }
 }
 
+#[allow(needless_pass_by_value)]
 fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
     block_wrapper
         .getattr(py, "block")
@@ -604,10 +605,6 @@ impl<T> PyIteratorWrapper<T>
 where
     for<'source> T: FromPyObject<'source>,
 {
-    fn new(py_iter: PyObject) -> Self {
-        PyIteratorWrapper::with_xform(py_iter, Box::new(|_, obj| obj))
-    }
-
     fn with_xform(py_iter: PyObject, xform: Box<Fn(Python, PyObject) -> PyObject>) -> Self {
         PyIteratorWrapper {
             py_iter,
