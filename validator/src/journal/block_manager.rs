@@ -555,14 +555,11 @@ impl BlockManager {
                 .blockstore_by_name
                 .read()
                 .expect("Acquiring blockstore read lock; lock poisoned");
-            let block_store = blockstore_by_name
+            let mut block_store_iter = blockstore_by_name
                 .get(store_name)
-                .expect("Blockstore removed during persist operation");
-            let head = block_store
-                .iter()?
-                .nth(0)
-                .map(|b| b.header_signature.clone());
-            head
+                .expect("Blockstore removed during persist operation")
+                .iter()?;
+            block_store_iter.nth(0).map(|b| b.header_signature.clone())
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();

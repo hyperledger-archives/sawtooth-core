@@ -97,8 +97,7 @@ impl BlockPublisherState {
 
     pub fn get_previous_block_id(&self) -> Option<String> {
         let candidate_block = self.candidate_block.as_ref();
-        let optional_block_id = candidate_block.map(|cb| cb.previous_block_id());
-        optional_block_id
+        candidate_block.map(|cb| cb.previous_block_id())
     }
 }
 
