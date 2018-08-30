@@ -16,7 +16,7 @@
  */
 
 use cpython;
-use cpython::ObjectProtocol;
+use cpython::{ObjectProtocol, PyClone};
 
 use execution::execution_platform::ExecutionPlatform;
 
@@ -35,8 +35,8 @@ impl PyExecutor {
 
 impl ExecutionPlatform for PyExecutor {
     fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr> {
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
         let scheduler = self
             .executor
             .call_method(py, "create_scheduler", (state_hash,), None)
@@ -44,5 +44,16 @@ impl ExecutionPlatform for PyExecutor {
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",
             );
         Ok(Box::new(PyScheduler::new(scheduler)))
+    }
+}
+
+impl Clone for PyExecutor {
+    fn clone(&self) -> Self {
+        let gil = cpython::Python::acquire_gil();
+        let py = gil.python();
+
+        PyExecutor {
+            executor: self.executor.clone_ref(py),
+        }
     }
 }
