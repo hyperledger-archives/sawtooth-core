@@ -103,7 +103,7 @@ impl ZmqMessageSender {
 
 impl MessageSender for ZmqMessageSender {
     fn send(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
@@ -129,7 +129,7 @@ impl MessageSender for ZmqMessageSender {
     }
 
     fn reply(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
@@ -199,7 +199,7 @@ impl InboundRouter {
         }
     }
 
-    fn expect_reply(&mut self, correlation_id: String) -> Receiver<MessageResult> {
+    fn expect_reply(&self, correlation_id: String) -> Receiver<MessageResult> {
         let (expect_tx, expect_rx) = channel();
         let mut expected_replies = self.expected_replies.lock().unwrap();
         expected_replies.insert(correlation_id, expect_tx);
