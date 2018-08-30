@@ -636,7 +636,7 @@ impl BlockPublisher {
             .state
             .read()
             .expect("RwLock was poisoned during a write lock");
-        return state.pending_batches.contains(batch_id);
+        state.pending_batches.contains(batch_id)
     }
 }
 

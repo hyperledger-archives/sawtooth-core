@@ -121,7 +121,7 @@ impl BlockManagerState {
 
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
 
-        return Ok(block_has_been_put || block_is_null_block);
+        Ok(block_has_been_put || block_is_null_block)
     }
 
     /// Checks that every block is preceded by the block referenced by block.previous_block_id except the
