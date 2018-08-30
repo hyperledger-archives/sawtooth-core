@@ -193,7 +193,7 @@ impl ChainControllerState {
         });
 
         let result = ForkResolutionResult {
-            block: block,
+            block,
             chain_head: Some(chain_head),
             new_chain,
             current_chain,
@@ -291,7 +291,7 @@ impl<
     ) -> Self {
         let mut chain_controller = ChainController {
             state: Arc::new(RwLock::new(ChainControllerState {
-                block_manager: block_manager,
+                block_manager,
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
                 observers,
@@ -300,7 +300,7 @@ impl<
                 fork_cache: ForkCache::new(fork_cache_keep_time),
             })),
             block_validator,
-            block_validation_results: block_validation_results,
+            block_validation_results,
             stop_handle: Arc::new(Mutex::new(None)),
             block_queue_sender: None,
             commit_queue_sender: None,

@@ -323,7 +323,7 @@ where
                     Err(ValidationError::BlockValidationFailure(ref reason)) => {
                         warn!("Block {} failed validation: {}", &block_id, reason);
                         if let Err(err) = results_sender.send(BlockValidationResult {
-                            block_id: block_id,
+                            block_id,
                             execution_results: vec![],
                             num_transactions: 0,
                             status: BlockStatus::Invalid,

@@ -817,7 +817,7 @@ mod test {
             batch_ids,
             signer_public_key: "".into(),
             previous_block_id: previous_id.into(),
-            block_num: block_num,
+            block_num,
             header_bytes: vec![],
         }
     }
