@@ -341,7 +341,7 @@ impl CandidateBlock {
             return Ok(Some(summary.clone()));
         }
 
-        if !(force || !self.pending_batches.is_empty()) {
+        if !force && self.pending_batches.is_empty() {
             return Err(CandidateBlockError::BlockEmpty);
         }
 
