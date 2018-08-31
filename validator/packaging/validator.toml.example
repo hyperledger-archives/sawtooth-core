@@ -28,7 +28,7 @@
 # network and component.
 bind = [
   "network:tcp://127.0.0.1:8800",
-  "component:tcp://127.0.0.1:4004"
+  "component:tcp://127.0.0.1:4004",
   "consensus:tcp://127.0.0.1:5050"
 ]
 
