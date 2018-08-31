@@ -30,19 +30,6 @@ services:
       - ../../:/project/sawtooth-core
     command: run_lint
 
-  lint-go:
-    build:
-      context: ../
-      dockerfile: ./lint
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: lint:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-    command: run_go_fmt
-
   lint-rust:
     build:
       context: ../

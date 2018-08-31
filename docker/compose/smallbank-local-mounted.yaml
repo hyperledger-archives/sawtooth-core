@@ -26,14 +26,14 @@ services:
       - validator
     command: settings-tp -vv --connect tcp://validator:4004
 
-  smallbank-tp-go:
-    image: sawtooth-smallbank-tp-go:latest
-    container_name: sawtooth-smallbank-tp-go-default
+  smallbank-tp-rust:
+    image: sawtooth-smallbank-tp-rust:latest
+    container_name: sawtooth-smallbank-tp-rust-default
     volumes:
       - ../../:/project/sawtooth-core
     depends_on:
       - validator
-    command: smallbank-tp-go -vv -C tcp://validator:4004
+    command: smallbank_rust -vv -C tcp://validator:4004
 
   validator:
     image: sawtooth-validator-mounted:latest

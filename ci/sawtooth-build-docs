@@ -38,7 +38,6 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/ci xenial universe" >>
     libffi-dev \
     libssl-dev \
     libzmq3-dev \
-    golang-golang-x-tools \
     pep8 \
     pkg-config \
     python3-aiodns=1.1.1-1 \
@@ -104,8 +103,7 @@ RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
  && chmod +x /usr/bin/rustup-init \
  && rustup-init -y
 
-ENV GOPATH=/go:/project/sawtooth-core/sdk/go \
-    PYTHONPATH=/project/sawtooth-core/sdk/python:/project/sawtooth-core/signing \
+ENV PYTHONPATH=/project/sawtooth-core/sdk/python:/project/sawtooth-core/signing \
     PATH=$PATH:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin \
     CARGO_INCREMENTAL=0
 

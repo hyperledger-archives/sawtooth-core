@@ -45,34 +45,13 @@ RUN apt-get install -y -q \
 
 RUN apt-get install -y -q --allow-downgrades \
     build-essential \
-    golang-1.9-go \
     git \
     libssl-dev \
     libzmq3-dev \
     openssl \
     python3-grpcio-tools=1.1.3-1
 
-ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/sdk/examples/xo_go
-
-ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin:/usr/lib/go-1.9/bin
-
-RUN mkdir /go
-
-RUN go get -u \
-    github.com/golang/protobuf/proto \
-    github.com/golang/protobuf/protoc-gen-go \
-    github.com/pebbe/zmq4 \
-    github.com/brianolson/cbor_go \
-    github.com/satori/go.uuid \
-    github.com/btcsuite/btcd/btcec \
-    github.com/jessevdk/go-flags \
-    github.com/pelletier/go-toml \
-    github.com/golang/mock/gomock \
-    github.com/golang/mock/mockgen \
-    golang.org/x/crypto/ripemd160 \
-    golang.org/x/crypto/ssh/terminal \
-    gopkg.in/fatih/set.v0
-
+ENV PATH=$PATH:/project/sawtooth-core/bin
 
 RUN apt-get install -y -q --allow-downgrades \
     build-essential \

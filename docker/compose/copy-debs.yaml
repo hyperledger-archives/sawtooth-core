@@ -106,42 +106,6 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  smallbank-tp-go:
-    image: sawtooth-smallbank-tp-go:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  sawtooth-intkey-tp-go:
-    image: sawtooth-intkey-tp-go:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  sawtooth-noop-tp-go:
-    image: sawtooth-noop-tp-go:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  sawtooth-xo-tp-go:
-    image: sawtooth-xo-tp-go:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   python-sdk:
     image: sawtooth-sdk-python:${ISOLATION_ID}
     volumes:

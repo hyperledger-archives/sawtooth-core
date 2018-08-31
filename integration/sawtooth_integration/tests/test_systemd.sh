@@ -18,9 +18,6 @@
 # without immediately crashing given the default arguments
 
 services="
-smallbank-tp-go
-xo-tp-go
-intkey-tp-go
 validator
 rest-api
 intkey-tp-python
