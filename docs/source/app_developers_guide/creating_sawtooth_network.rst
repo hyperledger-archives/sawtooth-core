@@ -84,7 +84,7 @@ About the Sawtooth Network Environment
 
 The following figure shows an example network with two validator nodes:
 
-.. figure:: ../images/appdev-environment-two-nodes.*
+.. figure:: ../images/appdev-environment-multi-node.*
    :width: 100%
    :align: center
    :alt: Application development environment with two nodes
