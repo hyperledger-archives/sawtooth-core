@@ -31,7 +31,7 @@ processing.
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
-   :alt: Docker application environment environment for Sawtooth
+   :alt: Docker: Sawtooth application environment with one node
 
 This environment introduces basic Sawtooth functionality with the
 `IntegerKey

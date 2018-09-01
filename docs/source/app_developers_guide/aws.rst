@@ -39,7 +39,7 @@ processing.
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
-   :alt: AWS application development environment for Sawtooth
+   :alt: AWS: Sawtooth application environment with one node
 
 This environment introduces basic Sawtooth functionality with the
 `IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`_
