@@ -87,7 +87,7 @@ The following figure shows an example network with two validator nodes:
 .. figure:: ../images/appdev-environment-multi-node.*
    :width: 100%
    :align: center
-   :alt: Application development environment with two nodes
+   :alt: Docker: Sawtooth network with five nodes
 
 Like the single-node environment, this environment uses serial transaction
 processing and static peering. However, it has the following differences:
@@ -270,7 +270,7 @@ The following figure shows an example network with two validator nodes:
 .. figure:: ../images/appdev-environment-two-nodes.*
    :width: 100%
    :align: center
-   :alt: Application development environment with two nodes
+   :alt: Ubuntu: Sawtooth network with two nodes
 
 Like the single-node environment, this environment uses serial transaction
 processing and static peering. However, it has the following differences:
@@ -779,7 +779,7 @@ and static peering (all-to-all)
 .. figure:: ../images/appdev-environment-multi-node-3TPs-kube.*
    :width: 100%
    :align: center
-   :alt: Kubernetes Sawtooth Network
+   :alt: Kubernetes: Sawtooth network with five nodes
 
 The Kubernetes cluster has a pod for each Sawtooth node. On each pod, there are
 containers for each Sawtooth component. The Sawtooth nodes are connected in

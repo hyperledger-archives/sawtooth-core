@@ -36,7 +36,7 @@ processing.
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
-   :alt: Ubuntu application development environment for Ubuntu
+   :alt: Ubuntu: Sawtooth application environment with one node
 
 This environment introduces basic Sawtooth functionality with the
 `IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`_
