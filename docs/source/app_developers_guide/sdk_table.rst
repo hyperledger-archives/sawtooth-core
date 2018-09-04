@@ -34,8 +34,31 @@ The Maturity column shows the general maturity level of each feature:
   2.  Community support only (core maintainers do not update these SDKs)
   3.  Experimental: Might have known issues and future API changes
 
-The available SDKs are in
-https://github.com/hyperledger/sawtooth-core/tree/master/sdk.
+The available SDKs are in the following repositories:
+
+* Python:
+  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_python
+  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_python>`_
+
+* Rust:
+  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust
+  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust>`_
+
+* Go:
+  `https://github.com/hyperledger/sawtooth-sdk-go
+  <https://github.com/hyperledger/sawtooth-sdk-go>`_
+
+* JavaScript:
+  `https://github.com/hyperledger/sawtooth-sdk-javascript
+  <https://github.com/hyperledger/sawtooth-sdk-javascript>`_
+
+* Java:
+  `https://github.com/hyperledger/sawtooth-sdk-java
+  <https://github.com/hyperledger/sawtooth-sdk-java>`_
+
+* C++:
+  `https://github.com/hyperledger/sawtooth-sdk-cxx
+  <https://github.com/hyperledger/sawtooth-sdk-cxx>`_
 
 .. |yes| unicode:: U+2713 .. checkmark
 
