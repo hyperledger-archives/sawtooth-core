@@ -776,7 +776,7 @@ This environment is a network of five Sawtooth node. Each node has a
 :doc:`serial transaction processing <../architecture/scheduling>`,
 and static peering (all-to-all)
 
-.. figure:: ../images/appdev-environment-multi-node-3TPs-kube.*
+.. figure:: ../images/appdev-environment-multi-node-kube.*
    :width: 100%
    :align: center
    :alt: Kubernetes: Sawtooth network with five nodes
