@@ -53,17 +53,42 @@ to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
 
 {% endif %}
 
-
 .. note::
 
    This tutorial demonstrates the relevant concepts for a Sawtooth transaction
    processor and client, but does not create a complete implementation.
 
-   * For a full implementation of the tic-tac-toe transaction family, see
-     ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
 
-   * For full implementations in other languages, see
-     ``https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples``.
+{% if language == 'Rust' %}
+
+   For a full Rust implementation of the XO transaction family, see
+   ``/{project}/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
+
+{% elif language == 'Go' %}
+
+   For a full Go implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-go/tree/master/examples/xo_go
+   <https://github.com/hyperledger/sawtooth-sdk-go/tree/master/examples/xo_go>`_.
+
+{% elif language == 'Java' %}
+
+   For a full Java implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-java/tree/master/examples/xo_java
+   <https://github.com/hyperledger/sawtooth-sdk-java/tree/master/examples/xo_java>`_.
+
+{% elif language == 'JavaScript' %}
+
+   For a full JavaScript implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-javascript/tree/master/examples/xo
+   <https://github.com/hyperledger/sawtooth-sdk-javascript/tree/master/examples/xo>`_.
+
+{% else %}
+
+   For a full Python implementation of the XO transaction family, see
+   ``/{project}/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
+
+{% endif %}
+
 
 Prerequisites
 =============
