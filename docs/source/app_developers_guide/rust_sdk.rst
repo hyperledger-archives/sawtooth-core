@@ -2,6 +2,9 @@
 Using the Rust SDK
 ******************************
 
+This tutorial describes how to develop a Sawtooth application with an example
+transaction family, XO, using the Sawtooth Rust SDK.
+
 .. toctree::
     :maxdepth: 2
 

@@ -16,8 +16,11 @@
     {% set lowercase_lang = 'rust' %}
 {% endif %}
 
-This tutorial describes how to develop a Sawtooth application with an example
-transaction family, using the Sawtooth {{ language }} SDK.
+Overview
+========
+
+This tutorial shows how to use the Sawtooth {{ language }} SDK to develop a
+simple application (also called a transaction family).
 
 A transaction family includes these components:
 
