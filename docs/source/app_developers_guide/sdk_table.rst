@@ -31,7 +31,7 @@ require updates to application code.
 The Maturity column shows the general maturity level of each feature:
 
   1.  Recommended: Well supported and heavily used
-  2.  Community support only
+  2.  Community support only (core maintainers do not update these SDKs)
   3.  Experimental: Might have known issues and future API changes
 
 The available SDKs are in
