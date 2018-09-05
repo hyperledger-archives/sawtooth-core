@@ -6,6 +6,7 @@ Using the Go SDK
    :maxdepth: 2
 
    ../_autogen/sdk_overview_tutorial_go
+   sdk_prerequisites
    ../_autogen/sdk_TP_tutorial_go
 
 .. Licensed under Creative Commons Attribution 4.0 International License
