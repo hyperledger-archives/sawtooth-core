@@ -6,6 +6,7 @@ Using the Python SDK
    :maxdepth: 2
 
    ../_autogen/sdk_overview_tutorial_python
+   sdk_prerequisites
    python_sdk_install.rst
    ../_autogen/sdk_TP_tutorial_python
    ../_autogen/sdk_submit_tutorial_python

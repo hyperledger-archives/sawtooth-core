@@ -6,6 +6,7 @@ Using the Rust SDK
     :maxdepth: 2
 
     ../_autogen/sdk_overview_tutorial_rust
+    sdk_prerequisites
     ./rust_sdk_import.rst
     ../_autogen/sdk_TP_tutorial_rust
 

@@ -6,6 +6,7 @@ Using the JavaScript SDK
    :maxdepth: 2
 
    ../_autogen/sdk_overview_tutorial_js
+   sdk_prerequisites
    ../_autogen/sdk_TP_tutorial_js
    ../_autogen/sdk_submit_tutorial_js
 
