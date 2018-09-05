@@ -21,17 +21,16 @@ Overview
 
 This tutorial shows how to use the Sawtooth {{ language }} SDK to develop a
 simple application (also called a transaction family).
-
 A transaction family includes these components:
 
-* A transaction processor to define the business logic for your application.
+* A **transaction processor** to define the business logic for your application.
   The transaction processor is responsible for registering with the validator,
   handling transaction payloads and associated metadata, and getting/setting
   state as needed.
 
-* A data model to record and store data
+* A **data model** to record and store data.
 
-* A client to handle the client logic for your application.
+* A **client** to handle the client logic for your application.
   The client is responsible for creating and signing transactions, combining
   those transactions into batches, and submitting them to the validator. The
   client can post batches through the REST API or connect directly to the
