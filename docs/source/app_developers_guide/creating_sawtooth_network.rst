@@ -23,8 +23,9 @@ environment on one of the following platforms:
 
 .. note::
 
-   The guides in this chapter set up an environment with five Sawtooth validator
-   nodes. For a single-node environment, see :doc:`installing_sawtooth`.
+   The guides in this chapter set up an environment with multiple Sawtooth
+   validator nodes. For a single-node environment, see
+   :doc:`installing_sawtooth`.
 
 To get started, choose the guide for the platform of your choice:
 
