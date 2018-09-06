@@ -1280,18 +1280,10 @@ At this point, your environment is ready for experimenting with Sawtooth.
 For more ways to test basic functionality, see the Kubernetes section of
 "Setting Up a Sawtooth Application Development Environment".
 
-.. REVIEWERS: THE FOLLOWING LINKS WON'T WORK UNTIL PR 1822 HAS BEEN MERGED.
-.. I WILL ACTIVATE THESE LINKS (AND REMOVE THE COMMENTS) WHEN THE SINGLE-NODE
-.. KUBERNETES PROCEDURE IS AVAILABLE.
-
 * To use Sawtooth client commands to view block information and check state
-  data, see xxx.
+  data, see :ref:`sawtooth-client-kube-label`.
 
-.. :ref:`sawtooth-client-kube-label`.
-
-* For information on the Sawtooth logs, see xxx.
-
-.. :ref:`examine-logs-kube-label`.
+* For information on the Sawtooth logs, see :ref:`examine-logs-kube-label`.
 
 
 .. _configure-txn-procs-kube-label:
