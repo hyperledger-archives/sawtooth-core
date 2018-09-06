@@ -959,8 +959,8 @@ to view pod status, container names, Sawtooth log files, and more.
 This example environment includes the following transaction processors:
 
  * :doc:`Settings <../transaction_family_specifications/settings_transaction_family>`
-   handles Sawtooth's on-chain settings. The ``sawtooth-settings-tp``
-   transaction processor is required for this environment.
+   handles Sawtooth's on-chain settings. The Settings transaction processor,
+   ``settings-tp``, is required for this environment.
 
  * :doc:`PoET Validator Registry <../transaction_family_specifications/validator_registry_transaction_family>`
    configures PoET consensus and handles a network with multiple validators.
