@@ -99,7 +99,7 @@ processing and static peering. However, it has the following differences:
   Software Guard Extensions (SGX) to implement a leader-election lottery system.
   PoET simulator provides the same consensus algorithm on an SGX simulator.
 
-* An additional transaction processor, Validator Registry, which handles PoET
+* An additional transaction processor, PoET Validator Registry, handles PoET
   settings for a multiple-node network.
 
 Prerequisites
@@ -371,7 +371,7 @@ processing and static peering. However, it has the following differences:
   Software Guard Extensions (SGX) to implement a leader-election lottery system.
   PoET simulator provides the same consensus algorithm on an SGX simulator.
 
-* An additional transaction processor, Validator Registry, which handles PoET
+* An additional transaction processor, PoET Validator Registry, handles PoET
   settings for a multiple-node network.
 
 .. _prereqs-multi-ubuntu-label:
@@ -524,7 +524,7 @@ in :doc:`ubuntu`.
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
 
-#. Create a batch to register the first validator with the PoET Validator
+#. Create a batch to register the first validator with the Validator
    Registry. Without this command, the validator would not be able to publish
    any blocks.
 
@@ -627,7 +627,9 @@ in :doc:`ubuntu`.
 
    .. note::
 
-      This network requires ``settings-tp`` and ``poet-validator-registry-tp``.
+      This network requires the Settings transaction processor, ``settings-tp``,
+      and the PoET Validator Registry transaction processor,
+      ``poet-validator-registry-tp``.
       The other transaction processors (``intkey-tp-python`` and
       ``xo-tp-python``) are not required, but are used for the other tutorials
       in this guide. Note that each node in the network must run the same
@@ -960,7 +962,7 @@ This example environment includes the following transaction processors:
    handles Sawtooth's on-chain settings. The ``sawtooth-settings-tp``
    transaction processor is required for this environment.
 
- * :doc:`Validator Registry <../transaction_family_specifications/validator_registry_transaction_family>`
+ * :doc:`PoET Validator Registry <../transaction_family_specifications/validator_registry_transaction_family>`
    configures PoET consensus and handles a network with multiple validators.
 
  * :doc:`IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`
@@ -1264,7 +1266,7 @@ Step 5: Confirm Network and Blockchain Functionality
    available in the kubeconfig file or on a pod's page on the Kubernetes
    dashboard.
 
-   The following example connects to pod 3's Validator Registry container
+   The following example connects to pod 3's PoET Validator Registry container
    (``sawtooth-poet-validator-registry-tp``), then displays the list of running
    process.
 
