@@ -495,7 +495,7 @@ in :doc:`ubuntu`.
    .. code-block:: console
 
       $ ls ~/.sawtooth/keys/
-      yourname.priv    yourname.pub
+      {yourname}.priv    {yourname}.pub
 
       $ ls /etc/sawtooth/keys/
       validator.priv   validator.pub
@@ -650,8 +650,8 @@ Step 2: Set Up the Second Validator Node
    .. code-block:: console
 
       $ sawtooth keygen
-      writing file: /home/yourname/.sawtooth/keys/yourname.priv
-      writing file: /home/yourname/.sawtooth/keys/yourname.pub
+      writing file: /home/{yourname}/.sawtooth/keys/{yourname}.priv
+      writing file: /home/{yourname}/.sawtooth/keys/{yourname}.pub
 
 #. Create the root key for the validator:
 
