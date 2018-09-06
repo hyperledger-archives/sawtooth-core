@@ -14,7 +14,7 @@ environment on one of the following platforms:
   `Docker <https://www.docker.com/>`_ containers.
 
 * Ubuntu: Install Sawtooth natively using
-  `Ubuntu 16.04 <https://www.ubuntu.com/>`_. You will add a node to the existing
+  `Ubuntu 16.04 <https://www.ubuntu.com/>`_. You will add a node to an existing
   application development environment that is described in :doc:`ubuntu`, but
   you will delete all existing blockchain data, including the genesis block.
 
@@ -344,8 +344,8 @@ command from your host system:
 Ubuntu: Add a Node to the Single-Node Environment
 =================================================
 
-This procedure describes how to add a second validator node to a single-node
-application development environment, as described in :doc:`ubuntu`.
+This procedure describes how to add a second validator node to an existing
+single-node application development environment, as described in :doc:`ubuntu`.
 You will stop the Sawtooth components on the first node and delete the
 existing blockchain data, then create a new genesis block that specifies PoET
 simulator consensus and related settings. All nodes on the network will run four
