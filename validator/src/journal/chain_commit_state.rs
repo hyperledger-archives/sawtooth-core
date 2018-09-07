@@ -21,10 +21,8 @@ use cpython;
 use cpython::ObjectProtocol;
 
 use batch::Batch;
-use block::Block;
 use journal::block_manager::BlockManager;
 use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
-use journal::NULL_BLOCK_IDENTIFIER;
 use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
@@ -36,14 +34,6 @@ pub enum ChainCommitStateError {
     Error(String),
 }
 
-pub struct ChainCommitState<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> {
-    batch_index: &'b B,
-    transaction_index: &'t T,
-    ancestor: Option<Block>,
-    uncommitted_batch_ids: Vec<String>,
-    uncommitted_txn_ids: Vec<String>,
-}
-
 fn check_no_duplicates(ids: &[String]) -> Option<String> {
     for (i, id1) in ids.iter().enumerate() {
         if ids[i + 1..ids.len()].contains(id1) {
@@ -53,171 +43,78 @@ fn check_no_duplicates(ids: &[String]) -> Option<String> {
     None
 }
 
-impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 't, B, T> {
-    pub fn new<BS: BlockStore>(
-        branch_head_id: &str,
-        block_manager: &BlockManager,
-        batch_index: &'b B,
-        transaction_index: &'t T,
-        block_store: &BS,
-    ) -> Result<Self, ChainCommitStateError> {
-        let mut uncommitted_batch_ids = vec![];
-        let mut uncommitted_txn_ids = vec![];
-        let mut common_ancestor = None;
-        if branch_head_id != NULL_BLOCK_IDENTIFIER {
-            for block in block_manager.branch(branch_head_id).map_err(|err| {
-                ChainCommitStateError::Error(format!(
-                    "Error getting branch from block manager: {:?}",
-                    err
-                ))
-            })? {
-                let chain_head = block_store
-                    .get(&[&block.header_signature])
-                    .map_err(|err| {
-                        ChainCommitStateError::Error(format!(
-                            "Error getting block from blockstore: {:?}",
-                            err
-                        ))
-                    })?.next();
-
-                if chain_head.is_some() {
-                    common_ancestor = Some(block);
-                    break;
-                } else {
-                    for batch in &block.batches {
-                        uncommitted_batch_ids.push(batch.header_signature.clone());
-
-                        for transaction in &batch.transactions {
-                            uncommitted_txn_ids.push(transaction.header_signature.clone());
-                        }
-                    }
-                }
-            }
-        }
-        Ok(ChainCommitState {
-            batch_index,
-            transaction_index,
-            ancestor: common_ancestor,
-            uncommitted_batch_ids,
-            uncommitted_txn_ids,
-        })
+pub fn validate_no_duplicate_batches(
+    block_manager: &BlockManager,
+    branch_head_id: &str,
+    batch_ids: Vec<String>,
+) -> Result<(), ChainCommitStateError> {
+    if let Some(batch_id) = check_no_duplicates(batch_ids.as_slice()) {
+        return Err(ChainCommitStateError::DuplicateBatch(batch_id));
     }
 
-    fn block_in_chain(&self, block: &Block) -> bool {
-        if let Some(ref common) = self.ancestor {
-            return block.block_num <= common.block_num;
-        }
-        false
-    }
-
-    pub fn validate_no_duplicate_batches(
-        &self,
-        batch_ids: Vec<String>,
-    ) -> Result<(), ChainCommitStateError> {
-        if let Some(batch_id) = check_no_duplicates(batch_ids.as_slice()) {
+    for batch_id in batch_ids {
+        if block_manager
+            .contains_batch(branch_head_id, &batch_id)
+            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+        {
             return Err(ChainCommitStateError::DuplicateBatch(batch_id));
         }
-        for id in batch_ids {
-            if self.uncommitted_batch_ids.contains(&id) {
-                return Err(ChainCommitStateError::DuplicateBatch((*id).into()));
-            }
+    }
+    Ok(())
+}
 
-            let batch_is_contained = self.batch_index.contains(&id).map_err(|err| {
-                ChainCommitStateError::Error(format!("Reading contains on BatchIndex: {:?}", err))
-            });
-
-            if batch_is_contained? {
-                if let Some(ref block) = self
-                    .batch_index
-                    .get_block_by_id(&id)
-                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
-                {
-                    if self.block_in_chain(block) {
-                        return Err(ChainCommitStateError::DuplicateBatch(id));
-                    }
-                }
-            }
-        }
-
-        Ok(())
+pub fn validate_no_duplicate_transactions(
+    block_manager: &BlockManager,
+    branch_head_id: &str,
+    transaction_ids: Vec<String>,
+) -> Result<(), ChainCommitStateError> {
+    if let Some(txn_id) = check_no_duplicates(transaction_ids.as_slice()) {
+        return Err(ChainCommitStateError::DuplicateTransaction(txn_id));
     }
 
-    pub fn validate_no_duplicate_transactions(
-        &self,
-        transaction_ids: Vec<String>,
-    ) -> Result<(), ChainCommitStateError> {
-        if let Some(txn_id) = check_no_duplicates(transaction_ids.as_slice()) {
-            return Err(ChainCommitStateError::DuplicateTransaction(txn_id));
+    for id in transaction_ids {
+        if block_manager
+            .contains_transaction(branch_head_id, &id)
+            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+        {
+            return Err(ChainCommitStateError::DuplicateTransaction(id));
         }
-
-        for id in transaction_ids {
-            if self.uncommitted_txn_ids.contains(&(*id).into()) {
-                return Err(ChainCommitStateError::DuplicateTransaction(id));
-            }
-
-            if self
-                .transaction_index
-                .contains(&id)
-                .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
-            {
-                if let Some(ref block) = self
-                    .transaction_index
-                    .get_block_by_id(&id)
-                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
-                {
-                    if self.block_in_chain(block) {
-                        return Err(ChainCommitStateError::DuplicateTransaction(id));
-                    }
-                }
-            }
-        }
-        Ok(())
     }
 
-    pub fn validate_transaction_dependencies(
-        self,
-        transactions: &[Transaction],
-    ) -> Result<(), ChainCommitStateError> {
-        let mut dependencies = vec![];
-        let mut txn_ids = vec![];
-        for txn in transactions {
-            txn_ids.push(txn.header_signature.clone());
+    Ok(())
+}
 
-            for dep in &txn.dependencies {
+pub fn validate_transaction_dependencies(
+    block_manager: &BlockManager,
+    branch_head_id: &str,
+    transactions: &[Transaction],
+) -> Result<(), ChainCommitStateError> {
+    let mut dependencies = vec![];
+    let mut txn_ids = vec![];
+    for txn in transactions {
+        txn_ids.push(txn.header_signature.clone());
+
+        for dep in &txn.dependencies {
+            if !dependencies.contains(dep) {
                 dependencies.push(dep.clone());
             }
         }
-        for dep in dependencies {
-            // Check for dependencies within the given block's batches
-            if txn_ids.contains(&dep) {
-                continue;
-            }
-
-            // Check for dependencies within the uncommitted blocks
-            if self.uncommitted_txn_ids.contains(&dep) {
-                continue;
-            }
-
-            // Check for the dependency in the committed blocks
-            if self
-                .transaction_index
-                .contains(&dep)
-                .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
-            {
-                if let Some(ref block) = self
-                    .transaction_index
-                    .get_block_by_id(&dep)
-                    .map_err(|_| ChainCommitStateError::BlockStoreUpdated)?
-                {
-                    if self.block_in_chain(block) {
-                        continue;
-                    }
-                }
-            }
-            return Err(ChainCommitStateError::MissingDependency(dep));
-        }
-        Ok(())
     }
+    for dep in dependencies {
+        // Check for dependencies within the given block's batches
+        if txn_ids.contains(&dep) {
+            continue;
+        }
+
+        if block_manager
+            .contains_transaction(branch_head_id, &dep)
+            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+        {
+            continue;
+        }
+        return Err(ChainCommitStateError::MissingDependency(dep));
+    }
+    Ok(())
 }
 
 pub struct TransactionCommitCache {
@@ -386,16 +283,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-1",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_transaction_dependencies(&transactions),
+            validate_transaction_dependencies(&block_manager, "B5-1", &transactions),
             Err(ChainCommitStateError::MissingDependency("B2b0t0".into()))
         );
     }
@@ -413,16 +302,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-1",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_transaction_dependencies(&transactions),
+            validate_transaction_dependencies(&block_manager, "B5-1", &transactions),
             Ok(())
         );
     }
@@ -440,16 +321,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_transaction_dependencies(&transactions),
+            validate_transaction_dependencies(&block_manager, "B2", &transactions),
             Ok(())
         );
     }
@@ -467,16 +340,8 @@ mod test {
             .persist("B1", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-3",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_transaction_dependencies(&transactions),
+            validate_transaction_dependencies(&block_manager, "B5-3", &transactions),
             Ok(())
         );
     }
@@ -490,16 +355,9 @@ mod test {
         block_manager
             .persist("B4", "commit")
             .expect("The block manager is able to persist all blocks known to it");
-        let chain_commit_state = ChainCommitState::new(
-            "B5",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, "B5", batches),
             Ok(())
         );
     }
@@ -514,16 +372,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
             Ok(())
         );
     }
@@ -538,16 +388,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manage is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
             Err(ChainCommitStateError::DuplicateBatch("B2b0".into()))
         );
     }
@@ -562,16 +404,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
             Err(ChainCommitStateError::DuplicateBatch("B5-2b0".into()))
         );
     }
@@ -586,16 +420,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-1",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, "B5-1", batches),
             Ok(())
         );
     }
@@ -617,16 +443,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, "B5", transactions),
             Ok(())
         );
     }
@@ -641,16 +459,8 @@ mod test {
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, "B5-2", transactions),
             Err(ChainCommitStateError::DuplicateTransaction("B2b0t2".into())),
         )
     }
@@ -665,16 +475,8 @@ mod test {
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-4",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, "B5-4", transactions),
             Err(ChainCommitStateError::DuplicateTransaction(
                 "B2-1b0t1".into()
             ))
@@ -691,16 +493,8 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        let chain_commit_state = ChainCommitState::new(
-            "B5-1",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, "B5-1", transactions),
             Ok(())
         );
     }
@@ -712,61 +506,39 @@ mod test {
         let transactions = vec!["B0b0t0".into(), "B0b0t1".into(), "B0b0t2".into()];
         let batches = vec!["B0b0".into(), "B0b1".into()];
         let block_store_clone = block_store.clone();
-        let chain_commit_state = ChainCommitState::new(
-            NULL_BLOCK_IDENTIFIER,
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
 
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_batches(&block_manager, NULL_BLOCK_IDENTIFIER, batches),
             Ok(())
         );
 
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
-            Ok(())
-        );
-
-        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
-        let batches = vec!["B3b0".into(), "B3b1".into()];
-        let chain_commit_state = ChainCommitState::new(
-            "B2",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
-
-        assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
-            Ok(())
-        );
-
-        assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, NULL_BLOCK_IDENTIFIER, transactions),
             Ok(())
         );
 
         let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
         let batches = vec!["B3b0".into(), "B3b1".into()];
 
-        let chain_commit_state = ChainCommitState::new(
-            "B3",
-            &block_manager,
-            &block_store,
-            &block_store,
-            &block_store,
-        ).expect("There was no error creating ChainCommitState");
+        assert_eq!(
+            validate_no_duplicate_batches(&block_manager, "B2", batches),
+            Ok(())
+        );
 
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_batches(batches),
+            validate_no_duplicate_transactions(&block_manager, "B2", transactions),
+            Ok(())
+        );
+
+        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
+        let batches = vec!["B3b0".into(), "B3b1".into()];
+
+        assert_eq!(
+            validate_no_duplicate_batches(&block_manager, "B3", batches),
             Err(ChainCommitStateError::DuplicateBatch("B3b0".into()))
         );
         assert_eq!(
-            chain_commit_state.validate_no_duplicate_transactions(transactions),
+            validate_no_duplicate_transactions(&block_manager, "B3", transactions),
             Err(ChainCommitStateError::DuplicateTransaction("B3b0t0".into()))
         );
     }

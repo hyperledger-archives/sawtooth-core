@@ -35,7 +35,10 @@ use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
 use journal::block_scheduler::BlockScheduler;
 use journal::block_store::{BatchIndex, TransactionIndex};
-use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
+use journal::chain_commit_state::{
+    validate_no_duplicate_batches, validate_no_duplicate_transactions,
+    validate_transaction_dependencies, ChainCommitStateError,
+};
 use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
@@ -259,13 +262,9 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(DuplicatesAndDependenciesValidation::new(
-                self.batch_index.clone(),
-                self.transaction_index.clone(),
-                self.block_store.clone(),
-                self.block_manager.clone(),
-            ));
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+            DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
+        );
 
         let dependent_validations = vec![dependent_validation];
 
@@ -401,13 +400,9 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(DuplicatesAndDependenciesValidation::new(
-                self.batch_index.clone(),
-                self.transaction_index.clone(),
-                self.block_store.clone(),
-                self.block_manager.clone(),
-            ));
+        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+            DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
+        );
 
         let dependent_validations = vec![dependent_validation];
 
@@ -722,52 +717,27 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
     }
 }
 
-struct DuplicatesAndDependenciesValidation<B: BatchIndex, T: TransactionIndex, BS: BlockStore> {
-    batch_index: B,
-    transaction_index: T,
-    block_store: BS,
+struct DuplicatesAndDependenciesValidation {
     block_manager: BlockManager,
 }
 
-impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore>
-    DuplicatesAndDependenciesValidation<B, T, BS>
-{
-    fn new(
-        batch_index: B,
-        transaction_index: T,
-        block_store: BS,
-        block_manager: BlockManager,
-    ) -> Self {
-        DuplicatesAndDependenciesValidation {
-            batch_index,
-            transaction_index,
-            block_store,
-            block_manager,
-        }
+impl DuplicatesAndDependenciesValidation {
+    fn new(block_manager: BlockManager) -> Self {
+        DuplicatesAndDependenciesValidation { block_manager }
     }
 }
 
-impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
-    for DuplicatesAndDependenciesValidation<B, T, BS>
-{
+impl BlockValidation for DuplicatesAndDependenciesValidation {
     type ReturnValue = ();
 
     fn validate_block(&self, block: &Block, _: Option<&String>) -> Result<(), ValidationError> {
-        let chain_commit_state = ChainCommitState::new(
-            &block.previous_block_id,
-            &self.block_manager,
-            &self.batch_index,
-            &self.transaction_index,
-            &self.block_store,
-        )?;
-
         let batch_ids = block
             .batches
             .iter()
             .map(|b| b.header_signature.clone())
             .collect();
 
-        chain_commit_state.validate_no_duplicate_batches(batch_ids)?;
+        validate_no_duplicate_batches(&self.block_manager, &block.previous_block_id, batch_ids)?;
 
         let txn_ids = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {
@@ -776,7 +746,7 @@ impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
             arr
         });
 
-        chain_commit_state.validate_no_duplicate_transactions(txn_ids)?;
+        validate_no_duplicate_transactions(&self.block_manager, &block.previous_block_id, txn_ids)?;
 
         let transactions = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {
@@ -784,7 +754,11 @@ impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
             }
             arr
         });
-        chain_commit_state.validate_transaction_dependencies(&transactions)?;
+        validate_transaction_dependencies(
+            &self.block_manager,
+            &block.previous_block_id,
+            &transactions,
+        )?;
         Ok(())
     }
 }
