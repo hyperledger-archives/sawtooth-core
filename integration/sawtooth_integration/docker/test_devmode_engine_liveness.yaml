@@ -161,8 +161,8 @@ services:
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=None \
-          sawtooth.consensus.min_wait_time=1 \
-          sawtooth.consensus.max_wait_time=3 \
+          sawtooth.consensus.min_wait_time=2 \
+          sawtooth.consensus.max_wait_time=4 \
           -o config.batch && \
         sawadm genesis \
           config-genesis.batch config.batch && \

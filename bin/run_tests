@@ -242,6 +242,8 @@ test_integration() {
     copy_coverage .coverage.test_basic_auth_proxy
     run_docker_test test_transactor_permissioning
     copy_coverage .coverage.test_transactor_permissioning
+    run_docker_test test_devmode_engine_liveness
+    copy_coverage .coverage.test_devmode_engine_liveness
 }
 
 test_deployment() {
