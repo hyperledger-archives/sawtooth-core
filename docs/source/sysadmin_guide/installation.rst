@@ -16,7 +16,7 @@ host system:
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
+  $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
 
 Nightly Builds:
 
