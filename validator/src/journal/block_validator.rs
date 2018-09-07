@@ -262,31 +262,24 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
-        let independent_validations = vec![independent_validation1, independent_validation2];
+        let validations = vec![validation1, validation2, validation3];
 
         let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
 
-        let check = ChainHeadCheck::new(self.block_store.clone());
-
         let block_validations = BlockValidationProcessor::new(
-            self.block_store.clone(),
             self.block_manager.clone(),
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         );
 
         let exit = self.validation_thread_exit.clone();
@@ -400,31 +393,24 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
-        let independent_validations = vec![independent_validation1, independent_validation2];
+        let validations = vec![validation1, validation2, validation3];
 
         let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
 
-        let check = ChainHeadCheck::new(self.block_store.clone());
-
         let block_validations = BlockValidationProcessor::new(
-            self.block_store.clone(),
             self.block_manager.clone(),
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         );
 
         let result = block_validations.validate_block(block)?;
@@ -490,49 +476,22 @@ trait BlockValidation: Send {
     ) -> Result<Self::ReturnValue, ValidationError>;
 }
 
-/// A check that determines if the Dependent checks are honored. If this check
-/// returns false, the dependent checks are honored.
-trait BlockStoreUpdatedCheck {
-    fn check_chain_head_updated(
-        &self,
-        expected_chain_head_id: Option<&String>,
-    ) -> Result<bool, ValidationError>;
-}
-
-struct BlockValidationProcessor<
-    BS: BlockStore,
-    SBV: BlockValidation<ReturnValue = BlockValidationResult>,
-    C: BlockStoreUpdatedCheck,
-> {
-    block_store: BS,
+struct BlockValidationProcessor<SBV: BlockValidation<ReturnValue = BlockValidationResult>> {
     block_manager: BlockManager,
-    dependent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
-    independent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+    validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
     state_validation: SBV,
-    check: C,
 }
 
-impl<
-        BS: BlockStore,
-        SBV: BlockValidation<ReturnValue = BlockValidationResult>,
-        C: BlockStoreUpdatedCheck,
-    > BlockValidationProcessor<BS, SBV, C>
-{
+impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationProcessor<SBV> {
     fn new(
-        block_store: BS,
         block_manager: BlockManager,
-        dependent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
-        independent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+        validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
         state_validation: SBV,
-        check: C,
     ) -> Self {
         BlockValidationProcessor {
-            block_store,
             block_manager,
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         }
     }
 
@@ -544,44 +503,7 @@ impl<
             .unwrap_or(None)
             .map(|b| b.state_root_hash.clone());
 
-        let checks = 'outer: loop {
-            let chain_head_option = self
-                .block_store
-                .iter()
-                .map_err(|err| {
-                    ValidationError::BlockValidationError(format!(
-                        "There was an error reading from the BlockStore: {:?}",
-                        err
-                    ))
-                })?.next()
-                .map(|b| b.header_signature.clone());
-            let mut dependent_checks = vec![];
-            for validation in &self.dependent_validations {
-                match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
-                    Ok(()) => (),
-                    Err(ValidationError::BlockStoreUpdated) => {
-                        warn!(
-                            "Blockstore updated during validation of block {}, retrying checks",
-                            &block.header_signature
-                        );
-                        continue 'outer;
-                    }
-                    Err(err) => dependent_checks.push(Err(err)),
-                }
-            }
-
-            if !self
-                .check
-                .check_chain_head_updated(chain_head_option.as_ref())?
-            {
-                break dependent_checks;
-            }
-        };
-        for check in checks {
-            check?;
-        }
-
-        for validation in &self.independent_validations {
+        for validation in &self.validations {
             match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
                 Ok(()) => (),
                 Err(err) => return Err(err),
@@ -847,39 +769,6 @@ impl BlockValidation for OnChainRulesValidation {
             }
         }
         Ok(())
-    }
-}
-
-struct ChainHeadCheck<BS: BlockStore> {
-    block_store: BS,
-}
-
-impl<BS: BlockStore> ChainHeadCheck<BS> {
-    fn new(block_store: BS) -> Self {
-        ChainHeadCheck { block_store }
-    }
-}
-
-impl<BS: BlockStore> BlockStoreUpdatedCheck for ChainHeadCheck<BS> {
-    fn check_chain_head_updated(
-        &self,
-        original_chain_head: Option<&String>,
-    ) -> Result<bool, ValidationError> {
-        let chain_head = self
-            .block_store
-            .iter()
-            .map_err(|err| {
-                ValidationError::BlockValidationError(format!(
-                    "There was an error reading from the BlockStore: {:?}",
-                    err
-                ))
-            })?.next()
-            .map(|b| b.header_signature.clone());
-
-        if chain_head.as_ref() != original_chain_head {
-            return Ok(true);
-        }
-        Ok(false)
     }
 }
 
