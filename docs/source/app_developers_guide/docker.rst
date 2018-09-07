@@ -483,12 +483,12 @@ or check the status of Sawtooth components in any container.
    .. code-block:: console
 
       CONTAINER ID IMAGE                                     COMMAND               CREATED       STATUS       PORTS                            NAMES
-      76f6731c43a9 hyperledger/sawtooth-all:1.0              "bash -c 'sawtooth k" 7 minutes ago Up 7 minutes 4004/tcp, 8008/tcp               sawtooth-shell-default
-      9844faed9e9d hyperledger/sawtooth-intkey-tp-python:1.0 "intkey-tp-python -v" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-intkey-tp-python-default
-      44db125c2dca hyperledger/sawtooth-settings-tp:1.0      "settings-tp -vv -C " 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-settings-tp-default
-      875df9d022d6 hyperledger/sawtooth-xo-tp-python:1.0     "xo-tp-python -vv -C" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-xo-tp-python-default
-      93d048c01d30 hyperledger/sawtooth-rest-api:1.0         "sawtooth-rest-api -" 7 minutes ago Up 7 minutes 4004/tcp, 0.0.0.0:8008->8008/tcp sawtooth-rest-api-default
-      6bbcda66a5aa hyperledger/sawtooth-validator:1.0        "bash -c 'sawadm key" 7 minutes ago Up 7 minutes 0.0.0.0:4004->4004/tcp           sawtooth-validator-default
+      76f6731c43a9 hyperledger/sawtooth-all:1.1              "bash -c 'sawtooth k" 7 minutes ago Up 7 minutes 4004/tcp, 8008/tcp               sawtooth-shell-default
+      9844faed9e9d hyperledger/sawtooth-intkey-tp-python:1.1 "intkey-tp-python -v" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-intkey-tp-python-default
+      44db125c2dca hyperledger/sawtooth-settings-tp:1.1      "settings-tp -vv -C " 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-settings-tp-default
+      875df9d022d6 hyperledger/sawtooth-xo-tp-python:1.1     "xo-tp-python -vv -C" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-xo-tp-python-default
+      93d048c01d30 hyperledger/sawtooth-rest-api:1.1         "sawtooth-rest-api -" 7 minutes ago Up 7 minutes 4004/tcp, 0.0.0.0:8008->8008/tcp sawtooth-rest-api-default
+      6bbcda66a5aa hyperledger/sawtooth-validator:1.1        "bash -c 'sawadm key" 7 minutes ago Up 7 minutes 0.0.0.0:4004->4004/tcp           sawtooth-validator-default
 
    The Docker Compose file defines the name of each container. It also
    specifies the TCP port and host name, if applicable. The following table
