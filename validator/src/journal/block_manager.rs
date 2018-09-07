@@ -22,7 +22,7 @@ use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
 
 use block::Block;
-use journal::block_store::{BlockStore, BlockStoreError};
+use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
 use journal::NULL_BLOCK_IDENTIFIER;
 use metrics;
 
@@ -108,7 +108,7 @@ enum BlockLocation {
 struct BlockManagerState {
     block_by_block_id: RwLock<HashMap<String, Block>>,
 
-    blockstore_by_name: RwLock<HashMap<String, Box<BlockStore>>>,
+    blockstore_by_name: RwLock<HashMap<String, Box<IndexedBlockStore>>>,
 
     references_by_block_id: RwLock<HashMap<String, RefCount>>,
 }
@@ -383,7 +383,11 @@ impl BlockManagerState {
         (blocks_to_remove, pointed_to)
     }
 
-    fn add_store(&self, store_name: &str, store: Box<BlockStore>) -> Result<(), BlockManagerError> {
+    fn add_store(
+        &self,
+        store_name: &str,
+        store: Box<IndexedBlockStore>,
+    ) -> Result<(), BlockManagerError> {
         self.blockstore_by_name
             .write()
             .expect("Acquiring blockstore write lock; lock poisoned")
@@ -398,11 +402,156 @@ impl BlockManagerState {
 #[derive(Default, Clone)]
 pub struct BlockManager {
     state: Arc<BlockManagerState>,
+    persist_lock: Arc<RwLock<()>>,
 }
 
 impl BlockManager {
     pub fn new() -> Self {
         BlockManager::default()
+    }
+
+    /// Returns whether the transaction id `id` is in the TransactionIndex of
+    /// the IndexedBlockStore and supposing the Block `block_id` is in the block store,
+    /// whether the transaction is <= the block
+    ///
+    /// Note:
+    /// transaction_index_contains requires the indexed blockstore under
+    /// consideration to be exclusive with respect to writes.
+    fn transaction_index_contains(
+        &self,
+        index: &IndexedBlockStore,
+        block_id: &str,
+        id: &str,
+    ) -> Result<bool, BlockManagerError> {
+        if let Some(block) = TransactionIndex::get_block_by_id(index, id)? {
+            let head = index
+                .get(&[block_id])?
+                .next()
+                .expect("BlockStore updated during transaction index check");
+            Ok(block.block_num <= head.block_num)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Returns whether the batch id `id` is in the BatchIndex of
+    /// the IndexedBlockStore and supposing the Block `block_id` is in the block store,
+    /// whether the batch is <= the block
+    ///
+    /// Note:
+    /// transaction_index_contains requires the indexed blockstore under
+    /// consideration to be exclusive with respect to writes.
+    fn batch_index_contains(
+        &self,
+        index: &IndexedBlockStore,
+        block_id: &str,
+        id: &str,
+    ) -> Result<bool, BlockManagerError> {
+        if let Some(block) = BatchIndex::get_block_by_id(index, id)? {
+            let head = index
+                .get(&[block_id])?
+                .next()
+                .expect("BlockStore updated during batch index check");
+            Ok(block.block_num <= head.block_num)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn contains_transaction(
+        &self,
+        block_id: &str,
+        id: &str,
+    ) -> Result<bool, BlockManagerError> {
+        let _lock = self
+            .persist_lock
+            .read()
+            .expect("The persist RwLock is poisoned");
+        if let Some((_, store)) = self
+            .state
+            .blockstore_by_name
+            .read()
+            .expect("Blockstore RW Lock is poisoned")
+            .iter()
+            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
+        {
+            self.transaction_index_contains(store, block_id, id)
+        } else {
+            if block_id != NULL_BLOCK_IDENTIFIER {
+                for pool_block in self.branch(block_id)? {
+                    if let Some((_, store)) = self
+                        .state
+                        .blockstore_by_name
+                        .read()
+                        .expect("BlockStore RW Lock is poisoned")
+                        .iter()
+                        .find(|(_, store)| {
+                            store
+                                .get(&[&pool_block.header_signature])
+                                .map(|res| res.count())
+                                .unwrap_or(0) > 0
+                        }) {
+                        return self.transaction_index_contains(
+                            store,
+                            &pool_block.header_signature,
+                            id,
+                        );
+                    }
+
+                    if pool_block
+                        .batches
+                        .iter()
+                        .any(|b| b.transactions.iter().any(|t| t.header_signature == id))
+                    {
+                        return Ok(true);
+                    }
+                }
+            }
+
+            Ok(false)
+        }
+    }
+
+    pub fn contains_batch(&self, block_id: &str, id: &str) -> Result<bool, BlockManagerError> {
+        let _lock = self
+            .persist_lock
+            .read()
+            .expect("The persist RwLock is poisoned");
+        if let Some((_, store)) = self
+            .state
+            .blockstore_by_name
+            .read()
+            .expect("Blockstore RW Lock is poisoned")
+            .iter()
+            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
+        {
+            self.batch_index_contains(store, block_id, id)
+        } else {
+            if block_id != NULL_BLOCK_IDENTIFIER {
+                for pool_block in self.branch(block_id)? {
+                    if let Some((_, store)) = self
+                        .state
+                        .blockstore_by_name
+                        .read()
+                        .expect("BlockStore RW Lock is poisoned")
+                        .iter()
+                        .find(|(_, store)| {
+                            store
+                                .get(&[&pool_block.header_signature])
+                                .map(|res| res.count())
+                                .unwrap_or(0) > 0
+                        }) {
+                        return self.batch_index_contains(store, &pool_block.header_signature, id);
+                    }
+
+                    if pool_block.batches.iter().any(|b| &b.header_signature == id) {
+                        return Ok(true);
+                    }
+                }
+            }
+
+            Ok(false)
+        }
     }
 
     pub fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
@@ -472,7 +621,7 @@ impl BlockManager {
     pub fn add_store(
         &self,
         store_name: &str,
-        store: Box<BlockStore>,
+        store: Box<IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         self.state.add_store(store_name, store)
     }
@@ -541,6 +690,10 @@ impl BlockManager {
     }
 
     pub fn persist(&self, head: &str, store_name: &str) -> Result<(), BlockManagerError> {
+        let _lock = self
+            .persist_lock
+            .write()
+            .expect("The persist RwLock is poisoned");
         if !self
             .state
             .blockstore_by_name

@@ -26,7 +26,9 @@ use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
-use journal::block_store::{BatchIndex, BlockStore, BlockStoreError, TransactionIndex};
+use journal::block_store::{
+    BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
+};
 use journal::block_validator::{BlockValidationResult, BlockValidationResultStore, BlockValidator};
 use journal::block_wrapper::{BlockStatus, BlockWrapper};
 use journal::chain::*;
@@ -721,6 +723,8 @@ impl TransactionIndex for PyBlockStore {
             })
     }
 }
+
+impl IndexedBlockStore for PyBlockStore {}
 
 impl Clone for PyBlockStore {
     fn clone(&self) -> Self {
