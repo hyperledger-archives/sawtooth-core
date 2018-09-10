@@ -784,16 +784,11 @@ mod test {
         let block_manager = BlockManager::new();
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
 
-        let block_store = Mock1::new(None);
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
 
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
-
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(Mock2::new(Ok(()), Ok(())));
-        let independent_validations = vec![independent_validation];
+        let validations = vec![validation1, validation2];
         let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
             "".into(),
             vec![],
@@ -801,89 +796,9 @@ mod test {
             BlockStatus::Valid,
         )));
 
-        let check = Mock2::new(Ok(true), Ok(false));
-
-        let validation_processor = BlockValidationProcessor::new(
-            block_store,
-            block_manager,
-            dependent_validations,
-            independent_validations,
-            state_block_validation,
-            check,
-        );
+        let validation_processor =
+            BlockValidationProcessor::new(block_manager, validations, state_block_validation);
         assert!(validation_processor.validate_block(&block_a).is_ok());
-    }
-
-    #[test]
-    fn test_validation_processor_chain_head_updated() {
-        let block_manager = BlockManager::new();
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-        let block_b = create_block("B", "A", vec![]);
-
-        block_manager
-            .put(vec![block_a.clone()])
-            .expect("Block manager errored on `put`");
-        let block_store = Mock1::new(Some(block_a));
-
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
-
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Ok(()), Ok(())));
-        let independent_validations = vec![independent_validation];
-        let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
-            "".into(),
-            vec![],
-            0,
-            BlockStatus::Valid,
-        )));
-
-        let check = Mock2::new(Ok(true), Ok(false));
-
-        let validation_processor = BlockValidationProcessor::new(
-            block_store,
-            block_manager,
-            dependent_validations,
-            independent_validations,
-            state_block_validation,
-            check,
-        );
-        assert!(validation_processor.validate_block(&block_b).is_ok());
-    }
-
-    #[test]
-    fn test_check_chain_head_updated_false() {
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-
-        let original_chain_head = Some(block_a.header_signature.clone());
-
-        let block_store = Mock1::new(Some(block_a.clone()));
-
-        let check = ChainHeadCheck::new(block_store);
-
-        assert_eq!(
-            check.check_chain_head_updated(original_chain_head.as_ref()),
-            Ok(false)
-        );
-    }
-
-    #[test]
-    fn test_check_chain_head_updated_true() {
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-        let block_b = create_block("B", "A", vec![]);
-
-        let original_chain_head = Some(block_a.header_signature.clone());
-
-        let block_store = Mock1::new(Some(block_b));
-
-        let check = ChainHeadCheck::new(block_store);
-
-        assert_eq!(
-            check.check_chain_head_updated(original_chain_head.as_ref()),
-            Ok(true)
-        );
     }
 
     /*
@@ -900,15 +815,6 @@ mod test {
     impl<R: Clone> Mock1<R> {
         fn new(result: R) -> Self {
             Mock1 { result }
-        }
-    }
-
-    impl BlockStoreUpdatedCheck for Mock1<Result<bool, ValidationError>> {
-        fn check_chain_head_updated(
-            &self,
-            expected_chain_head_id: Option<&String>,
-        ) -> Result<bool, ValidationError> {
-            self.result.clone()
         }
     }
 
@@ -952,22 +858,6 @@ mod test {
                 every_other,
                 called: Mutex::new(false),
             }
-        }
-    }
-
-    impl BlockStoreUpdatedCheck for Mock2<Result<bool, ValidationError>> {
-        fn check_chain_head_updated(
-            &self,
-            expected_chain_head_id: Option<&String>,
-        ) -> Result<bool, ValidationError> {
-            if *self.called.lock().expect("Error acquiring Mock2 lock") {
-                return self.every_other.clone();
-            }
-            {
-                let mut called = self.called.lock().expect("Error acquiring Mock2 lock");
-                *called = true;
-            }
-            self.first.clone()
         }
     }
 
