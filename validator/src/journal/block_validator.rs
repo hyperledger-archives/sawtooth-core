@@ -653,22 +653,26 @@ impl BlockValidation for DuplicatesAndDependenciesValidation {
     type ReturnValue = ();
 
     fn validate_block(&self, block: &Block, _: Option<&String>) -> Result<(), ValidationError> {
-        let batch_ids = block
-            .batches
-            .iter()
-            .map(|b| b.header_signature.clone())
-            .collect();
+        let batch_ids: Vec<&String> = block.batches.iter().map(|b| &b.header_signature).collect();
 
-        validate_no_duplicate_batches(&self.block_manager, &block.previous_block_id, batch_ids)?;
+        validate_no_duplicate_batches(
+            &self.block_manager,
+            &block.previous_block_id,
+            batch_ids.as_slice(),
+        )?;
 
         let txn_ids = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {
-                arr.push(txn.header_signature.clone());
+                arr.push(&txn.header_signature);
             }
             arr
         });
 
-        validate_no_duplicate_transactions(&self.block_manager, &block.previous_block_id, txn_ids)?;
+        validate_no_duplicate_transactions(
+            &self.block_manager,
+            &block.previous_block_id,
+            txn_ids.as_slice(),
+        )?;
 
         let transactions = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {

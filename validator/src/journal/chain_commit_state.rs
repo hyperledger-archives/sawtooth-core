@@ -22,7 +22,6 @@ use cpython::ObjectProtocol;
 
 use batch::Batch;
 use journal::block_manager::BlockManager;
-use journal::block_store::{BatchIndex, BlockStore, TransactionIndex};
 use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
@@ -34,7 +33,7 @@ pub enum ChainCommitStateError {
     Error(String),
 }
 
-fn check_no_duplicates(ids: &[String]) -> Option<String> {
+fn check_no_duplicates(ids: &[&String]) -> Option<String> {
     for (i, id1) in ids.iter().enumerate() {
         if ids[i + 1..ids.len()].contains(id1) {
             return Some(id1.to_string());
@@ -46,19 +45,18 @@ fn check_no_duplicates(ids: &[String]) -> Option<String> {
 pub fn validate_no_duplicate_batches(
     block_manager: &BlockManager,
     branch_head_id: &str,
-    batch_ids: Vec<String>,
+    batch_ids: &[&String],
 ) -> Result<(), ChainCommitStateError> {
-    if let Some(batch_id) = check_no_duplicates(batch_ids.as_slice()) {
+    if let Some(batch_id) = check_no_duplicates(batch_ids) {
         return Err(ChainCommitStateError::DuplicateBatch(batch_id));
     }
 
-    for batch_id in batch_ids {
-        if block_manager
-            .contains_batch(branch_head_id, &batch_id)
-            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
-        {
-            return Err(ChainCommitStateError::DuplicateBatch(batch_id));
-        }
+    if let Some(batch_id) = block_manager
+        .contains_any_batches(branch_head_id, batch_ids)
+        .map_err(|err| {
+            ChainCommitStateError::Error(format!("During validate_no_duplicate_batches: {:?}", err))
+        })? {
+        return Err(ChainCommitStateError::DuplicateBatch(batch_id));
     }
     Ok(())
 }
@@ -66,19 +64,21 @@ pub fn validate_no_duplicate_batches(
 pub fn validate_no_duplicate_transactions(
     block_manager: &BlockManager,
     branch_head_id: &str,
-    transaction_ids: Vec<String>,
+    transaction_ids: &[&String],
 ) -> Result<(), ChainCommitStateError> {
-    if let Some(txn_id) = check_no_duplicates(transaction_ids.as_slice()) {
+    if let Some(txn_id) = check_no_duplicates(transaction_ids) {
         return Err(ChainCommitStateError::DuplicateTransaction(txn_id));
     }
 
-    for id in transaction_ids {
-        if block_manager
-            .contains_transaction(branch_head_id, &id)
-            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
-        {
-            return Err(ChainCommitStateError::DuplicateTransaction(id));
-        }
+    if let Some(transaction_id) = block_manager
+        .contains_any_transactions(branch_head_id, transaction_ids)
+        .map_err(|err| {
+            ChainCommitStateError::Error(format!(
+                "During validate_no_duplicate_transactions: {:?}",
+                err
+            ))
+        })? {
+        return Err(ChainCommitStateError::DuplicateTransaction(transaction_id));
     }
 
     Ok(())
@@ -95,24 +95,29 @@ pub fn validate_transaction_dependencies(
         txn_ids.push(txn.header_signature.clone());
 
         for dep in &txn.dependencies {
-            if !dependencies.contains(dep) {
-                dependencies.push(dep.clone());
+            if !dependencies.contains(&dep) {
+                dependencies.push(&dep);
             }
         }
     }
-    for dep in dependencies {
+    for dep in &dependencies {
         // Check for dependencies within the given block's batches
-        if txn_ids.contains(&dep) {
+        if txn_ids.contains(dep) {
             continue;
         }
 
         if block_manager
-            .contains_transaction(branch_head_id, &dep)
-            .map_err(|err| ChainCommitStateError::Error(format!("{:?}", err)))?
+            .contains_any_transactions(branch_head_id, &[dep])
+            .map_err(|err| {
+                ChainCommitStateError::Error(format!(
+                    "During validate transaction dependencies: {:?}",
+                    err
+                ))
+            })?.is_some()
         {
             continue;
         }
-        return Err(ChainCommitStateError::MissingDependency(dep));
+        return Err(ChainCommitStateError::MissingDependency(dep.to_string()));
     }
     Ok(())
 }
@@ -249,7 +254,7 @@ mod test {
     #[test]
     fn test_no_duplicates() {
         assert_eq!(
-            check_no_duplicates(&["1".into(), "2".into(), "3".into()]),
+            check_no_duplicates(&[&"1".into(), &"2".into(), &"3".into()]),
             None
         );
     }
@@ -257,7 +262,7 @@ mod test {
     #[test]
     fn test_duplicates1() {
         assert_eq!(
-            check_no_duplicates(&["1".into(), "2".into(), "1".into()]),
+            check_no_duplicates(&[&"1".into(), &"2".into(), &"1".into()]),
             Some("1".into())
         );
     }
@@ -265,7 +270,7 @@ mod test {
     #[test]
     fn test_duplicates2() {
         assert_eq!(
-            check_no_duplicates(&["1".into(), "1".into(), "2".into()]),
+            check_no_duplicates(&[&"1".into(), &"1".into(), &"2".into()]),
             Some("1".into())
         );
     }
@@ -350,14 +355,18 @@ mod test {
     fn test_no_duplicate_batches() {
         let (block_manager, block_store) = setup_state();
 
-        let batches = vec!["B6b0".into(), "B6b1".into()];
+        let batches = ["B6b0".into(), "B6b1".into()];
 
         block_manager
             .persist("B4", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
         assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B5", batches),
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B5",
+                &batches.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
     }
@@ -366,14 +375,18 @@ mod test {
     fn test_no_duplicates_because_batches_in_other_fork() {
         let (block_manager, block_store) = setup_state();
 
-        let batches = vec!["B3b0".into(), "B3b1".into()];
+        let batches = ["B3b0".into(), "B3b1".into()];
 
         block_manager
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
         assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B5-2",
+                &batches.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
     }
@@ -382,15 +395,18 @@ mod test {
     fn test_no_duplicate_batches_duplicate_in_branch() {
         let (block_manager, block_store) = setup_state();
 
-        let batches = vec!["B2b0".into(), "B2b1".into()];
+        let batches = ["B2b0".into(), "B2b1".into()];
 
         block_manager
             .persist("B5", "commit")
             .expect("The block manage is able to persist all blocks known to it");
 
-        assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
-            Err(ChainCommitStateError::DuplicateBatch("B2b0".into()))
+        assert!(
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B5-2",
+                &batches.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         );
     }
 
@@ -398,15 +414,18 @@ mod test {
     fn test_no_duplicate_batches_duplicate_in_uncommitted() {
         let (block_manager, block_store) = setup_state();
 
-        let batches = vec!["B5-2b0".into(), "B5-2b1".into()];
+        let batches = ["B5-2b0".into(), "B5-2b1".into()];
 
         block_manager
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B5-2", batches),
-            Err(ChainCommitStateError::DuplicateBatch("B5-2b0".into()))
+        assert!(
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B5-2",
+                &batches.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         );
     }
 
@@ -414,14 +433,18 @@ mod test {
     fn test_no_duplicate_batches_duplicate_in_other_fork() {
         let (block_manager, block_store) = setup_state();
 
-        let batches = vec!["B2b0".into(), "B2b1".into()];
+        let batches = ["B2b0".into(), "B2b1".into()];
 
         block_manager
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
         assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B5-1", batches),
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B5-1",
+                &batches.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
     }
@@ -430,7 +453,7 @@ mod test {
     fn test_no_duplicate_transactions() {
         let (block_manager, block_store) = setup_state();
 
-        let transactions = vec![
+        let transactions = [
             "B6b0t0".into(),
             "B6b0t1".into(),
             "B6b0t2".into(),
@@ -444,7 +467,11 @@ mod test {
             .expect("The block manager is able to persist all blocks known to it");
 
         assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B5", transactions),
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B5",
+                &transactions.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
     }
@@ -453,15 +480,18 @@ mod test {
     fn test_no_duplicate_transactions_duplicate_in_branch() {
         let (block_manager, block_store) = setup_state();
 
-        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2b0t2".into()];
+        let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2b0t2".into()];
 
         block_manager
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B5-2", transactions),
-            Err(ChainCommitStateError::DuplicateTransaction("B2b0t2".into())),
+        assert!(
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B5-2",
+                &transactions.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         )
     }
 
@@ -469,17 +499,18 @@ mod test {
     fn test_no_duplicate_transactions_duplicate_in_uncommitted() {
         let (block_manager, block_store) = setup_state();
 
-        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2-1b0t1".into()];
+        let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2-1b0t1".into()];
 
         block_manager
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B5-4", transactions),
-            Err(ChainCommitStateError::DuplicateTransaction(
-                "B2-1b0t1".into()
-            ))
+        assert!(
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B5-4",
+                &transactions.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         );
     }
 
@@ -487,14 +518,18 @@ mod test {
     fn test_no_duplicate_transactions_duplicate_in_other_fork() {
         let (block_manager, block_store) = setup_state();
 
-        let transactions = vec!["B6b0t0".into(), "B6b0t1".into(), "B2b0t1".into()];
+        let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2b0t1".into()];
 
         block_manager
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
         assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B5-1", transactions),
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B5-1",
+                &transactions.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
     }
@@ -503,43 +538,65 @@ mod test {
     fn test_before_genesis() {
         let (block_manager, block_store) = setup_state();
 
-        let transactions = vec!["B0b0t0".into(), "B0b0t1".into(), "B0b0t2".into()];
-        let batches = vec!["B0b0".into(), "B0b1".into()];
+        let transactions = ["B0b0t0".into(), "B0b0t1".into(), "B0b0t2".into()];
+        let batches = ["B0b0".into(), "B0b1".into()];
         let block_store_clone = block_store.clone();
 
         assert_eq!(
-            validate_no_duplicate_batches(&block_manager, NULL_BLOCK_IDENTIFIER, batches),
+            validate_no_duplicate_batches(
+                &block_manager,
+                NULL_BLOCK_IDENTIFIER,
+                &batches.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
 
         assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, NULL_BLOCK_IDENTIFIER, transactions),
+            validate_no_duplicate_transactions(
+                &block_manager,
+                NULL_BLOCK_IDENTIFIER,
+                &transactions.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
 
-        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
-        let batches = vec!["B3b0".into(), "B3b1".into()];
+        let transactions = ["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
+        let batches = ["B3b0".into(), "B3b1".into()];
 
         assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B2", batches),
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B2",
+                &batches.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
 
         assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B2", transactions),
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B2",
+                &transactions.iter().collect::<Vec<&String>>()
+            ),
             Ok(())
         );
 
-        let transactions = vec!["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
-        let batches = vec!["B3b0".into(), "B3b1".into()];
+        let transactions = ["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
+        let batches = ["B3b0".into(), "B3b1".into()];
 
-        assert_eq!(
-            validate_no_duplicate_batches(&block_manager, "B3", batches),
-            Err(ChainCommitStateError::DuplicateBatch("B3b0".into()))
+        assert!(
+            validate_no_duplicate_batches(
+                &block_manager,
+                "B3",
+                &batches.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         );
-        assert_eq!(
-            validate_no_duplicate_transactions(&block_manager, "B3", transactions),
-            Err(ChainCommitStateError::DuplicateTransaction("B3b0t0".into()))
+        assert!(
+            validate_no_duplicate_transactions(
+                &block_manager,
+                "B3",
+                &transactions.iter().collect::<Vec<&String>>(),
+            ).is_err(),
         );
     }
 

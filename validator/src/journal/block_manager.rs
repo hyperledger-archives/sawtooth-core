@@ -17,8 +17,8 @@
 
 #![allow(unknown_lints)]
 
-use std::collections::HashMap;
-use std::iter::Peekable;
+use std::collections::{HashMap, HashSet};
+use std::iter::{FromIterator, Peekable};
 use std::sync::{Arc, RwLock};
 
 use block::Block;
@@ -458,100 +458,156 @@ impl BlockManager {
         }
     }
 
-    pub fn contains_transaction(
+    pub fn contains_any_transactions<'a>(
         &self,
-        block_id: &str,
-        id: &str,
-    ) -> Result<bool, BlockManagerError> {
+        block_id: &'a str,
+        ids: &[&String],
+    ) -> Result<Option<String>, BlockManagerError> {
         let _lock = self
             .persist_lock
             .read()
             .expect("The persist RwLock is poisoned");
-        if let Some((_, store)) = self
+        let blockstore_by_name = self
             .state
             .blockstore_by_name
             .read()
-            .expect("Blockstore RW Lock is poisoned")
-            .iter()
-            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
-        {
-            self.transaction_index_contains(store, block_id, id)
+            .expect("The blockstore RwLock is poisoned");
+        if let Some(store) = self.persisted_branch_contains_block(&blockstore_by_name, block_id)? {
+            self.persisted_branch_contains_any_transactions(store, block_id, ids)
         } else {
             if block_id != NULL_BLOCK_IDENTIFIER {
                 for pool_block in self.branch(block_id)? {
-                    if let Some((_, store)) = self
-                        .state
-                        .blockstore_by_name
-                        .read()
-                        .expect("BlockStore RW Lock is poisoned")
-                        .iter()
-                        .find(|(_, store)| {
-                            store
-                                .get(&[&pool_block.header_signature])
-                                .map(|res| res.count())
-                                .unwrap_or(0) > 0
-                        }) {
-                        return self.transaction_index_contains(
+                    if let Some(store) = self.persisted_branch_contains_block(
+                        &blockstore_by_name,
+                        &pool_block.header_signature,
+                    )? {
+                        return self.persisted_branch_contains_any_transactions(
                             store,
                             &pool_block.header_signature,
-                            id,
+                            ids,
                         );
                     }
-
-                    if pool_block
-                        .batches
-                        .iter()
-                        .any(|b| b.transactions.iter().any(|t| t.header_signature == id))
+                    if let Some(transaction_id) =
+                        self.block_contains_any_transaction(&pool_block, ids)
                     {
-                        return Ok(true);
+                        return Ok(Some(transaction_id));
                     }
                 }
             }
 
-            Ok(false)
+            Ok(None)
         }
     }
 
-    pub fn contains_batch(&self, block_id: &str, id: &str) -> Result<bool, BlockManagerError> {
+    pub fn contains_any_batches(
+        &self,
+        block_id: &str,
+        ids: &[&String],
+    ) -> Result<Option<String>, BlockManagerError> {
         let _lock = self
             .persist_lock
             .read()
             .expect("The persist RwLock is poisoned");
-        if let Some((_, store)) = self
+        let blockstore_by_name = self
             .state
             .blockstore_by_name
             .read()
-            .expect("Blockstore RW Lock is poisoned")
-            .iter()
-            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
-        {
-            self.batch_index_contains(store, block_id, id)
+            .expect("The blockstore RwLock is poisoned");
+        if let Some(store) = self.persisted_branch_contains_block(&blockstore_by_name, block_id)? {
+            self.persisted_branch_contains_any_batches(store, block_id, ids)
         } else {
             if block_id != NULL_BLOCK_IDENTIFIER {
                 for pool_block in self.branch(block_id)? {
-                    if let Some((_, store)) = self
-                        .state
-                        .blockstore_by_name
-                        .read()
-                        .expect("BlockStore RW Lock is poisoned")
-                        .iter()
-                        .find(|(_, store)| {
-                            store
-                                .get(&[&pool_block.header_signature])
-                                .map(|res| res.count())
-                                .unwrap_or(0) > 0
-                        }) {
-                        return self.batch_index_contains(store, &pool_block.header_signature, id);
+                    if let Some(store) = self.persisted_branch_contains_block(
+                        &blockstore_by_name,
+                        &pool_block.header_signature,
+                    )? {
+                        return self.persisted_branch_contains_any_batches(
+                            store,
+                            &pool_block.header_signature,
+                            ids,
+                        );
                     }
 
-                    if pool_block.batches.iter().any(|b| &b.header_signature == id) {
-                        return Ok(true);
+                    if let Some(batch_id) = self.block_contains_any_batch(&pool_block, ids) {
+                        return Ok(Some(batch_id));
                     }
                 }
             }
-
-            Ok(false)
+            Ok(None)
         }
+    }
+
+    fn block_contains_any_transaction(&self, block: &Block, ids: &[&String]) -> Option<String> {
+        let transaction_ids: HashSet<&String> = HashSet::from_iter(
+            block
+                .batches
+                .iter()
+                .fold(vec![], |mut arr, b| {
+                    for transaction in &b.transactions {
+                        arr.push(&transaction.header_signature)
+                    }
+                    arr
+                }).into_iter(),
+        );
+        let comparison_transaction_ids: HashSet<&String> = HashSet::from_iter(ids.iter().cloned());
+        transaction_ids
+            .intersection(&comparison_transaction_ids)
+            .next()
+            .map(|t| t.to_string())
+    }
+
+    fn block_contains_any_batch(&self, block: &Block, ids: &[&String]) -> Option<String> {
+        let batch_ids = HashSet::from_iter(block.batches.iter().map(|b| &b.header_signature));
+        let comparison_batch_ids: HashSet<&String> = HashSet::from_iter(ids.iter().cloned());
+        batch_ids
+            .intersection(&comparison_batch_ids)
+            .next()
+            .map(|t| t.to_string())
+    }
+
+    fn persisted_branch_contains_block<'a>(
+        &self,
+        blockstore_by_name: &'a HashMap<String, Box<IndexedBlockStore>>,
+        block_id: &str,
+    ) -> Result<Option<&'a IndexedBlockStore>, BlockManagerError> {
+        if let Some((_, store)) = blockstore_by_name
+            .iter()
+            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
+        {
+            Ok(Some(store.as_ref()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn persisted_branch_contains_any_transactions(
+        &self,
+        store: &IndexedBlockStore,
+        block_id: &str,
+        ids: &[&String],
+    ) -> Result<Option<String>, BlockManagerError> {
+        for id in ids {
+            if self.transaction_index_contains(store, block_id, id)? {
+                return Ok(Some(id.to_string()));
+            }
+        }
+        Ok(None)
+    }
+
+    fn persisted_branch_contains_any_batches(
+        &self,
+        store: &IndexedBlockStore,
+        block_id: &str,
+        ids: &[&String],
+    ) -> Result<Option<String>, BlockManagerError> {
+        for id in ids {
+            if self.batch_index_contains(store, block_id, id)? {
+                return Ok(Some(id.to_string()));
+            }
+        }
+
+        Ok(None)
     }
 
     pub fn contains(&self, block_id: &str) -> Result<bool, BlockManagerError> {
