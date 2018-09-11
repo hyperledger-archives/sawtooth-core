@@ -55,7 +55,15 @@ services:
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 \
         \""
+
+  devmode-engine:
+    image: hyperledger/sawtooth-devmode-engine:1.1
+    container_name: sawtooth-devmode-engine-default
+    depends_on:
+      - validator
+    entrypoint: devmode-rust -C tcp://validator:5050
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
