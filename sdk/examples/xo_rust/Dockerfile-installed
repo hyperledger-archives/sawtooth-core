@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f adm/Dockerfile-installed -t sawtooth-admin-tools .
+# docker build -f sdk/examples/xo_rust/Dockerfile-installed -t sawtooth-xo-tp-rust .
 
-# -------------=== admin tools build ===-------------
-FROM ubuntu:xenial as adm-builder
+# -------------=== xo rust build ===-------------
+FROM ubuntu:xenial as xo-rust-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -41,16 +41,16 @@ RUN /root/.cargo/bin/cargo install cargo-deb
 
 COPY . /project
 
-WORKDIR /project/adm
+WORKDIR /project/sdk/examples/xo_rust/
 
-RUN sed -i -e s/version.*$/version\ =\ \"$(../bin/get_version)\"/ Cargo.toml
+RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
-# -------------=== admin tools docker build ===-------------
+# -------------=== xo rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=adm-builder /project/adm/target/debian/sawadm_*.deb /tmp
+COPY --from=xo-rust-builder /project/sdk/examples/xo_rust/target/debian/xo_rust_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawadm_*.deb || true \
+ && dpkg -i /tmp/xo_rust_*.deb || true \
  && apt-get -f -y install
