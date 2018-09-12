@@ -514,15 +514,15 @@ impl BlockStore for PyBlockStore {
         let py = gil_guard.python();
         let mut deleted_blocks = Vec::new();
         for block_id in block_ids {
-            let block: Block = self.py_block_store
+            let block: Block = self
+                .py_block_store
                 .call_method(py, "get", (block_id,), None)
                 // Unwrap the block wrapper
                 .and_then(|blkw| blkw.getattr(py, "block"))
                 .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
                     BlockStoreError::Error("Unable to get blocks".into())
-                })?
-                .extract(py)
+                })?.extract(py)
                 .expect("Unable to convert block from python");
 
             self.py_block_store
@@ -660,18 +660,23 @@ impl BatchIndex for PyBlockStore {
         let py = gil_guard.python();
         self.py_block_store
             .call_method(py, "get_block_by_batch_id", (id,), None)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error calling get_block_by_id on the block store: {:?}",
-                    py_err
-                ))
-            })?.extract(py)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error extracting Option<BlockWrapper>: {:?}",
-                    py_err
-                ))
-            }).and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
+            .and_then(|r| r.extract(py))
+            .map(|bw: Option<BlockWrapper>| {
+                if let Some(bw) = bw {
+                    Some(bw.block())
+                } else {
+                    None
+                }
+            }).or_else(|py_err| {
+                if py_err.get_type(py).name(py) == "ValueError" {
+                    Ok(None)
+                } else {
+                    Err(BlockStoreError::Error(format!(
+                        "Error calling get_block_by_batch_id: {:?}",
+                        py_err
+                    )))
+                }
+            })
     }
 }
 
@@ -697,18 +702,23 @@ impl TransactionIndex for PyBlockStore {
         let py = gil_guard.python();
         self.py_block_store
             .call_method(py, "get_block_by_transaction_id", (id,), None)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error calling get_block_transaction_id on the block store: {:?}",
-                    py_err
-                ))
-            })?.extract(py)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error extracting Option<BlockWrapper>: {:?}",
-                    py_err
-                ))
-            }).and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
+            .and_then(|r| r.extract(py))
+            .map(|bw: Option<BlockWrapper>| {
+                if let Some(bw) = bw {
+                    Some(bw.block())
+                } else {
+                    None
+                }
+            }).or_else(|py_err| {
+                if py_err.get_type(py).name(py) == "ValueError" {
+                    Ok(None)
+                } else {
+                    Err(BlockStoreError::Error(format!(
+                        "Error calling get_block_by_transaction_id: {:?}",
+                        py_err
+                    )))
+                }
+            })
     }
 }
 
