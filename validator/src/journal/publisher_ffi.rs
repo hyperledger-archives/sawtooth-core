@@ -40,7 +40,6 @@ pub enum ErrorCode {
     BlockInProgress = 0x03,
     BlockNotInitialized = 0x04,
     BlockEmpty = 0x05,
-    BlockNotInProgress = 0x06,
     MissingPredecessor = 0x07,
 }
 
@@ -402,6 +401,6 @@ pub unsafe extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) ->
 
     match (*(publisher as *mut BlockPublisher)).cancel_block() {
         Ok(_) => ErrorCode::Success,
-        Err(_) => ErrorCode::BlockNotInProgress,
+        Err(_) => ErrorCode::BlockNotInitialized,
     }
 }

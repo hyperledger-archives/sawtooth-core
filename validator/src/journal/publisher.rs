@@ -56,7 +56,7 @@ pub enum InitializeBlockError {
 
 #[derive(Debug)]
 pub enum CancelBlockError {
-    BlockNotInProgress,
+    BlockNotInitialized,
 }
 
 #[derive(Debug)]
@@ -586,7 +586,7 @@ impl BlockPublisher {
             self.publisher.cancel_block(&mut state, true);
             Ok(())
         } else {
-            Err(CancelBlockError::BlockNotInProgress)
+            Err(CancelBlockError::BlockNotInitialized)
         }
     }
 
