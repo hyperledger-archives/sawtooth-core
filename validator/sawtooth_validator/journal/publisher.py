@@ -25,9 +25,6 @@ from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY, LIBRARY
 from sawtooth_validator.ffi import OwnedPointer
 
-from sawtooth_validator.consensus.handlers import BlockEmpty
-from sawtooth_validator.consensus.handlers import BlockInProgress
-from sawtooth_validator.consensus.handlers import BlockNotInitialized
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 LOGGER = logging.getLogger(__name__)
@@ -116,6 +113,18 @@ class BlockPublisherErrorCode(IntEnum):
     BlockInProgress = 0x03
     BlockNotInitialized = 0x04
     BlockEmpty = 0x05
+
+
+class BlockEmpty(Exception):
+    """There are no batches in the block."""
+
+
+class BlockInProgress(Exception):
+    """There is already a block in progress."""
+
+
+class BlockNotInitialized(Exception):
+    """There is no block in progress to finalize."""
 
 
 class BlockPublisher(OwnedPointer):
