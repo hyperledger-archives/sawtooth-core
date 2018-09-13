@@ -28,6 +28,10 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.publisher import BlockEmpty
+from sawtooth_validator.journal.publisher import BlockInProgress
+from sawtooth_validator.journal.publisher import BlockNotInitialized
+from sawtooth_validator.journal.publisher import MissingPredecessor
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusSettingsEntry
@@ -35,18 +39,6 @@ from sawtooth_validator.protobuf.consensus_pb2 import ConsensusStateEntry
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class BlockEmpty(Exception):
-    """There are no batches in the block."""
-
-
-class BlockInProgress(Exception):
-    """There is already a block in progress."""
-
-
-class BlockNotInitialized(Exception):
-    """There is no block in progress to finalize."""
 
 
 class ConsensusServiceHandler(Handler):
@@ -204,6 +196,9 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
     def handle_request(self, request, response):
         try:
             self._proxy.initialize_block(request.previous_id)
+        except MissingPredecessor:
+            response.status =\
+                consensus_pb2.ConsensusInitializeBlockResponse.UNKNOWN_BLOCK
         except BlockInProgress:
             response.status =\
                 consensus_pb2.ConsensusInitializeBlockResponse.INVALID_STATE
