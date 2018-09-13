@@ -113,6 +113,7 @@ class BlockPublisherErrorCode(IntEnum):
     BlockInProgress = 0x03
     BlockNotInitialized = 0x04
     BlockEmpty = 0x05
+    MissingPredecessor = 0x07
 
 
 class BlockEmpty(Exception):
@@ -125,6 +126,10 @@ class BlockInProgress(Exception):
 
 class BlockNotInitialized(Exception):
     """There is no block in progress to finalize."""
+
+
+class MissingPredecessor(Exception):
+    """A predecessor was missing"""
 
 
 class BlockPublisher(OwnedPointer):
@@ -223,6 +228,8 @@ class BlockPublisher(OwnedPointer):
             raise BlockNotInitialized("A block is not initialized")
         elif res == BlockPublisherErrorCode.BlockEmpty:
             raise BlockEmpty("The block is empty")
+        elif res == BlockPublisherErrorCode.MissingPredecessor:
+            raise MissingPredecessor("A predecessor was missing")
 
     def start(self):
         sender_ptr = ctypes.c_void_p()

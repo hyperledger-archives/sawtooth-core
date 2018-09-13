@@ -31,6 +31,7 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.publisher import BlockEmpty
 from sawtooth_validator.journal.publisher import BlockInProgress
 from sawtooth_validator.journal.publisher import BlockNotInitialized
+from sawtooth_validator.journal.publisher import MissingPredecessor
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusSettingsEntry
@@ -195,6 +196,9 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
     def handle_request(self, request, response):
         try:
             self._proxy.initialize_block(request.previous_id)
+        except MissingPredecessor:
+            response.status =\
+                consensus_pb2.ConsensusInitializeBlockResponse.UNKNOWN_BLOCK
         except BlockInProgress:
             response.status =\
                 consensus_pb2.ConsensusInitializeBlockResponse.INVALID_STATE
