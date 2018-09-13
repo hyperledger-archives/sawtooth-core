@@ -115,15 +115,29 @@ struct BlockManagerState {
 
 impl BlockManagerState {
     fn contains(
-        &self,
         references_block_id: &HashMap<String, RefCount>,
+        blockstore_by_name: &HashMap<String, Box<IndexedBlockStore>>,
         block_id: &str,
     ) -> Result<bool, BlockManagerError> {
-        let block_has_been_put = references_block_id.contains_key(block_id);
-
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
+        if block_is_null_block {
+            return Ok(true);
+        }
 
-        Ok(block_has_been_put || block_is_null_block)
+        let block_has_been_put = references_block_id.contains_key(block_id);
+        if block_has_been_put {
+            return Ok(true);
+        }
+
+        let block_in_some_store = blockstore_by_name
+            .iter()
+            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
+            .is_some();
+        if block_in_some_store {
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     /// Checks that every block is preceded by the block referenced by block.previous_block_id except the
@@ -165,9 +179,17 @@ impl BlockManagerState {
             .references_by_block_id
             .write()
             .expect("Acquiring reference write lock; lock poisoned");
+        let blockstore_by_name = self
+            .blockstore_by_name
+            .read()
+            .expect("Acquiring blockstore name lock; lock poisoned");
         match branch.split_first() {
             Some((head, tail)) => {
-                if !self.contains(&references_by_block_id, &head.previous_block_id)? {
+                if !Self::contains(
+                    &references_by_block_id,
+                    &blockstore_by_name,
+                    &head.previous_block_id,
+                )? {
                     return Err(BlockManagerError::MissingPredecessor(format!(
                         "During Put, missing predecessor of block {}: {}",
                         head.header_signature, head.previous_block_id
@@ -175,7 +197,11 @@ impl BlockManagerState {
                 }
 
                 self.check_predecessor_relationship(tail, head)?;
-                if !self.contains(&references_by_block_id, &head.header_signature)? {
+                if !Self::contains(
+                    &references_by_block_id,
+                    &blockstore_by_name,
+                    &head.header_signature,
+                )? {
                     if let Some(r) = references_by_block_id.get_mut(&head.previous_block_id) {
                         r.increase_internal_ref_count();
                     }
@@ -185,7 +211,11 @@ impl BlockManagerState {
         }
         let mut blocks_not_added_yet: Vec<Block> = Vec::new();
         for block in branch {
-            if !self.contains(&references_by_block_id, &block.header_signature)? {
+            if !Self::contains(
+                &references_by_block_id,
+                &blockstore_by_name,
+                &block.header_signature,
+            )? {
                 blocks_not_added_yet.push(block);
             }
         }
@@ -269,16 +299,41 @@ impl BlockManagerState {
     }
 
     fn ref_block(&self, block_id: &str) -> Result<(), BlockManagerError> {
-        match self
+        let mut references_by_block_id = self
             .references_by_block_id
             .write()
-            .expect("Acquiring references write lock; lock poisoned")
-            .get_mut(block_id)
-        {
-            Some(r) => r.increase_external_ref_count(),
-            None => return Err(BlockManagerError::UnknownBlock),
+            .expect("Acquiring references write lock; lock poisoned");
+
+        if let Some(r) = references_by_block_id.get_mut(block_id) {
+            r.increase_external_ref_count();
+            return Ok(());
         }
-        Ok(())
+
+        let blockstore_by_name = self
+            .blockstore_by_name
+            .read()
+            .expect("Acquiring blockstore by name read lock; lock poisoned");
+
+        let block = blockstore_by_name
+            .iter()
+            .filter_map(|(_, store)| {
+                store
+                    .get(&[block_id])
+                    .expect("Failed to get from blockstore")
+                    .next()
+            }).next();
+
+        if let Some(block) = block {
+            let mut rc = RefCount::new_reffed_block(
+                block.header_signature.clone(),
+                block.previous_block_id.clone(),
+            );
+            rc.increase_external_ref_count();
+            references_by_block_id.insert(block.header_signature.clone(), rc);
+            return Ok(());
+        }
+
+        Err(BlockManagerError::UnknownBlock)
     }
 
     fn unref_block(&self, tip: &str) -> Result<bool, BlockManagerError> {
@@ -388,10 +443,29 @@ impl BlockManagerState {
         store_name: &str,
         store: Box<IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
-        self.blockstore_by_name
+        let mut references_by_block_id = self
+            .references_by_block_id
             .write()
-            .expect("Acquiring blockstore write lock; lock poisoned")
-            .insert(store_name.into(), store);
+            .expect("Acquiring references_by_block_id lock; lock poisoned");
+
+        let mut stores = self
+            .blockstore_by_name
+            .write()
+            .expect("Acquiring blockstore write lock; lock poisoned");
+
+        if let Some(head) = store.iter().expect("Failed to get store iterator").next() {
+            if !references_by_block_id.contains_key(&head.header_signature) {
+                references_by_block_id.insert(
+                    head.header_signature.clone(),
+                    RefCount::new_unreffed_block(
+                        head.header_signature.clone(),
+                        head.previous_block_id.clone(),
+                    ),
+                );
+            }
+        }
+
+        stores.insert(store_name.into(), store);
         Ok(())
     }
 }
@@ -616,7 +690,12 @@ impl BlockManager {
             .references_by_block_id
             .read()
             .expect("Acquiring references read lock; lock poisoned");
-        self.state.contains(&references_by_block_id, block_id)
+        let blockstore_by_name = self
+            .state
+            .blockstore_by_name
+            .read()
+            .expect("Acquiring blockstore name read lock; lock poisoned");
+        BlockManagerState::contains(&references_by_block_id, &blockstore_by_name, block_id)
     }
 
     /// Put is idempotent, making the guarantee that after put is called with a
