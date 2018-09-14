@@ -78,8 +78,7 @@ impl<'b, 't, B: BatchIndex + 'b, T: TransactionIndex + 't> ChainCommitState<'b, 
                             "Error getting block from blockstore: {:?}",
                             err
                         ))
-                    })?
-                    .next();
+                    })?.next();
 
                 if chain_head.is_some() {
                     common_ancestor = Some(block);
@@ -304,8 +303,7 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            })
-            .collect();
+            }).collect();
 
         let mut previous_block_id = "B1";
         let mut block_num = 2;
@@ -316,8 +314,7 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            })
-            .collect();
+            }).collect();
 
         let mut previous_block_id = "B3-1";
         let mut block_num = 4;
@@ -328,8 +325,7 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            })
-            .collect();
+            }).collect();
 
         let mut previous_block_id = "B2";
         let mut block_num = 3;
@@ -339,8 +335,7 @@ mod test {
                 let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
-            })
-            .collect();
+            }).collect();
 
         let mut previous_block_id = "B3-2";
         let mut block_num = 4;
@@ -350,8 +345,7 @@ mod test {
                 let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
-            })
-            .collect();
+            }).collect();
         vec![chain0, chain1, chain4, chain2, chain3]
     }
 
@@ -791,11 +785,9 @@ mod test {
                     .map(|t_id: &str| {
                         let txn_id = format!("{}{}", batch_header_signature, t_id);
                         create_transaction(txn_id, vec![])
-                    })
-                    .collect();
+                    }).collect();
                 create_batch(batch_header_signature, txns)
-            })
-            .collect();
+            }).collect();
 
         let block = create_block(block_id, previous_block_id, block_num, batches);
 

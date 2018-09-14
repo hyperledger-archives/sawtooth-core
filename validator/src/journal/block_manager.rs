@@ -747,13 +747,11 @@ impl BranchDiffIterator {
             left_iterator
                 .peek()
                 .map(|left| {
-                    left.block_num as i64
-                        - right_iterator
-                            .peek()
-                            .map(|right| right.block_num as i64)
-                            .unwrap_or(0)
-                })
-                .unwrap_or(0)
+                    left.block_num as i64 - right_iterator
+                        .peek()
+                        .map(|right| right.block_num as i64)
+                        .unwrap_or(0)
+                }).unwrap_or(0)
         };
         if difference < 0 {
             // seek to the same height on the exclude side

@@ -612,8 +612,7 @@ impl<
                     .map_err(|err| {
                         error!("Error reading chain head: {:?}", err);
                         err
-                    })?
-                    .expect(
+                    })?.expect(
                         "Attempting to handle block commit before a genesis block has been
                         committed",
                     );
@@ -672,8 +671,7 @@ impl<
                     .persist(
                         &state.chain_head.as_ref().unwrap().header_signature,
                         COMMIT_STORE,
-                    )
-                    .map_err(|err| {
+                    ).map_err(|err| {
                         error!("Error persisting new chain head: {:?}", err);
                         err
                     })?;
@@ -896,8 +894,7 @@ impl<
                     if let Err(err) = chain_thread.run() {
                         error!("Error occurred during ChainController loop: {:?}", err);
                     }
-                })
-                .unwrap();
+                }).unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
             self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
@@ -941,8 +938,7 @@ impl<
                 } else {
                     break;
                 }
-            })
-            .unwrap();
+            }).unwrap();
     }
 
     fn start_commit_queue_thread(
@@ -983,8 +979,7 @@ impl<
                 } else {
                     break;
                 }
-            })
-            .unwrap();
+            }).unwrap();
     }
 
     pub fn stop(&mut self) {

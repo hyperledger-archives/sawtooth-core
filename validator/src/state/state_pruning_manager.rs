@@ -76,8 +76,7 @@ impl StatePruningManager {
                     debug!("Removing {} from pruning queue", candidate.1);
                     false
                 }
-            })
-            .collect();
+            }).collect();
     }
 
     /// Add a single state root to the pruning queue.

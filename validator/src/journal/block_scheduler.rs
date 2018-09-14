@@ -296,8 +296,7 @@ mod tests {
                 block_b.clone(),
                 block_c1.clone(),
                 block_d1.clone(),
-            ])
-            .expect("The block manager failed to `put` a branch");
+            ]).expect("The block manager failed to `put` a branch");
         block_manager
             .put(vec![block_b.clone(), block_c2.clone()])
             .expect("The block manager failed to put a branch");

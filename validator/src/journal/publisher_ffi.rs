@@ -125,8 +125,7 @@ pub unsafe extern "C" fn block_publisher_new(
             "BatchPublisher",
             (identity_signer.clone_ref(py), batch_sender),
             None,
-        )
-        .expect("Unable to create BatchPublisher");
+        ).expect("Unable to create BatchPublisher");
 
     let block_header_class = py
         .import("sawtooth_validator.protobuf.block_pb2")

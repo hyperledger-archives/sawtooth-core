@@ -388,8 +388,7 @@ mod tests {
                 nonce: String::new(),
 
                 header_bytes: vec![],
-            })
-            .collect();
+            }).collect();
 
         vec![Batch {
             transaction_ids: transactions
