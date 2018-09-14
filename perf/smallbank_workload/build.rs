@@ -59,8 +59,7 @@ fn main() {
                     .to_str()
                     .expect("Unable to extract filename")
             )
-        })
-        .collect::<Vec<_>>()
+        }).collect::<Vec<_>>()
         .join("\n");
 
     let mut mod_file = File::create(dest_path.join("mod.rs")).unwrap();
@@ -78,6 +77,5 @@ fn glob_simple(pattern: &str) -> Vec<String> {
                 .to_str()
                 .expect("utf-8")
                 .to_owned()
-        })
-        .collect()
+        }).collect()
 }
