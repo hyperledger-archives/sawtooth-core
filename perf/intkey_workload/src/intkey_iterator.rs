@@ -190,7 +190,8 @@ mod tests {
                     acc - p.value
                 } else {
                     acc
-                }) < MAX_VALUE
+                })
+                < MAX_VALUE
         );
     }
 
