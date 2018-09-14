@@ -194,15 +194,16 @@ impl CandidateBlock {
 
     fn batch_is_already_committed(&self, batch: &Batch) -> bool {
         self.pending_batch_ids
-            .contains(batch.header_signature.as_str()) || {
-            let gil = cpython::Python::acquire_gil();
-            let py = gil.python();
-            self.batch_committed
-                .call(py, (batch.header_signature.as_str(),), None)
-                .expect("Call to determine if batch is committed failed")
-                .extract::<bool>(py)
-                .unwrap()
-        }
+            .contains(batch.header_signature.as_str())
+            || {
+                let gil = cpython::Python::acquire_gil();
+                let py = gil.python();
+                self.batch_committed
+                    .call(py, (batch.header_signature.as_str(),), None)
+                    .expect("Call to determine if batch is committed failed")
+                    .extract::<bool>(py)
+                    .unwrap()
+            }
     }
 
     fn poll_injectors<F: Fn(&cpython::PyObject) -> Vec<cpython::PyObject>>(
@@ -369,8 +370,7 @@ impl CandidateBlock {
             .filter(|(_, txns)| match txns {
                 Some(t) => !t.iter().any(|t| !t.is_valid),
                 None => false,
-            })
-            .map(|(b_id, _)| b_id)
+            }).map(|(b_id, _)| b_id)
             .collect();
 
         let builder = {
@@ -448,8 +448,7 @@ impl CandidateBlock {
                 "set_state_hash",
                 (execution_results.ending_state_hash,),
                 None,
-            )
-            .expect("BlockBuilder has no method 'set_state_hash'");
+            ).expect("BlockBuilder has no method 'set_state_hash'");
 
         let mut hasher = Sha256::new();
 
@@ -509,7 +508,8 @@ impl CandidateBlock {
             .expect("BlockBuilder has no attribute 'batches'")
             .extract::<cpython::PyList>(py)
             .unwrap()
-            .len(py) == 0
+            .len(py)
+            == 0
     }
 
     fn build_result(

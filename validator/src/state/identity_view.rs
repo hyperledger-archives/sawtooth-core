@@ -109,8 +109,7 @@ impl IdentityView {
                 } else {
                     None
                 })
-            })
-            .and_then(|list_opt| {
+            }).and_then(|list_opt| {
                 if let Some(list) = list_opt {
                     for item in list.values() {
                         if item.name() == name {
@@ -353,8 +352,7 @@ mod tests {
                     entry.set_field_type(Policy_EntryType::PERMIT_KEY);
                     entry.set_key(key.to_string());
                     entry
-                })
-                .collect(),
+                }).collect(),
         ));
 
         policy

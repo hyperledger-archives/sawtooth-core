@@ -193,8 +193,7 @@ fn hex_str_to_bytes(s: &str) -> Result<Vec<u8>, Error> {
         .chunks(2)
         .map(|chunk| {
             ((chunk[0].to_digit(16).unwrap() << 4) | (chunk[1].to_digit(16).unwrap())) as u8
-        })
-        .collect();
+        }).collect();
 
     Ok(decoded)
 }

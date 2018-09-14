@@ -250,8 +250,7 @@ impl TransactionContext {
                 entry.set_address(address.to_string());
                 entry.set_data(payload.to_vec());
                 entry
-            })
-            .collect();
+            }).collect();
 
         let mut request = TpStateSetRequest::new();
         request.set_context_id(self.context_id.clone());

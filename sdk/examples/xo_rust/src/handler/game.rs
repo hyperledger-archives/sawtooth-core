@@ -15,8 +15,8 @@
  * -----------------------------------------------------------------------------
  */
 
-use std::collections::HashMap;
 use sawtooth_sdk::processor::handler::ApplyError;
+use std::collections::HashMap;
 
 const POSSIBLE_WINS: [(usize, usize, usize); 8] = [
     (1, 2, 3),
@@ -129,8 +129,7 @@ impl Game {
                 } else {
                     ch.to_string()
                 }
-            })
-            .collect();
+            }).collect();
         self.board = board_vec.join("");
         Ok(())
     }

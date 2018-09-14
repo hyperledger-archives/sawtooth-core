@@ -122,7 +122,8 @@ pub unsafe extern "C" fn block_validator_start(block_validator_ptr: *mut c_void)
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).start();
+        >))
+        .start();
 
     ErrorCode::Success
 }
@@ -137,7 +138,8 @@ pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) 
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).stop();
+        >))
+        .stop();
 
     ErrorCode::Success
 }

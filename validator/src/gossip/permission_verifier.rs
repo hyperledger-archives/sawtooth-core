@@ -50,8 +50,7 @@ impl PermissionVerifier for PyPermissionVerifier {
                 "is_batch_signer_authorized",
                 (batch, state_root, from_state),
                 None,
-            )
-            .expect("PermissionVerifier has no method `is_batch_signer_authorized`")
+            ).expect("PermissionVerifier has no method `is_batch_signer_authorized`")
             .extract(py)
             .expect("Unable to extract bool from `is_batch_signer_authorized`")
     }

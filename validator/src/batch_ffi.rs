@@ -41,8 +41,7 @@ impl ToPyObject for Batch {
                 proto_txn.set_header_signature(txn.header_signature.clone());
                 proto_txn.set_payload(txn.payload.clone());
                 proto_txn
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
         rust_batch.set_transactions(::protobuf::RepeatedField::from_vec(proto_txns));
         rust_batch.set_trace(self.trace);
         rust_batch.set_header_signature(self.header_signature.clone());
@@ -65,8 +64,7 @@ impl ToPyObject for Batch {
                     ],
                 ),
                 None,
-            )
-            .unwrap();
+            ).unwrap();
         batch
     }
 }
@@ -105,8 +103,7 @@ impl<'source> FromPyObject<'source> for Batch {
                         payload_sha512: proto_header.take_payload_sha512(),
                         signer_public_key: proto_header.take_signer_public_key(),
                     })
-                })
-                .collect::<cpython::PyResult<Vec<_>>>()?,
+                }).collect::<cpython::PyResult<Vec<_>>>()?,
             signer_public_key: proto_batch_header.take_signer_public_key(),
             transaction_ids: proto_batch_header.take_transaction_ids().to_vec(),
             trace: proto_batch.get_trace(),

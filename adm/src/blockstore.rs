@@ -33,9 +33,9 @@ impl<'a> Blockstore<'a> {
 
     pub fn get(&self, block_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let packed = reader
-            .get(&block_id.as_bytes())
-            .ok_or_else(|| DatabaseError::NotFoundError(format!("Block not found: {}", block_id)))?;
+        let packed = reader.get(&block_id.as_bytes()).ok_or_else(|| {
+            DatabaseError::NotFoundError(format!("Block not found: {}", block_id))
+        })?;
         let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
@@ -113,9 +113,10 @@ impl<'a> Blockstore<'a> {
     }
 
     pub fn put(&self, block: &Block) -> Result<(), DatabaseError> {
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
-            DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
-        })?;
+        let block_header: BlockHeader =
+            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+                DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+            })?;
         let mut writer = self.db.writer()?;
         // Add block to main db
         let packed = block.write_to_bytes().map_err(|err| {
@@ -156,9 +157,10 @@ impl<'a> Blockstore<'a> {
     pub fn delete(&self, block_id: &str) -> Result<(), DatabaseError> {
         let block = self.get(block_id)?;
         let block_id = &block.header_signature;
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
-            DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
-        })?;
+        let block_header: BlockHeader =
+            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+                DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+            })?;
         // Delete block from main db
         let mut writer = self.db.writer()?;
         writer.delete(&block_id.as_bytes())?;
@@ -252,7 +254,7 @@ mod tests {
             &ctx,
             &["index_batch", "index_transaction", "index_block_num"],
         ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
-            .unwrap();
+        .unwrap();
 
         let blockstore = Blockstore::new(database);
 

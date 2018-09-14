@@ -420,8 +420,7 @@ impl SyncBlockPublisher {
             .call_method(py, "send", (block, injected_batches), None)
             .map_err(|py_err| {
                 ::pylogger::exception(py, "{:?}", py_err);
-            })
-            .expect("BlockSender.send() raised an exception");
+            }).expect("BlockSender.send() raised an exception");
 
         let mut blocks_published_count =
             COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
@@ -574,8 +573,7 @@ impl BlockPublisher {
                     }
                 }
                 warn!("PublisherThread exiting");
-            })
-            .unwrap();
+            }).unwrap();
 
         batch_tx
     }

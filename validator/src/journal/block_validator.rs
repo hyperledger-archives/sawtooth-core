@@ -342,8 +342,7 @@ where
                         }
                     }
                 }
-            })
-            .expect("The background thread had an error");
+            }).expect("The background thread had an error");
     }
 
     pub fn start(&mut self) {
@@ -460,8 +459,7 @@ impl<
                 .map(|s| {
                     let (tx, _) = s;
                     (tx.clone(), None)
-                })
-                .collect(),
+                }).collect(),
             index,
             transaction_executor,
             validation_thread_exit,
@@ -560,8 +558,7 @@ impl<
                         "There was an error reading from the BlockStore: {:?}",
                         err
                     ))
-                })?
-                .next()
+                })?.next()
                 .map(|b| b.header_signature.clone());
             let mut dependent_checks = vec![];
             for validation in &self.dependent_validations {
@@ -673,8 +670,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     "During call to scheduler.complete: {:?}",
                     err
                 ))
-            })?
-            .ok_or_else(|| {
+            })?.ok_or_else(|| {
                 ValidationError::BlockValidationFailure(format!(
                     "Block {} failed validation: no execution results produced",
                     &block.header_signature
@@ -903,8 +899,7 @@ impl<BS: BlockStore> BlockStoreUpdatedCheck for ChainHeadCheck<BS> {
                     "There was an error reading from the BlockStore: {:?}",
                     err
                 ))
-            })?
-            .next()
+            })?.next()
             .map(|b| b.header_signature.clone());
 
         if chain_head.as_ref() != original_chain_head {

@@ -64,8 +64,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
                 CliError::ArgumentError(format!("Unable to read {}: {}", filepath, err))
             })?;
             Ok(batch_list)
-        })
-        .collect::<Result<Vec<BatchList>, CliError>>()?;
+        }).collect::<Result<Vec<BatchList>, CliError>>()?;
 
     let batches = batch_lists
         .into_iter()

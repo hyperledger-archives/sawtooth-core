@@ -108,7 +108,8 @@ pub unsafe extern "C" fn chain_controller_new(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).clone();
+        >))
+        .clone();
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
@@ -178,7 +179,8 @@ pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).start();
+        >))
+        .start();
 
     ErrorCode::Success
 }
@@ -201,7 +203,8 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).block_validation_result(block_id)
+        >))
+        .block_validation_result(block_id)
     {
         Some(r) => r.status,
         None => BlockStatus::Unknown,
@@ -221,7 +224,8 @@ pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) ->
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).stop();
+        >))
+        .stop();
 
     ErrorCode::Success
 }
@@ -278,7 +282,8 @@ pub unsafe extern "C" fn chain_controller_queue_block(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).queue_block(block_id);
+        >))
+        .queue_block(block_id);
 
     ErrorCode::Success
 }
@@ -304,7 +309,8 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).on_block_received(block_id)
+        >))
+        .on_block_received(block_id)
     {
         error!("ChainController.on_block_received error: {:?}", err);
         return ErrorCode::Unknown;
@@ -329,7 +335,8 @@ pub unsafe extern "C" fn chain_controller_chain_head(
             PyBlockStore,
             PyBlockStore,
             PyBlockStore,
-        >)).light_clone();
+        >))
+        .light_clone();
 
     if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
         match chain_head.write_to_bytes() {
@@ -410,8 +417,7 @@ impl ChainReader for PyBlockStore {
                 } else {
                     None
                 }
-            })
-            .map_err(|py_err| {
+            }).map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
                 ChainReadError::GeneralReadError("Unable to read from python block store".into())
             })
@@ -430,15 +436,13 @@ impl ChainReader for PyBlockStore {
                 } else {
                     None
                 }
-            })
-            .or_else(|py_err| {
+            }).or_else(|py_err| {
                 if py_err.get_type(py).name(py) == "KeyError" {
                     Ok(None)
                 } else {
                     Err(py_err)
                 }
-            })
-            .map_err(|py_err| {
+            }).map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
                 ChainReadError::GeneralReadError("Unable to read from python block store".into())
             })
@@ -457,15 +461,13 @@ impl ChainReader for PyBlockStore {
                 } else {
                     None
                 }
-            })
-            .or_else(|py_err| {
+            }).or_else(|py_err| {
                 if py_err.get_type(py).name(py) == "KeyError" {
                     Ok(None)
                 } else {
                     Err(py_err)
                 }
-            })
-            .map_err(|py_err| {
+            }).map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
                 ChainReadError::GeneralReadError("Unable to read from python block store".into())
             })
@@ -501,8 +503,7 @@ impl BlockStore for PyBlockStore {
                     py_iter,
                     Box::new(unwrap_block),
                 )) as Box<Iterator<Item = Block>>)
-            })
-            .map_err(|py_err| {
+            }).map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
                 BlockStoreError::Error(format!("Unable to read blocks: {:?}", block_ids))
             })
@@ -558,8 +559,7 @@ impl BlockStore for PyBlockStore {
                             .expect("Unable to wrap block."),
                     ),
                     None,
-                )
-                .map_err(|py_err| {
+                ).map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
                     BlockStoreError::Error("Unable to put blocks".into())
                 })?;
@@ -579,8 +579,7 @@ impl BlockStore for PyBlockStore {
                     py_iter,
                     Box::new(unwrap_block),
                 )) as Box<Iterator<Item = Block>>)
-            })
-            .map_err(|py_err| {
+            }).map_err(|py_err| {
                 let py = unsafe { Python::assume_gil_acquired() };
                 pylogger::exception(py, "Unable to call iter(block_store)", py_err);
                 BlockStoreError::Error("Unable to iterate block store".into())
@@ -650,8 +649,7 @@ impl BatchIndex for PyBlockStore {
                     "Error calling has_batch on the block store: {:?}",
                     py_err
                 ))
-            })?
-            .extract::<bool>(py)
+            })?.extract::<bool>(py)
             .map_err(|py_err| {
                 BlockStoreError::Error(format!("Error extracting bool: {:?}", py_err))
             })
@@ -667,15 +665,13 @@ impl BatchIndex for PyBlockStore {
                     "Error calling get_block_by_id on the block store: {:?}",
                     py_err
                 ))
-            })?
-            .extract(py)
+            })?.extract(py)
             .map_err(|py_err| {
                 BlockStoreError::Error(format!(
                     "Error extracting Option<BlockWrapper>: {:?}",
                     py_err
                 ))
-            })
-            .and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
+            }).and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
     }
 }
 
@@ -690,8 +686,7 @@ impl TransactionIndex for PyBlockStore {
                     "Error calling has_transaction on the block store: {:?}",
                     py_err
                 ))
-            })?
-            .extract::<bool>(py)
+            })?.extract::<bool>(py)
             .map_err(|py_err| {
                 BlockStoreError::Error(format!("Error extracting bool: {:?}", py_err))
             })
@@ -707,15 +702,13 @@ impl TransactionIndex for PyBlockStore {
                     "Error calling get_block_transaction_id on the block store: {:?}",
                     py_err
                 ))
-            })?
-            .extract(py)
+            })?.extract(py)
             .map_err(|py_err| {
                 BlockStoreError::Error(format!(
                     "Error extracting Option<BlockWrapper>: {:?}",
                     py_err
                 ))
-            })
-            .and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
+            }).and_then(|b: Option<BlockWrapper>| Ok(b.map(|b| b.block())))
     }
 }
 
@@ -750,8 +743,7 @@ impl ChainObserver for PyChainObserver {
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
                 ()
-            })
-            .unwrap_or(())
+            }).unwrap_or(())
     }
 }
 
@@ -793,8 +785,7 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            })
-            .unwrap_or(())
+            }).unwrap_or(())
     }
 
     fn notify_block_valid(&self, block_id: &str) {
@@ -811,8 +802,7 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            })
-            .unwrap_or(())
+            }).unwrap_or(())
     }
 
     fn notify_block_invalid(&self, block_id: &str) {
@@ -829,8 +819,7 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            })
-            .unwrap_or(())
+            }).unwrap_or(())
     }
 
     fn notify_block_commit(&self, block_id: &str) {
@@ -847,8 +836,7 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            })
-            .unwrap_or(())
+            }).unwrap_or(())
     }
 }
 
@@ -872,8 +860,7 @@ impl ToPyObject for TransactionReceipt {
                 "ParseFromString",
                 (cpython::PyBytes::new(py, &self.write_to_bytes().unwrap()).into_object(),),
                 None,
-            )
-            .expect("Unable to ParseFromString");
+            ).expect("Unable to ParseFromString");
 
         py_txn_receipt
     }
