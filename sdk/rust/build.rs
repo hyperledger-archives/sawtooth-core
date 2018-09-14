@@ -58,8 +58,7 @@ fn main() {
                     .to_str()
                     .expect("Unable to extract filename")
             )
-        })
-        .collect::<Vec<_>>()
+        }).collect::<Vec<_>>()
         .join("\n");
 
     let mut mod_file = File::create(dest_path.join("mod.rs")).unwrap();
