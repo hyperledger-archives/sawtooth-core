@@ -120,7 +120,7 @@ following command from your host system:
 For more information, see :ref:`stop-sawtooth-docker-label`.
 
 
-Step 1: Download the Docker Compose file
+Step 1: Download the Docker Compose File
 ----------------------------------------
 
 Download the Docker Compose file for a multiple-node network,
@@ -168,7 +168,7 @@ Step 2: Start the Sawtooth Network
 Step 3: Verify Connectivity
 ---------------------------
 
-You can connect to Docker container, such as
+You can connect to a Docker container, such as
 ``sawtooth-poet-validator-registry-tp-0``, then use the following ``ps``
 command to verify that the component is running.
 
@@ -209,8 +209,8 @@ Step 4: Confirm Network Functionality
         }
 
 #. (Optional) You can also connect to a validator container, such as
-    ``sawtooth-validator-default-0``, and run the following Sawtooth commands to
-    show the other nodes on the network.
+   ``sawtooth-validator-default-0``, and run the following Sawtooth commands to
+   show the other nodes on the network.
 
    a. Run ``sawtooth peer list`` to show the peers of a particular node.
 
@@ -1231,7 +1231,7 @@ Step 5: Confirm Network and Blockchain Functionality
         $ kubectl exec -it $(kubectl get pods | awk '/sawtooth-N/{print $1}') --container sawtooth-shell -- bash
 
 #. (Optional) You can also connect to the shell container of any pod, and
-    run the following Sawtooth commands to show the other nodes on the network.
+   run the following Sawtooth commands to show the other nodes on the network.
 
    a. Run ``sawtooth peer list`` to show the peers of a particular node.
 
@@ -1261,7 +1261,7 @@ Step 5: Confirm Network and Blockchain Functionality
            root@sawtooth-1# intkey show MyKey
            MyKey: 999
 
-#. You can can check whether a Sawtooth component is running by connecting to a
+#. You can check whether a Sawtooth component is running by connecting to a
    different container, then running the ``ps`` command. The container names are
    available in the kubeconfig file or on a pod's page on the Kubernetes
    dashboard.
@@ -1386,7 +1386,7 @@ Use the following steps to create and submit a batch containing the new setting.
 
 .. _stop-sawtooth-kube2-label:
 
-Step 7: Stop the Sawtooth Kubernetes Cluster
+Step 6: Stop the Sawtooth Kubernetes Cluster
 --------------------------------------------
 
 Use the following commands to stop and reset the Sawtooth network.
