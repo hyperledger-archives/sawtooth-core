@@ -19,11 +19,11 @@ mod game;
 mod payload;
 mod state;
 
-use sawtooth_sdk::messages::processor::TpProcessRequest;
-use sawtooth_sdk::processor::handler::{ApplyError, TransactionContext, TransactionHandler};
 use self::game::Game;
 use self::payload::XoPayload;
 use self::state::{get_xo_prefix, XoState};
+use sawtooth_sdk::messages::processor::TpProcessRequest;
+use sawtooth_sdk::processor::handler::{ApplyError, TransactionContext, TransactionHandler};
 
 pub struct XoTransactionHandler {
     family_name: String,
