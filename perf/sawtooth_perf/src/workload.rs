@@ -303,8 +303,7 @@ pub fn make_request(
                 .request(req)
                 .then(move |response: Result<Response, HyperError>| {
                     handle_http_error(response, batch_id, &batches, &batch_map, &counter)
-                })
-                .map(|_| ())
+                }).map(|_| ())
                 .map_err(|_| ());
 
             handle_clone.spawn(response_future);
