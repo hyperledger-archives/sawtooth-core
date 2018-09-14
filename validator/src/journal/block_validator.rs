@@ -35,7 +35,10 @@ use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
 use journal::block_scheduler::BlockScheduler;
 use journal::block_store::{BatchIndex, TransactionIndex};
-use journal::chain_commit_state::{ChainCommitState, ChainCommitStateError};
+use journal::chain_commit_state::{
+    validate_no_duplicate_batches, validate_no_duplicate_transactions,
+    validate_transaction_dependencies, ChainCommitStateError,
+};
 use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
@@ -259,35 +262,24 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(DuplicatesAndDependenciesValidation::new(
-                self.batch_index.clone(),
-                self.transaction_index.clone(),
-                self.block_store.clone(),
-                self.block_manager.clone(),
-            ));
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+            DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
+        );
 
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
-        let independent_validations = vec![independent_validation1, independent_validation2];
+        let validations = vec![validation1, validation2, validation3];
 
         let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
 
-        let check = ChainHeadCheck::new(self.block_store.clone());
-
         let block_validations = BlockValidationProcessor::new(
-            self.block_store.clone(),
             self.block_manager.clone(),
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         );
 
         let exit = self.validation_thread_exit.clone();
@@ -401,35 +393,24 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(DuplicatesAndDependenciesValidation::new(
-                self.batch_index.clone(),
-                self.transaction_index.clone(),
-                self.block_store.clone(),
-                self.block_manager.clone(),
-            ));
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+            DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
+        );
 
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation1: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let independent_validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
-        let independent_validations = vec![independent_validation1, independent_validation2];
+        let validations = vec![validation1, validation2, validation3];
 
         let state_validation = BatchesInBlockValidation::new(self.transaction_executor.clone());
 
-        let check = ChainHeadCheck::new(self.block_store.clone());
-
         let block_validations = BlockValidationProcessor::new(
-            self.block_store.clone(),
             self.block_manager.clone(),
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         );
 
         let result = block_validations.validate_block(block)?;
@@ -495,49 +476,22 @@ trait BlockValidation: Send {
     ) -> Result<Self::ReturnValue, ValidationError>;
 }
 
-/// A check that determines if the Dependent checks are honored. If this check
-/// returns false, the dependent checks are honored.
-trait BlockStoreUpdatedCheck {
-    fn check_chain_head_updated(
-        &self,
-        expected_chain_head_id: Option<&String>,
-    ) -> Result<bool, ValidationError>;
-}
-
-struct BlockValidationProcessor<
-    BS: BlockStore,
-    SBV: BlockValidation<ReturnValue = BlockValidationResult>,
-    C: BlockStoreUpdatedCheck,
-> {
-    block_store: BS,
+struct BlockValidationProcessor<SBV: BlockValidation<ReturnValue = BlockValidationResult>> {
     block_manager: BlockManager,
-    dependent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
-    independent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+    validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
     state_validation: SBV,
-    check: C,
 }
 
-impl<
-        BS: BlockStore,
-        SBV: BlockValidation<ReturnValue = BlockValidationResult>,
-        C: BlockStoreUpdatedCheck,
-    > BlockValidationProcessor<BS, SBV, C>
-{
+impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationProcessor<SBV> {
     fn new(
-        block_store: BS,
         block_manager: BlockManager,
-        dependent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
-        independent_validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+        validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
         state_validation: SBV,
-        check: C,
     ) -> Self {
         BlockValidationProcessor {
-            block_store,
             block_manager,
-            dependent_validations,
-            independent_validations,
+            validations,
             state_validation,
-            check,
         }
     }
 
@@ -549,44 +503,7 @@ impl<
             .unwrap_or(None)
             .map(|b| b.state_root_hash.clone());
 
-        let checks = 'outer: loop {
-            let chain_head_option = self
-                .block_store
-                .iter()
-                .map_err(|err| {
-                    ValidationError::BlockValidationError(format!(
-                        "There was an error reading from the BlockStore: {:?}",
-                        err
-                    ))
-                })?.next()
-                .map(|b| b.header_signature.clone());
-            let mut dependent_checks = vec![];
-            for validation in &self.dependent_validations {
-                match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
-                    Ok(()) => (),
-                    Err(ValidationError::BlockStoreUpdated) => {
-                        warn!(
-                            "Blockstore updated during validation of block {}, retrying checks",
-                            &block.header_signature
-                        );
-                        continue 'outer;
-                    }
-                    Err(err) => dependent_checks.push(Err(err)),
-                }
-            }
-
-            if !self
-                .check
-                .check_chain_head_updated(chain_head_option.as_ref())?
-            {
-                break dependent_checks;
-            }
-        };
-        for check in checks {
-            check?;
-        }
-
-        for validation in &self.independent_validations {
+        for validation in &self.validations {
             match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
                 Ok(()) => (),
                 Err(err) => return Err(err),
@@ -722,61 +639,40 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
     }
 }
 
-struct DuplicatesAndDependenciesValidation<B: BatchIndex, T: TransactionIndex, BS: BlockStore> {
-    batch_index: B,
-    transaction_index: T,
-    block_store: BS,
+struct DuplicatesAndDependenciesValidation {
     block_manager: BlockManager,
 }
 
-impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore>
-    DuplicatesAndDependenciesValidation<B, T, BS>
-{
-    fn new(
-        batch_index: B,
-        transaction_index: T,
-        block_store: BS,
-        block_manager: BlockManager,
-    ) -> Self {
-        DuplicatesAndDependenciesValidation {
-            batch_index,
-            transaction_index,
-            block_store,
-            block_manager,
-        }
+impl DuplicatesAndDependenciesValidation {
+    fn new(block_manager: BlockManager) -> Self {
+        DuplicatesAndDependenciesValidation { block_manager }
     }
 }
 
-impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
-    for DuplicatesAndDependenciesValidation<B, T, BS>
-{
+impl BlockValidation for DuplicatesAndDependenciesValidation {
     type ReturnValue = ();
 
     fn validate_block(&self, block: &Block, _: Option<&String>) -> Result<(), ValidationError> {
-        let chain_commit_state = ChainCommitState::new(
-            &block.previous_block_id,
+        let batch_ids: Vec<&String> = block.batches.iter().map(|b| &b.header_signature).collect();
+
+        validate_no_duplicate_batches(
             &self.block_manager,
-            &self.batch_index,
-            &self.transaction_index,
-            &self.block_store,
+            &block.previous_block_id,
+            batch_ids.as_slice(),
         )?;
-
-        let batch_ids = block
-            .batches
-            .iter()
-            .map(|b| b.header_signature.clone())
-            .collect();
-
-        chain_commit_state.validate_no_duplicate_batches(batch_ids)?;
 
         let txn_ids = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {
-                arr.push(txn.header_signature.clone());
+                arr.push(&txn.header_signature);
             }
             arr
         });
 
-        chain_commit_state.validate_no_duplicate_transactions(txn_ids)?;
+        validate_no_duplicate_transactions(
+            &self.block_manager,
+            &block.previous_block_id,
+            txn_ids.as_slice(),
+        )?;
 
         let transactions = block.batches.iter().fold(vec![], |mut arr, b| {
             for txn in &b.transactions {
@@ -784,7 +680,11 @@ impl<B: BatchIndex, T: TransactionIndex, BS: BlockStore> BlockValidation
             }
             arr
         });
-        chain_commit_state.validate_transaction_dependencies(&transactions)?;
+        validate_transaction_dependencies(
+            &self.block_manager,
+            &block.previous_block_id,
+            &transactions,
+        )?;
         Ok(())
     }
 }
@@ -876,39 +776,6 @@ impl BlockValidation for OnChainRulesValidation {
     }
 }
 
-struct ChainHeadCheck<BS: BlockStore> {
-    block_store: BS,
-}
-
-impl<BS: BlockStore> ChainHeadCheck<BS> {
-    fn new(block_store: BS) -> Self {
-        ChainHeadCheck { block_store }
-    }
-}
-
-impl<BS: BlockStore> BlockStoreUpdatedCheck for ChainHeadCheck<BS> {
-    fn check_chain_head_updated(
-        &self,
-        original_chain_head: Option<&String>,
-    ) -> Result<bool, ValidationError> {
-        let chain_head = self
-            .block_store
-            .iter()
-            .map_err(|err| {
-                ValidationError::BlockValidationError(format!(
-                    "There was an error reading from the BlockStore: {:?}",
-                    err
-                ))
-            })?.next()
-            .map(|b| b.header_signature.clone());
-
-        if chain_head.as_ref() != original_chain_head {
-            return Ok(true);
-        }
-        Ok(false)
-    }
-}
-
 #[cfg(test)]
 mod test {
 
@@ -921,16 +788,11 @@ mod test {
         let block_manager = BlockManager::new();
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
 
-        let block_store = Mock1::new(None);
+        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
 
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
-
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(Mock2::new(Ok(()), Ok(())));
-        let independent_validations = vec![independent_validation];
+        let validations = vec![validation1, validation2];
         let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
             "".into(),
             vec![],
@@ -938,89 +800,9 @@ mod test {
             BlockStatus::Valid,
         )));
 
-        let check = Mock2::new(Ok(true), Ok(false));
-
-        let validation_processor = BlockValidationProcessor::new(
-            block_store,
-            block_manager,
-            dependent_validations,
-            independent_validations,
-            state_block_validation,
-            check,
-        );
+        let validation_processor =
+            BlockValidationProcessor::new(block_manager, validations, state_block_validation);
         assert!(validation_processor.validate_block(&block_a).is_ok());
-    }
-
-    #[test]
-    fn test_validation_processor_chain_head_updated() {
-        let block_manager = BlockManager::new();
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-        let block_b = create_block("B", "A", vec![]);
-
-        block_manager
-            .put(vec![block_a.clone()])
-            .expect("Block manager errored on `put`");
-        let block_store = Mock1::new(Some(block_a));
-
-        let dependent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Err(ValidationError::BlockStoreUpdated), Ok(())));
-
-        let dependent_validations = vec![dependent_validation];
-
-        let independent_validation: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(Mock2::new(Ok(()), Ok(())));
-        let independent_validations = vec![independent_validation];
-        let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
-            "".into(),
-            vec![],
-            0,
-            BlockStatus::Valid,
-        )));
-
-        let check = Mock2::new(Ok(true), Ok(false));
-
-        let validation_processor = BlockValidationProcessor::new(
-            block_store,
-            block_manager,
-            dependent_validations,
-            independent_validations,
-            state_block_validation,
-            check,
-        );
-        assert!(validation_processor.validate_block(&block_b).is_ok());
-    }
-
-    #[test]
-    fn test_check_chain_head_updated_false() {
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-
-        let original_chain_head = Some(block_a.header_signature.clone());
-
-        let block_store = Mock1::new(Some(block_a.clone()));
-
-        let check = ChainHeadCheck::new(block_store);
-
-        assert_eq!(
-            check.check_chain_head_updated(original_chain_head.as_ref()),
-            Ok(false)
-        );
-    }
-
-    #[test]
-    fn test_check_chain_head_updated_true() {
-        let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
-        let block_b = create_block("B", "A", vec![]);
-
-        let original_chain_head = Some(block_a.header_signature.clone());
-
-        let block_store = Mock1::new(Some(block_b));
-
-        let check = ChainHeadCheck::new(block_store);
-
-        assert_eq!(
-            check.check_chain_head_updated(original_chain_head.as_ref()),
-            Ok(true)
-        );
     }
 
     /*
@@ -1037,15 +819,6 @@ mod test {
     impl<R: Clone> Mock1<R> {
         fn new(result: R) -> Self {
             Mock1 { result }
-        }
-    }
-
-    impl BlockStoreUpdatedCheck for Mock1<Result<bool, ValidationError>> {
-        fn check_chain_head_updated(
-            &self,
-            expected_chain_head_id: Option<&String>,
-        ) -> Result<bool, ValidationError> {
-            self.result.clone()
         }
     }
 
@@ -1089,22 +862,6 @@ mod test {
                 every_other,
                 called: Mutex::new(false),
             }
-        }
-    }
-
-    impl BlockStoreUpdatedCheck for Mock2<Result<bool, ValidationError>> {
-        fn check_chain_head_updated(
-            &self,
-            expected_chain_head_id: Option<&String>,
-        ) -> Result<bool, ValidationError> {
-            if *self.called.lock().expect("Error acquiring Mock2 lock") {
-                return self.every_other.clone();
-            }
-            {
-                let mut called = self.called.lock().expect("Error acquiring Mock2 lock");
-                *called = true;
-            }
-            self.first.clone()
         }
     }
 

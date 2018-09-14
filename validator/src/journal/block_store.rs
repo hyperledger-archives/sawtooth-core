@@ -52,6 +52,8 @@ pub trait TransactionIndex: Sync + Send {
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
 }
 
+pub trait IndexedBlockStore: BlockStore + TransactionIndex + BatchIndex {}
+
 #[derive(Clone, Default)]
 pub struct InMemoryBlockStore {
     state: Arc<Mutex<InMemoryBlockStoreState>>,
@@ -70,6 +72,8 @@ impl InMemoryBlockStore {
             .cloned()
     }
 }
+
+impl IndexedBlockStore for InMemoryBlockStore {}
 
 impl BlockStore for InMemoryBlockStore {
     fn get<'a>(
