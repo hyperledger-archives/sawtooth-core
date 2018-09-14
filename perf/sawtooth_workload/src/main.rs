@@ -71,32 +71,28 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              The transaction input is expected to be length-delimited protobuf \
              Transaction messages, which should also be pre-signed for \
              submission to the validator.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .required(true)
                 .help("The source of input transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
                 .value_name("FILE")
                 .required(true)
                 .help("The target for the signed batches"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("key")
                 .short("k")
                 .long("key")
                 .value_name("FILE")
                 .required(true)
                 .help("The signing key for the transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("max-batch-size")
                 .short("n")
                 .long("max-batch-size")
@@ -150,22 +146,19 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              The batch input is expected to be length-delimited protobuf \
              Batch messages, which should also be pre-signed for \
              submission to the validator.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .help("The source of batch transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("target")
                 .short("t")
                 .long("target")
                 .value_name("TARGET")
                 .help("A Sawtooth REST API endpoint"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("rate")
                 .short("r")
                 .long("rate")
