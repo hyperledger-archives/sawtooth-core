@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-#![allow(unknown_lints)]
-
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -218,17 +216,20 @@ impl<'a> LmdbDatabaseReaderCursor<'a> {
             .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
     }
 
-    #[allow(should_implement_trait)]
-    pub fn next(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        self.cursor
-            .next(&self.access)
-            .ok()
-            .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
-    }
-
     pub fn last(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .last(&self.access)
+            .ok()
+            .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
+    }
+}
+
+impl<'a> Iterator for LmdbDatabaseReaderCursor<'a> {
+    type Item = (Vec<u8>, Vec<u8>);
+
+    fn next(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+        self.cursor
+            .next(&self.access)
             .ok()
             .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
     }
