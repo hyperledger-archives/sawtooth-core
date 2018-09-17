@@ -129,11 +129,11 @@ Grafana
 
    #. Select "metrics" in the drop-down menu and click "Import".
 
-Sawtooth Configuration
-======================
+Sawtooth Validator Configuration
+================================
 
-Sawtooth metrics are reported by the validator process, and are configured in
-the file /etc/sawtooth/validator.toml.
+Sawtooth validator metrics are reported by the sawtooth-validator process, and
+are configured in the file /etc/sawtooth/validator.toml.
 
 #. If the validator configuration file doesn't exist yet, copy the template
    from ``/etc/sawtooth/validator.toml.example`` to
@@ -145,13 +145,13 @@ the file /etc/sawtooth/validator.toml.
    for ``opentsdb_username`` and INFLUXDB_USER_PASSWORD for
    ``opentsdb_password`` created above.
 
-   .. code-block:: console
+   .. code-block:: ini
 
       # The host and port for Open TSDB database used for metrics
       opentsdb_url = "http://{host}:3000"
 
-      # The name of the  ld the Grafana Docker image from the Dockerfile included in thedatabase used for storing metrics
-      opentsdb_db = "met rics"
+      # The name of the database used for storing metrics
+      opentsdb_db = "metrics"
 
       opentsdb_username  = "lrdata"
 
@@ -168,6 +168,36 @@ the file /etc/sawtooth/validator.toml.
    .. code-block:: console
 
       $ sudo systemctl restart sawtooth-validator
+
+Sawtooth REST API Configuration
+===============================
+
+Sawtooth REST API metrics are reported by the the ``sawtooth-rest-api`` process.
+
+#. If the REST API configuration file doesn't exist yet, copy the template from
+   ``/etc/sawtooth/rest_api.toml.example`` to ``/etc/sawtooth/rest_api.toml``.
+
+#. Modify ``opentsdb_url``, ``opentsdb_db``, ``opentsdb_username``, and
+   ``opentsdb_password`` to match the values used for the validator and the
+   DB created above.
+
+   .. code-block:: ini
+
+      opentsdb_url = "http://{host}:3000"
+
+      # The name of the database used for storing metrics
+      opentsdb_db = "metrics"
+
+      opentsdb_username = "lrdata"
+      opentsdb_password = "test"
+
+#. Restart ``sawtooth-rest-api`` for these changes to take effect.
+
+   If started via systemd:
+
+   .. code-block:: console
+
+      $ sudo systemctl restart sawtooth-rest-api
 
 Telegraf Configuration
 =======================
@@ -193,7 +223,7 @@ metrics to InfluxDB.
 #. Under ``[[outputs.influxdb]]``, change the following settings to match the
    values used above.
 
-   .. code-block:: console
+   .. code-block:: ini
 
       urls = ["http://{host}:8086"]
       database = "metrics"
