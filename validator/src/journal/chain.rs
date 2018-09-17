@@ -535,15 +535,13 @@ impl<
         self.block_validation_results.insert(result)
     }
 
-    fn get_block_unchecked(&self, block_id: &str) -> Block {
+    fn get_block(&self, block_id: &str) -> Option<Block> {
         let state = self
             .state
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        let block = state.block_manager.get(&[block_id]).next();
-        let errstr = "The caller must guarantee that the block is known to the block manager";
-        block.expect(errstr).expect(errstr)
+        state.block_manager.get(&[block_id]).next().unwrap_or(None)
     }
 
     pub fn commit_block(&self, block: Block) {
@@ -932,9 +930,13 @@ impl<
                 if !result_thread_exit.load(Ordering::Relaxed) {
                     result_thread_controller
                         .set_block_validation_result(block_validation_result.clone());
-                    let block = result_thread_controller
-                        .get_block_unchecked(&block_validation_result.block_id);
-                    result_thread_controller.on_block_validated(&block, &block_validation_result);
+                    if let Some(block) = result_thread_controller
+                        .get_block(&block_validation_result.block_id) {
+                            result_thread_controller.on_block_validated(&block, &block_validation_result);
+                        } else {
+                            error!("During validation result thread loop, received a block validation result for a block that is not in the BlockManager");
+                        }
+
                 } else {
                     break;
                 }
