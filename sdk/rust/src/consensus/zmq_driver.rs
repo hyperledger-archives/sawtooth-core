@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-#![allow(unknown_lints)]
-
 use protobuf;
 use protobuf::{Message as ProtobufMessage, ProtobufError};
 use rand;
@@ -85,9 +83,9 @@ impl ZmqDriver {
         let driver_thread = thread::spawn(move || {
             driver_loop(
                 update_sender,
-                self.stop_receiver,
+                &self.stop_receiver,
                 validator_sender,
-                validator_receiver,
+                &validator_receiver,
             )
         });
 
@@ -121,12 +119,11 @@ impl Stop {
     }
 }
 
-#[allow(needless_pass_by_value)]
 fn driver_loop(
     mut update_sender: Sender<Update>,
-    stop_receiver: Receiver<()>,
+    stop_receiver: &Receiver<()>,
     mut validator_sender: ZmqMessageSender,
-    validator_receiver: Receiver<Result<Message, ReceiveError>>,
+    validator_receiver: &Receiver<Result<Message, ReceiveError>>,
 ) -> Result<(), Error> {
     loop {
         match validator_receiver.recv_timeout(Duration::from_millis(100)) {
