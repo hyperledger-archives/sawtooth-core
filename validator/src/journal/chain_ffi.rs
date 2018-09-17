@@ -29,7 +29,7 @@ use journal::block_manager::BlockManager;
 use journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
-use journal::block_validator::{BlockValidationResult, BlockValidationResultStore, BlockValidator};
+use journal::block_validator::{BlockValidationResultStore, BlockValidator};
 use journal::block_wrapper::{BlockStatus, BlockWrapper};
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
@@ -42,7 +42,6 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
-use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use protobuf::{self, Message};
@@ -361,38 +360,6 @@ pub unsafe extern "C" fn chain_controller_chain_head(
         *block_len = 0;
         ErrorCode::Success
     }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn sender_drop(sender: *const c_void) -> ErrorCode {
-    check_null!(sender);
-
-    Box::from_raw(sender as *mut Sender<BlockWrapper>);
-
-    ErrorCode::Success
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn sender_send(
-    sender: *const c_void,
-    validation_result: *mut py_ffi::PyObject,
-) -> ErrorCode {
-    check_null!(sender, validation_result);
-
-    let gil_guard = Python::acquire_gil();
-    let py = gil_guard.python();
-
-    let py_result = PyObject::from_borrowed_ptr(py, validation_result);
-    let result: BlockValidationResult = py_result.extract(py).expect("Unable to extract block");
-
-    let sender = (*(sender as *mut Sender<BlockValidationResult>)).clone();
-    py.allow_threads(move || match sender.send(result) {
-        Ok(_) => ErrorCode::Success,
-        Err(err) => {
-            error!("Unable to send validation result: {:?}", err);
-            ErrorCode::Unknown
-        }
-    })
 }
 
 pub struct PyBlockStore {
