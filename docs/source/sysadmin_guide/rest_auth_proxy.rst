@@ -125,29 +125,31 @@ and https, pointed at an instance of the *Sawtooth* REST API.
 Install Apache
 --------------
 
-We'll begin by installing Apache and its components. These commands may require
-``sudo``.
+We'll begin by installing the Apache webserver and enabling the required
+modules. Apache will need to be restarted for these modules to load.
 
 .. code-block:: console
 
-   $ apt-get update
-   $ apt-get install -y apache2
-   $ a2enmod ssl
-   $ a2enmod headers
-   $ a2enmod proxy_http
+   $ sudo apt-get update
+   $ sudo apt-get install -y apache2
+   $ sudo a2enmod ssl
+   $ sudo a2enmod headers
+   $ sudo a2enmod proxy_http
+   $ sudo systemctl restart apache2
 
 
 Set Up Passwords and Certificates
 ---------------------------------
 
-First we'll create a password file for the user *"sawtooth"*, with the password
-*"sawtooth"*. You can
-`generate other .htpasswd files <http://www.htaccesstools.com/htpasswd-generator/>`_
-as well, just make sure to authorize those users in the config file below.
+First we'll create a password file for the user *"sawtooth"*. Enter your
+desired password when the ``htpasswd`` command prompts for it. You can generate
+a password for other users as well, just make sure to remove the ``-c`` from
+the ``htpasswd`` command and authorize those users in the apache config file
+as shown in the section below.
 
 .. code-block:: console
 
-   $ echo "sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr." >/tmp/.password
+   $ sudo htpasswd -c /etc/apache2/.htpassword sawtooth
 
 Then we'll use ``openssl`` to build a self-signed SSL certificate. This
 certificate will not be good enough for most HTTP clients, but is suitable for
@@ -155,21 +157,27 @@ testing purposes.
 
 .. code-block:: console
 
-   $ openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
+   $ sudo mkdir /etc/apache2/keys
+   $ sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
        -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=sawtooth \
-       -keyout /tmp/.ssl.key \
-       -out /tmp/.ssl.crt
+       -keyout /etc/apache2/keys/.ssl.key \
+       -out /etc/apache2/keys/.ssl.crt
+
+
+.. note::
+
+   Let's Encrypt provides a trusted certificate at no cost. Follow the
+   instructions at Let's Encrypt <https://letsencrypt.org/>_.
 
 
 Configure Proxy
 ---------------
 
-Now we'll set up the proxy by editing an Apache config files. This may require
-``sudo``.
+Now we'll set up the proxy by creating an Apache config file.
 
 .. code-block:: console
 
-   $ vi /etc/apache2/sites-enabled/000-default.conf
+   $ sudo vi /etc/apache2/sites-available/000-sawtooth-rest-api.conf
 
 Edit the file to look like this:
 
@@ -181,8 +189,8 @@ Edit the file to look like this:
        DocumentRoot /var/www/html
 
        SSLEngine on
-       SSLCertificateFile /tmp/.ssl.crt
-       SSLCertificateKeyFile /tmp/.ssl.key
+       SSLCertificateFile /etc/apache2/keys/.ssl.crt
+       SSLCertificateKeyFile /etc/apache2/keys/.ssl.key
        RequestHeader set X-Forwarded-Proto "https"
 
        <Location />
@@ -190,7 +198,7 @@ Edit the file to look like this:
            AllowOverride None
            AuthType Basic
            AuthName "Enter password"
-           AuthUserFile "/tmp/.password"
+           AuthUserFile "/etc/apache2/.htpassword"
            Require user sawtooth
            Require all denied
        </Location>
@@ -205,28 +213,23 @@ Edit the file to look like this:
    Apache will automatically set the *X-Forwarded-Host* header.
 
 
-Start Apache, a Validator, and the REST API
--------------------------------------------
-
-Start or restart Apache as appropriate. This may require ``sudo``.
+Disable the default Apache landing page and enable our new authenticated proxy
+config.
 
 .. code-block:: console
 
-   $ apachectl start
+   $ sudo a2dissite 000-default.conf
+   $ sudo a2ensite 000-sawtooth-rest-api.conf
+
+
+Restart Apache
+--------------
+
+Restart Apache to apply our changes.
 
 .. code-block:: console
 
-   $ apachectl restart
-
-
-Start a validator, and the REST API.
-
-.. code-block:: console
-
-   $ sawadm keygen
-   $ sawadm genesis
-   $ sawtooth-validator -v --endpoint localhost:8800
-   $ sawtooth-rest-api -v
+   $ sudo systemctl restart apache2
 
 
 Send Test Requests
@@ -263,7 +266,12 @@ And finally, if we send a properly authorized request:
 
 .. code-block:: console
 
-   $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:sawtooth
+   $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:{password}
+
+.. note::
+
+   Change ``{password}`` here to match the one used in the ``htpasswd`` command
+   above.
 
 We should get back a response that looks very similar to querying the REST API
 directly, but with a new *link* that reflects the URL we sent the request to:
