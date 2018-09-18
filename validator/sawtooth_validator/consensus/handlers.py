@@ -110,7 +110,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
 
         if startup_info is None:
             response.status = consensus_pb2.ConsensusRegisterResponse.NOT_READY
-            return
+            return None
 
         chain_head = startup_info.chain_head
         peers = [bytes.fromhex(peer_id) for peer_id in startup_info.peers]
@@ -143,6 +143,29 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
             "Consensus engine registered: %s %s",
             request.name,
             request.version)
+
+        return HandlerStatus.RETURN_AND_PASS
+
+
+class ConsensusRegisterBlockNewSyncHandler(Handler):
+    def __init__(self, proxy, consensus_notifier):
+        self._proxy = proxy
+        self._consensus_notifier = consensus_notifier
+
+    @property
+    def request_type(self):
+        return validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+
+    def handle(self, connection_id, message_content):
+        forks = self._proxy.forks()
+
+        if not forks:
+            return None
+
+        for block in forks:
+            self._consensus_notifier.notify_block_new(block)
+
+        return HandlerResult(status=self.PASS)
 
 
 class ConsensusSendToHandler(ConsensusServiceHandler):
