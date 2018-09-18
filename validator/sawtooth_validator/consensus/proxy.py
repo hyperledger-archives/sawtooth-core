@@ -131,6 +131,13 @@ class ConsensusProxy:
             raise UnknownBlock()
         self._chain_controller.fail_block(block)
 
+    def forks(self):
+        chain_head = self._chain_controller.chain_head
+        if chain_head is None:
+            return None
+
+        return self._chain_controller.forks(chain_head.header_signature)
+
     # Using blockstore and state database
     def blocks_get(self, block_ids):
         '''Returns a list of blocks.'''
