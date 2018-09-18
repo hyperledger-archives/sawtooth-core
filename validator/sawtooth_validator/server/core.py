@@ -238,7 +238,6 @@ class Validator:
             secured=False,
             heartbeat=False,
             max_incoming_connections=20,
-            monitor=True,
             max_future_callback_workers=10)
 
         consensus_notifier = ConsensusNotifier(consensus_service)
