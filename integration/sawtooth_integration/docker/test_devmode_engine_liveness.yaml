@@ -134,7 +134,8 @@ services:
     image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: devmode-rust --connect tcp://validator-4:5005 -vv
+    command: |
+      bash -c "sleep 15 && devmode-rust --connect tcp://validator-4:5005 -v"
     stop_signal: SIGKILL
 
   validator-0:
@@ -289,7 +290,7 @@ services:
             --peering dynamic \
             --seeds tcp://validator-0:8800 \
             --scheduler parallel \
-            --fork-cache-keep-time 0 \
+            --fork-cache-keep-time 30 \
     \""
     stop_signal: SIGKILL
 
