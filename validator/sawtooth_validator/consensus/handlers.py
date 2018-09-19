@@ -48,13 +48,11 @@ class ConsensusServiceHandler(Handler):
         request_type,
         response_class,
         response_type,
-        handler_status=HandlerStatus.RETURN
     ):
         self._request_class = request_class
         self._request_type = request_type
         self._response_class = response_class
         self._response_type = response_type
-        self._handler_status = handler_status
 
     def handle_request(self, request, response):
         raise NotImplementedError()
@@ -85,10 +83,13 @@ class ConsensusServiceHandler(Handler):
         except DecodeError:
             response.status = response.BAD_REQUEST
         else:
-            self.handle_request(request, response)
+            handler_status = self.handle_request(request, response)
+
+        if handler_status is None:
+            handler_status = HandlerStatus.RETURN
 
         return HandlerResult(
-            status=self._handler_status,
+            status=handler_status,
             message_out=response,
             message_type=self._response_type)
 
@@ -287,8 +288,7 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCheckBlocksRequest,
             validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST,
             consensus_pb2.ConsensusCheckBlocksResponse,
-            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE,
-            handler_status=HandlerStatus.RETURN_AND_PASS)
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE)
 
         self._proxy = proxy
 
@@ -302,6 +302,8 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusCheckBlocks")
             response.status =\
                 consensus_pb2.ConsensusCheckBlocksResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN_AND_PASS
 
 
 class ConsensusCheckBlocksNotifier(Handler):
