@@ -231,7 +231,7 @@ impl SyncBlockPublisher {
             self.block_manager
                 .ref_block(&previous_block.header_signature)
                 .map_err(|err| {
-                    error!("Unable to ref block!: {:?}", err);
+                    error!("Unable to ref block! {}: {:?}", &previous_block, err);
                     InitializeBlockError::MissingPredecessor
                 })?;
         }
