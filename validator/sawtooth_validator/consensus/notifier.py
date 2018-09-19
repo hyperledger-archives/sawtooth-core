@@ -15,6 +15,7 @@
 
 import hashlib
 import logging
+from queue import Queue
 
 
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
@@ -32,6 +33,7 @@ class ConsensusNotifier:
     def __init__(self, consensus_service):
         self._service = consensus_service
         self._registered_engines = ConcurrentSet()
+        self._message_queue = Queue()
 
     def _notify(self, message_type, message):
         if self._registered_engines:
@@ -40,6 +42,8 @@ class ConsensusNotifier:
                 message.SerializeToString())
             for future in futures:
                 future.result()
+        else:
+            self._message_queue.put((message_type, message))
 
     def notify_peer_connected(self, peer_id):
         """A new peer was added"""
@@ -106,3 +110,7 @@ class ConsensusNotifier:
     def add_registered_engine(self, engine_name, engine_version):
         """Add to list of registered consensus engines"""
         self._registered_engines.add((engine_name, engine_version))
+        # Drain message queue since engine is now listening
+        while not self._message_queue.empty():
+            (message_type, message) = self._message_queue.get()
+            self._notify(message_type, message)
