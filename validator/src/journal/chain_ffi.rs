@@ -57,6 +57,7 @@ pub enum ErrorCode {
     InvalidDataDir = 0x02,
     InvalidPythonObject = 0x03,
     InvalidBlockId = 0x04,
+    UnknownBlock = 0x05,
 
     Unknown = 0xff,
 }
@@ -263,6 +264,82 @@ macro_rules! chain_controller_block_ffi {
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct BlockPayload {
+    block_bytes: *const u8,
+    block_cap: usize,
+    block_len: usize,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chain_controller_reclaim_block_payload_vec(
+    vec_ptr: *mut BlockPayload,
+    vec_len: usize,
+    vec_cap: usize,
+) -> isize {
+    Vec::from_raw_parts(vec_ptr, vec_len, vec_cap);
+
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chain_controller_forks(
+    chain_controller: *mut c_void,
+    head: *const c_char,
+    forks: *mut *const BlockPayload,
+    forks_len: *mut usize,
+    forks_cap: *mut usize,
+) -> ErrorCode {
+    check_null!(chain_controller, head);
+
+    let head = match CStr::from_ptr(head).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidBlockId,
+    };
+
+    match (*(chain_controller
+        as *mut ChainController<
+            PyExecutor,
+            PyPermissionVerifier,
+            PyBlockStore,
+            PyBlockStore,
+            PyBlockStore,
+        >))
+        .forks(head)
+    {
+        None => ErrorCode::UnknownBlock,
+        Some(blocks) => {
+            let payloads: Vec<BlockPayload> = blocks
+                .into_iter()
+                .map(|block| {
+                    let proto_block: proto::block::Block = block.into();
+                    let bytes = proto_block
+                        .write_to_bytes()
+                        .expect("Failed to serialize proto Block");
+
+                    let payload = BlockPayload {
+                        block_cap: bytes.capacity(),
+                        block_len: bytes.len(),
+                        block_bytes: bytes.as_slice().as_ptr(),
+                    };
+
+                    mem::forget(bytes);
+
+                    payload
+                }).collect();
+
+            *forks_cap = payloads.capacity();
+            *forks_len = payloads.len();
+            *forks = payloads.as_slice().as_ptr();
+
+            mem::forget(payloads);
+
+            ErrorCode::Success
+        }
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_queue_block(
