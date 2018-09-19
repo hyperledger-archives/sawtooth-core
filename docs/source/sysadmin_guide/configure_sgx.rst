@@ -45,7 +45,7 @@ Install the prerequisites for SGX/PSW:
 .. code-block:: console
 
   $ sudo apt-get update &&
-    sudo apt-get install -q -y \
+    sudo apt-get install -y \
         alien \
         autoconf \
         automake \
@@ -137,8 +137,9 @@ Install Sawtooth
     $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
     $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
     $ sudo apt-get update
-    $ sudo apt-get install -y -q \
+    $ sudo apt-get install -y \
       sawtooth \
+      python3-sawtooth-poet-engine \
       python3-sawtooth-poet-sgx
 
 Certificate File
@@ -170,7 +171,7 @@ with your favorite editor (such as vi):
 Add the following lines, replacing [example] with the spid value provided by
 Intel:
 
-.. code-block:: console
+.. code-block:: ini
 
     # Service Provider ID. It is linked to the key pair used to authenticate with
     # the attestation service.
@@ -313,7 +314,7 @@ Create the file ``/etc/sawtooth/validator.toml``:
 
 Add the following content to the file:
 
-.. code-block:: console
+.. code-block:: ini
 
     #
     # Hyperledger Sawtooth -- Validator Configuration
@@ -329,7 +330,8 @@ Add the following content to the file:
     # network and component.
     bind = [
       "network:tcp://eno1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
     # The type of peering approach the validator should take. Choices are 'static'
@@ -366,7 +368,7 @@ Next, locate the ``endpoint`` section in this file.
 Replace the external interface and port values with either the
 publicly addressable IP address and port or the NAT values for your validator.
 
-.. code-block:: console
+.. code-block:: ini
 
     endpoint = "tcp://[external interface]:[port]"
 
@@ -375,18 +377,19 @@ Replace the seed address and port values with either the
 publicly addressable IP address and port or the NAT values for the other nodes
 in your network.
 
-.. code-block:: console
+.. code-block:: ini
 
     seeds = ["tcp://[seed address 1]:[port]",
              "tcp://[seed address 2]:[port]"]
 
 If necessary, change the network bind interface in the ``bind`` section.
 
-.. code-block:: console
+.. code-block:: ini
 
     bind = [
       "network:tcp://eno1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
 The default network bind interface is "eno1". If this device
@@ -426,6 +429,7 @@ Use these commands to start the Sawtooth services:
 
     $ sudo systemctl start sawtooth-rest-api.service
     $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl start sawtooth-poet-engine.service
     $ sudo systemctl start sawtooth-validator.service
     $ sudo systemctl start sawtooth-settings-tp.service
     $ sudo systemctl start sawtooth-intkey-tp-python.service
@@ -438,6 +442,7 @@ You can follow the logs by running:
     -u sawtooth-validator \
     -u sawtooth-tp_settings \
     -u sawtooth-poet-validator-registry-tp \
+    -u sawtooth-poet-engine \
     -u sawtooth-rest-api \
     -u sawtooth-intkey-tp-python
 
@@ -449,6 +454,7 @@ To verify that the services are running:
 
     $ sudo systemctl status sawtooth-rest-api.service
     $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl status sawtooth-poet-engine.service
     $ sudo systemctl status sawtooth-validator.service
     $ sudo systemctl status sawtooth-settings-tp.service
     $ sudo systemctl status sawtooth-intkey-tp-python.service
@@ -465,6 +471,7 @@ Stop Sawtooth services:
 
     $ sudo systemctl stop sawtooth-rest-api.service
     $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl stop sawtooth-poet-engine.service
     $ sudo systemctl stop sawtooth-validator.service
     $ sudo systemctl stop sawtooth-settings-tp.service
     $ sudo systemctl stop sawtooth-intkey-tp-python.service
@@ -475,6 +482,7 @@ Restart Sawtooth services:
 
     $ sudo systemctl restart sawtooth-rest-api.service
     $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl restart sawtooth-poet-engine.service
     $ sudo systemctl restart sawtooth-validator.service
     $ sudo systemctl restart sawtooth-settings-tp.service
     $ sudo systemctl restart sawtooth-intkey-tp-python.service
