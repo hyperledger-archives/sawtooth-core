@@ -106,15 +106,16 @@ pub fn validate_transaction_dependencies(
             continue;
         }
 
-        if block_manager
+        let block_manager_contains_transaction = block_manager
             .contains_any_transactions(branch_head_id, &[dep])
             .map_err(|err| {
                 ChainCommitStateError::Error(format!(
                     "During validate transaction dependencies: {:?}",
                     err
                 ))
-            })?.is_some()
-        {
+            })?.is_some();
+
+        if block_manager_contains_transaction {
             continue;
         }
         return Err(ChainCommitStateError::MissingDependency(dep.to_string()));

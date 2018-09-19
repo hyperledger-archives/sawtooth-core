@@ -17,18 +17,6 @@
 
 #![allow(unknown_lints)]
 
-use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
-    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
-    Arc, Mutex,
-};
-use std::thread;
-use std::time::Duration;
-
-use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyObject, Python};
-use uluru;
-
 use batch::Batch;
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
@@ -43,6 +31,14 @@ use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
+    Arc, Mutex,
+};
+use std::thread;
+use std::time::Duration;
+use uluru;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
@@ -161,23 +157,6 @@ impl BlockValidationResult {
             num_transactions,
             status,
         }
-    }
-}
-
-impl<'source> FromPyObject<'source> for BlockValidationResult {
-    fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        let status: BlockStatus = obj.getattr(py, "status")?.extract(py)?;
-        let execution_results: Vec<TxnExecutionResult> =
-            obj.getattr(py, "execution_results")?.extract(py)?;
-        let block_id: String = obj.getattr(py, "block_id")?.extract(py)?;
-        let num_transactions = obj.getattr(py, "num_transactions")?.extract(py)?;
-
-        Ok(BlockValidationResult {
-            block_id,
-            execution_results,
-            num_transactions,
-            status,
-        })
     }
 }
 
