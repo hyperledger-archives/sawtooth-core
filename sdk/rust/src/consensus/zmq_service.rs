@@ -54,8 +54,7 @@ pub fn register(
             Message_MessageType::CONSENSUS_REGISTER_REQUEST,
             &generate_correlation_id(),
             &request,
-        )?
-        .get_timeout(timeout)?;
+        )?.get_timeout(timeout)?;
 
     let ret: Result<(Block, Vec<PeerInfo>), Error>;
 
@@ -86,8 +85,7 @@ pub fn register(
                                 Message_MessageType::CONSENSUS_REGISTER_REQUEST,
                                 &generate_correlation_id(),
                                 &request,
-                            )?
-                            .get_timeout(timeout)?;
+                            )?.get_timeout(timeout)?;
 
                         continue;
                     }
