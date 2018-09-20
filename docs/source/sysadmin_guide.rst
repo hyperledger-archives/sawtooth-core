@@ -6,8 +6,7 @@ System Administrator's Guide
 .. toctree::
    :maxdepth: 2
 
-   sysadmin_guide/installation
-   sysadmin_guide/systemd
+   sysadmin_guide/setting_up_sawtooth_poet-sim
    sysadmin_guide/configuring_sawtooth
    sysadmin_guide/rest_auth_proxy
    sysadmin_guide/configuring_permissions
