@@ -133,8 +133,7 @@ impl DevmodeService {
                 &PeerId::from(block.signer_id),
                 "received",
                 Vec::from(block.block_id),
-            )
-            .expect("Failed to send block received");
+            ).expect("Failed to send block received");
     }
 
     fn send_block_ack(&mut self, sender_id: PeerId, block_id: BlockId) {
@@ -162,9 +161,9 @@ impl DevmodeService {
                 settings.get("sawtooth.consensus.min_wait_time").unwrap(),
                 settings.get("sawtooth.consensus.max_wait_time").unwrap(),
             ].iter()
-                .map(|string| string.parse::<u64>())
-                .map(|result| result.unwrap_or(0))
-                .collect();
+            .map(|string| string.parse::<u64>())
+            .map(|result| result.unwrap_or(0))
+            .collect();
 
             let min_wait_time: u64 = ints[0];
             let max_wait_time: u64 = ints[1];
@@ -294,32 +293,34 @@ impl Engine for DevmodeEngine {
                             service.initialize_block();
                         }
 
-                        Update::PeerMessage(message, sender_id) => match DevmodeMessage::from_str(
-                            message.message_type.as_ref(),
-                        ).unwrap()
-                        {
-                            DevmodeMessage::Published => {
-                                let block_id = BlockId::from(message.content);
-                                info!(
-                                    "Received block published message from {:?}: {:?}",
-                                    sender_id, block_id
-                                );
-                            }
+                        Update::PeerMessage(message, sender_id) => {
+                            match DevmodeMessage::from_str(message.message_type.as_ref()).unwrap() {
+                                DevmodeMessage::Published => {
+                                    let block_id = BlockId::from(message.content);
+                                    info!(
+                                        "Received block published message from {:?}: {:?}",
+                                        sender_id, block_id
+                                    );
+                                }
 
-                            DevmodeMessage::Received => {
-                                let block_id = BlockId::from(message.content);
-                                info!(
-                                    "Received block received message from {:?}: {:?}",
-                                    sender_id, block_id
-                                );
-                                service.send_block_ack(sender_id, block_id);
-                            }
+                                DevmodeMessage::Received => {
+                                    let block_id = BlockId::from(message.content);
+                                    info!(
+                                        "Received block received message from {:?}: {:?}",
+                                        sender_id, block_id
+                                    );
+                                    service.send_block_ack(sender_id, block_id);
+                                }
 
-                            DevmodeMessage::Ack => {
-                                let block_id = BlockId::from(message.content);
-                                info!("Received ack message from {:?}: {:?}", sender_id, block_id);
+                                DevmodeMessage::Ack => {
+                                    let block_id = BlockId::from(message.content);
+                                    info!(
+                                        "Received ack message from {:?}: {:?}",
+                                        sender_id, block_id
+                                    );
+                                }
                             }
-                        },
+                        }
 
                         // Devmode doesn't care about peer notifications
                         // or invalid blocks.
