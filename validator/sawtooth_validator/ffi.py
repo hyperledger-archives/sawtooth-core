@@ -88,12 +88,12 @@ def from_rust_string(string_ptr, string_len, string_cap):
     return py_bytes
 
 
-def prepare_vec_result():
+def prepare_vec_result(pointer_type=ctypes.c_uint8):
     """Returns pair of byte pointer and size value for use as return parameters
     in a LIBRARY call
     """
     return (
-        ctypes.POINTER(ctypes.c_uint8)(),
+        ctypes.POINTER(pointer_type)(),
         ctypes.c_size_t(0),
         ctypes.c_size_t(0),
     )

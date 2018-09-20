@@ -38,6 +38,12 @@ class ChainObserver(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+class _BlockPayload(ctypes.Structure):
+    _fields_ = [('block_ptr', ctypes.POINTER(ctypes.c_uint8)),
+                ('block_len', ctypes.c_size_t),
+                ('block_cap', ctypes.c_size_t)]
+
+
 class ChainController(OwnedPointer):
     def __init__(
         self,
@@ -95,6 +101,44 @@ class ChainController(OwnedPointer):
         self._chain_controller_block_ffi_fn(
             'chain_controller_fail_block',
             block)
+
+    def forks(self, head):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result(
+            pointer_type=_BlockPayload)
+
+        head = ctypes.c_char_p(head.encode())
+
+        _libexec(
+            'chain_controller_forks',
+            self.pointer,
+            head,
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        # Check if NULL
+        if not vec_ptr:
+            return None
+
+        blocks = []
+        for i in range(vec_len.value):
+            block_payload = vec_ptr[i]
+            payload = ffi.from_rust_vec(
+                block_payload.block_ptr,
+                ctypes.c_size_t(block_payload.block_len),
+                ctypes.c_size_t(block_payload.block_cap),
+            )
+            block = Block()
+            block.ParseFromString(payload)
+            blocks.append(block)
+
+        LIBRARY.call(
+            "chain_controller_reclaim_block_payload_vec",
+            vec_ptr,
+            vec_len,
+            vec_cap)
+
+        return blocks
 
     def commit_block(self, block):
         self._chain_controller_block_ffi_fn(
@@ -175,6 +219,8 @@ def _exec(library, name, *args):
         raise ValueError("Invalid python object submitted")
     if res == ErrorCode.InvalidBlockId:
         raise ValueError("Invalid block id provided.")
+    if res == ErrorCode.UnknownBlock:
+        raise KeyError("Unknown block")
 
     raise TypeError("Unknown error occurred: {}".format(res.error))
 
@@ -185,3 +231,4 @@ class ErrorCode(IntEnum):
     InvalidDataDir = 0x02
     InvalidPythonObject = 0x03
     InvalidBlockId = 0x04
+    UnknownBlock = 0x05

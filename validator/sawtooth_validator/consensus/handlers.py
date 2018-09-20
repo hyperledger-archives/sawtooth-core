@@ -48,13 +48,11 @@ class ConsensusServiceHandler(Handler):
         request_type,
         response_class,
         response_type,
-        handler_status=HandlerStatus.RETURN
     ):
         self._request_class = request_class
         self._request_type = request_type
         self._response_class = response_class
         self._response_type = response_type
-        self._handler_status = handler_status
 
     def handle_request(self, request, response):
         raise NotImplementedError()
@@ -84,11 +82,12 @@ class ConsensusServiceHandler(Handler):
             request.ParseFromString(message_content)
         except DecodeError:
             response.status = response.BAD_REQUEST
+            handler_status = HandlerStatus.RETURN
         else:
-            self.handle_request(request, response)
+            handler_status = self.handle_request(request, response)
 
         return HandlerResult(
-            status=self._handler_status,
+            status=handler_status,
             message_out=response,
             message_type=self._response_type)
 
@@ -109,7 +108,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
 
         if startup_info is None:
             response.status = consensus_pb2.ConsensusRegisterResponse.NOT_READY
-            return
+            return HandlerStatus.RETURN
 
         chain_head = startup_info.chain_head
         peers = [bytes.fromhex(peer_id) for peer_id in startup_info.peers]
@@ -143,6 +142,29 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
             request.name,
             request.version)
 
+        return HandlerStatus.RETURN_AND_PASS
+
+
+class ConsensusRegisterBlockNewSyncHandler(Handler):
+    def __init__(self, proxy, consensus_notifier):
+        self._proxy = proxy
+        self._consensus_notifier = consensus_notifier
+
+    @property
+    def request_type(self):
+        return validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+
+    def handle(self, connection_id, message_content):
+        forks = self._proxy.forks()
+
+        if not forks:
+            return HandlerResult(status=HandlerStatus.PASS)
+
+        for block in forks:
+            self._consensus_notifier.notify_block_new(block)
+
+        return HandlerResult(status=HandlerStatus.PASS)
+
 
 class ConsensusSendToHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -163,6 +185,8 @@ class ConsensusSendToHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusSendToResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusBroadcastHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -181,6 +205,8 @@ class ConsensusBroadcastHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusBroadcast")
             response.status =\
                 consensus_pb2.ConsensusBroadcastResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN
 
 
 class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
@@ -206,6 +232,8 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusInitializeBlock")
             response.status =\
                 consensus_pb2.ConsensusInitializeBlockResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN
 
 
 class ConsensusSummarizeBlockHandler(ConsensusServiceHandler):
@@ -233,6 +261,8 @@ class ConsensusSummarizeBlockHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusSummarizeBlockResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -258,6 +288,8 @@ class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusFinalizeBlockResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusCancelBlockHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -280,6 +312,8 @@ class ConsensusCancelBlockHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusCancelBlockResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -287,8 +321,7 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCheckBlocksRequest,
             validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST,
             consensus_pb2.ConsensusCheckBlocksResponse,
-            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE,
-            handler_status=HandlerStatus.RETURN_AND_PASS)
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE)
 
         self._proxy = proxy
 
@@ -302,6 +335,8 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusCheckBlocks")
             response.status =\
                 consensus_pb2.ConsensusCheckBlocksResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN_AND_PASS
 
 
 class ConsensusCheckBlocksNotifier(Handler):
@@ -351,6 +386,8 @@ class ConsensusCommitBlockHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusCommitBlockResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusIgnoreBlockHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -373,6 +410,8 @@ class ConsensusIgnoreBlockHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusIgnoreBlockResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusFailBlockHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -394,6 +433,8 @@ class ConsensusFailBlockHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusFailBlock")
             response.status =\
                 consensus_pb2.ConsensusFailBlockResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN
 
 
 class ConsensusBlocksGetHandler(ConsensusServiceHandler):
@@ -427,6 +468,8 @@ class ConsensusBlocksGetHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusBlocksGet")
             response.status =\
                 consensus_pb2.ConsensusBlocksGetResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN
 
 
 class ConsensusChainHeadGetHandler(ConsensusServiceHandler):
@@ -462,6 +505,8 @@ class ConsensusChainHeadGetHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusChainHeadGetResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusSettingsGetHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -490,6 +535,8 @@ class ConsensusSettingsGetHandler(ConsensusServiceHandler):
             response.status =\
                 consensus_pb2.ConsensusSettingsGetResponse.SERVICE_ERROR
 
+        return HandlerStatus.RETURN
+
 
 class ConsensusStateGetHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
@@ -517,3 +564,5 @@ class ConsensusStateGetHandler(ConsensusServiceHandler):
             LOGGER.exception("ConsensusStateGet")
             response.status =\
                 consensus_pb2.ConsensusStateGetResponse.SERVICE_ERROR
+
+        return HandlerStatus.RETURN
