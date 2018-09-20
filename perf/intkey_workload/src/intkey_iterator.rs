@@ -199,7 +199,8 @@ mod tests {
                     acc - p.value
                 } else {
                     acc
-                }) < MAX_VALUE
+                })
+                < MAX_VALUE
         );
     }
 
@@ -215,7 +216,8 @@ mod tests {
                     acc + 1
                 } else {
                     acc
-                }) == INCS_AND_DECS_PER_SET
+                })
+                == INCS_AND_DECS_PER_SET
         );
     }
 }
