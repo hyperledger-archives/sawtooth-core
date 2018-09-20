@@ -710,8 +710,7 @@ impl Node {
                     Key::Text(Text::Text(k.to_string())),
                     Value::Text(Text::Text(v.to_string())),
                 )
-            })
-            .collect();
+            }).collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));
 
@@ -946,8 +945,7 @@ mod tests {
                     let key = format!("{:016x}", i);
                     let hash = hex_hash(key.as_bytes());
                     (key, hash)
-                })
-                .collect::<Vec<_>>();
+                }).collect::<Vec<_>>();
 
             let mut values = HashMap::new();
             for &(ref key, ref hashed) in key_hashes.iter() {
@@ -1251,7 +1249,7 @@ mod tests {
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
             ].into_iter()
-                .collect();
+            .collect();
 
             let parent_root = merkle_db
                 .update(&updates, &[], false)
@@ -1264,7 +1262,7 @@ mod tests {
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
             ].into_iter()
-                .collect();
+            .collect();
             let successor_root_middle = merkle_db
                 .update(&updates, &[], false)
                 .expect("Update failed to work");
@@ -1286,7 +1284,8 @@ mod tests {
                     .first()
                     .unwrap()
                     .get_deletions()
-                    .len() - 1,
+                    .len()
+                    - 1,
                 MerkleDatabase::prune(&db, &parent_root)
                     .expect("Prune should have no errors")
                     .len()
@@ -1309,7 +1308,7 @@ mod tests {
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
             ].into_iter()
-                .collect();
+            .collect();
 
             let parent_root = merkle_db
                 .update(&updates, &[], false)
@@ -1321,7 +1320,7 @@ mod tests {
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
             ].into_iter()
-                .collect();
+            .collect();
             let successor_root_middle = merkle_db
                 .update(&updates, &[], false)
                 .expect("Update failed to work");
@@ -1458,7 +1457,7 @@ mod tests {
             INDEXES.len(),
             Some(120 * 1024 * 1024),
         ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
-            .unwrap();
+        .unwrap();
         LmdbDatabase::new(ctx, &INDEXES)
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap()

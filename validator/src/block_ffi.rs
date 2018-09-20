@@ -130,14 +130,12 @@ impl ToPyObject for Block {
                         proto_txn.set_header_signature(txn.header_signature.clone());
                         proto_txn.set_payload(txn.payload.clone());
                         proto_txn
-                    })
-                    .collect::<Vec<_>>();
+                    }).collect::<Vec<_>>();
 
                 proto_batch.set_transactions(protobuf::RepeatedField::from_vec(proto_txns));
 
                 proto_batch
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
 
         proto_block.set_batches(protobuf::RepeatedField::from_vec(proto_batches));
 
@@ -150,8 +148,7 @@ impl ToPyObject for Block {
                 "ParseFromString",
                 (cpython::PyBytes::new(py, &proto_block.write_to_bytes().unwrap()).into_object(),),
                 None,
-            )
-            .expect("Unable to ParseFromString");
+            ).expect("Unable to ParseFromString");
         block
     }
 }
