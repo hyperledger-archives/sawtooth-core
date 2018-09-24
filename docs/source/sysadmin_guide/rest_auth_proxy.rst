@@ -98,173 +98,166 @@ When the REST API builds a response link, it looks for the following keys:
    can produce an accurate link for the client.
 
 
-Apache Proxy Setup Guide
-========================
+Set Up an Apache Proxy Server for the REST API
+==============================================
 
-For further clarification, this section walks through the setup of a simple
-`Apache 2 <https://httpd.apache.org/>`_ proxy server secured with Basic Auth
-and https, pointed at an instance of the *Sawtooth* REST API.
-
-
-Install Apache
---------------
-
-We'll begin by installing the Apache webserver and enabling the required
-modules. Apache will need to be restarted for these modules to load.
-
-.. code-block:: console
-
-   $ sudo apt-get update
-   $ sudo apt-get install -y apache2
-   $ sudo a2enmod ssl
-   $ sudo a2enmod headers
-   $ sudo a2enmod proxy_http
-   $ sudo systemctl restart apache2
-
-
-Set Up Passwords and Certificates
----------------------------------
-
-First we'll create a password file for the user *"sawtooth"*. Enter your
-desired password when the ``htpasswd`` command prompts for it. You can generate
-a password for other users as well, just make sure to remove the ``-c`` from
-the ``htpasswd`` command and authorize those users in the apache config file
-as shown in the section below.
-
-.. code-block:: console
-
-   $ sudo htpasswd -c /etc/apache2/.htpassword sawtooth
-
-Then we'll use ``openssl`` to build a self-signed SSL certificate. This
-certificate will not be good enough for most HTTP clients, but is suitable for
-testing purposes.
-
-.. code-block:: console
-
-   $ sudo mkdir /etc/apache2/keys
-   $ sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
-       -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=sawtooth \
-       -keyout /etc/apache2/keys/.ssl.key \
-       -out /etc/apache2/keys/.ssl.crt
-
+This procedure sets up a simple `Apache 2 <https://httpd.apache.org/>`_ proxy
+server that is secured with Basic Auth and https, then configures the proxy
+server for an instance of the Sawtooth REST API.
 
 .. note::
 
-   Let's Encrypt provides a trusted certificate at no cost. Follow the
-   instructions at Let's Encrypt <https://letsencrypt.org/>_.
+   This procedure covers only the information for Sawtooth configuration. It
+   does not cover other Apache configuration or security settings.
 
+1. Install the Apache web server and enable the required modules, then restart
+   Apache to load these modules.
 
-Configure Proxy
----------------
+   .. code-block:: console
 
-Now we'll set up the proxy by creating an Apache config file.
+      $ sudo apt-get update
+      $ sudo apt-get install -y apache2
+      $ sudo a2enmod ssl
+      $ sudo a2enmod headers
+      $ sudo a2enmod proxy_http
+      $ sudo systemctl restart apache2
 
-.. code-block:: console
+#. Create a password file for the user ``sawtooth``. Enter a new password when
+   the ``htpasswd`` command prompts for it.
 
-   $ sudo vi /etc/apache2/sites-available/000-sawtooth-rest-api.conf
+    .. code-block:: console
 
-Edit the file to look like this:
+       $ sudo htpasswd -c /etc/apache2/.htpassword sawtooth
 
-.. code-block:: apache
+    .. tip::
 
-   <VirtualHost *:443>
-       ServerName sawtooth
-       ServerAdmin sawtooth@sawtooth
-       DocumentRoot /var/www/html
+       You can repeat this command to generate passwords for other users, but
+       you must omit the ``-c`` option from the ``htpasswd`` command. You must
+       also remember to authorize those users in the proxy configuration file
+       (later in this procedure).
 
-       SSLEngine on
-       SSLCertificateFile /etc/apache2/keys/.ssl.crt
-       SSLCertificateKeyFile /etc/apache2/keys/.ssl.key
-       RequestHeader set X-Forwarded-Proto "https"
+#. Obtain or create an SSL certificate.
 
-       <Location />
-           Options Indexes FollowSymLinks
-           AllowOverride None
-           AuthType Basic
-           AuthName "Enter password"
-           AuthUserFile "/etc/apache2/.htpassword"
-           Require user sawtooth
-           Require all denied
-       </Location>
-   </VirtualHost>
+   * You can use ``openssl`` to build a self-signed SSL certificate. This
+     certificate is not suitable for most HTTP clients, but it is good enough
+     for testing purposes.
 
-   ProxyPass /sawtooth http://localhost:8008
-   ProxyPassReverse /sawtooth http://localhost:8008
-   RequestHeader set X-Forwarded-Path "/sawtooth"
+     .. code-block:: console
 
-.. note::
+        $ sudo mkdir /etc/apache2/keys
+        $ sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
+        -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=sawtooth \
+        -keyout /etc/apache2/keys/.ssl.key \
+        -out /etc/apache2/keys/.ssl.crt
 
-   Apache will automatically set the *X-Forwarded-Host* header.
+   * You can get a free trusted certificate from
+     `Let's Encrypt <https://letsencrypt.org/>`_. Follow the instructions at
+     `letsencrypt.org/getting-started <https://letsencrypt.org/getting-started/>`_.
 
+#. Configure the proxy with settings for the Sawtooth REST API.
 
-Disable the default Apache landing page and enable our new authenticated proxy
-config.
+   a. Create an Apache configuration file.
 
-.. code-block:: console
+      .. code-block:: console
 
-   $ sudo a2dissite 000-default.conf
-   $ sudo a2ensite 000-sawtooth-rest-api.conf
+         $ sudo vi /etc/apache2/sites-available/000-sawtooth-rest-api.conf
 
+   #. Add the following contents to this file.
 
-Restart Apache
---------------
+      .. code-block:: apache
 
-Restart Apache to apply our changes.
+         <VirtualHost *:443>
+             ServerName sawtooth
+             ServerAdmin sawtooth@sawtooth
+             DocumentRoot /var/www/html
 
-.. code-block:: console
+             SSLEngine on
+             SSLCertificateFile /etc/apache2/keys/.ssl.crt
+             SSLCertificateKeyFile /etc/apache2/keys/.ssl.key
+             RequestHeader set X-Forwarded-Proto "https"
 
-   $ sudo systemctl restart apache2
+             <Location />
+                 Options Indexes FollowSymLinks
+                 AllowOverride None
+                 AuthType Basic
+                 AuthName "Enter password"
+                 AuthUserFile "/etc/apache2/.htpassword"
+                 Require user sawtooth
+                 Require all denied
+             </Location>
+         </VirtualHost>
 
+         ProxyPass /sawtooth http://localhost:8008
+         ProxyPassReverse /sawtooth http://localhost:8008
+         RequestHeader set X-Forwarded-Path "/sawtooth"
 
-Send Test Requests
-------------------
+      .. note::
 
-Finally, let's use ``curl`` to make some requests and make sure everything
-worked. We'll start by querying the REST API directly:
+         Apache automatically sets the "X-Forwarded-Host" header.
 
-.. code-block:: console
+   #. Run the following commands to disable the default Apache landing page and
+      enable the new authenticated proxy configuration.
 
-   $ curl http://localhost:8008/blocks
+      .. code-block:: console
 
-The response link should look like this:
+         $ sudo a2dissite 000-default.conf
+         $ sudo a2ensite 000-sawtooth-rest-api.conf
 
-.. code-block:: json
+   #. Restart Apache to apply the changes.
 
-   {
-     "link": "http://localhost:8008/blocks?head=..."
-   }
+      .. code-block:: console
 
-You should also be able to get back a ``401`` by querying the proxy without
-authorization:
+         $ sudo systemctl restart apache2
 
-.. code-block:: console
+#. Send some test requests to verify the proxy configuration. This step uses
+   ``curl`` to send requests to the REST API to make sure that everything works.
 
-   $ curl https://localhost/sawtooth/blocks --insecure
+   a. Start by querying the REST API directly.
 
-.. note::
+      .. code-block:: console
 
-   The ``--insecure`` flag just forces curl to complete the request even though
-   there isn't an official SSL Certificate. It does *not* bypass Basic Auth.
+         $ curl http://localhost:8008/blocks
 
-And finally, if we send a properly authorized request:
+      The response should look like this example:
 
-.. code-block:: console
+      .. code-block:: json
 
-   $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:{password}
+         {
+           "link": "http://localhost:8008/blocks?head=..."
+         }
 
-.. note::
+      A failed request might mean that the REST API is not running. To restart
+      the REST API as a service, see :doc:`systemd`.
 
-   Change ``{password}`` here to match the one used in the ``htpasswd`` command
-   above.
+   #. Next, query the proxy without authorization. This command should return
+      a ``401`` error.
 
-We should get back a response that looks very similar to querying the REST API
-directly, but with a new *link* that reflects the URL we sent the request to:
+      .. code-block:: console
 
-.. code-block:: json
+         $ curl https://localhost/sawtooth/blocks --insecure
 
-   {
-     "link": "https://localhost/sawtooth/blocks?head=..."
-   }
+      .. note::
+
+         The ``--insecure`` flag forces ``curl`` to complete the request even
+         if there isn't an official SSL certificate. It does not bypass
+         basic authentication.
+
+   #. Finally, send a properly authorized request. Replace ``{password}`` in the
+      following example with the password for the ``sawtooth`` user.
+
+      .. code-block:: console
+
+         $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:{password}
+
+      The response is similar to a direct query response, but ``link`` shows the
+      URL used to send this request.
+
+      .. code-block:: json
+
+         {
+           "link": "https://localhost/sawtooth/blocks?head=..."
+         }
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
