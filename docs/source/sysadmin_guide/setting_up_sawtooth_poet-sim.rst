@@ -43,6 +43,7 @@ following transaction processors:
    generating_keys.rst
    creating_genesis_block.rst
    systemd.rst
+   testing_sawtooth.rst
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
