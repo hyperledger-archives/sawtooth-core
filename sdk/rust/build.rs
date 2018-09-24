@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate cc;
 extern crate glob;
 extern crate protoc_rust;
 
@@ -28,16 +27,6 @@ use std::path::Path;
 use protoc_rust::Customize;
 
 fn main() {
-    // Compile C PEM loader file
-    if cfg!(feature = "pem") {
-        println!("cargo:rustc-link-lib={}={}", "dylib", "crypto");
-        cc::Build::new()
-            .file("../c/loader.c")
-            .file("../c/c11_support.c")
-            .include("../c")
-            .compile("libloader.a");
-    }
-
     // Generate protobuf files
     let proto_src_files = glob_simple("../../protos/*.proto");
     println!("{:?}", proto_src_files);

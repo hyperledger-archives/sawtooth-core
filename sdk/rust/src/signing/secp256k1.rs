@@ -21,8 +21,6 @@ use rand::os::OsRng;
 use rand::Rng;
 use secp256k1;
 
-#[cfg(feature = "pem")]
-use signing::pem_loader::load_pem_key;
 use signing::Context;
 use signing::Error;
 use signing::PrivateKey;
@@ -41,18 +39,6 @@ pub struct Secp256k1PrivateKey {
 impl Secp256k1PrivateKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
         hex_str_to_bytes(s).map(|key_bytes| Secp256k1PrivateKey { private: key_bytes })
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn from_pem(s: &str) -> Result<Self, Error> {
-        let (priv_key_str, _) = load_pem_key(s, "")?;
-        Self::from_hex(&priv_key_str)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn from_pem_with_password(s: &str, pw: &str) -> Result<Self, Error> {
-        let (priv_key_str, _) = load_pem_key(s, pw)?;
-        Self::from_hex(&priv_key_str)
     }
 }
 
