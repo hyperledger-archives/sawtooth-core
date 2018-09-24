@@ -20,6 +20,8 @@ extern crate hex;
 extern crate libc;
 #[macro_use]
 extern crate log;
+#[cfg(feature = "pem")]
+extern crate openssl;
 extern crate protobuf;
 extern crate rand;
 extern crate secp256k1;
