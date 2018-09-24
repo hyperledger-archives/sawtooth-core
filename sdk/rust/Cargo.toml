@@ -22,7 +22,7 @@ build = "build.rs"
 [features]
 default = ["pem"]
 # Add support for loading PEM encoded private keys
-pem = []
+pem = ["openssl"]
 
 [dependencies]
 hex = "0.3"
@@ -35,6 +35,7 @@ uuid = { version = "0.5", features = ["v4"] }
 log = "0.3"
 libc = "0.2"
 ctrlc = { version = "3.0", features = ["termination"] }
+openssl = { version = "0.10", optional = true }
 
 [dev-dependencies]
 env_logger = "0.3"
