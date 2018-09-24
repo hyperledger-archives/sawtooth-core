@@ -235,7 +235,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
+                == num_to_consider
         );
     }
 
@@ -276,7 +277,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
+                == 0
         );
     }
 
@@ -314,7 +316,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider
+                })
+                == num_to_consider
         );
     }
 
@@ -352,7 +355,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
+                == 0
         );
     }
 
@@ -389,7 +393,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == num_to_consider - 1 // The first txn will have 0 dependencies since there is no prior txn.
+                })
+                == num_to_consider - 1 // The first txn will have 0 dependencies since there is no prior txn.
         );
     }
 
@@ -426,7 +431,8 @@ mod tests {
                     } else {
                         acc
                     }
-                }) == 0
+                })
+                == 0
         );
     }
 }

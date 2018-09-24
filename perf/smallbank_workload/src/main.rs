@@ -98,56 +98,48 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
                 .value_name("KEY_FILE")
                 .required(true)
                 .help("The signing key for both batches and transactions."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("max-batch-size")
                 .short("n")
                 .long("max-batch-size")
                 .value_name("NUMBER")
                 .help("The number of transaction in a batch. Defaults to 1."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("num-accounts")
                 .short("a")
                 .long("accounts")
                 .value_name("ACCOUNTS")
                 .help("The number of Smallbank accounts to make. Defaults to 100."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("rate")
                 .short("r")
                 .long("rate")
                 .value_name("RATE")
                 .help("The number of batches per second. Defaults to 2."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("target")
                 .short("t")
                 .long("target")
                 .value_name("TARGET")
                 .help("A comma separated list of Sawtooth REST Api endpoints."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("seed")
                 .short("s")
                 .long("seed")
                 .value_name("SEED")
                 .help("An integer to use as a seed to make the workload reproduceable."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("update")
                 .short("u")
                 .long("update-length")
                 .value_name("UPDATE_LENGTH")
                 .help("The time in seconds between updates from this utility."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("username")
                 .long("--auth-username")
                 .value_name("AUTH_USERNAME")
                 .help("The basic auth username to authenticate with the Sawtooth REST Api."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("password")
                 .long("--auth-password")
                 .value_name("AUTH_PASSWORD")
@@ -211,8 +203,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         .unwrap_or({
             let mut rng = rand::thread_rng();
             rng.gen::<usize>().to_string().as_ref()
-        })
-        .parse()
+        }).parse()
     {
         Ok(s) => vec![s],
         Err(_) => return arg_error("The seed is a number to seed the random number generator."),
@@ -260,32 +251,28 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              The transaction input is expected to be length-delimited protobuf \
              Transaction messages, which should also be pre-signed for \
              submission to the validator.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .required(true)
                 .help("The source of input transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
                 .value_name("FILE")
                 .required(true)
                 .help("The target for the signed batches"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("key")
                 .short("k")
                 .long("key")
                 .value_name("FILE")
                 .required(true)
                 .help("The signing key for the transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("max-batch-size")
                 .short("n")
                 .long("max-batch-size")
@@ -339,22 +326,19 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              The batch input is expected to be length-delimited protobuf \
              Batch messages, which should also be pre-signed for \
              submission to the validator.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .help("The source of batch transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("target")
                 .short("t")
                 .long("target")
                 .value_name("TARGET")
                 .help("A Sawtooth REST API endpoint"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("rate")
                 .short("r")
                 .long("rate")
@@ -419,30 +403,26 @@ fn create_playlist_create_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              A playlist is a series of transactions, described in \
              YAML.  This command generates a playlist and writes it \
              to file or statndard out.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
                 .value_name("FILE")
                 .help("The target for the generated playlist"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("random_seed")
                 .short("S")
                 .long("seed")
                 .value_name("NUMBER")
                 .help("A random seed, which will generate the same output"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("accounts")
                 .short("a")
                 .long("accounts")
                 .value_name("NUMBER")
                 .required(true)
                 .help("The number of unique accounts to generate"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("transactions")
                 .short("n")
                 .long("transactions")
@@ -462,24 +442,21 @@ fn create_playlist_process_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              A playlist is a series of transactions, described in \
              YAML.  This command processes a playlist, converting it into \
              transactions and writes it to file or statndard out.",
-        )
-        .arg(
+        ).arg(
             Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .required(true)
                 .help("The source of the input playlist yaml"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("key")
                 .short("k")
                 .long("key")
                 .value_name("FILE")
                 .required(true)
                 .help("The signing key for the transactions"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")

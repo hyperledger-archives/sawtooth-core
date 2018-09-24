@@ -505,8 +505,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .as_ref()
             .expect(
                 "Attempted to submit blocks for validation before starting the chain controller",
-            )
-            .clone();
+            ).clone();
 
         state
             .block_validator
@@ -720,8 +719,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
             .as_ref()
             .expect(
                 "Attempted to submit blocks for validation before starting the chain controller",
-            )
-            .clone();
+            ).clone();
 
         self.state
             .write()
@@ -805,8 +803,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                     if let Err(err) = chain_thread.run() {
                         error!("Error occurred during ChainController loop: {:?}", err);
                     }
-                })
-                .unwrap();
+                }).unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
             self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
@@ -846,8 +843,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 } else {
                     break;
                 }
-            })
-            .unwrap();
+            }).unwrap();
     }
 
     fn start_commit_queue_thread(
@@ -888,8 +884,7 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
                 } else {
                     break;
                 }
-            })
-            .unwrap();
+            }).unwrap();
     }
 
     pub fn stop(&mut self) {

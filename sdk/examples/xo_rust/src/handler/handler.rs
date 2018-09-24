@@ -22,8 +22,8 @@ use sawtooth_sdk::processor::handler::TransactionHandler;
 
 use handler::game::Game;
 use handler::payload::XoPayload;
-use handler::state::XoState;
 use handler::state::get_xo_prefix;
+use handler::state::XoState;
 
 pub struct XoTransactionHandler {
     family_name: String,

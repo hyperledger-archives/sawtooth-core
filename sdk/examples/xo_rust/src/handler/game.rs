@@ -120,7 +120,8 @@ impl Game {
 
         let index = space - 1;
 
-        let board_vec: Vec<String> = self.board
+        let board_vec: Vec<String> = self
+            .board
             .chars()
             .enumerate()
             .map(|(i, ch)| {
@@ -129,8 +130,7 @@ impl Game {
                 } else {
                     ch.to_string()
                 }
-            })
-            .collect();
+            }).collect();
         self.board = board_vec.join("");
         Ok(())
     }
@@ -258,8 +258,10 @@ impl Game {
 
 impl PartialEq for Game {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.game_state == other.board
-            && self.game_state == other.game_state && self.player1 == other.player1
+        self.name == other.name
+            && self.game_state == other.board
+            && self.game_state == other.game_state
+            && self.player1 == other.player1
             && self.player2 == other.player2
     }
 }

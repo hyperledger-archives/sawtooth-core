@@ -77,9 +77,7 @@ impl LmdbDatabase {
             ctx.env.clone(),
             Some("main"),
             &lmdb::DatabaseOptions::new(lmdb::db::CREATE),
-        ).map_err(|err| {
-            DatabaseError::InitError(format!("Failed to open database: {:?}", err))
-        })?;
+        ).map_err(|err| DatabaseError::InitError(format!("Failed to open database: {:?}", err)))?;
 
         let mut index_dbs = HashMap::with_capacity(indexes.len());
         for name in indexes {
@@ -188,8 +186,7 @@ impl<'a> DatabaseReader for LmdbDatabaseReader<'a> {
             .db_stat(&self.db.main)
             .map_err(|err| {
                 DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
-            })
-            .map(|stat| stat.entries)
+            }).map(|stat| stat.entries)
     }
 
     fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
@@ -202,8 +199,7 @@ impl<'a> DatabaseReader for LmdbDatabaseReader<'a> {
             .db_stat(index)
             .map_err(|err| {
                 DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
-            })
-            .map(|stat| stat.entries)
+            }).map(|stat| stat.entries)
     }
 }
 
@@ -349,8 +345,7 @@ impl<'a> DatabaseReader for LmdbDatabaseWriter<'a> {
             .db_stat(&self.db.main)
             .map_err(|err| {
                 DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
-            })
-            .map(|stat| stat.entries)
+            }).map(|stat| stat.entries)
     }
 
     fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
@@ -363,8 +358,7 @@ impl<'a> DatabaseReader for LmdbDatabaseWriter<'a> {
             .db_stat(index)
             .map_err(|err| {
                 DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err))
-            })
-            .map(|stat| stat.entries)
+            }).map(|stat| stat.entries)
     }
 }
 

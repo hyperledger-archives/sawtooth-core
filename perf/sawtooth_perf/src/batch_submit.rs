@@ -187,18 +187,15 @@ pub fn run_workload(
         .map(|_: ()| -> Result<(), workload::WorkloadError> {
             let counter_clone = Rc::clone(&counter);
             workload::log(&counter_clone, &mut log_time, update_time)
-        })
-        .map(move |_| -> Result<BatchList, workload::WorkloadError> {
+        }).map(move |_| -> Result<BatchList, workload::WorkloadError> {
             let batch_map = Rc::clone(&batch_map_clone);
             let batches_clone = Rc::clone(&batches_clone);
             workload::get_next_batchlist(batch_list_iter, &batch_map, &batches_clone)
-        })
-        .map(|batch_list: Result<BatchList, workload::WorkloadError>| {
+        }).map(|batch_list: Result<BatchList, workload::WorkloadError>| {
             let basic_auth_c = basic_auth.clone();
             let urls_c = &mut urls;
             workload::form_request_from_batchlist(urls_c, batch_list, &basic_auth_c)
-        })
-        .map_err(workload::WorkloadError::from)
+        }).map_err(workload::WorkloadError::from)
         .and_then(
             |req: Result<(Request, Option<String>), workload::WorkloadError>| {
                 let handle_clone = handle.clone();
@@ -214,8 +211,7 @@ pub fn run_workload(
                     req,
                 )
             },
-        )
-        .for_each(|_| Ok(()));
+        ).for_each(|_| Ok(()));
 
     core.run(stream)
 }

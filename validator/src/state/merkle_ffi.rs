@@ -366,8 +366,7 @@ pub unsafe extern "C" fn merkle_db_update(
 
                     let data = Vec::from(data);
                     Ok((address, data))
-                })
-                .collect()
+                }).collect()
         } else {
             Ok(Vec::with_capacity(0))
         };
@@ -387,8 +386,7 @@ pub unsafe extern "C" fn merkle_db_update(
                     .to_str()
                     .map(String::from)
                     .map_err(|_| ErrorCode::InvalidAddress)
-            })
-            .collect()
+            }).collect()
     } else {
         Ok(Vec::with_capacity(0))
     };

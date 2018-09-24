@@ -231,8 +231,7 @@ impl SendReceiveStream {
             .monitor(
                 "inproc://monitor-socket",
                 zmq::SocketEvent::DISCONNECTED as i32,
-            )
-            .is_ok();
+            ).is_ok();
         let monitor_socket = context.socket(zmq::PAIR).unwrap();
 
         let identity = uuid::Uuid::new(uuid::UuidVersion::Random).unwrap();
