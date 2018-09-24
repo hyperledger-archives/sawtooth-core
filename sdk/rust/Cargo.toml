@@ -40,6 +40,5 @@ ctrlc = { version = "3.0", features = ["termination"] }
 env_logger = "0.3"
 
 [build-dependencies]
-cc = "1.0"
 protoc-rust = "2.0"
 glob = "0.2"
