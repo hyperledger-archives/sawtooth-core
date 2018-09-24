@@ -2,25 +2,28 @@
 Using a Proxy Server to Authorize the REST API
 **********************************************
 
-As a lightweight shim on top of internal communications, requests sent to the
-*Hyperledger Sawtooth* REST API are simply passed on to the validator, without
-any sort of authorization. While this is in keeping with the public nature of
-blockchains, that behavior may not be desirable in every use case. Rather than
-internally implementing one authorization scheme or another, the REST API is
-designed to work well behind a proxy server, allowing any available
-authorization scheme to be implemented externally.
+The Sawtooth REST API is designed to be a lightweight shim on top of internal
+communications. When the REST API receives a request, it passes that request to
+the validator without any authorization. While this behavior is appropriate for
+the public nature of blockchains, the lack of authorization might not be
+desirable in some situations. For these cases, you can configure the REST API to
+work behind a proxy server.
+
+This section explains how the REST API handles proxy server issues, then shows
+how to set up an Apache proxy server for the REST API.
 
 
-Forwarding URL Info with Headers
-================================
+About Proxying the REST API
+===========================
 
-For the most part putting the REST API behind a proxy server should just work.
-The majority of what it does will work equally well whether or not it is
-communicating directly with a client. The notable exceptions being the `"link"`
-parameter sent back in the response envelope, and the `"previous"` and `"next"`
-links that are sent back with a paging response. These URLs can be a
-convenience for clients, but not when crucial URL information is destroyed by
-proxying. In that case, a link that should look like this:
+In general, putting the REST API behind a proxy server works as expected. The
+REST API has the same behavior as if it were communicating directly with a
+client. The notable exception is how URLs are handled; specifically, the
+``link`` parameter that is sent back in the response envelope, and the
+``previous`` and ``next`` links that are sent back with a paging response.
+
+These URLs are a convenience for clients, but the proxy can destroy crucial URL
+information.  For example, a correct link should look this this:
 
 .. code-block:: json
 
@@ -28,7 +31,7 @@ proxying. In that case, a link that should look like this:
      "link": "https://hyperledger.org/sawtooth/blocks?head=..."
    }
 
-Might instead look like this:
+Instead, the "destroyed" link might look like this:
 
 .. code-block:: json
 
@@ -36,82 +39,63 @@ Might instead look like this:
      "link": "http://localhost:8008/blocks?head=..."
    }
 
-The solution to this problem is sending the destroyed information using HTTP
-request headers. The Sawtooth REST API will properly recognize and parse two
-sorts of headers.
-
+The solution to this problem is to send the destroyed information with HTTP
+request headers. The Sawtooth REST API will properly recognize and parse
+information in both "X-Forwarded" and "Forwarded" headers.
 
 "X-Forwarded" Headers
 ---------------------
 
-Although they aren't part of any standard, the various *X-Forwarded* headers
-are a very common way of communicating useful information about a proxy. There
-are three of these headers that the REST API may look for when building links.
+Although they aren't part of any standard, "X-Forwarded" headers are a common
+way to communicate information about a proxy. When the REST API builds a link,
+it looks for the following types of "X-Forwarded" headers:
 
-.. list-table::
-   :widths: 20, 44, 16
-   :header-rows: 1
+* ``X-Forwarded-Host``:
+  Domain name of the proxy server (for example, ``hyperledger.org``)
 
-   * - header
-     - description
-     - example
-   * - **X-Forwarded-Host**
-     - The domain name of the proxy server.
-     - *hyperledger.org*
-   * - **X-Forwarded-Proto**
-     - The protocol/scheme used to make request.
-     - *https*
-   * - **X-Forwarded-Path**
-     - An uncommon header implemented specially by the REST API to handle extra
-       path information. Only necessary if the proxy endpoints do not map
-       directly to the REST API endpoints (i.e.
-       *"hyperledger.org/sawtooth/blocks"* -> *"localhost:8008/blocks"*).
-     - */sawtooth*
+* ``X-Forwarded-Proto``:
+  Protocol/scheme used to make requests (for example, ``https``)
 
+* ``X-Forwarded-Path``:
+  Extra path information (for example, ``/sawtooth``). This uncommon header is
+  implemented by the REST API. It is necessary only if the proxy endpoints do
+  not map directly to the REST API endpoints, that is, when
+  ``hyperledger.org/sawtooth/blocks`` does not map to ``localhost:8008/blocks``.
 
-"Forwarded" Header
-------------------
+"Forwarded" Headers
+-------------------
 
-Although less common, the same information can be sent using a single
-*Forwarded* header, standardized by
-`RFC7239 <https://tools.ietf.org/html/rfc7239#section-4>`_. The Forwarded
-header contains semi-colon-separated key value pairs. It might for example look
-like this:
+This type of header is less common, but a single "Forwarded" header sends the
+same information as multiple "X-Forwarded" headers.  The "Forwarded" header,
+which is standardized by
+`RFC7239 <https://tools.ietf.org/html/rfc7239#section-4>`_, contains
+semicolon-separated key-value pairs, as in this example:
 
 .. code-block:: text
 
    Forwarded: for=196.168.1.1; host=proxy1.com, host=proxy2.com; proto="https"
 
-There are three keys in particular the REST API will look for when building
-response links:
+When the REST API builds a response link, it looks for the following keys:
 
-.. list-table::
-   :widths: 8, 52, 20
-   :header-rows: 1
+* ``host``:
+  Domain name of the proxy server (for example, ``host=hyperledger.org``)
 
-   * - key
-     - description
-     - example
-   * - **host**
-     - The domain name of the proxy server.
-     - *host=hyperledger.org*
-   * - **proto**
-     - The protocol/scheme used to make request.
-     - *proto=https*
-   * - **path**
-     - An non-standard key header used to handle extra path information. Only
-       necessary if the proxy endpoints do not map directly to the REST API
-       endpoints (i.e. *"hyperledger.org/sawtooth/blocks"* ->
-       *"localhost:8008/blocks"*).
-     - *path="/sawtooth"*
+* ``proto``:
+  Protocol/scheme used to make requests (for example, ``proto=https``)
+
+* ``path``:
+  Extra path information (for example, ``path="/sawtooth"``). This non-standard
+  key header is necessary only if the proxy endpoints do not map directly to
+  the REST API endpoints, that is, when ``hyperledger.org/sawtooth/blocks`` does
+  not map to ``localhost:8008/blocks``.
 
 .. note::
 
-   Any key in a *Forwarded* header can be set multiple times, each instance
-   comma-separated, allowing for a chain of proxy information to be traced.
-   However, the REST API will always reference the leftmost of any particular
-   key. It is only interested in producing an accurate link for the original
-   client.
+   Any key in a "Forwarded" header can be set multiple times, using commas to
+   separate each setting. (See the ``host`` values in the example above.)
+   Repeating a key allows a chain of proxy information to be traced. However,
+   the REST API always uses the left-most value for a particular key so that it
+   can produce an accurate link for the client.
 
 
 Apache Proxy Setup Guide
