@@ -125,16 +125,6 @@ impl<'a> LmdbDatabaseReader<'a> {
         Ok(val.ok().map(Vec::from))
     }
 
-    #[allow(dead_code)]
-    pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
-        let cursor = self
-            .txn
-            .cursor(&self.db.main)
-            .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
-        let access = self.txn.access();
-        Ok(LmdbDatabaseReaderCursor { access, cursor })
-    }
-
     pub fn index_cursor(&self, index: &str) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
         let index = self
             .db
@@ -177,14 +167,6 @@ pub struct LmdbDatabaseReaderCursor<'a> {
 }
 
 impl<'a> LmdbDatabaseReaderCursor<'a> {
-    #[allow(dead_code)]
-    pub fn first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        self.cursor
-            .first(&self.access)
-            .ok()
-            .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
-    }
-
     pub fn last(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .last(&self.access)

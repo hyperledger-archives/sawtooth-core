@@ -131,8 +131,8 @@ impl BlockManagerState {
 
         let block_in_some_store = blockstore_by_name
             .iter()
-            .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
-            .is_some();
+            .any(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0);
+
         if block_in_some_store {
             return Ok(true);
         }

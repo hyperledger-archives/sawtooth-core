@@ -566,7 +566,7 @@ impl<
                 .cmp(&right.block_num)
                 .then(left.header_signature.cmp(&right.header_signature))
         });
-        forks.dedup_by(|left, right| &left.header_signature == &right.header_signature);
+        forks.dedup_by(|left, right| left.header_signature == right.header_signature);
 
         state
             .block_manager
