@@ -1,35 +1,41 @@
-********************************
-Configuring Grafana and InfluxDB
-********************************
+*****************************************
+Using Grafana to Display Sawtooth Metrics
+*****************************************
 
-This procedure is for a Linux (Ubuntu) environment. For a Sawtooth network in
-Docker containers, additional steps are needed to change the configuration of
-the validator containers. These steps are not described in this procedure.
+This procedure describes how to display Sawtooth metrics with
+`Grafana <https://grafana.com>`__, using
+`InfluxDB <https://www.influxdata.com/time-series-platform/influxdb/>`__
+to store the metrics data.
 
 .. note::
 
-   This procedure is for a Linux (Ubuntu) environment. For a Sawtooth network
-   in Docker containers, additional steps are needed to change the
-   configuration of the validator containers. These steps are not described in
-   this procedure.
+   This procedure is for a Ubuntu environment. For a Sawtooth network in Docker
+   containers, there are additional steps to change the configuration of the
+   validator and REST API containers. This guide does not describe these steps.
 
-Requirements
-============
 
-This guide assumes Docker Engine is installed and one or more Sawtooth
-validator nodes have been configured.
+Prerequisites
+=============
 
-Download `sawtooth-core <https://github.com/hyperledger/sawtooth-core>`_
-from the Hyperledger GitHub repository.
+* Docker Engine must be installed
 
-.. code-block:: console
+* One or more Sawtooth nodes must be configured and in a runnable state
 
-   $ git clone https://github.com/hyperledger/sawtooth-core.git
+* Download the
+  `hyperledger/sawtooth-core <https://github.com/hyperledger/sawtooth-core>`_
+  repository from GitHub with this command:
 
-InfluxDB
-========
+  .. code-block:: console
 
-#. First, pull the InfluxDB Docker image from Docker Hub.
+     $ git clone https://github.com/hyperledger/sawtooth-core.git
+
+
+Set Up InfluxDB
+===============
+
+InfluxDB is used to store Sawtooth metrics data.
+
+#. Pull the InfluxDB Docker image from Docker Hub.
 
    .. code-block:: console
 
@@ -40,17 +46,23 @@ InfluxDB
 
    .. note::
 
-      Depending on the host operating system /var/lib/influx-data may not be
-      appropriate, modify this path accordingly.
+      This step creates the directory ``/var/lib/influx-data``. If this path is
+      not appropriate for your host operating system, change the path here and
+      in the next command.
 
    .. code-block:: console
 
       $ sudo mkdir /var/lib/influx-data
 
-#. Next, start an InfluxDB Docker container. This command uses the persistent
-   storage on the local file system and exposes port 8086 to the network. It
-   also configures the database name and the ``admin`` and ``lrdata`` users for
-   InfluxDB.
+#. Start an InfluxDB Docker container. This command exposes port 8086 to the
+   network and uses the persistent storage created in the previous step. It also
+   configures the database name (``metrics``) and creates two users for
+   InfluxDB, ``admin`` and ``lrdata``.
+
+
+   In the following command, replace ``{admin-pw}`` and ``{lrdata-pw}`` with
+   unique passwords for the ``admin`` and ``lrdata`` users. Remember to properly
+   escape any special characters in these passwords, such as ``,@!$``.
 
    .. code-block:: console
 
@@ -60,16 +72,12 @@ InfluxDB
        -e INFLUXDB_USER=lrdata -e INFLUXDB_USER_PASSWORD='{lrdata-pw}' \
        --name sawtooth-stats-influxdb influxdb
 
-   .. note::
 
-      Also, remember to properly escape any special characters, such as
-      ``,@!$``.
+Install and Configure Grafana
+=============================
 
-Grafana
-=======
-
-#. First, build the Grafana Docker image from the Dockerfile included in the
-   sawtooth-core repository.
+#. Build the Grafana Docker image from the Dockerfile that is included in the
+   ``sawtooth-core`` repository.
 
    .. code-block:: console
 
@@ -84,13 +92,12 @@ Grafana
       $ docker run -d -p 3000:3000 --name sawtooth-stats-grafana \
        sawtooth-stats-grafana
 
-#. Next, open the Grafana web page at ``http://{host}:3000``.
+#. Open the Grafana web page at ``http://{host}:3000``.
 
-   .. note::
-      Be sure to replace {host} with the IP or Fully Qualified Domain Name
-      (FQDN) of the system running the Grafana Docker container.
+   In this URL, replace ``{host}`` with the IP or Fully Qualified Domain Name
+   (FQDN) of the system running the Grafana Docker container.
 
-#. Log in as user ``admin`` with the password ``admin``.
+#. On the Grafana web page, log in as user ``admin`` with the password ``admin``.
 
 #. Change the admin password. First, click on the Grafana spiral icon at the
    top left of the web page and go to "Admin / Profile". Next, click on
@@ -106,44 +113,64 @@ Grafana
    #. Change the URL to the host server (IP or FQDN) running the InfluxDB
       Docker container.
 
-   #. Under "InfluxDB Details", set INFLUXDB_USER to ``lrdata``. For
-      INFLUXDB_USER_PASSWORD, enter the ``lrdata`` password that was defined in
-      "Configure InfluxDB", above.
+   #. Under "InfluxDB Details", set ``INFLUXDB_USER`` to ``lrdata``. For
+      ``INFLUXDB_USER_PASSWORD``, enter the ``lrdata`` password that was defined
+      when you set up InfluxDB.
 
    #. Click "Save & Test".
 
-#. For Sawtooth 1.0.* only, import the 1.0 dashboard. (Sawtooth 1.1.* can use
-   the dashboard included in the Grafana Docker container from git master.)
+#. (Sawtooth 1.0.* releases only) Import the Grafana 1.0 dashboard.
 
-   a. Get the 1.0 dashboard from either
-      sawtooth-core/docker/grafana/dashboards/sawtooth_performance.json in the
-      1-0 branch or download from GitHub directly at `sawtooth_performance.json
-      <https://raw.githubusercontent.com/hyperledger/sawtooth-core/1-0/docker/grafana/dashboards/sawtooth_performance.json>`_.
+   .. note::
 
-   #. Click Grafana spiral logo and mouse over "Dashboards", then click
+      Skip this step for Sawtooth release 1.1 and later, which can use the
+      dashboard that is included in the Grafana Docker container from git
+      master.
+
+   a. Use one of these methods to get the 1.0 dashboard:
+
+      - Find the dashboard in the 1-0 branch at
+        ``sawtooth-core/docker/grafana/dashboards/sawtooth_performance.json``
+
+      - Download the dashboard from GitHub at this location:
+        `hyperledger/sawtooth-core/1-0/docker/grafana/dashboards/sawtooth_performance.json
+        <https://raw.githubusercontent.com/hyperledger/sawtooth-core/1-0/docker/grafana/dashboards/sawtooth_performance.json>`_
+
+   b. Click on the Grafana spiral logo and mouse over "Dashboards", then click
       "Import".
 
    #. Click "Upload .json file".
 
-   #. Navigate to the location of `` sawtooth_performance.json``.
+   #. Navigate to the location of ``sawtooth_performance.json``.
 
    #. Select "metrics" in the drop-down menu and click "Import".
 
-Sawtooth Validator Configuration
-================================
 
-Sawtooth validator metrics are reported by the sawtooth-validator process, and
-are configured in the file /etc/sawtooth/validator.toml.
+Configure the Sawtooth Validator for Grafana
+============================================
+
+The ``sawtooth-validator`` process reports metrics for the Sawtooth validator.
+Use the validator configuration file, ``/etc/sawtooth/validator.toml``, to
+specify the validator settings for Grafana.
 
 #. If the validator configuration file doesn't exist yet, copy the template
    from ``/etc/sawtooth/validator.toml.example`` to
-   ``/etc/sawtooth/validator.toml``.
+   ``/etc/sawtooth/validator.toml``. For more information, see
+   :doc:`configuring_sawtooth/validator_configuration_file`.
 
-#. Fill in the following values with the configurations used above.
-   ``opentsdb_url`` is the IP / FQDN:port to the InfluxDB instance,
-   ``opentsdb_db`` is the value of INFLUXDB_DB, then fill in the INFLUXDB_USER
-   for ``opentsdb_username`` and INFLUXDB_USER_PASSWORD for
-   ``opentsdb_password`` created above.
+   .. note::
+
+      The default config directory is ``/etc/sawtooth/``. For information on
+      finding the config directory in a non-default location, see
+      :doc:`configuring_sawtooth/path_configuration_file`.
+
+#. Edit ``/etc/sawtooth/validator.toml``. Change the following settings to the
+   values that you defined when you set up InfluxDB:
+
+   * ``opentsdb_url``: Enter the IP or FQDN:port to the InfluxDB instance
+   * ``opentsdb_db``: Enter ``metrics`` (the value of ``INFLUXDB_DB``)
+   * ``opentsdb_username``: Enter ``lrdata`` (the ``INFLUXDB_USER``)
+   * ``opentsdb_password``: Enter the password for ``INFLUXDB_USER_PASSWORD``
 
    .. code-block:: ini
 
@@ -155,31 +182,46 @@ are configured in the file /etc/sawtooth/validator.toml.
 
       opentsdb_username  = "lrdata"
 
-      opentsdb_password  = "test"
+      opentsdb_password  = "{lrdata-pw}"
 
    .. note::
-      Be sure to replace  {host} with the IP or Fully Qualified Domain Name
-      (FQDN) of the system running the InfluxDB Docker container.
 
-#. Restart sawtooth-validator for these changes to take effect.
+      For ``opentsdb_url``, be sure to replace  the existing host name with the
+      IP or FQDN of the system running the InfluxDB Docker container.
 
-   If started via systemd:
+#. Restart the validator for these changes to take effect.
 
-   .. code-block:: console
+   * If the validator was started as a ``systemd`` service:
 
-      $ sudo systemctl restart sawtooth-validator
+       .. code-block:: console
 
-Sawtooth REST API Configuration
-===============================
+          $ sudo systemctl restart sawtooth-validator
 
-Sawtooth REST API metrics are reported by the the ``sawtooth-rest-api`` process.
+   * To restart ``sawtooth-validator`` on the command line, see the appropriate
+     procedure in the Application Developer's Guide: either
+     :doc:`../app_developers_guide/ubuntu` or :ref:`proc-multi-ubuntu-label`.
+
+
+Configure the Sawtooth REST API for Grafana
+===========================================
+
+The ``sawtooth-rest-api`` process reports metrics for the Sawtooth REST API.
+Use the REST API configuration file, ``/etc/sawtooth/rest_api.toml``, to specify
+the REST API settings for Grafana.
 
 #. If the REST API configuration file doesn't exist yet, copy the template from
    ``/etc/sawtooth/rest_api.toml.example`` to ``/etc/sawtooth/rest_api.toml``.
+   For more information, see
+   :doc:`configuring_sawtooth/rest_api_configuration_file`.
+
+   .. note::
+
+      The default config directory is ``/etc/sawtooth/``. For information on
+      finding the config directory in a non-default location, see
+      :doc:`configuring_sawtooth/path_configuration_file`.
 
 #. Modify ``opentsdb_url``, ``opentsdb_db``, ``opentsdb_username``, and
-   ``opentsdb_password`` to match the values used for the validator and the
-   DB created above.
+   ``opentsdb_password`` to match the values used for the validator.
 
    .. code-block:: ini
 
@@ -189,21 +231,27 @@ Sawtooth REST API metrics are reported by the the ``sawtooth-rest-api`` process.
       opentsdb_db = "metrics"
 
       opentsdb_username = "lrdata"
-      opentsdb_password = "test"
+      opentsdb_password  = "{lrdata-pw}"
 
-#. Restart ``sawtooth-rest-api`` for these changes to take effect.
+#. Restart the REST API (``sawtooth-rest-api``) for these changes to take effect.
 
-   If started via systemd:
+   * If the REST API was started as a ``systemd`` service:
 
-   .. code-block:: console
+       .. code-block:: console
 
-      $ sudo systemctl restart sawtooth-rest-api
+          $ sudo systemctl restart sawtooth-rest-api
 
-Telegraf Configuration
-=======================
+   * To restart ``sawtooth-rest-api`` on the command line, see the appropriate
+     procedure in the Application Developer's Guide: either
+     :doc:`../app_developers_guide/ubuntu` or :ref:`proc-multi-ubuntu-label`.
+     :ref:`proc-multi-ubuntu-label`.
 
-Telegraf is used on the Sawtooth validator nodes for sending OS and hardware
-metrics to InfluxDB.
+
+Configure Telegraf
+==================
+
+`Telegraf <https://www.influxdata.com/time-series-platform/telegraf/>`_ runs on
+the Sawtooth nodes to send operating system and hardware metrics to InfluxDB.
 
 #. Install Telegraf from the InfluxData repository.
 
@@ -214,14 +262,14 @@ metrics to InfluxDB.
       $ sudo apt-get update
       $ sudo apt-get install telegraf
 
-#. To configure Telegraf, edit ``/etc/telegraf/telegraf.conf``.
+#. Edit ``/etc/telegraf/telegraf.conf`` to configure Telegraf.
 
    .. code-block:: console
 
       $ sudo vi /etc/telegraf/telegraf.conf
 
 #. Under ``[[outputs.influxdb]]``, change the following settings to match the
-   values used above.
+   values that you defined when you set up InfluxDB.
 
    .. code-block:: ini
 
@@ -231,10 +279,11 @@ metrics to InfluxDB.
       password = "{lrdata-pw}"
 
    .. note::
-      Be sure to replace {host} with the IP or Fully Qualified Domain Name
-      (FQDN) of the system running the InfluxDB Docker container.
 
-#. Restart Telegraf.
+      Be sure to replace ``{host}`` with the IP or FQDN of the system running
+      the InfluxDB Docker container.
+
+#. Restart the Telegraf service.
 
    .. code-block:: console
 
