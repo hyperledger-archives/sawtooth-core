@@ -21,6 +21,7 @@ Sawtooth metrics.
    :maxdepth: 2
 
    sysadmin_guide/setting_up_sawtooth_poet-sim
+   sysadmin_guide/setting_allowed_txns
    sysadmin_guide/rest_auth_proxy
    sysadmin_guide/configuring_permissions
    sysadmin_guide/grafana_configuration
