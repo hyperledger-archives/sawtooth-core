@@ -47,6 +47,7 @@ install any custom transaction processors.
    installation.rst
    generating_keys.rst
    creating_genesis_block.rst
+   off_chain_settings.rst
    systemd.rst
    testing_sawtooth.rst
 

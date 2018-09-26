@@ -94,6 +94,8 @@ blocks until a transaction exists which can be executed because its
 dependencies have been satisfied, with steps 2 through 6 happening in
 parallel for each transaction being executed.
 
+.. _arch-iterative-sched-label:
+
 Iterative Scheduling
 ====================
 
