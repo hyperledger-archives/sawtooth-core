@@ -32,6 +32,49 @@ to test basic Sawtooth functionality.
    If not, check the status of the REST API service and restart it, if
    necessary; see :doc:`systemd`.
 
+#. If this node has joined an existing network, use the following steps to
+   confirm network functionality.
+
+   a. To check whether peering has occurred on the network, submit a peers query
+      to the REST API on this node.
+
+      .. code-block:: console
+
+         $ curl http://localhost:8008/peers
+
+      .. note::
+
+         If this node is not running a local REST API, replace
+         ``localhost:8008`` with the externally advertised IP address and port
+         of the REST API.
+
+      You should see a JSON response that includes the IP address and port for
+      the validator and REST API, as in this example:
+
+      .. code-block:: console
+
+         {
+             "data": [
+             "tcp://validator-1:8800",
+           ],
+           "link": "http://rest-api:8008/peers"
+         }
+
+      If this query returns a 503 error, the node has not yet peered with the
+      Sawtooth network. Repeat the query until you see the JSON response.
+
+   #. (Optional) You can run the following Sawtooth commands to show the other
+      nodes on the network.
+
+      * Run ``sawtooth peer list`` to show the peers of this node.
+
+      * (Release 1.1 and later) Run ``sawnet peers list`` to display a complete
+        graph of peers on the network.
+
+   If there are problems, check the validator and REST API configuration files
+   for errors in the IP addresses, ports, or peer settings. For more
+   information, see :doc:`configuring_sawtooth`.
+
 #. Check the list of blocks on the blockchain.
 
    .. code-block:: console
