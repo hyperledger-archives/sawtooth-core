@@ -6,13 +6,14 @@ The REST API configuration file specifies network connection settings and an
 optional timeout value.
 
 If the config directory contains a file named ``rest_api.toml``, the
-configuration settings are applied when the REST API starts.  (By default, the
-config directory is ``/etc/sawtooth/``; see :doc:`path_configuration_file` for
-more information.) Specifying a command-line option will override the setting
+configuration settings are applied when the REST API starts.
+Specifying a command-line option will override the setting
 in the configuration file.
 
-Note: By default, the config directory is /etc/sawtooth/.
-See :doc:`path_configuration_file` for more information.
+.. note::
+
+   By default, the config directory is ``/etc/sawtooth/``.
+   See :doc:`path_configuration_file` for more information.
 
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/rest_api/packaging/rest_api.toml.example``.

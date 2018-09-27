@@ -8,14 +8,14 @@ file to set the URL of the REST API once, rather than entering the ``--url``
 option for each subcommand.
 
 If the config directory contains a file named ``cli.toml``, the
-configuration settings are applied when the ``sawtooth`` command is
-run. (By default, the config directory is /etc/sawtooth/; see
-:doc:`path_configuration_file` for more information.)
+configuration settings are applied when the ``sawtooth`` command is run.
 Specifying command-line options will override the settings in the
 configuration file.
 
-Note: By default, the config directory is /etc/sawtooth/.
-See :doc:`path_configuration_file` for more information.
+.. note::
+
+   By default, the config directory is ``/etc/sawtooth/``.
+   See :doc:`path_configuration_file` for more information.
 
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/cli/cli.toml.example``. To create a CLI configuration
