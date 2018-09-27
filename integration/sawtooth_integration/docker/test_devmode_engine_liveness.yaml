@@ -154,6 +154,8 @@ services:
       - 8800
       - 5005
     working_dir: /root
+    environment:
+      RUST_BACKTRACE: full
     command: "bash -c \"\
         sawadm keygen && \
         sawset genesis \
@@ -193,6 +195,8 @@ services:
       - 4004
       - 8800
       - 5005
+    environment:
+      RUST_BACKTRACE: full
     command: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -v \
@@ -222,6 +226,8 @@ services:
       - 4004
       - 8800
       - 5005
+    environment:
+      RUST_BACKTRACE: full
     command: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -v \
@@ -251,6 +257,8 @@ services:
       - 4004
       - 8800
       - 5005
+    environment:
+      RUST_BACKTRACE: full
     command: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -v \
@@ -280,6 +288,8 @@ services:
       - 4004
       - 8800
       - 5005
+    environment:
+      RUST_BACKTRACE: full
     command: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -v \
