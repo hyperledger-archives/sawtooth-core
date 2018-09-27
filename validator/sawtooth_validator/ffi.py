@@ -20,6 +20,8 @@ import logging
 import os
 import sys
 
+from sawtooth_validator.protobuf.block_pb2 import Block
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -185,3 +187,37 @@ def python_to_sender_callback(sender):
         return sender.send(*args)
 
     return callback_wrapper
+
+
+class BlockIterator(OwnedPointer):
+
+    def __init__(self, check_return_code, initialized_ptr=None):
+        super().__init__("{}_drop".format(self.name), initialized_ptr)
+        self._check_return_code = check_return_code
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.pointer:
+            raise StopIteration()
+
+        (vec_ptr, vec_len, vec_cap) = prepare_vec_result()
+
+        self._check_return_code(
+            LIBRARY.call(
+                "{}_next".format(self.name),
+                self.pointer,
+                ctypes.byref(vec_ptr),
+                ctypes.byref(vec_len),
+                ctypes.byref(vec_cap)))
+
+        # Check if NULL
+        if not vec_ptr:
+            raise StopIteration()
+
+        payload = from_rust_vec(vec_ptr, vec_len, vec_cap)
+        block = Block()
+        block.ParseFromString(payload)
+
+        return block
