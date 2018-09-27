@@ -29,20 +29,16 @@ example configuration options as necessary for your system.
 
 The ``validator.toml`` configuration file has the following options:
 
-- ``bind`` = [ "``endpoint``", "``endpoint``" ]
+- ``bind = [ "network:{endpoint}", "component:{endpoint}", "consensus:{endpoint}", ]``
 
-  Sets the network and component endpoints. Default network bind interface:
-  ``tcp://127.0.0.1:8800``. Default component bind interface:
-  ``tcp://127.0.0.1:4004``.
-
-  Each string has the format ``{option}:{endpoint}``, where
-  ``{option}`` is either ``network`` or ``component``. For example:
+  Sets the network, component, and consensus endpoints. The default values are:
 
   .. code-block:: none
 
     bind = [
       "network:tcp://127.0.0.1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
 - ``peering = "{static,dynamic}"``
