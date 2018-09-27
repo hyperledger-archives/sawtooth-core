@@ -5,13 +5,14 @@ PoET SGX Enclave Configuration File
 This configuration file specifies configuration settings for a PoET SGX enclave.
 
 If the config directory contains a file named ``poet_enclave_sgx.toml``, the
-configuration settings are applied when the component starts. (By default, the
-config directory is ``/etc/sawtooth/``; see :doc:`path_configuration_file` for
-more information.) Specifying a command-line option will override the setting
+configuration settings are applied when the component starts.
+Specifying a command-line option will override the setting
 in the configuration file.
 
-Note: By default, the config directory is /etc/sawtooth/.
-See :doc:`path_configuration_file` for more information.
+.. note::
+
+   By default, the config directory is ``/etc/sawtooth/``.
+   See :doc:`path_configuration_file` for more information.
 
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/consensus/poet/sgx/packaging/poet_enclave_sgx.toml.example``.
