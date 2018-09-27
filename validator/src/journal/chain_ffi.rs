@@ -134,10 +134,12 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let state_pruning_manager = StatePruningManager::new(state_database);
 
+    let commit_store = Box::from_raw(commit_store as *mut CommitStore);
+
     let chain_controller = ChainController::new(
         block_manager,
         block_validator,
-        Box::new(PyBlockStore::new(py_block_store_reader)),
+        commit_store.clone(),
         chain_head_lock_ref.clone(),
         results_cache,
         Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
@@ -149,6 +151,8 @@ pub unsafe extern "C" fn chain_controller_new(
     );
 
     *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
+
+    Box::into_raw(commit_store);
 
     ErrorCode::Success
 }

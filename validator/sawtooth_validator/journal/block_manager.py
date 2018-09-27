@@ -68,11 +68,11 @@ class BlockManager(OwnedPointer):
         _libexec("block_manager_new",
                  ctypes.byref(self.pointer))
 
-    def add_store(self, name, block_store):
-        _pylibexec("block_manager_add_store",
-                   self.pointer,
-                   ctypes.c_char_p(name.encode()),
-                   ctypes.py_object(block_store))
+    def add_commit_store(self, block_store):
+        _libexec(
+            "block_manager_add_commit_store",
+            self.pointer,
+            block_store.pointer)
 
     def put(self, branch):
         c_put_items = (ctypes.POINTER(_PutEntry) * len(branch))()

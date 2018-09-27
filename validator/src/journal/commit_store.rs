@@ -203,7 +203,7 @@ impl CommitStore {
         Ok(())
     }
 
-    fn put_blocks(&self, blocks: Vec<Block>) -> Result<(), DatabaseError> {
+    pub fn put_blocks(&self, blocks: Vec<Block>) -> Result<(), DatabaseError> {
         let mut writer = self.db.writer()?;
         for block in blocks {
             Self::put_block(&mut writer, block)?;

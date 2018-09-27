@@ -21,14 +21,12 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use block::Block;
-use cpython::{PyObject, Python};
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::chain_ffi::PyBlockStore;
+use journal::commit_store::CommitStore;
 use proto;
 use protobuf::{self, Message};
-use py_ffi;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -93,30 +91,22 @@ pub unsafe extern "C" fn block_manager_contains(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn block_manager_add_store(
+pub unsafe extern "C" fn block_manager_add_commit_store(
     block_manager: *mut c_void,
-    block_store_name: *const c_char,
-    block_store: *mut py_ffi::PyObject,
+    commit_store: *mut c_void,
 ) -> ErrorCode {
-    check_null!(block_manager, block_store_name, block_store);
+    check_null!(block_manager, commit_store);
 
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-    let py_block_store = PyBlockStore::new(PyObject::from_borrowed_ptr(py, block_store));
+    let commit_store = Box::from_raw(commit_store as *mut CommitStore);
 
-    let name = match CStr::from_ptr(block_store_name).to_str() {
-        Ok(s) => s,
-        Err(_) => return ErrorCode::InvalidInputString,
-    };
+    let rc = (*(block_manager as *mut BlockManager))
+        .add_store("commit_store", commit_store.clone())
+        .map(|_| ErrorCode::Success)
+        .unwrap_or(ErrorCode::Error);
 
-    let block_manager = (*(block_manager as *mut BlockManager)).clone();
+    Box::into_raw(commit_store);
 
-    py.allow_threads(move || {
-        block_manager
-            .add_store(name, Box::new(py_block_store))
-            .map(|_| ErrorCode::Success)
-            .unwrap_or(ErrorCode::Error)
-    })
+    rc
 }
 
 #[no_mangle]
