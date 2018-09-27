@@ -1,42 +1,46 @@
-*****************
-Log Configuration
-*****************
+**********************
+Log Configuration File
+**********************
 
-Overview
-========
-The validator and the Python SDK make it easy to customize the
+The validator and the Python SDK make it easy to customize Sawtooth
 logging output.  This is done by creating a log config file in
 `TOML <https://github.com/toml-lang/toml>`_ or `YAML <http://yaml.org>`_
 format and passing it to the built-in Python logging module.
 
 .. Note::
 
-  Use YAML to configure a remote syslog service. Due to a limitation in
+  You must use YAML to configure a remote syslog service. Due to a limitation in
   the TOML spec, you cannot configure a remote syslog service using TOML.
 
-Log Files
-=========
+About Sawtooth Log Files
+========================
 
-If there is no log configuration file provided, the default is to create an
-error log and a debug log. Theses files will be stored in the log directory
-(``log_dir``) in a location determined by the ``SAWTOOTH_HOME`` environment
-variable. For more information, see
-:doc:`configuring_sawtooth/path_configuration_file`.
+If there is no log configuration file provided, Sawtooth creates an error log
+and a debug log by default. These files are stored in the log directory
+(``log_dir``), which is ``/var/log/sawtooth`` by default. However, the location
+``SAWTOOTH_HOME`` environment variable, if set, can change the default location.
+For more information, see :doc:`configuring_sawtooth/path_configuration_file`.
 
-The names of the validator log files are:
+For Sawtooth core components, such as the validator or REST API, the log file
+names are ``{component}-debug.log`` and ``{component}-error.log``. For example,
+the validator log files are:
 
 - ``validator-debug.log``
 - ``validator-error.log``
 
 For Python transaction processors, the author determines the name of the log
-file. It is highly encouraged that the file names are unique for each running
-processor to avoid naming conflicts.  The example transaction processors
-provided with the SDK uses the following naming convention:
+file. Because a Sawtooth node can run several instances of the same transaction
+processor, it is important to create unique log file names for each running
+transaction processor to avoid naming conflicts.
+
+The example transaction processors included in Sawtooth use the following
+naming convention:
 
 - ``{TPname}-{zmqID}-debug.log``
 - ``{TPname}-{zmqID}-error.log``
 
-Examples:
+For example, an instance of the IntegerKey (``intkey``) transaction processor
+could have the following log files:
 
 -  ``intkey-18670799cbbe4367-debug.log``
 -  ``intkey-18670799cbbe4367-error.log``
@@ -45,12 +49,13 @@ Log Configuration
 =================
 
 To change the default logging behavior of a Sawtooth component, such as the
-validator, put a log configuration file in the config directory (see
+validator or REST API, put a log configuration file in the config directory
+(``/var/log/sawtooth`` by default; see
 :doc:`configuring_sawtooth/path_configuration_file`).
 
-An example log configuration file is at
+Sawtooth provides an example log configuration file in
 ``/etc/sawtooth/log_config.toml.example``. To create a log configuration file,
-copy the example file to ``/etc/sawtooth`` and name it ``log_config.toml``.
+copy the example file to the config directory and name it ``log_config.toml``.
 
 Each transaction processor can define its own config file. The name of
 this file is determined by the author. The transaction processors included in
@@ -61,11 +66,8 @@ the Python SDK use the following naming convention:
 For example, the IntegerKey (``intkey``) log configuration file is
 ``intkey_log_config.toml``.
 
-Examples
-========
-
-Configure a Specific Logger
----------------------------
+Example: Configure a Specific Logger
+====================================
 If the default logs give too much information, you can configure a specific
 logger that will only report on the area of the code you are interested in.
 
@@ -95,9 +97,9 @@ interconnect logs to the directory and file specified.
 The formatter and log level can also be specified to provide the exact
 information you want in your logs.
 
-Rotating File Handler
----------------------
-Below is an example of how to setup rotating logs. This is useful when the logs
+Example: Create a Rotating File Handler
+=======================================
+This example shows how to set up rotating logs. This is useful when the logs
 may grow very large, such as with a long-running network. For example:
 
 .. code-block:: none
@@ -120,10 +122,11 @@ may grow very large, such as with a long-running network. For example:
   handlers = [ "interconnect"]
 
 If one file exceeds the ``maxBytes`` set in the config file, that file will be
-renamed to ``filename.log.1`` and a new ``filename.log`` will be written to.
-This process continues for the number of files plus one set in the
-``backupCount``. After that point, the file that is being written to is rotated.
-The current file being written to is always ``filename.log``.
+renamed to ``filename.log.1`` and logs will be written to a new
+``filename.log``.
+This process continues for the number of files plus one (the value set in
+``backupCount``). After that point, the file being written to is rotated.
+The current log file is always ``filename.log``.
 
 For more Python configuration options, see the Python documentation at
 `<https://docs.python.org/3/library/logging.config.html>`_.

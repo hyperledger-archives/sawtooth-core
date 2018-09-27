@@ -10,8 +10,10 @@ configuration settings are applied when the transaction processor starts.
 Specifying a command-line option will override the setting in the configuration
 file.
 
-Note: By default, the config directory is /etc/sawtooth/.
-See :doc:`path_configuration_file` for more information.
+.. note::
+
+   By default, the config directory is ``/etc/sawtooth/``.
+   See :doc:`path_configuration_file` for more information.
 
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/families/settings/packaging/settings.toml.example``.
