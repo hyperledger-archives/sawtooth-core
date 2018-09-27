@@ -27,7 +27,6 @@ class BlockValidator(OwnedPointer):
                  transaction_executor,
                  block_status_store,
                  permission_verifier,
-                 block_store,
                  view_factory):
         super(BlockValidator, self).__init__("block_validator_drop")
 
@@ -36,7 +35,6 @@ class BlockValidator(OwnedPointer):
                                       ctypes.py_object(transaction_executor),
                                       block_status_store.pointer,
                                       ctypes.py_object(permission_verifier),
-                                      ctypes.py_object(block_store),
                                       view_factory.pointer,
                                       ctypes.byref(self.pointer)))
 

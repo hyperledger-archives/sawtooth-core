@@ -314,7 +314,6 @@ class Validator:
 
         block_validator = BlockValidator(
             block_manager=block_manager,
-            block_store=block_store,
             view_factory=native_state_view_factory,
             transaction_executor=transaction_executor,
             block_status_store=block_status_store,
