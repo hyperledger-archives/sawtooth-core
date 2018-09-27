@@ -28,6 +28,7 @@ use database::lmdb::LmdbDatabaseWriter;
 use journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
+use journal::chain::{ChainReadError, ChainReader};
 use transaction::Transaction;
 
 /// Contains all committed blocks for the current chain
@@ -540,5 +541,34 @@ impl Iterator for CommitStoreByHeightIterator {
             }
         }
         block
+    }
+}
+
+fn map_block_database_result_to_chain_reader_result(
+    result: Result<Block, DatabaseError>,
+) -> Result<Option<Block>, ChainReadError> {
+    match result {
+        Ok(block) => Ok(Some(block)),
+        Err(DatabaseError::NotFoundError(_)) => Ok(None),
+        Err(err) => Err(ChainReadError::GeneralReadError(format!("{:?}", err))),
+    }
+}
+
+impl ChainReader for CommitStore {
+    fn chain_head(&self) -> Result<Option<Block>, ChainReadError> {
+        map_block_database_result_to_chain_reader_result(self.get_chain_head())
+    }
+
+    fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError> {
+        map_block_database_result_to_chain_reader_result(self.get_by_block_id(block_id))
+    }
+
+    fn get_block_by_block_num(&self, block_num: u64) -> Result<Option<Block>, ChainReadError> {
+        map_block_database_result_to_chain_reader_result(self.get_by_block_num(block_num))
+    }
+
+    fn count_committed_transactions(&self) -> Result<usize, ChainReadError> {
+        self.get_transaction_count()
+            .map_err(|err| ChainReadError::GeneralReadError(format!("{:?}", err)))
     }
 }

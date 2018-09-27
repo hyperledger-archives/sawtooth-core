@@ -69,7 +69,7 @@ class ChainController(OwnedPointer):
 
         _pylibexec(
             'chain_controller_new',
-            ctypes.py_object(block_store),
+            block_store.pointer,
             block_manager.pointer,
             block_validator.pointer,
             state_database.pointer,
