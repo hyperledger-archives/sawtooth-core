@@ -129,8 +129,11 @@ The ``validator.toml`` configuration file has the following options:
 
 - ``opentsdb_url`` = "`value`"
 
-  Sets the host and port for Open TSDB database (used for metrics).
+  Sets the host and port for an Open TSDB database (used for metrics).
   Default: none.
+
+  For example of using the ``opentsdb_`` settings, see
+  :doc:`../grafana_configuration`.
 
 - ``opentsdb_db`` = "`name`"
 
