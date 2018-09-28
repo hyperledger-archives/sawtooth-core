@@ -30,8 +30,7 @@ message Policy {
     // Whether this is a Permit_KEY or Deny_KEY entry
     EntryType type = 1;
 
-    // This should be a list of public keys or * to refer to all participants.
-    // If using *, it should be the only key in the list.
+    // This should be a public key or * to refer to all participants.
     string  key = 2;
   }
 
