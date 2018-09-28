@@ -1,10 +1,14 @@
-**************************************************
-Using Sawtooth with the SGX Implementation of PoET
-**************************************************
+****************************
+Using Sawtooth with PoET-SGX
+****************************
 
 .. note::
 
-    These instructions have been tested on Ubuntu 16.04 only.
+   PoET-SGX is currently not compatible with Sawtooth 1.1. Users looking to
+   leverage PoET-SGX should remain on Sawtooth 1.0. PoET-SGX is being upgraded
+   to be made compatible with 1.1 and will be released before the end of 2018.
+
+These instructions have been tested on Ubuntu 16.04 only.
 
 Prerequisites
 =============
