@@ -15,11 +15,14 @@
 
 # pylint: disable=protected-access
 
+import os
+import tempfile
 import unittest
 from unittest.mock import Mock
 from uuid import uuid4
 
 from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.event_extractors \
@@ -272,11 +275,15 @@ class ClientEventsUnsubscribeHandlerTest(unittest.TestCase):
 
 class ClientEventsGetRequestHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.block_store = BlockStore(DictDatabase())
+        self.dir = tempfile.mkdtemp()
+        self.block_db = NativeLmdbDatabase(
+            os.path.join(self.dir, 'block.lmdb'),
+            BlockStore.create_index_configuration())
+        self.block_store = BlockStore(self.block_db)
         self.receipt_store = TransactionReceiptStore(DictDatabase())
         self._txn_ids_by_block_id = {}
         for block_id, blk_w, txn_ids in create_chain():
-            self.block_store[block_id] = blk_w
+            self.block_store.put_blocks([blk_w.block])
             self._txn_ids_by_block_id[block_id] = txn_ids
             for txn_id in txn_ids:
                 receipt = create_receipt(txn_id=txn_id,

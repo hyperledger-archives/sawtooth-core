@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.protobuf import client_block_pb2
 from sawtooth_validator.protobuf.block_pb2 import Block
 from test_client_request_handlers.base_case import ClientHandlerTestCase
@@ -283,7 +282,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             response,
             '0x0000000000000002',
             2,
-            next_id=BlockStore.block_num_to_hex(0))
+            next_id=handlers.block_num_to_hex(0))
 
     def test_block_list_paginated_by_start(self):
         """Verifies block list requests work paginated by limit and start.
@@ -305,7 +304,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - that item has a header_signature of 'bbb...1'
         """
         response = self.make_paged_request(
-            limit=1, start=BlockStore.block_num_to_hex(1))
+            limit=1, start=handlers.block_num_to_hex(1))
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
@@ -313,7 +312,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             response,
             '0x0000000000000001',
             1,
-            next_id=BlockStore.block_num_to_hex(0))
+            next_id=handlers.block_num_to_hex(0))
         self.assertEqual(1, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_1, response.blocks[0].header_signature)

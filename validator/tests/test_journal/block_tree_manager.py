@@ -27,7 +27,6 @@ import tempfile
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
@@ -97,10 +96,12 @@ class BlockTreeManager:
     def __init__(self, with_genesis=True):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
-        self.block_store = BlockStore(DictDatabase(
-            indexes=BlockStore.create_index_configuration()))
-        self.block_cache = BlockCache(self.block_store)
         self.dir = tempfile.mkdtemp()
+        self.block_db = NativeLmdbDatabase(
+            os.path.join(self.dir, 'block.lmdb'),
+            BlockStore.create_index_configuration())
+        self.block_store = BlockStore(self.block_db)
+        self.block_cache = BlockCache(self.block_store)
         self.state_db = NativeLmdbDatabase(
             os.path.join(self.dir, "merkle.lmdb"),
             MerkleDatabase.create_index_configuration())
@@ -108,7 +109,7 @@ class BlockTreeManager:
         self.state_view_factory = NativeStateViewFactory(self.state_db)
 
         self.block_manager = BlockManager()
-        self.block_manager.add_store("commit_store", self.block_store)
+        self.block_manager.add_commit_store(self.block_store)
 
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
@@ -215,7 +216,7 @@ class BlockTreeManager:
             self.block_cache[block_wrapper.identifier] = block_wrapper
 
         if add_to_store:
-            self.block_store[block_wrapper.identifier] = block_wrapper
+            self.block_store.put_blocks([block_wrapper.block])
 
         LOGGER.debug("Generated %s", dumps_block(block_wrapper))
         return block_wrapper
@@ -231,7 +232,7 @@ class BlockTreeManager:
 
         if root_block is None:
             previous = self.generate_genesis_block()
-            self.block_store[previous.identifier] = previous
+            self.block_store.put_blocks([previous.block])
         else:
             previous = self._get_block(root_block)
 

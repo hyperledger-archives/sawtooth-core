@@ -726,7 +726,10 @@ impl BlockValidation for OnChainRulesValidation {
 mod test {
 
     use super::*;
-    use journal::{block_store::BlockStoreError, NULL_BLOCK_IDENTIFIER};
+    use journal::{
+        block_store::{BlockStore, BlockStoreError},
+        NULL_BLOCK_IDENTIFIER,
+    };
     use std::sync::Mutex;
 
     #[test]
