@@ -31,7 +31,6 @@ use std::thread;
 use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
-use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
@@ -505,7 +504,7 @@ impl BlockPublisher {
     #![allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
-        transaction_executor: PyObject,
+        transaction_executor: Box<ExecutionPlatform>,
         batch_committed: PyObject,
         transaction_committed: PyObject,
         state_view_factory: StateViewFactory,
@@ -519,10 +518,8 @@ impl BlockPublisher {
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
     ) -> Self {
-        let tep = Box::new(PyExecutor::new(transaction_executor).unwrap());
-
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
-            tep,
+            transaction_executor,
             chain_head,
             None,
             PendingBatchesPool::new(NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT),

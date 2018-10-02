@@ -24,6 +24,7 @@ use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use block::Block;
+use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::publisher::{
@@ -130,7 +131,10 @@ pub unsafe extern "C" fn block_publisher_new(
 
     let publisher = BlockPublisher::new(
         block_manager,
-        transaction_executor,
+        Box::new(
+            PyExecutor::new(transaction_executor)
+                .expect("Failed to create python transaction executor"),
+        ),
         batch_committed,
         transaction_committed,
         state_view_factory.clone(),
