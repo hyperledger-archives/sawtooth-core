@@ -22,13 +22,12 @@ use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
 use journal::block_scheduler::BlockScheduler;
-use journal::block_store::{BatchIndex, TransactionIndex};
 use journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
 use journal::validation_rule_enforcer::enforce_validation_rules;
-use journal::{block_manager::BlockManager, block_store::BlockStore, block_wrapper::BlockStatus};
+use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 use std::sync::{
@@ -163,40 +162,22 @@ impl BlockValidationResult {
 type InternalSender = Sender<(Block, Sender<BlockValidationResult>)>;
 type InternalReceiver = Receiver<(Block, Sender<BlockValidationResult>)>;
 
-pub struct BlockValidator<
-    TEP: ExecutionPlatform,
-    PV: PermissionVerifier,
-    BS: BlockStore,
-    B: BatchIndex,
-    T: TransactionIndex,
-> {
+pub struct BlockValidator<TEP: ExecutionPlatform, PV: PermissionVerifier> {
     channels: Vec<(InternalSender, Option<InternalReceiver>)>,
     index: Arc<AtomicUsize>,
     validation_thread_exit: Arc<AtomicBool>,
     block_scheduler: BlockScheduler<BlockValidationResultStore>,
     block_status_store: BlockValidationResultStore,
     block_manager: BlockManager,
-    block_store: BS,
-    batch_index: B,
     transaction_executor: TEP,
-    transaction_index: T,
     view_factory: StateViewFactory,
     permission_verifier: PV,
 }
 
-impl<
-        TEP: ExecutionPlatform + 'static,
-        PV: PermissionVerifier + 'static,
-        BS: BlockStore + 'static,
-        B: BatchIndex + 'static,
-        T: TransactionIndex + 'static,
-    > BlockValidator<TEP, PV, BS, B, T>
+impl<TEP: ExecutionPlatform + 'static, PV: PermissionVerifier + 'static> BlockValidator<TEP, PV>
 where
     TEP: Clone,
     PV: Clone,
-    BS: Clone,
-    B: Clone,
-    T: Clone,
 {
     #[allow(too_many_arguments)]
     pub fn new(
@@ -204,9 +185,6 @@ where
         transaction_executor: TEP,
         block_status_store: BlockValidationResultStore,
         permission_verifier: PV,
-        block_store: BS,
-        batch_index: B,
-        transaction_index: T,
         view_factory: StateViewFactory,
     ) -> Self {
         let mut channels = vec![];
@@ -222,9 +200,6 @@ where
             block_scheduler: BlockScheduler::new(block_manager.clone(), block_status_store.clone()),
             block_status_store,
             block_manager,
-            block_store,
-            batch_index,
-            transaction_index,
             view_factory,
             permission_verifier,
         }
@@ -399,13 +374,8 @@ where
     }
 }
 
-impl<
-        TEP: ExecutionPlatform + Clone,
-        PV: PermissionVerifier + Clone,
-        BS: BlockStore + Clone,
-        B: BatchIndex + Clone,
-        T: TransactionIndex + Clone,
-    > Clone for BlockValidator<TEP, PV, BS, B, T>
+impl<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> Clone
+    for BlockValidator<TEP, PV>
 {
     fn clone(&self) -> Self {
         let transaction_executor = self.transaction_executor.clone();
@@ -426,9 +396,6 @@ impl<
             block_scheduler: self.block_scheduler.clone(),
             block_status_store: self.block_status_store.clone(),
             block_manager: self.block_manager.clone(),
-            block_store: self.block_store.clone(),
-            batch_index: self.batch_index.clone(),
-            transaction_index: self.transaction_index.clone(),
             permission_verifier: self.permission_verifier.clone(),
             view_factory: self.view_factory.clone(),
         }
@@ -759,7 +726,10 @@ impl BlockValidation for OnChainRulesValidation {
 mod test {
 
     use super::*;
-    use journal::{block_store::BlockStoreError, NULL_BLOCK_IDENTIFIER};
+    use journal::{
+        block_store::{BlockStore, BlockStoreError},
+        NULL_BLOCK_IDENTIFIER,
+    };
     use std::sync::Mutex;
 
     #[test]

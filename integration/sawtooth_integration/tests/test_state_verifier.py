@@ -24,7 +24,6 @@ import cbor
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.journal.block_store import BlockStore
@@ -75,8 +74,7 @@ def populate_blockstore(blockstore, signer, state_roots):
             signer=signer)
         blocks.append(block)
 
-    for block in blocks:
-        blockstore[block.header_signature] = block
+    blockstore.put_blocks([blkw.block for blkw in blocks])
 
 
 def make_intkey_address(name):
@@ -193,10 +191,14 @@ class TestStateVerifier(unittest.TestCase):
         shutil.rmtree(self._temp_dir)
 
     def test_state_verifier(self):
-        blockstore = BlockStore(DictDatabase(
-            indexes=BlockStore.create_index_configuration()))
+        block_store_db = NativeLmdbDatabase(
+            os.path.join(
+                self._temp_dir, 'test_state_verifier_block_store_db.lmdb'),
+            indexes=BlockStore.create_index_configuration())
+        blockstore = BlockStore(block_store_db)
         global_state_db = NativeLmdbDatabase(
-            os.path.join(self._temp_dir, 'test_state_verifier.lmdb'),
+            os.path.join(
+                self._temp_dir, 'test_state_verifier_global_state.lmdb'),
             indexes=MerkleDatabase.create_index_configuration())
 
         precalculated_state_roots = [

@@ -17,7 +17,6 @@ import ctypes
 from enum import IntEnum
 
 from sawtooth_validator.ffi import OwnedPointer
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator import ffi
 
 
@@ -69,11 +68,11 @@ class BlockManager(OwnedPointer):
         _libexec("block_manager_new",
                  ctypes.byref(self.pointer))
 
-    def add_store(self, name, block_store):
-        _pylibexec("block_manager_add_store",
-                   self.pointer,
-                   ctypes.c_char_p(name.encode()),
-                   ctypes.py_object(block_store))
+    def add_commit_store(self, block_store):
+        _libexec(
+            "block_manager_add_commit_store",
+            self.pointer,
+            block_store.pointer)
 
     def put(self, branch):
         c_put_items = (ctypes.POINTER(_PutEntry) * len(branch))()
@@ -134,7 +133,10 @@ def _pylibexec(name, *args):
 
 
 def _exec(library, name, *args):
-    res = library.call(name, *args)
+    _check_error(library.call(name, *args))
+
+
+def _check_error(res):
     if res == ErrorCode.Success:
         return
 
@@ -156,86 +158,51 @@ def _exec(library, name, *args):
         raise Exception("There was an unknown error: {}".format(res))
 
 
-class _BlockIterator:
-
-    def __del__(self):
-        if self._c_iter_ptr:
-            _libexec("{}_drop".format(self.name), self._c_iter_ptr)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if not self._c_iter_ptr:
-            raise StopIteration()
-
-        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-
-        _libexec("{}_next".format(self.name),
-                 self._c_iter_ptr,
-                 ctypes.byref(vec_ptr),
-                 ctypes.byref(vec_len),
-                 ctypes.byref(vec_cap))
-
-        # Check if NULL
-        if not vec_ptr:
-            raise StopIteration()
-
-        payload = ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
-        block = Block()
-        block.ParseFromString(payload)
-
-        return block
-
-
-class _GetBlockIterator(_BlockIterator):
+class _GetBlockIterator(ffi.BlockIterator):
 
     name = "block_manager_get_iterator"
 
     def __init__(self, block_manager_ptr, block_ids):
+        super().__init__(_check_error)
 
         c_block_ids = (ctypes.c_char_p * len(block_ids))()
         for i, block_id in enumerate(block_ids):
             c_block_ids[i] = ctypes.c_char_p(block_id.encode())
 
-        self._c_iter_ptr = ctypes.c_void_p()
-
         _libexec("{}_new".format(self.name),
                  block_manager_ptr,
                  c_block_ids,
                  ctypes.c_size_t(len(block_ids)),
-                 ctypes.byref(self._c_iter_ptr))
+                 ctypes.byref(self.pointer))
 
 
-class _BranchDiffIterator(_BlockIterator):
+class _BranchDiffIterator(ffi.BlockIterator):
 
     name = "block_manager_branch_diff_iterator"
 
     def __init__(self, block_manager_ptr, tip, exclude):
+        super().__init__(_check_error)
 
         c_tip = ctypes.c_char_p(tip.encode())
         c_exclude = ctypes.c_char_p(exclude.encode())
-
-        self._c_iter_ptr = ctypes.c_void_p()
 
         _libexec("{}_new".format(self.name),
                  block_manager_ptr,
                  c_tip,
                  c_exclude,
-                 ctypes.byref(self._c_iter_ptr))
+                 ctypes.byref(self.pointer))
 
 
-class _BranchIterator(_BlockIterator):
+class _BranchIterator(ffi.BlockIterator):
 
     name = "block_manager_branch_iterator"
 
     def __init__(self, block_manager_ptr, tip):
+        super().__init__(_check_error)
 
         c_tip = ctypes.c_char_p(tip.encode())
-
-        self._c_iter_ptr = ctypes.c_void_p()
 
         _libexec("{}_new".format(self.name),
                  block_manager_ptr,
                  c_tip,
-                 ctypes.byref(self._c_iter_ptr))
+                 ctypes.byref(self.pointer))

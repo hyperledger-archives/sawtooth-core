@@ -27,7 +27,6 @@ from threading import Condition
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
-from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchFinishObserver
 from sawtooth_validator.networking.dispatch import Handler
@@ -535,6 +534,19 @@ class _Sorter:
             return header
 
 
+def block_num_to_hex(block_num):
+    """Converts a block number to a hex string.
+    This is used for proper index ordering and lookup.
+
+    Args:
+        block_num: uint64
+
+    Returns:
+        A hex-encoded str
+    """
+    return "{0:#0{1}x}".format(block_num, 18)
+
+
 def _format_batch_statuses(statuses, batch_ids, tracker):
     """Takes a statuses dict and formats it for transmission with Protobuf and
     ZMQ.
@@ -811,13 +823,13 @@ class BlockListRequest(_ClientRequestHandler):
 
                 next_block = next(block_iter, None)
                 if next_block:
-                    next_block_num = BlockStore.block_num_to_hex(
+                    next_block_num = block_num_to_hex(
                         next_block.block_num)
                 else:
                     next_block_num = None
 
-                start = self._block_store.get(
-                    blocks[0].header_signature).block_num
+                block_id = blocks[0].header_signature
+                start = self._block_store[block_id].block_num
             except ValueError:
                 if paging.start:
                     return self._status.INVALID_PAGING
@@ -827,7 +839,7 @@ class BlockListRequest(_ClientRequestHandler):
             paging_response = client_list_control_pb2.ClientPagingResponse(
                 next=next_block_num,
                 limit=limit,
-                start=BlockStore.block_num_to_hex(start)
+                start=block_num_to_hex(start)
             )
 
         if not blocks:

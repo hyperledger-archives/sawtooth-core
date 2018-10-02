@@ -18,13 +18,15 @@
 import unittest
 import random
 import hashlib
+import os
+import tempfile
 
 import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 from sawtooth_validator.journal.completer import Completer
-from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -37,10 +39,13 @@ from test_completer.mock import MockGossip
 
 class TestCompleter(unittest.TestCase):
     def setUp(self):
-        self.block_store = BlockStore(DictDatabase(
-            indexes=BlockStore.create_index_configuration()))
+        self.dir = tempfile.mkdtemp()
+        self.block_db = NativeLmdbDatabase(
+            os.path.join(self.dir, 'block.lmdb'),
+            BlockStore.create_index_configuration())
+        self.block_store = BlockStore(self.block_db)
         self.block_manager = BlockManager()
-        self.block_manager.add_store("commit_store", self.block_store)
+        self.block_manager.add_commit_store(self.block_store)
         self.gossip = MockGossip()
         self.completer = Completer(
             block_manager=self.block_manager,

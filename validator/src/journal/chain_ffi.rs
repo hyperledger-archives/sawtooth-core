@@ -18,26 +18,20 @@
 #![allow(unknown_lints)]
 
 use block::Block;
-use cpython::{
-    self, FromPyObject, NoArgs, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject,
-    ToPyObject,
-};
+use cpython::{self, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
-use journal::block_store::{
-    BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
-};
 use journal::block_validator::{BlockValidationResultStore, BlockValidator};
-use journal::block_wrapper::{BlockStatus, BlockWrapper};
+use journal::block_wrapper::BlockStatus;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
+use journal::commit_store::CommitStore;
 use py_ffi;
 use pylogger;
 use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
-use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::ptr;
@@ -70,7 +64,7 @@ macro_rules! check_null {
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_new(
-    block_store: *mut py_ffi::PyObject,
+    commit_store: *mut c_void,
     block_manager: *const c_void,
     block_validator: *const c_void,
     state_database: *const c_void,
@@ -84,7 +78,7 @@ pub unsafe extern "C" fn chain_controller_new(
     chain_controller_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
-        block_store,
+        commit_store,
         block_manager,
         block_validator,
         state_database,
@@ -101,17 +95,8 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let py = Python::assume_gil_acquired();
 
-    let py_block_store_reader = PyObject::from_borrowed_ptr(py, block_store);
-
-    let block_validator = (*(block_validator
-        as *const BlockValidator<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
-        .clone();
+    let block_validator =
+        (*(block_validator as *const BlockValidator<PyExecutor, PyPermissionVerifier>)).clone();
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
@@ -134,10 +119,12 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let state_pruning_manager = StatePruningManager::new(state_database);
 
+    let commit_store = Box::from_raw(commit_store as *mut CommitStore);
+
     let chain_controller = ChainController::new(
         block_manager,
         block_validator,
-        Box::new(PyBlockStore::new(py_block_store_reader)),
+        commit_store.clone(),
         chain_head_lock_ref.clone(),
         results_cache,
         Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
@@ -150,6 +137,8 @@ pub unsafe extern "C" fn chain_controller_new(
 
     *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
 
+    Box::into_raw(commit_store);
+
     ErrorCode::Success
 }
 
@@ -157,16 +146,7 @@ pub unsafe extern "C" fn chain_controller_new(
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    Box::from_raw(
-        chain_controller
-            as *mut ChainController<
-                PyExecutor,
-                PyPermissionVerifier,
-                PyBlockStore,
-                PyBlockStore,
-                PyBlockStore,
-            >,
-    );
+    Box::from_raw(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>);
     ErrorCode::Success
 }
 
@@ -174,15 +154,7 @@ pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) ->
 pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
-        .start();
+    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).start();
 
     ErrorCode::Success
 }
@@ -199,13 +171,7 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
     };
 
     let status = match (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
+        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .block_validation_result(block_id)
     {
         Some(r) => r.status,
@@ -219,15 +185,7 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
 pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
-        .stop();
+    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).stop();
 
     ErrorCode::Success
 }
@@ -254,7 +212,7 @@ macro_rules! chain_controller_block_ffi {
                 proto_block.into()
             };
 
-            (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier, PyBlockStore, PyBlockStore, PyBlockStore>)).$cc_fn_name($($block_args)*);
+            (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).$cc_fn_name($($block_args)*);
 
             ErrorCode::Success
         }
@@ -299,14 +257,7 @@ pub unsafe extern "C" fn chain_controller_forks(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    match (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
+    match (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .forks(head)
     {
         None => ErrorCode::UnknownBlock,
@@ -353,14 +304,7 @@ pub unsafe extern "C" fn chain_controller_queue_block(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
+    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .queue_block(block_id);
 
     ErrorCode::Success
@@ -381,13 +325,7 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
     };
 
     if let Err(err) = (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
+        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .on_block_received(block_id)
     {
         error!("ChainController.on_block_received error: {:?}", err);
@@ -407,13 +345,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
     check_null!(chain_controller);
 
     let controller = (*(chain_controller
-        as *mut ChainController<
-            PyExecutor,
-            PyPermissionVerifier,
-            PyBlockStore,
-            PyBlockStore,
-            PyBlockStore,
-        >))
+        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .light_clone();
 
     if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
@@ -436,347 +368,6 @@ pub unsafe extern "C" fn chain_controller_chain_head(
         *block = ptr::null();
         *block_len = 0;
         ErrorCode::Success
-    }
-}
-
-pub struct PyBlockStore {
-    py_block_store: PyObject,
-}
-
-impl PyBlockStore {
-    pub fn new(py_block_store: PyObject) -> Self {
-        PyBlockStore { py_block_store }
-    }
-}
-
-impl ChainReader for PyBlockStore {
-    fn chain_head(&self) -> Result<Option<Block>, ChainReadError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .getattr(py, "chain_head")
-            .and_then(|result| result.extract(py))
-            .map(|bw: Option<BlockWrapper>| {
-                if let Some(bw) = bw {
-                    Some(bw.block())
-                } else {
-                    None
-                }
-            }).map_err(|py_err| {
-                pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
-                ChainReadError::GeneralReadError("Unable to read from python block store".into())
-            })
-    }
-
-    fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .get_item(py, block_id)
-            .and_then(|result| result.extract(py))
-            .map(|bw: Option<BlockWrapper>| {
-                if let Some(bw) = bw {
-                    Some(bw.block())
-                } else {
-                    None
-                }
-            }).or_else(|py_err| {
-                if py_err.get_type(py).name(py) == "KeyError" {
-                    Ok(None)
-                } else {
-                    Err(py_err)
-                }
-            }).map_err(|py_err| {
-                pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
-                ChainReadError::GeneralReadError("Unable to read from python block store".into())
-            })
-    }
-
-    fn get_block_by_block_num(&self, block_num: u64) -> Result<Option<Block>, ChainReadError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .call_method(py, "get_block_by_number", (block_num,), None)
-            .and_then(|result| result.extract(py))
-            .map(|bw: Option<BlockWrapper>| {
-                if let Some(bw) = bw {
-                    Some(bw.block())
-                } else {
-                    None
-                }
-            }).or_else(|py_err| {
-                if py_err.get_type(py).name(py) == "KeyError" {
-                    Ok(None)
-                } else {
-                    Err(py_err)
-                }
-            }).map_err(|py_err| {
-                pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
-                ChainReadError::GeneralReadError("Unable to read from python block store".into())
-            })
-    }
-
-    fn count_committed_transactions(&self) -> Result<usize, ChainReadError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .call_method(py, "get_transaction_count", cpython::NoArgs, None)
-            .and_then(|result| result.extract(py))
-            .map_err(|py_err| {
-                pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
-                ChainReadError::GeneralReadError("Unable to read from python block store".into())
-            })
-    }
-}
-
-impl BlockStore for PyBlockStore {
-    fn get<'a>(
-        &'a self,
-        block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .call_method(py, "get_blocks", (block_ids,), None)
-            .and_then(|py_list| py_list.call_method(py, "__iter__", NoArgs, None))
-            .and_then(|py_iter| {
-                Ok(Box::new(PyIteratorWrapper::with_xform(
-                    py_iter,
-                    Box::new(unwrap_block),
-                )) as Box<Iterator<Item = Block>>)
-            }).map_err(|py_err| {
-                pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                BlockStoreError::Error(format!("Unable to read blocks: {:?}", block_ids))
-            })
-    }
-
-    fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        let mut deleted_blocks = Vec::new();
-        for block_id in block_ids {
-            let block: Block = self
-                .py_block_store
-                .call_method(py, "get", (block_id,), None)
-                // Unwrap the block wrapper
-                .and_then(|blkw| blkw.getattr(py, "block"))
-                .map_err(|py_err| {
-                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error("Unable to get blocks".into())
-                })?.extract(py)
-                .expect("Unable to convert block from python");
-
-            self.py_block_store
-                .call_method(py, "__delitem__", (block_id,), None)
-                .map_err(|py_err| {
-                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error("Unable to delete blocks".into())
-                })?;
-
-            deleted_blocks.push(block);
-        }
-
-        Ok(deleted_blocks)
-    }
-
-    fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        for block in blocks {
-            let block_wrapper = py
-                .import("sawtooth_validator.journal.block_wrapper")
-                .expect("Unable to import block_wrapper")
-                .get(py, "BlockWrapper")
-                .expect("Unable to import BlockWrapper");
-
-            self.py_block_store
-                .call_method(
-                    py,
-                    "__setitem__",
-                    (
-                        &block.header_signature,
-                        block_wrapper
-                            .call(py, (&block,), None)
-                            .expect("Unable to wrap block."),
-                    ),
-                    None,
-                ).map_err(|py_err| {
-                    pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
-                    BlockStoreError::Error("Unable to put blocks".into())
-                })?;
-        }
-
-        Ok(())
-    }
-
-    fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_block_store
-            .call_method(py, "__iter__", NoArgs, None)
-            .and_then(|py_iter| {
-                Ok(Box::new(PyIteratorWrapper::with_xform(
-                    py_iter,
-                    Box::new(unwrap_block),
-                )) as Box<Iterator<Item = Block>>)
-            }).map_err(|py_err| {
-                let py = unsafe { Python::assume_gil_acquired() };
-                pylogger::exception(py, "Unable to call iter(block_store)", py_err);
-                BlockStoreError::Error("Unable to iterate block store".into())
-            })
-    }
-}
-
-#[allow(needless_pass_by_value)]
-fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
-    block_wrapper
-        .getattr(py, "block")
-        .expect("Unable to get block from block wrapper")
-}
-
-struct PyIteratorWrapper<T> {
-    py_iter: PyObject,
-    target_type: PhantomData<T>,
-    xform: Box<Fn(Python, PyObject) -> PyObject>,
-}
-
-impl<T> PyIteratorWrapper<T>
-where
-    for<'source> T: FromPyObject<'source>,
-{
-    fn with_xform(py_iter: PyObject, xform: Box<Fn(Python, PyObject) -> PyObject>) -> Self {
-        PyIteratorWrapper {
-            py_iter,
-            target_type: PhantomData,
-            xform,
-        }
-    }
-}
-
-impl<T> Iterator for PyIteratorWrapper<T>
-where
-    for<'source> T: FromPyObject<'source>,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        match self.py_iter.call_method(py, "__next__", NoArgs, None) {
-            Ok(py_obj) => Some(
-                (*self.xform)(py, py_obj)
-                    .extract(py)
-                    .expect("Unable to convert py obj"),
-            ),
-            Err(py_err) => {
-                if py_err.get_type(py).name(py) != "StopIteration" {
-                    pylogger::exception(py, "Unable to iterate; aborting", py_err);
-                }
-                None
-            }
-        }
-    }
-}
-
-impl BatchIndex for PyBlockStore {
-    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_block_store
-            .call_method(py, "has_batch", (id,), None)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error calling has_batch on the block store: {:?}",
-                    py_err
-                ))
-            })?.extract::<bool>(py)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!("Error extracting bool: {:?}", py_err))
-            })
-    }
-
-    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_block_store
-            .call_method(py, "get_block_by_batch_id", (id,), None)
-            .and_then(|r| r.extract(py))
-            .map(|bw: Option<BlockWrapper>| {
-                if let Some(bw) = bw {
-                    Some(bw.block())
-                } else {
-                    None
-                }
-            }).or_else(|py_err| {
-                if py_err.get_type(py).name(py) == "ValueError" {
-                    Ok(None)
-                } else {
-                    Err(BlockStoreError::Error(format!(
-                        "Error calling get_block_by_batch_id: {:?}",
-                        py_err
-                    )))
-                }
-            })
-    }
-}
-
-impl TransactionIndex for PyBlockStore {
-    fn contains(&self, id: &str) -> Result<bool, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_block_store
-            .call_method(py, "has_transaction", (id,), None)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!(
-                    "Error calling has_transaction on the block store: {:?}",
-                    py_err
-                ))
-            })?.extract::<bool>(py)
-            .map_err(|py_err| {
-                BlockStoreError::Error(format!("Error extracting bool: {:?}", py_err))
-            })
-    }
-
-    fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        self.py_block_store
-            .call_method(py, "get_block_by_transaction_id", (id,), None)
-            .and_then(|r| r.extract(py))
-            .map(|bw: Option<BlockWrapper>| {
-                if let Some(bw) = bw {
-                    Some(bw.block())
-                } else {
-                    None
-                }
-            }).or_else(|py_err| {
-                if py_err.get_type(py).name(py) == "ValueError" {
-                    Ok(None)
-                } else {
-                    Err(BlockStoreError::Error(format!(
-                        "Error calling get_block_by_transaction_id: {:?}",
-                        py_err
-                    )))
-                }
-            })
-    }
-}
-
-impl IndexedBlockStore for PyBlockStore {}
-
-impl Clone for PyBlockStore {
-    fn clone(&self) -> Self {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        PyBlockStore {
-            py_block_store: self.py_block_store.clone_ref(py),
-        }
     }
 }
 

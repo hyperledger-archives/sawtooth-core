@@ -13,61 +13,130 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# pylint: disable=no-name-in-module
-from collections.abc import MutableMapping
+import ctypes
+from enum import IntEnum
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
+from sawtooth_validator import ffi
 
 
-class BlockStore(MutableMapping):
+class ErrorCode(IntEnum):
+    Success = ffi.CommonErrorCode.Success
+
+    # Input errors
+    NullPointerProvided = ffi.CommonErrorCode.NullPointerProvided
+    InvalidArgument = 2
+
+    # # output errors
+    DatabaseError = 0x10
+    NotFound = 0x11
+
+    StopIteration = 0x20
+
+
+def _check_error(return_code):
+    if return_code == ErrorCode.Success:
+        return
+    if return_code == ErrorCode.NullPointerProvided:
+        raise TypeError("Provided null pointer(s)")
+    if return_code == ErrorCode.InvalidArgument:
+        raise TypeError("An invalid argument was provided")
+    if return_code == ErrorCode.DatabaseError:
+        raise RuntimeError("A database error occurred")
+    if return_code == ErrorCode.NotFound:
+        raise ValueError("Unable to find requested item")
+    if return_code == ErrorCode.StopIteration:
+        raise StopIteration()
+
+    raise RuntimeError("An unknown error occurred: {}".format(return_code))
+
+
+def _libexec(name, *args):
+    _check_error(ffi.LIBRARY.call(name, *args))
+
+
+class _PutEntry(ctypes.Structure):
+    _fields_ = [('block_bytes', ctypes.c_char_p),
+                ('block_bytes_len', ctypes.c_size_t)]
+
+    @staticmethod
+    def new(block_bytes):
+        return _PutEntry(
+            block_bytes,
+            len(block_bytes)
+        )
+
+
+class BlockStore(ffi.OwnedPointer):
     """
     A dict like interface wrapper around the block store to guarantee,
     objects are correctly wrapped and unwrapped as they are stored and
     retrieved.
     """
 
-    def __init__(self, block_db):
-        self._block_store = block_db
+    def __init__(self, database):
+        super().__init__('commit_store_drop')
+        _libexec(
+            'commit_store_new',
+            database.pointer,
+            ctypes.byref(self.pointer))
 
-    def __setitem__(self, key, value):
-        if key != value.identifier:
-            raise KeyError(
-                "Invalid key to store block under: {} expected {}".format(
-                    key, value.identifier))
-        self._block_store.put(key, value)
+    def _get_data_by_id(self, object_id, ffi_fn_name):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+
+        _libexec(
+            ffi_fn_name,
+            self.pointer,
+            ctypes.c_char_p(object_id.encode()),
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+
+    def _get_block_by_id(self, object_id, ffi_fn_name):
+        return self.deserialize_block(
+            self._get_data_by_id(object_id, ffi_fn_name))
 
     def __getitem__(self, key):
-        return self._get_block(key)
+        try:
+            return self._get_block_by_id(key, 'commit_store_get_by_block_id')
+        except ValueError:
+            raise KeyError("Unable to find block: %s" % key)
 
-    def __delitem__(self, key):
-        del self._block_store[key]
+    def put_blocks(self, blocks):
+        c_put_items = (ctypes.POINTER(_PutEntry) * len(blocks))()
+        for (i, block) in enumerate(blocks):
+            c_put_items[i] = ctypes.pointer(_PutEntry.new(
+                block.SerializeToString(),
+            ))
 
-    def __contains__(self, x):
-        return x in self._block_store
+        _libexec('commit_store_put_blocks',
+                 self.pointer,
+                 c_put_items, ctypes.c_size_t(len(blocks)))
+
+    def _contains_id(self, object_id, fn_name):
+        contains = ctypes.c_bool(False)
+        _libexec(
+            fn_name,
+            self.pointer,
+            ctypes.c_char_p(object_id.encode()),
+            ctypes.byref(contains))
+        return contains.value
+
+    def __contains__(self, block_id):
+        return self._contains_id(block_id, 'commit_store_contains_block')
 
     def __iter__(self):
         return self.get_block_iter()
 
-    def __len__(self):
-        # Required by abstract base class, but implementing is non-trivial
-        raise NotImplementedError('BlockStore has no meaningful length')
-
-    def __str__(self):
-        out = []
-        for key in self._block_store.keys():
-            value = self._block_store[key]
-            out.append(str(value))
-        return ','.join(out)
-
     @staticmethod
     def create_index_configuration():
-        return {
-            'batch': BlockStore._batch_index_keys,
-            'transaction': BlockStore._transaction_index_keys,
-            'block_num': BlockStore._block_num_index_keys,
-        }
+        return ['index_batch', 'index_transaction', 'index_block_num']
 
     @staticmethod
     def deserialize_block(value):
@@ -87,52 +156,25 @@ class BlockStore(MutableMapping):
         return BlockWrapper(
             block=block)
 
-    @staticmethod
-    def serialize_block(blkw):
-        """
-        Given a block wrapper, produce a byte string
-
-        Args:
-            blkw: (:obj:`BlockWrapper`) a block wrapper to serialize
-
-        Returns:
-            bytes: the serialized bytes
-        """
-        return blkw.block.SerializeToString()
-
-    def update_chain(self, new_chain, old_chain=None):
-        """
-        Set the current chain head, does not validate that the block
-        store is in a valid state, ie that all the head block and all
-        predecessors are in the store.
-
-        :param new_chain: The list of blocks of the new chain.
-        :param old_chain: The list of blocks of the existing chain to
-            remove from the block store.
-        store.
-        :return:
-        None
-        """
-
-        new_chain = [BlockWrapper.wrap(b) for b in new_chain]
-        if old_chain:
-            old_chain = [BlockWrapper.wrap(b) for b in old_chain]
-        add_pairs = [(blkw.identifier, blkw) for blkw in new_chain]
-        if old_chain:
-            del_keys = [blkw.identifier for blkw in old_chain]
-        else:
-            del_keys = []
-
-        self._block_store.update(add_pairs, del_keys)
-
     @property
     def chain_head(self):
         """
         Return the head block of the current chain.
         """
-        with self._block_store.cursor(index='block_num') as curs:
-            curs.last()
-            return curs.value()
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+
+        try:
+            _libexec(
+                'commit_store_get_chain_head',
+                self.pointer,
+                ctypes.byref(vec_ptr),
+                ctypes.byref(vec_len),
+                ctypes.byref(vec_cap))
+        except ValueError:
+            return None
+
+        return self.deserialize_block(
+            ffi.from_rust_vec(vec_ptr, vec_len, vec_cap))
 
     def chain_head_state_root(self):
         """
@@ -142,13 +184,6 @@ class BlockStore(MutableMapping):
         if chain_head is not None:
             return chain_head.state_root_hash
         return INIT_ROOT_KEY
-
-    @property
-    def store(self):
-        """
-        Access to the underlying store.
-        """
-        return self._block_store
 
     def get_predecessor_iter(self, starting_block=None):
         """Returns an iterator that traverses block via its predecesssors.
@@ -183,67 +218,20 @@ class BlockStore(MutableMapping):
             ValueError: If start_block or start_block_num do not specify a
                 valid block
         """
-        with self._block_store.cursor(index='block_num') as curs:
-            if start_block:
-                start_block_num = BlockStore.block_num_to_hex(
-                    start_block.block_num)
-                if not curs.seek(start_block_num):
-                    raise ValueError(
-                        'block {} is not a valid block'.format(start_block))
-            elif start_block_num:
-                if not curs.seek(start_block_num):
-                    raise ValueError('Block number {} does not reference a '
-                                     'valid block'.format(start_block_num))
+        start = None
+        if start_block_num:
+            if len(start_block_num) < 2:
+                raise ValueError("Invalid start block num")
+            if start_block_num[:2] != "0x":
+                raise ValueError("Invalid start block num")
+            start = int(start_block_num, 16)
+        elif start_block:
+            start = start_block.block_num
 
-            iterator = None
-            if reverse:
-                iterator = curs.iter_rev()
-            else:
-                iterator = curs.iter()
-
-            for block in iterator:
-                yield block
-
-    @staticmethod
-    def _batch_index_keys(block):
-        blkw = BlockWrapper.wrap(block)
-        return [batch.header_signature.encode()
-                for batch in blkw.batches]
-
-    @staticmethod
-    def _transaction_index_keys(block):
-        blkw = BlockWrapper.wrap(block)
-        keys = []
-        for batch in blkw.batches:
-            for txn in batch.transactions:
-                keys.append(txn.header_signature.encode())
-        return keys
-
-    @staticmethod
-    def _block_num_index_keys(block):
-        blkw = BlockWrapper.wrap(block)
-        # Format the number to a 64bit hex value, for natural ordering
-        return [BlockStore.block_num_to_hex(blkw.block_num).encode()]
-
-    @staticmethod
-    def block_num_to_hex(block_num):
-        """Converts a block number to a hex string.
-        This is used for proper index ordering and lookup.
-
-        Args:
-            block_num: uint64
-
-        Returns:
-            A hex-encoded str
-        """
-        return "{0:#0{1}x}".format(block_num, 18)
-
-    def _get_block(self, key):
-        value = self._block_store.get(key)
-        if value is None:
-            raise KeyError('Block "{}" not found in store'.format(key))
-
-        return BlockWrapper.wrap(value)
+        return _BlockStoreIter(
+            self.pointer,
+            start,
+            reverse)
 
     def get_blocks(self, block_ids):
         """Returns all blocks with the given set of block_ids.
@@ -256,7 +244,16 @@ class BlockStore(MutableMapping):
         Returns
             list of block wrappers found for the given block ids
         """
-        return [block for _, block in self._block_store.get_multi(block_ids)]
+        return list(
+            filter(
+                lambda b: b is not None,
+                map(self._get_block_by_id_or_none, block_ids)))
+
+    def _get_block_by_id_or_none(self, block_id):
+        try:
+            return self[block_id]
+        except KeyError:
+            return None
 
     def get_block_by_transaction_id(self, txn_id):
         """Returns the block that contains the given transaction id.
@@ -270,12 +267,8 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError if no block containing the transaction is found
         """
-        block = self._block_store.get(txn_id, index='transaction')
-        if not block:
-            raise ValueError(
-                'Transaction "{}" not in BlockStore'.format(txn_id))
-
-        return block
+        return self._get_block_by_id(
+            txn_id, 'commit_store_get_by_transaction_id')
 
     def get_block_by_number(self, block_num):
         """Returns the block that contains the given transaction id.
@@ -289,13 +282,8 @@ class BlockStore(MutableMapping):
         Raises:
             KeyError if no block with the given number is found
         """
-        block = self._block_store.get(
-            BlockStore.block_num_to_hex(block_num), index='block_num')
-        if not block:
-            raise KeyError(
-                'Block number "{}" not in BlockStore'.format(block_num))
-
-        return block
+        return self._get_block_by_id(
+            block_num, 'commit_store_get_by_block_num')
 
     def has_transaction(self, txn_id):
         """Returns True if the transaction is contained in a block in the
@@ -307,7 +295,7 @@ class BlockStore(MutableMapping):
         Returns:
             True if it is contained in a committed block, False otherwise
         """
-        return self._block_store.contains_key(txn_id, index='transaction')
+        return self._contains_id(txn_id, 'commit_store_contains_transaction')
 
     def get_block_by_batch_id(self, batch_id):
         """Returns the block that contains the given batch id.
@@ -321,25 +309,8 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError if no block containing the batch is found
         """
-        block = self._block_store.get(batch_id, index='batch')
-        if not block:
-            raise ValueError('Batch "{}" not in BlockStore'.format(batch_id))
-
-        return block
-
-    def get_blocks_by_batch_ids(self, batch_ids):
-        """Returns the block that contains the given batch id.
-
-        Args:
-            batch_id (str): a batch id
-
-        Returns:
-            a block wrapper of the containing block
-
-        Raises:
-            ValueError if no block containing the batch is found
-        """
-        return self._block_store.get_multi(batch_ids, index='batch')
+        return self._get_block_by_id(
+            batch_id, 'commit_store_get_by_batch_id')
 
     def has_batch(self, batch_id):
         """Returns True if the batch is contained in a block in the
@@ -351,7 +322,7 @@ class BlockStore(MutableMapping):
         Returns:
             True if it is contained in a committed block, False otherwise
         """
-        return self._block_store.contains_key(batch_id, index='batch')
+        return self._contains_id(batch_id, 'commit_store_contains_batch')
 
     def get_batch_by_transaction(self, transaction_id):
         """
@@ -365,15 +336,13 @@ class BlockStore(MutableMapping):
         :return:
         The batch that has the transaction.
         """
-        block = self.get_block_by_transaction_id(transaction_id)
-        if block is None:
-            return None
-        # Find batch in block
-        for batch in block.batches:
-            for txn in batch.transactions:
-                if txn.header_signature == transaction_id:
-                    return batch
-        return None
+        payload = self._get_data_by_id(
+            transaction_id, 'commit_store_get_batch_by_transaction')
+
+        batch = Batch()
+        batch.ParseFromString(payload)
+
+        return batch
 
     def get_batch(self, batch_id):
         """
@@ -385,35 +354,13 @@ class BlockStore(MutableMapping):
         :return:
         The batch with the batch_id.
         """
-        block = self.get_block_by_batch_id(batch_id)
-        return BlockStore._get_batch_from_block(block, batch_id)
 
-    def get_batches(self, batch_ids):
-        """Returns a list of committed batches from a iterable of batch ids.
-        Any batch id that does not exist in a committed block is ignored.
+        payload = self._get_data_by_id(batch_id, 'commit_store_get_batch')
 
-        Args:
-            batch_ids (:iterable:str): the batch ids to find
+        batch = Batch()
+        batch.ParseFromString(payload)
 
-        Returns:
-            A list of the batches found by the given batch ids
-        """
-        blocks = self._block_store.get_multi(batch_ids, index='batch')
-
-        return [
-            BlockStore._get_batch_from_block(block, batch_id)
-            for batch_id, block in blocks
-        ]
-
-    @staticmethod
-    def _get_batch_from_block(block, batch_id):
-        for batch in block.batches:
-            if batch.header_signature == batch_id:
-                return batch
-
-        raise ValueError(
-            'Batch {} not in block {}: possible index mismatch'.format(
-                batch_id, block.identifier))
+        return batch
 
     def get_transaction(self, transaction_id):
         """Returns a Transaction object from the block store by its id.
@@ -427,17 +374,18 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError: The transaction is not in the block store
         """
-        block = self.get_block_by_transaction_id(transaction_id)
-        return BlockStore._get_txn_from_block(block, transaction_id)
+        payload = self._get_data_by_id(
+            transaction_id, 'commit_store_get_transaction')
 
-    def get_transactions(self, transaction_ids):
-        blocks = self._block_store.get_multi(transaction_ids,
-                                             index='transaction')
+        txn = Transaction()
+        txn.ParseFromString(payload)
 
-        return [
-            BlockStore._get_txn_from_block(block, txn_id)
-            for txn_id, block in blocks
-        ]
+        return txn
+
+    def _get_count(self, fn_name):
+        count = ctypes.c_size_t(0)
+        _libexec(fn_name, self.pointer, ctypes.byref(count))
+        return count.value
 
     def get_transaction_count(self):
         """Returns the count of transactions in the block store.
@@ -445,7 +393,7 @@ class BlockStore(MutableMapping):
         Returns:
             Integer: The count of transactions
         """
-        return self._block_store.count(index='transaction')
+        return self._get_count('commit_store_get_transaction_count')
 
     def get_batch_count(self):
         """Returns the count of batches in the block store.
@@ -453,7 +401,7 @@ class BlockStore(MutableMapping):
         Returns:
             Integer: The count of batches
         """
-        return self._block_store.count(index='batch')
+        return self._get_count('commit_store_get_batch_count')
 
     def get_block_count(self):
         """Returns the count of blocks in the block store.
@@ -461,15 +409,34 @@ class BlockStore(MutableMapping):
         Returns:
             Integer: The count of blocks
         """
-        return self._block_store.count()
+        return self._get_count('commit_store_get_block_count')
 
-    @staticmethod
-    def _get_txn_from_block(block, txn_id):
-        for batch in block.batches:
-            for txn in batch.transactions:
-                if txn.header_signature == txn_id:
-                    return txn
 
-        raise ValueError(
-            'Transaction {} not in block {}: possible index mismatch'.format(
-                txn_id, block.identifier))
+class _BlockStoreIter(ffi.BlockIterator):
+    """
+    A dict like interface wrapper around the block store to guarantee,
+    objects are correctly wrapped and unwrapped as they are stored and
+    retrieved.
+    """
+
+    name = "commit_store_block_by_height_iter"
+
+    def __init__(self, commit_store_ptr, start=None, decreasing=True):
+        super().__init__(_check_error)
+
+        if start is not None:
+            c_start_ptr =\
+                ctypes.POINTER(ctypes.c_uint32)(ctypes.c_uint32(start))
+        else:
+            c_start_ptr = 0
+
+        _libexec(
+            'commit_store_get_block_iter',
+            commit_store_ptr,
+            c_start_ptr,
+            decreasing,
+            ctypes.byref(self.pointer))
+
+    def __next__(self):
+        block = super().__next__()
+        return BlockWrapper(block=block)

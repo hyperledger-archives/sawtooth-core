@@ -25,7 +25,6 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.consensus.notifier import ConsensusNotifier
 from sawtooth_validator.consensus.proxy import ConsensusProxy
-from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
@@ -138,11 +137,8 @@ class Validator:
         block_db_filename = os.path.join(
             data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
-        block_db = IndexedDatabase(
+        block_db = NativeLmdbDatabase(
             block_db_filename,
-            BlockStore.serialize_block,
-            BlockStore.deserialize_block,
-            flag='c',
             indexes=BlockStore.create_index_configuration())
         block_store = BlockStore(block_db)
         # The cache keep time for the journal's block cache must be greater
@@ -150,7 +146,7 @@ class Validator:
         base_keep_time = 1200
 
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         block_status_store = BlockValidationResultStore()
 
@@ -318,7 +314,6 @@ class Validator:
 
         block_validator = BlockValidator(
             block_manager=block_manager,
-            block_store=block_store,
             view_factory=native_state_view_factory,
             transaction_executor=transaction_executor,
             block_status_store=block_status_store,

@@ -26,7 +26,6 @@ from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
 
-from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 
 from sawtooth_validator.journal.block_store import BlockStore
@@ -63,11 +62,8 @@ def get_databases(bind_network, data_dir):
     block_db_filename = os.path.join(
         data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
     LOGGER.debug('block store file is %s', block_db_filename)
-    block_db = IndexedDatabase(
+    block_db = NativeLmdbDatabase(
         block_db_filename,
-        BlockStore.serialize_block,
-        BlockStore.deserialize_block,
-        flag='c',
         indexes=BlockStore.create_index_configuration())
     blockstore = BlockStore(block_db)
 

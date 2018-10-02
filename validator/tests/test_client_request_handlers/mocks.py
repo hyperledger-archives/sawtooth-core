@@ -17,6 +17,7 @@
 
 import logging
 import os
+import tempfile
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -24,10 +25,8 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
 
@@ -83,15 +82,17 @@ class MockBlockStore(BlockStore):
     """
 
     def __init__(self, size=3, start='0'):
-        super().__init__(DictDatabase(
-            indexes=BlockStore.create_index_configuration()))
+        self.dir = tempfile.mkdtemp()
+        self.block_db = NativeLmdbDatabase(
+            os.path.join(self.dir, 'block.lmdb'),
+            BlockStore.create_index_configuration())
+        super().__init__(self.block_db)
 
         for i in range(size):
             self.add_block(_increment_key(start, i))
 
     def clear(self):
-        self._block_store = DictDatabase(
-            indexes=BlockStore.create_index_configuration())
+        self.__init__(size=0)
 
     def add_block(self, base_id, root='merkle_root'):
         block_id = 'b' * (128 - len(base_id)) + base_id
@@ -116,7 +117,7 @@ class MockBlockStore(BlockStore):
             header_signature=block_id,
             batches=[make_mock_batch(base_id)])
 
-        self.update_chain([BlockWrapper(block)], [])
+        self.put_blocks([block])
 
 
 def make_db_and_store(base_dir, size=3):

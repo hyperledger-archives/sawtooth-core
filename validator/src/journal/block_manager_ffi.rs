@@ -21,14 +21,12 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use block::Block;
-use cpython::{PyObject, Python};
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::chain_ffi::PyBlockStore;
+use journal::commit_store::CommitStore;
 use proto;
 use protobuf::{self, Message};
-use py_ffi;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -93,30 +91,22 @@ pub unsafe extern "C" fn block_manager_contains(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn block_manager_add_store(
+pub unsafe extern "C" fn block_manager_add_commit_store(
     block_manager: *mut c_void,
-    block_store_name: *const c_char,
-    block_store: *mut py_ffi::PyObject,
+    commit_store: *mut c_void,
 ) -> ErrorCode {
-    check_null!(block_manager, block_store_name, block_store);
+    check_null!(block_manager, commit_store);
 
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-    let py_block_store = PyBlockStore::new(PyObject::from_borrowed_ptr(py, block_store));
+    let commit_store = Box::from_raw(commit_store as *mut CommitStore);
 
-    let name = match CStr::from_ptr(block_store_name).to_str() {
-        Ok(s) => s,
-        Err(_) => return ErrorCode::InvalidInputString,
-    };
+    let rc = (*(block_manager as *mut BlockManager))
+        .add_store("commit_store", commit_store.clone())
+        .map(|_| ErrorCode::Success)
+        .unwrap_or(ErrorCode::Error);
 
-    let block_manager = (*(block_manager as *mut BlockManager)).clone();
+    Box::into_raw(commit_store);
 
-    py.allow_threads(move || {
-        block_manager
-            .add_store(name, Box::new(py_block_store))
-            .map(|_| ErrorCode::Success)
-            .unwrap_or(ErrorCode::Error)
-    })
+    rc
 }
 
 #[no_mangle]
@@ -413,18 +403,18 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 mod test {
     use super::*;
     use block::Block;
+    use database::lmdb::{LmdbContext, LmdbDatabase};
     use journal::block_store::BlockStore;
+    use journal::commit_store::CommitStore;
     use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
-    use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-
-    use protobuf;
     use protobuf::Message;
 
     use std::env;
     use std::fs::remove_file;
     use std::panic;
+    use std::path::Path;
     use std::thread;
 
     const TEST_DB_SIZE: usize = 10 * 1024 * 1024;
@@ -433,14 +423,9 @@ mod test {
     /// It creates a Python-backed block store, inserts several blocks,
     /// retrieves them, iterates on them, and deletes one.
     #[test]
-    fn py_block_store() {
+    fn block_store() {
         run_test(|db_path| {
-            let py_block_store = create_block_store(db_path);
-            let mut store = {
-                let gil_guard = Python::acquire_gil();
-                let py = gil_guard.python();
-                PyBlockStore::new(py_block_store.clone_ref(py))
-            };
+            let mut store = create_block_store(db_path);
 
             let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
             let block_b = create_block("B", 2, "A");
@@ -462,21 +447,16 @@ mod test {
 
             assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
 
-            let chain_head = get_chain_head(&py_block_store);
+            let chain_head = get_chain_head(&store);
 
-            assert_eq!(block_b, chain_head);
+            assert_eq!(Some(block_b), chain_head);
         })
     }
 
     #[test]
-    fn persist_to_py_block_store() {
+    fn persist_to_block_store() {
         run_test(|db_path| {
-            let py_block_store = create_block_store(db_path);
-            let mut store = {
-                let gil_guard = Python::acquire_gil();
-                let py = gil_guard.python();
-                PyBlockStore::new(py_block_store.clone_ref(py))
-            };
+            let store = create_block_store(db_path);
 
             let block_manager = BlockManager::new();
             block_manager.add_store("commit_store", Box::new(store.clone()));
@@ -503,9 +483,9 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            let chain_head = get_chain_head(&py_block_store);
+            let chain_head = get_chain_head(&store);
 
-            assert_eq!(block_c, chain_head);
+            assert_eq!(Some(block_c), chain_head);
         })
     }
 
@@ -527,48 +507,19 @@ mod test {
         }
     }
 
-    fn create_block_store(db_path: &str) -> PyObject {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
+    fn create_block_store(db_path: &str) -> CommitStore {
+        let indexes = ["index_batch", "index_transaction", "index_block_num"];
 
-        let block_store_mod = py.import("sawtooth_validator.journal.block_store").unwrap();
-        let block_store = block_store_mod.get(py, "BlockStore").unwrap();
+        let ctx = LmdbContext::new(Path::new(&db_path), indexes.len(), Some(TEST_DB_SIZE))
+            .expect("Failed to create LmdbContext");
 
-        let db_mod = py
-            .import("sawtooth_validator.database.indexed_database")
-            .unwrap();
-        let indexed_database = db_mod.get(py, "IndexedDatabase").unwrap();
+        let db = LmdbDatabase::new(ctx, &indexes).expect("Failed to create LmdbDatabase");
 
-        let db_instance = indexed_database
-            .call(
-                py,
-                (
-                    db_path,
-                    block_store.getattr(py, "serialize_block").unwrap(),
-                    block_store.getattr(py, "deserialize_block").unwrap(),
-                    block_store
-                        .call_method(py, "create_index_configuration", NoArgs, None)
-                        .unwrap(),
-                    "c",
-                    TEST_DB_SIZE,
-                ),
-                None,
-            ).unwrap();
-
-        block_store.call(py, (db_instance,), None).unwrap()
+        CommitStore::new(db)
     }
 
-    fn get_chain_head(py_block_store: &PyObject) -> Block {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        py_block_store
-            .getattr(py, "chain_head")
-            .map_err(|py_err| py_err.print(py))
-            .unwrap()
-            .getattr(py, "block")
-            .unwrap()
-            .extract(py)
-            .unwrap()
+    fn get_chain_head(store: &BlockStore) -> Option<Block> {
+        store.iter().expect("Failed to get BlockStore iter").next()
     }
 
     fn run_test<T>(test: T) -> ()

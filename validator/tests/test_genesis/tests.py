@@ -25,7 +25,6 @@ from unittest.mock import patch
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
-from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
@@ -57,17 +56,22 @@ class TestGenesisController(unittest.TestCase):
         shutil.rmtree(self._temp_dir)
 
     @staticmethod
-    def make_block_store(data=None):
-        return BlockStore(
-            DictDatabase(
-                data, indexes=BlockStore.create_index_configuration()))
+    def make_block_store(blocks=None):
+        block_dir = tempfile.mkdtemp()
+        block_db = NativeLmdbDatabase(
+            os.path.join(block_dir, 'block.lmdb'),
+            BlockStore.create_index_configuration())
+        block_store = BlockStore(block_db)
+        if blocks is not None:
+            block_store.put_blocks(blocks)
+        return block_store
 
     def test_requires_genesis(self):
         self._with_empty_batch_file()
 
         block_store = self.make_block_store()
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -86,11 +90,9 @@ class TestGenesisController(unittest.TestCase):
 
     def test_does_not_require_genesis_block_exists(self):
         block = self._create_block()
-        block_store = self.make_block_store({
-            block.header_signature: block
-        })
+        block_store = self.make_block_store([block.block])
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -112,7 +114,7 @@ class TestGenesisController(unittest.TestCase):
 
         block_store = self.make_block_store()
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -139,7 +141,7 @@ class TestGenesisController(unittest.TestCase):
         """
         block_store = self.make_block_store()
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -167,9 +169,9 @@ class TestGenesisController(unittest.TestCase):
         self._with_empty_batch_file()
 
         block = self._create_block()
-        block_store = self.make_block_store({block.header_signature: block})
+        block_store = self.make_block_store([block.block])
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -200,7 +202,7 @@ class TestGenesisController(unittest.TestCase):
 
         block_store = self.make_block_store()
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
@@ -233,7 +235,7 @@ class TestGenesisController(unittest.TestCase):
         genesis_file = self._with_empty_batch_file()
         block_store = self.make_block_store()
         block_manager = BlockManager()
-        block_manager.add_store("commit_store", block_store)
+        block_manager.add_commit_store(block_store)
 
         state_database = NativeLmdbDatabase(
             os.path.join(self._temp_dir, 'test_genesis.lmdb'),
