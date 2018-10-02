@@ -28,7 +28,7 @@ use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::publisher::{
-    BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
+    BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
 
 use state::state_view_factory::StateViewFactory;
@@ -119,11 +119,16 @@ pub unsafe extern "C" fn block_publisher_new(
             .extract(py)
             .expect("Got chain head that wasn't a BlockWrapper")
     };
-    let batch_observers: Vec<PyObject> = batch_observers
-        .extract::<PyList>(py)
-        .unwrap()
-        .iter(py)
-        .collect();
+
+    let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
+        let mut res: Vec<Box<BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        py_list
+            .iter(py)
+            .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
+        res
+    } else {
+        return ErrorCode::InvalidInput;
+    };
 
     let batch_publisher = PY_BATCH_PUBLISHER_CLASS
         .call(py, (identity_signer.clone_ref(py), batch_sender), None)
@@ -392,5 +397,25 @@ pub unsafe extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) ->
     match (*(publisher as *mut BlockPublisher)).cancel_block() {
         Ok(_) => ErrorCode::Success,
         Err(_) => ErrorCode::BlockNotInitialized,
+    }
+}
+
+struct PyBatchObserver {
+    py_batch_observer: PyObject,
+}
+
+impl PyBatchObserver {
+    fn new(py_batch_observer: PyObject) -> Self {
+        PyBatchObserver { py_batch_observer }
+    }
+}
+
+impl BatchObserver for PyBatchObserver {
+    fn notify_batch_pending(&self, batch: &Batch) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.py_batch_observer
+            .call_method(py, "notify_batch_pending", (batch,), None)
+            .expect("BatchObserver has no method notify_batch_pending");
     }
 }

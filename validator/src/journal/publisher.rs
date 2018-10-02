@@ -82,8 +82,13 @@ pub enum BlockPublisherError {
     UnknownBlock(String),
 }
 
+pub trait BatchObserver: Send + Sync {
+    fn notify_batch_pending(&self, batch: &Batch);
+}
+
 pub struct BlockPublisherState {
     pub transaction_executor: Box<ExecutionPlatform>,
+    pub batch_observers: Vec<Box<BatchObserver>>,
     pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
@@ -92,11 +97,13 @@ pub struct BlockPublisherState {
 impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<ExecutionPlatform>,
+        batch_observers: Vec<Box<BatchObserver>>,
         chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
     ) -> Self {
         BlockPublisherState {
+            batch_observers,
             transaction_executor,
             chain_head,
             candidate_block,
@@ -114,7 +121,6 @@ pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
     block_manager: BlockManager,
-    batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
@@ -139,11 +145,6 @@ impl Clone for SyncBlockPublisher {
         SyncBlockPublisher {
             state,
             block_manager: self.block_manager.clone(),
-            batch_observers: self
-                .batch_observers
-                .iter()
-                .map(|i| i.clone_ref(py))
-                .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
@@ -453,12 +454,8 @@ impl SyncBlockPublisher {
 
     pub fn on_batch_received(&self, batch: Batch) {
         let mut state = self.state.write().expect("Lock should not be poisoned");
-        for observer in &self.batch_observers {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            observer
-                .call_method(py, "notify_batch_pending", (batch.clone(),), None)
-                .expect("BatchObserver has no method notify_batch_pending");
+        for observer in &state.batch_observers {
+            observer.notify_batch_pending(&batch);
         }
         let permission_check = {
             let gil = Python::acquire_gil();
@@ -515,11 +512,12 @@ impl BlockPublisher {
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
-        batch_observers: Vec<PyObject>,
+        batch_observers: Vec<Box<BatchObserver>>,
         batch_injector_factory: PyObject,
     ) -> Self {
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
             transaction_executor,
+            batch_observers,
             chain_head,
             None,
             PendingBatchesPool::new(NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT),
@@ -537,7 +535,6 @@ impl BlockPublisher {
             data_dir,
             config_dir,
             permission_verifier,
-            batch_observers,
             batch_injector_factory,
             exit: Arc::new(Exit::new()),
         };
