@@ -20,16 +20,24 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{PyClone, PyList, PyObject, Python};
+use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use block::Block;
+use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::publisher::{
     BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
 
 use state::state_view_factory::StateViewFactory;
+
+lazy_static! {
+    static ref PY_BATCH_PUBLISHER_CLASS: PyObject = py_import_class(
+        "sawtooth_validator.journal.consensus.batch_publisher",
+        "BatchPublisher"
+    );
+}
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -116,28 +124,9 @@ pub unsafe extern "C" fn block_publisher_new(
         .iter(py)
         .collect();
 
-    let batch_publisher_mod = py
-        .import("sawtooth_validator.journal.consensus.batch_publisher")
-        .expect("Unable to import 'sawtooth_validator.journal.consensus.batch_publisher'");
-    let batch_publisher = batch_publisher_mod
-        .call(
-            py,
-            "BatchPublisher",
-            (identity_signer.clone_ref(py), batch_sender),
-            None,
-        ).expect("Unable to create BatchPublisher");
-
-    let block_header_class = py
-        .import("sawtooth_validator.protobuf.block_pb2")
-        .expect("Unable to import 'sawtooth_validator.protobuf.block_pb2'")
-        .get(py, "BlockHeader")
-        .expect("Unable to import BlockHeader from 'sawtooth_validator.protobuf.block_pb2'");
-
-    let block_builder_class = py
-        .import("sawtooth_validator.journal.block_builder")
-        .expect("Unable to import 'sawtooth_validator.journal.block_builder'")
-        .get(py, "BlockBuilder")
-        .expect("Unable to import BlockBuilder from 'sawtooth_validator.journal.block_builder'");
+    let batch_publisher = PY_BATCH_PUBLISHER_CLASS
+        .call(py, (identity_signer.clone_ref(py), batch_sender), None)
+        .expect("Unable to create BatchPublisher");
 
     let publisher = BlockPublisher::new(
         block_manager,
@@ -154,8 +143,6 @@ pub unsafe extern "C" fn block_publisher_new(
         permission_verifier,
         batch_observers,
         batch_injector_factory,
-        block_header_class,
-        block_builder_class,
     );
 
     *block_publisher_ptr = Box::into_raw(Box::new(publisher)) as *const c_void;

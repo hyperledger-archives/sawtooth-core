@@ -32,6 +32,7 @@ use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
 use execution::py_executor::PyExecutor;
+use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
@@ -46,6 +47,13 @@ const INITIAL_PUBLISH_COUNT: usize = 30;
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
         metrics::get_collector("sawtooth_validator.publisher");
+}
+
+lazy_static! {
+    static ref PY_BLOCK_HEADER_CLASS: PyObject =
+        py_import_class("sawtooth_validator.protobuf.block_pb2", "BlockHeader");
+    static ref PY_BLOCK_BUILDER_CLASS: PyObject =
+        py_import_class("sawtooth_validator.journal.block_builder", "BlockBuilder");
 }
 
 #[derive(Debug)]
@@ -109,8 +117,6 @@ pub struct SyncBlockPublisher {
     block_manager: BlockManager,
     batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
-    block_header_class: PyObject,
-    block_builder_class: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
     state_view_factory: StateViewFactory,
@@ -140,8 +146,6 @@ impl Clone for SyncBlockPublisher {
                 .map(|i| i.clone_ref(py))
                 .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            block_header_class: self.block_header_class.clone_ref(py),
-            block_builder_class: self.block_builder_class.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone(),
@@ -262,13 +266,11 @@ impl SyncBlockPublisher {
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
                 .unwrap();
-            let block_header = self
-                .block_header_class
+            let block_header = PY_BLOCK_HEADER_CLASS
                 .call(py, NoArgs, Some(&kwargs))
                 .expect("BlockHeader could not be constructed");
 
-            let block_builder = self
-                .block_builder_class
+            let block_builder = PY_BLOCK_BUILDER_CLASS
                 .call(py, (block_header,), None)
                 .expect("BlockBuilder could not be constructed");
 
@@ -516,8 +518,6 @@ impl BlockPublisher {
         permission_verifier: PyObject,
         batch_observers: Vec<PyObject>,
         batch_injector_factory: PyObject,
-        block_header_class: PyObject,
-        block_builder_class: PyObject,
     ) -> Self {
         let tep = Box::new(PyExecutor::new(transaction_executor).unwrap());
 
@@ -542,8 +542,6 @@ impl BlockPublisher {
             permission_verifier,
             batch_observers,
             batch_injector_factory,
-            block_header_class,
-            block_builder_class,
             exit: Arc::new(Exit::new()),
         };
 
