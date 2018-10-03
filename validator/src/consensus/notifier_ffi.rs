@@ -77,4 +77,12 @@ impl ConsensusNotifier for PyConsensusNotifier {
     fn notify_block_commit(&self, block_id: &str) {
         self.call_py_fn("notify_block_commit", block_id)
     }
+
+    fn notify_batch_new(&self, batch_id: &str) {
+        self.call_py_fn("notify_batch_new", batch_id)
+    }
+
+    fn notify_batch_invalid(&self, batch_id: &str) {
+        self.call_py_fn("notify_batch_invalid", batch_id)
+    }
 }

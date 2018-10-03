@@ -22,4 +22,7 @@ pub trait ConsensusNotifier: Send + Sync {
     fn notify_block_valid(&self, block_id: &str);
     fn notify_block_invalid(&self, block_id: &str);
     fn notify_block_commit(&self, block_id: &str);
+
+    fn notify_batch_new(&self, batch_id: &str);
+    fn notify_batch_invalid(&self, batch_id: &str);
 }

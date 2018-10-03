@@ -106,3 +106,17 @@ class ConsensusNotifier:
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
             consensus_pb2.ConsensusNotifyBlockCommit(
                 block_id=bytes.fromhex(block_id)))
+
+    def notify_batch_new(self, batch_id):
+        """A new batch was received"""
+        self._notify(
+            validator_pb2.Message.CONSENSUS_NOTIFY_BATCH_NEW,
+            consensus_pb2.ConsensusNotifyBatchNew(
+                batch_id=bytes.fromhex(batch_id)))
+
+    def notify_batch_invalid(self, batch_id):
+        """A batch was found to be invalid"""
+        self._notify(
+            validator_pb2.Message.CONSENSUS_NOTIFY_BATCH_INVALID,
+            consensus_pb2.ConsensusNotifyBatchInvalid(
+                batch_id=bytes.fromhex(batch_id)))
