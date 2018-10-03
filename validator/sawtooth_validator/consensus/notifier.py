@@ -70,16 +70,21 @@ class ConsensusNotifier:
             summary.update(batch.header_signature.encode())
         block_header = BlockHeader()
         block_header.ParseFromString(block.header)
+        consensus_block = consensus_pb2.ConsensusBlock(
+            block_id=bytes.fromhex(block.header_signature),
+            previous_id=bytes.fromhex(block_header.previous_block_id),
+            signer_id=bytes.fromhex(block_header.signer_public_key),
+            block_num=block_header.block_num,
+            payload=block_header.consensus,
+            summary=summary.digest())
+        consensus_block.batches.extend([
+            bytes.fromhex(batch_id)
+            for batch_id in block_header.batch_ids
+        ])
+
         self._notify(
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_NEW,
-            consensus_pb2.ConsensusNotifyBlockNew(
-                block=consensus_pb2.ConsensusBlock(
-                    block_id=bytes.fromhex(block.header_signature),
-                    previous_id=bytes.fromhex(block_header.previous_block_id),
-                    signer_id=bytes.fromhex(block_header.signer_public_key),
-                    block_num=block_header.block_num,
-                    payload=block_header.consensus,
-                    summary=summary.digest())))
+            consensus_pb2.ConsensusNotifyBlockNew(block=consensus_block))
 
     def notify_block_valid(self, block_id):
         """This block can be committed successfully"""
