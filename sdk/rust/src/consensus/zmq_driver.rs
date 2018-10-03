@@ -277,6 +277,16 @@ fn handle_update(
                 protobuf::parse_from_bytes(msg.get_content())?;
             Update::BlockCommit(request.take_block_id().into())
         }
+        CONSENSUS_NOTIFY_BATCH_NEW => {
+            let mut request: ConsensusNotifyBatchNew =
+                protobuf::parse_from_bytes(msg.get_content())?;
+            Update::BatchNew(request.take_batch_id().into())
+        }
+        CONSENSUS_NOTIFY_BATCH_INVALID => {
+            let mut request: ConsensusNotifyBatchInvalid =
+                protobuf::parse_from_bytes(msg.get_content())?;
+            Update::BatchInvalid(request.take_batch_id().into())
+        }
         unexpected => {
             return Err(Error::ReceiveError(format!(
                 "Received unexpected message type: {:?}",
