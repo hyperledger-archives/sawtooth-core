@@ -60,6 +60,8 @@ message ConsensusBlock {
   bytes payload = 5;
   // A summary of the contents of the block
   bytes summary = 6;
+  // Ids of batches included in the block
+  repeated bytes batches = 7;
 }
 
 // Information about a peer that is relevant to consensus
@@ -151,6 +153,18 @@ message ConsensusNotifyBlockInvalid {
 // This block has been committed
 message ConsensusNotifyBlockCommit {
   bytes block_id = 1;
+}
+
+// - Batches -
+
+// A new batch was received
+message ConsensusNotifyBatchNew {
+  bytes batch_id = 1;
+}
+
+// A previously sent batch was found to be invalid
+message ConsensusNotifyBatchInvalid {
+  bytes batch_id = 1;
 }
 
 // Confirm that the notification was received. The validator message

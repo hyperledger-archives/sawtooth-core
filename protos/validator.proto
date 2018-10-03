@@ -201,6 +201,9 @@ message Message {
         CONSENSUS_NOTIFY_BLOCK_INVALID = 905;
         CONSENSUS_NOTIFY_BLOCK_COMMIT = 906;
 
+        CONSENSUS_NOTIFY_BATCH_NEW = 907;
+        CONSENSUS_NOTIFY_BATCH_INVALID = 908;
+
         CONSENSUS_NOTIFY_ACK = 999;
     }
     // The type of message, used to determine how to 'route' the message
