@@ -37,35 +37,42 @@ pub enum Update {
     Shutdown,
 }
 
-#[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd)]
-pub struct BlockId(Vec<u8>);
-impl Deref for BlockId {
-    type Target = Vec<u8>;
+macro_rules! declare_id {
+    ($name:ident) => {
+        #[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd)]
+        pub struct $name(Vec<u8>);
+        impl Deref for $name {
+            type Target = Vec<u8>;
 
-    fn deref(&self) -> &Vec<u8> {
-        &self.0
-    }
+            fn deref(&self) -> &Vec<u8> {
+                &self.0
+            }
+        }
+        impl From<$name> for Vec<u8> {
+            fn from(id: $name) -> Vec<u8> {
+                id.0
+            }
+        }
+        impl From<Vec<u8>> for $name {
+            fn from(v: Vec<u8>) -> $name {
+                $name(v)
+            }
+        }
+        impl AsRef<[u8]> for $name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl fmt::Debug for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "{}", hex::encode(&self.0))
+            }
+        }
+    };
 }
-impl From<BlockId> for Vec<u8> {
-    fn from(id: BlockId) -> Vec<u8> {
-        id.0
-    }
-}
-impl From<Vec<u8>> for BlockId {
-    fn from(v: Vec<u8>) -> BlockId {
-        BlockId(v)
-    }
-}
-impl AsRef<[u8]> for BlockId {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-impl fmt::Debug for BlockId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
-    }
-}
+
+declare_id!(BlockId);
+declare_id!(PeerId);
 
 /// All information about a block that is relevant to consensus
 #[derive(Clone, Default)]
@@ -89,36 +96,6 @@ impl fmt::Debug for Block {
             hex::encode(&self.payload),
             hex::encode(&self.summary),
         )
-    }
-}
-
-#[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd)]
-pub struct PeerId(Vec<u8>);
-impl Deref for PeerId {
-    type Target = Vec<u8>;
-
-    fn deref(&self) -> &Vec<u8> {
-        &self.0
-    }
-}
-impl From<PeerId> for Vec<u8> {
-    fn from(id: PeerId) -> Vec<u8> {
-        id.0
-    }
-}
-impl From<Vec<u8>> for PeerId {
-    fn from(v: Vec<u8>) -> PeerId {
-        PeerId(v)
-    }
-}
-impl AsRef<[u8]> for PeerId {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-impl fmt::Debug for PeerId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
     }
 }
 
