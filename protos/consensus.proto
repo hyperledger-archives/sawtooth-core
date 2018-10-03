@@ -24,10 +24,30 @@ message ConsensusPeerMessage {
 
   // The opaque payload to send to other nodes
   bytes content = 2;
+}
+
+message ConsensusPeerMessageHeader {
+  // Public key for the component internal to the validator that
+  // signed the message
+  string signer_public_key = 1;
+
+  // The sha512 hash of the encoded message
+  string message_sha512 = 2;
 
   // Used to identify the consensus engine that produced this message
   string name = 3;
   string version = 4;
+}
+
+message ConsensusPeerMessageEnvelope {
+  // The serialized version of the ConsensusPeerMessageHeader
+  bytes header = 1;
+
+  // The serialized version of the ConsensusPeerMessage
+  bytes message = 2;
+
+  // The signature derived from signing the header
+  bytes header_signature = 3;
 }
 
 // All information about a block that is relevant to consensus

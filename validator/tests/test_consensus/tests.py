@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
+from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
@@ -38,12 +39,9 @@ class TestHandlers(unittest.TestCase):
             peers=['dead', 'beef'],
             local_peer_info=b'abc')
         self.mock_proxy.register.return_value = mock_startup_info
-        handler = handlers.ConsensusRegisterHandler(
-            self.mock_proxy, self.mock_consensus_notifier)
+        handler = handlers.ConsensusRegisterHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        request.name = "test"
-        request.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
@@ -59,8 +57,6 @@ class TestHandlers(unittest.TestCase):
         request.peer_id = b"test"
         request.message.message_type = "test"
         request.message.content = b"test"
-        request.message.name = "test"
-        request.message.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
@@ -74,8 +70,6 @@ class TestHandlers(unittest.TestCase):
         request = request_class()
         request.message.message_type = "test"
         request.message.content = b"test"
-        request.message.name = "test"
-        request.message.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
@@ -251,13 +245,15 @@ class TestProxy(unittest.TestCase):
             gossip=self._mock_gossip,
             identity_signer=self._mock_identity_signer,
             settings_view_factory=self._mock_settings_view_factory,
-            state_view_factory=self._mock_state_view_factory)
+            state_view_factory=self._mock_state_view_factory,
+            registered_engines=ConcurrentMultiMap())
 
     def test_send_to(self):
-        self._proxy.send_to(peer_id=b'peer_id', message=b'message')
+        self._proxy.send_to(
+            peer_id=b'peer_id', message=b'message', connection_id=b'')
 
     def test_broadcast(self):
-        self._proxy.broadcast(message=b'message')
+        self._proxy.broadcast(message=b'message', connection_id=b'')
 
     # Using block publisher
     def test_initialize_block(self):

@@ -17,7 +17,6 @@ import hashlib
 import logging
 
 
-from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import consensus_pb2
 from sawtooth_validator.protobuf import validator_pb2
