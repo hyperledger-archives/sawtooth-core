@@ -34,7 +34,8 @@ class ConsensusProxy:
 
     def __init__(self, block_manager, block_publisher,
                  chain_controller, gossip, identity_signer,
-                 settings_view_factory, state_view_factory):
+                 settings_view_factory, state_view_factory,
+                 registered_engines):
         self._block_manager = block_manager
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
@@ -43,11 +44,16 @@ class ConsensusProxy:
         self._public_key = self._identity_signer.get_public_key().as_bytes()
         self._settings_view_factory = settings_view_factory
         self._state_view_factory = state_view_factory
+        self._registered_engines = registered_engines
 
-    def register(self):
+    def register(self, engine_name, engine_version, connection_id):
         chain_head = self._chain_controller.chain_head
         if chain_head is None:
             return None
+
+        self._registered_engines.set(
+            connection_id,
+            [engine_name, engine_version])
 
         return StartupInfo(
             chain_head=chain_head,

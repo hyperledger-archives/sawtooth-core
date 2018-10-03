@@ -29,9 +29,9 @@ class ConsensusNotifier:
     """Handles sending notifications to the consensus engine using the provided
     interconnect service."""
 
-    def __init__(self, consensus_service):
+    def __init__(self, consensus_service, registered_engines):
         self._service = consensus_service
-        self._registered_engines = ConcurrentSet()
+        self._registered_engines = registered_engines
 
     def _notify(self, message_type, message):
         if self._registered_engines:
@@ -102,7 +102,3 @@ class ConsensusNotifier:
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
             consensus_pb2.ConsensusNotifyBlockCommit(
                 block_id=bytes.fromhex(block_id)))
-
-    def add_registered_engine(self, engine_name, engine_version):
-        """Add to list of registered consensus engines"""
-        self._registered_engines.add((engine_name, engine_version))
