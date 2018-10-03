@@ -24,6 +24,7 @@ class Block:
         self.block_num = block.block_num
         self.payload = block.payload
         self.summary = block.summary
+        self.batches = block.batches
 
 
 class Service(metaclass=abc.ABCMeta):

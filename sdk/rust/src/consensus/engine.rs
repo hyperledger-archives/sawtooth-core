@@ -34,6 +34,8 @@ pub enum Update {
     BlockValid(BlockId),
     BlockInvalid(BlockId),
     BlockCommit(BlockId),
+    BatchNew(BatchId),
+    BatchInvalid(BatchId),
     Shutdown,
 }
 
@@ -71,6 +73,7 @@ macro_rules! declare_id {
     };
 }
 
+declare_id!(BatchId);
 declare_id!(BlockId);
 declare_id!(PeerId);
 
@@ -292,6 +295,12 @@ pub mod tests {
                             Update::BlockCommit(_) => {
                                 (*self.calls.lock().unwrap()).push("BlockCommit".into())
                             }
+                            Update::BatchNew(_) => {
+                                (*self.calls.lock().unwrap()).push("BatchNew".into())
+                            }
+                            Update::BatchInvalid(_) => {
+                                (*self.calls.lock().unwrap()).push("BatchInvalid".into())
+                            }
                             Update::Shutdown => {
                                 println!("shutdown");
                                 break;
@@ -343,6 +352,10 @@ pub mod tests {
         sender
             .send(Update::BlockCommit(Default::default()))
             .unwrap();
+        sender.send(Update::BatchNew(Default::default())).unwrap();
+        sender
+            .send(Update::BatchInvalid(Default::default()))
+            .unwrap();
         let handle = thread::spawn(move || {
             let svc = Box::new(MockService {});
             mock_engine.start(receiver, svc, Default::default());
@@ -357,6 +370,8 @@ pub mod tests {
         assert!(contains(&calls, "BlockValid"));
         assert!(contains(&calls, "BlockInvalid"));
         assert!(contains(&calls, "BlockCommit"));
+        assert!(contains(&calls, "BatchNew"));
+        assert!(contains(&calls, "BatchInvalid"));
     }
 
     fn contains(calls: &Arc<Mutex<Vec<String>>>, expected: &str) -> bool {

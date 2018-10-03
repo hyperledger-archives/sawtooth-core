@@ -164,6 +164,18 @@ class ZmqDriver(Driver):
 
             data = notification.block_id
 
+        elif type_tag == Message.CONSENSUS_NOTIFY_BATCH_NEW:
+            notification = consensus_pb2.ConsensusNotifyBatchNew()
+            notification.ParseFromString(message.content)
+
+            data = notification.batch_id
+
+        elif type_tag == Message.CONSENSUS_NOTIFY_BATCH_INVALID:
+            notification = consensus_pb2.ConsensusNotifyBatchInvalid()
+            notification.ParseFromString(message.content)
+
+            data = notification.batch_id
+
         else:
             raise exceptions.ReceiveError(
                 'Received unexpected message type: {}'.format(type_tag))
