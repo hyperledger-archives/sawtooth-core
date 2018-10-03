@@ -82,6 +82,10 @@ class ConcurrentMultiMap:
         with self._lock:
             return key in self._dict
 
+    def __len__(self):
+        with self._lock:
+            return len(self._dict)
+
     def append(self, key, item):
         """Append item to the list at key. Creates the list at key if it
         doesn't exist.
