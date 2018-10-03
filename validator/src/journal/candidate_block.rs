@@ -18,6 +18,7 @@
 #![allow(unknown_lints)]
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use cpython;
 use cpython::ObjectProtocol;
@@ -31,6 +32,7 @@ use batch::Batch;
 use block::Block;
 use transaction::Transaction;
 
+use consensus::notifier::ConsensusNotifier;
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::validation_rule_enforcer;
 use state::settings_view::SettingsView;
@@ -72,6 +74,8 @@ pub struct CandidateBlock {
     injected_batch_ids: HashSet<String>,
 
     committed_txn_cache: TransactionCommitCache,
+
+    consensus_notifier: Arc<ConsensusNotifier>,
 }
 
 impl CandidateBlock {
@@ -87,6 +91,7 @@ impl CandidateBlock {
         batch_injectors: Vec<cpython::PyObject>,
         identity_signer: cpython::PyObject,
         settings_view: SettingsView,
+        consensus_notifier: Arc<ConsensusNotifier>,
     ) -> Self {
         CandidateBlock {
             previous_block,
@@ -95,6 +100,7 @@ impl CandidateBlock {
             scheduler,
             max_batches,
             committed_txn_cache,
+            consensus_notifier,
             block_builder,
             batch_injectors,
             identity_signer,
@@ -432,6 +438,8 @@ impl CandidateBlock {
                 }
             } else {
                 bad_batches.push(batch.clone());
+                self.consensus_notifier
+                    .notify_batch_invalid(&header_signature);
                 debug!("Batch {} invalid, not added to block", header_signature);
             }
         }
