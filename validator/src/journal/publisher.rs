@@ -30,6 +30,7 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
+use consensus::notifier::ConsensusNotifier;
 use execution::execution_platform::ExecutionPlatform;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
@@ -131,6 +132,7 @@ pub struct SyncBlockPublisher {
     data_dir: PyObject,
     config_dir: PyObject,
     permission_verifier: PyObject,
+    consensus_notifier: Arc<ConsensusNotifier>,
 
     exit: Arc<Exit>,
 }
@@ -155,6 +157,7 @@ impl Clone for SyncBlockPublisher {
             data_dir: self.data_dir.clone_ref(py),
             config_dir: self.config_dir.clone_ref(py),
             permission_verifier: self.permission_verifier.clone_ref(py),
+            consensus_notifier: Arc::clone(&self.consensus_notifier),
             exit: Arc::clone(&self.exit),
         }
     }
@@ -293,6 +296,7 @@ impl SyncBlockPublisher {
                 batch_injectors,
                 self.identity_signer.clone_ref(py),
                 settings_view,
+                Arc::clone(&self.consensus_notifier),
             )
         };
 
@@ -468,6 +472,8 @@ impl SyncBlockPublisher {
         };
 
         if permission_check {
+            self.consensus_notifier
+                .notify_batch_new(&batch.header_signature);
             state.pending_batches.append(batch.clone());
             if let Some(ref mut candidate_block) = state.candidate_block {
                 if candidate_block.can_add_batch() {
@@ -514,6 +520,7 @@ impl BlockPublisher {
         permission_verifier: PyObject,
         batch_observers: Vec<Box<BatchObserver>>,
         batch_injector_factory: PyObject,
+        consensus_notifier: Box<ConsensusNotifier>,
     ) -> Self {
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
             transaction_executor,
@@ -536,6 +543,7 @@ impl BlockPublisher {
             config_dir,
             permission_verifier,
             batch_injector_factory,
+            consensus_notifier: Arc::from(consensus_notifier),
             exit: Arc::new(Exit::new()),
         };
 

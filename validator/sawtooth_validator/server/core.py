@@ -314,7 +314,8 @@ class Validator:
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory)
+            batch_injector_factory=batch_injector_factory,
+            consensus_notifier=consensus_notifier)
 
         block_validator = BlockValidator(
             block_manager=block_manager,
