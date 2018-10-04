@@ -204,7 +204,7 @@ impl ChainControllerState {
         };
 
         info!(
-            "Building fork resoultion for chain head '{}' against new block '{}'",
+            "Building fork resolution for chain head '{}' against new block '{}'",
             &chain_head, &new_block
         );
         if let Some(prior_heads_successor) = result.new_chain.get(0) {
