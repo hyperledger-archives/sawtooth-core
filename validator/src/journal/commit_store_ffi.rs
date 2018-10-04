@@ -490,10 +490,7 @@ unsafe fn return_proto<I, O: protobuf::Message + From<I>>(
 
 fn map_database_error(err: DatabaseError) -> ErrorCode {
     match err {
-        DatabaseError::NotFoundError(s) => {
-            debug!("Not found: {}", s);
-            ErrorCode::NotFound
-        }
+        DatabaseError::NotFoundError(_) => ErrorCode::NotFound,
         err => {
             error!("Database error: {:?}", err);
             ErrorCode::DatabaseError
