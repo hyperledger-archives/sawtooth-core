@@ -76,51 +76,6 @@ main() {
     mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
 
     build_python_debs
-    build_cxx_debs
-}
-
-build_cxx_debs() {
-    info "Building debs needed by the C++ SDK"
-    build_dir_cxx=${build_dir}/cxx
-    mkdir -p ${build_dir_cxx}
-
-    build_cxx_protobuf_deb
-}
-
-build_cxx_protobuf_deb() {
-    version=3.3.0
-    deb_file=protobuf_$version-1_amd64.deb
-
-    if [[ -e $pkg_dir/$deb_file ]]
-    then
-        warn "Skipping $deb, already exists at $pkg_dir/$deb"
-    else
-
-        cd ${build_dir_cxx}
-
-        export DEBEMAIL="distributedledger@intel.com"
-        export DEBFULLNAME="Hyperledger Sawtooth"
-
-        # skip the fetch if we have the file
-        if [[ ! -e v$version.tar.gz ]]; then
-            wget https://github.com/google/protobuf/archive/v$version.tar.gz
-        fi
-        tar zxvf v$version.tar.gz
-
-        cd protobuf-$version
-
-        ./autogen.sh
-        ./configure  --enable-deb
-        make dist
-
-        # skip the debian dir creation (dh_make gets cranky if it already exists)
-        if [[ ! -e debian ]]; then
-            dh_make -s -y -f protobuf-$version.tar.gz
-        fi
-        dpkg-buildpackage -B
-
-        cp ../$deb_file $pkg_dir
-    fi
 }
 
 build_python_debs() {
