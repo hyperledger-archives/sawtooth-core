@@ -20,16 +20,25 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{PyClone, PyList, PyObject, Python};
+use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use block::Block;
+use execution::py_executor::PyExecutor;
+use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::publisher::{
-    BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
+    BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
 
 use state::state_view_factory::StateViewFactory;
+
+lazy_static! {
+    static ref PY_BATCH_PUBLISHER_CLASS: PyObject = py_import_class(
+        "sawtooth_validator.journal.consensus.batch_publisher",
+        "BatchPublisher"
+    );
+}
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -110,38 +119,27 @@ pub unsafe extern "C" fn block_publisher_new(
             .extract(py)
             .expect("Got chain head that wasn't a BlockWrapper")
     };
-    let batch_observers: Vec<PyObject> = batch_observers
-        .extract::<PyList>(py)
-        .unwrap()
-        .iter(py)
-        .collect();
 
-    let batch_publisher_mod = py
-        .import("sawtooth_validator.journal.consensus.batch_publisher")
-        .expect("Unable to import 'sawtooth_validator.journal.consensus.batch_publisher'");
-    let batch_publisher = batch_publisher_mod
-        .call(
-            py,
-            "BatchPublisher",
-            (identity_signer.clone_ref(py), batch_sender),
-            None,
-        ).expect("Unable to create BatchPublisher");
+    let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
+        let mut res: Vec<Box<BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        py_list
+            .iter(py)
+            .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
+        res
+    } else {
+        return ErrorCode::InvalidInput;
+    };
 
-    let block_header_class = py
-        .import("sawtooth_validator.protobuf.block_pb2")
-        .expect("Unable to import 'sawtooth_validator.protobuf.block_pb2'")
-        .get(py, "BlockHeader")
-        .expect("Unable to import BlockHeader from 'sawtooth_validator.protobuf.block_pb2'");
-
-    let block_builder_class = py
-        .import("sawtooth_validator.journal.block_builder")
-        .expect("Unable to import 'sawtooth_validator.journal.block_builder'")
-        .get(py, "BlockBuilder")
-        .expect("Unable to import BlockBuilder from 'sawtooth_validator.journal.block_builder'");
+    let batch_publisher = PY_BATCH_PUBLISHER_CLASS
+        .call(py, (identity_signer.clone_ref(py), batch_sender), None)
+        .expect("Unable to create BatchPublisher");
 
     let publisher = BlockPublisher::new(
         block_manager,
-        transaction_executor,
+        Box::new(
+            PyExecutor::new(transaction_executor)
+                .expect("Failed to create python transaction executor"),
+        ),
         batch_committed,
         transaction_committed,
         state_view_factory.clone(),
@@ -154,8 +152,6 @@ pub unsafe extern "C" fn block_publisher_new(
         permission_verifier,
         batch_observers,
         batch_injector_factory,
-        block_header_class,
-        block_builder_class,
     );
 
     *block_publisher_ptr = Box::into_raw(Box::new(publisher)) as *const c_void;
@@ -401,5 +397,25 @@ pub unsafe extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) ->
     match (*(publisher as *mut BlockPublisher)).cancel_block() {
         Ok(_) => ErrorCode::Success,
         Err(_) => ErrorCode::BlockNotInitialized,
+    }
+}
+
+struct PyBatchObserver {
+    py_batch_observer: PyObject,
+}
+
+impl PyBatchObserver {
+    fn new(py_batch_observer: PyObject) -> Self {
+        PyBatchObserver { py_batch_observer }
+    }
+}
+
+impl BatchObserver for PyBatchObserver {
+    fn notify_batch_pending(&self, batch: &Batch) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.py_batch_observer
+            .call_method(py, "notify_batch_pending", (batch,), None)
+            .expect("BatchObserver has no method notify_batch_pending");
     }
 }

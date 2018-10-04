@@ -31,7 +31,7 @@ use std::thread;
 use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
-use execution::py_executor::PyExecutor;
+use ffi::py_import_class;
 use journal::block_manager::BlockManager;
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
@@ -46,6 +46,13 @@ const INITIAL_PUBLISH_COUNT: usize = 30;
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
         metrics::get_collector("sawtooth_validator.publisher");
+}
+
+lazy_static! {
+    static ref PY_BLOCK_HEADER_CLASS: PyObject =
+        py_import_class("sawtooth_validator.protobuf.block_pb2", "BlockHeader");
+    static ref PY_BLOCK_BUILDER_CLASS: PyObject =
+        py_import_class("sawtooth_validator.journal.block_builder", "BlockBuilder");
 }
 
 #[derive(Debug)]
@@ -75,8 +82,13 @@ pub enum BlockPublisherError {
     UnknownBlock(String),
 }
 
+pub trait BatchObserver: Send + Sync {
+    fn notify_batch_pending(&self, batch: &Batch);
+}
+
 pub struct BlockPublisherState {
     pub transaction_executor: Box<ExecutionPlatform>,
+    pub batch_observers: Vec<Box<BatchObserver>>,
     pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
@@ -85,11 +97,13 @@ pub struct BlockPublisherState {
 impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<ExecutionPlatform>,
+        batch_observers: Vec<Box<BatchObserver>>,
         chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
     ) -> Self {
         BlockPublisherState {
+            batch_observers,
             transaction_executor,
             chain_head,
             candidate_block,
@@ -107,10 +121,7 @@ pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
     block_manager: BlockManager,
-    batch_observers: Vec<PyObject>,
     batch_injector_factory: PyObject,
-    block_header_class: PyObject,
-    block_builder_class: PyObject,
     batch_committed: PyObject,
     transaction_committed: PyObject,
     state_view_factory: StateViewFactory,
@@ -134,14 +145,7 @@ impl Clone for SyncBlockPublisher {
         SyncBlockPublisher {
             state,
             block_manager: self.block_manager.clone(),
-            batch_observers: self
-                .batch_observers
-                .iter()
-                .map(|i| i.clone_ref(py))
-                .collect(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            block_header_class: self.block_header_class.clone_ref(py),
-            block_builder_class: self.block_builder_class.clone_ref(py),
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone(),
@@ -262,13 +266,11 @@ impl SyncBlockPublisher {
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
                 .unwrap();
-            let block_header = self
-                .block_header_class
+            let block_header = PY_BLOCK_HEADER_CLASS
                 .call(py, NoArgs, Some(&kwargs))
                 .expect("BlockHeader could not be constructed");
 
-            let block_builder = self
-                .block_builder_class
+            let block_builder = PY_BLOCK_BUILDER_CLASS
                 .call(py, (block_header,), None)
                 .expect("BlockBuilder could not be constructed");
 
@@ -452,12 +454,8 @@ impl SyncBlockPublisher {
 
     pub fn on_batch_received(&self, batch: Batch) {
         let mut state = self.state.write().expect("Lock should not be poisoned");
-        for observer in &self.batch_observers {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            observer
-                .call_method(py, "notify_batch_pending", (batch.clone(),), None)
-                .expect("BatchObserver has no method notify_batch_pending");
+        for observer in &state.batch_observers {
+            observer.notify_batch_pending(&batch);
         }
         let permission_check = {
             let gil = Python::acquire_gil();
@@ -503,7 +501,7 @@ impl BlockPublisher {
     #![allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
-        transaction_executor: PyObject,
+        transaction_executor: Box<ExecutionPlatform>,
         batch_committed: PyObject,
         transaction_committed: PyObject,
         state_view_factory: StateViewFactory,
@@ -514,15 +512,12 @@ impl BlockPublisher {
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
-        batch_observers: Vec<PyObject>,
+        batch_observers: Vec<Box<BatchObserver>>,
         batch_injector_factory: PyObject,
-        block_header_class: PyObject,
-        block_builder_class: PyObject,
     ) -> Self {
-        let tep = Box::new(PyExecutor::new(transaction_executor).unwrap());
-
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
-            tep,
+            transaction_executor,
+            batch_observers,
             chain_head,
             None,
             PendingBatchesPool::new(NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT),
@@ -540,10 +535,7 @@ impl BlockPublisher {
             data_dir,
             config_dir,
             permission_verifier,
-            batch_observers,
             batch_injector_factory,
-            block_header_class,
-            block_builder_class,
             exit: Arc::new(Exit::new()),
         };
 
