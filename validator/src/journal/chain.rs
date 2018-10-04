@@ -254,7 +254,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
         result.transaction_count = result.new_chain.iter().map(|b| b.num_transactions()).sum();
 
         info!(
-            "Building fork resoultion for chain head '{}' against new block '{}'",
+            "Building fork resolution for chain head '{}' against new block '{}'",
             &chain_head, &block
         );
 
