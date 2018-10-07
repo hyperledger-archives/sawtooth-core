@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f perf/intkey_workload/Dockerfile-installed -t sawtooth-intkey-workload .
+# docker build -f perf/intkey_workload/Dockerfile-installed-xenial -t sawtooth-intkey-workload .
 
 # -------------=== intkey workload build ===-------------
 FROM ubuntu:xenial as intkey-workload-builder

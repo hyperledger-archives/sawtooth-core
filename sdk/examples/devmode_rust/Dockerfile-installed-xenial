@@ -1,4 +1,4 @@
-# Copyright 2018 Cargill Incorporated
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ------------------------------------------------------------------------------
 
-# docker build -f sdk/examples/xo_rust/Dockerfile-installed -t sawtooth-xo-tp-rust .
+# docker build -f sdk/examples/devmode_rust/Dockerfile-installed-xenial -t sawtooth-devmode-rust .
 
-# -------------=== xo rust build ===-------------
-FROM ubuntu:xenial as xo-rust-builder
+# -------------=== sawtooth devmode rust build ===-------------
+FROM ubuntu:xenial as devmode-rust-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -41,16 +42,16 @@ RUN /root/.cargo/bin/cargo install cargo-deb
 
 COPY . /project
 
-WORKDIR /project/sdk/examples/xo_rust/
+WORKDIR /project/sdk/examples/devmode_rust
 
 RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
-# -------------=== xo rust docker build ===-------------
+# -------------=== devmode rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=xo-rust-builder /project/sdk/examples/xo_rust/target/debian/xo_rust_*.deb /tmp
+COPY --from=devmode-rust-builder /project/sdk/examples/devmode_rust/target/debian/sawtooth-devmode-rust_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/xo_rust_*.deb || true \
+ && dpkg -i /tmp/sawtooth-devmode-rust_*.deb || true \
  && apt-get -f -y install

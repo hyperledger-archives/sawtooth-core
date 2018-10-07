@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f adm/Dockerfile-installed -t sawtooth-admin-tools .
+# docker build -f adm/Dockerfile-installed-xenial -t sawtooth-admin-tools .
 
 # -------------=== admin tools build ===-------------
 FROM ubuntu:xenial as adm-builder

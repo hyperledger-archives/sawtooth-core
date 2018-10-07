@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f perf/smallbank_workload/Dockerfile-installed -t sawtooth-smallbank-workload .
+# docker build -f perf/smallbank_workload/Dockerfile-installed-xenial -t sawtooth-smallbank-workload .
 
 # -------------=== smallbank workload build ===-------------
 FROM ubuntu:xenial as smallbank-workload-builder

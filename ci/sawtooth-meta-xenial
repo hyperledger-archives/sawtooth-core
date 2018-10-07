@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f ci/sawtooth-meta -t sawtooth-meta .
+# docker build -f ci/sawtooth-meta-xenial -t sawtooth-meta .
 
 # -------------=== sawtooth-meta build ===-------------
 FROM ubuntu:xenial as sawtooth-meta-builder

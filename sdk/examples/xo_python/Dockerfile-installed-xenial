@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/examples/intkey_python/Dockerfile-installed -t sawtooth-intkey-tp-python .
+# docker build -f sdk/examples/xo_python/Dockerfile-installed-xenial -t sawtooth-xo-tp-python .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder
@@ -48,7 +48,6 @@ FROM ubuntu:xenial as sawtooth-sdk-python-builder
 
 ENV VERSION=AUTO_STRICT
 
-
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
@@ -78,9 +77,9 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
-# -------------=== python intkey tp build ===-------------
+# -------------=== python xo tp build ===-------------
 
-FROM ubuntu:xenial as python-intkey-tp-builder
+FROM ubuntu:xenial as python-xo-tp-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -106,20 +105,20 @@ COPY . /project
 RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install \
  && /project/bin/protogen \
- && cd /project/sdk/examples/intkey_python/ \
+ && cd /project/sdk/examples/xo_python/ \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \
  && python3 setup.py --command-packages=stdeb.command debianize \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
- # -------------=== python-intkey-tp docker build ===-------------
+ # -------------=== python-xo-tp docker build ===-------------
 FROM ubuntu:xenial
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 
-COPY --from=python-intkey-tp-builder /project/sdk/examples/python3-sawtooth-intkey*.deb /tmp
+COPY --from=python-xo-tp-builder /project/sdk/examples/python3-sawtooth-xo*.deb /tmp
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \

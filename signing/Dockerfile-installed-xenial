@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f cli/Dockerfile-installed -t sawtooth-cli-builder .
+# docker build -f signing/Dockerfile-installed-xenial -t sawtooth-signing .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder
@@ -42,56 +42,15 @@ RUN /project/bin/protogen \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
-
-# -------------=== cli build ===-------------
-FROM ubuntu:xenial as cli-builder
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q --allow-downgrades \
-    git \
-    python3 \
-    python3-protobuf \
-    python3-stdeb \
-    python3-toml \
-    python3-grpcio-tools \
-    python3-grpcio
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-
-COPY . /project
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install
-
-RUN /project/bin/protogen \
- && cd /project/cli \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
-
-# -------------=== cli docker build ===-------------
+# -------------=== signing docker build ===-------------
 FROM ubuntu:xenial
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-COPY --from=cli-builder /project/python3-sawtooth-cli*.deb /tmp
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
- && dpkg -i /tmp/python3-sawtooth*.deb || true \
+ && dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*

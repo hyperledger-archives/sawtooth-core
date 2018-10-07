@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/python/Dockerfile-installed -t sawtooth-sdk-python .
+# docker build -f sdk/python/Dockerfile-installed-xenial -t sawtooth-sdk-python .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder
