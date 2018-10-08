@@ -404,6 +404,7 @@ class Validator:
 
         self._block_status_store = block_status_store
 
+        self._consensus_notifier = consensus_notifier
         self._consensus_dispatcher = consensus_dispatcher
         self._consensus_service = consensus_service
         self._consensus_thread_pool = consensus_thread_pool

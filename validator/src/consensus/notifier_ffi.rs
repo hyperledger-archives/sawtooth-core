@@ -15,66 +15,222 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyClone, PyObject, Python, ToPyObject};
+use std::ffi::CStr;
+use std::os::raw::{c_char, c_void};
+use std::slice;
+
+use cpython::{ObjectProtocol, PyClone, PyObject, Python};
+use protobuf::{self, Message, ProtobufEnum};
+use py_ffi;
 
 use block::Block;
-use consensus::notifier::ConsensusNotifier;
+use consensus::notifier::{ConsensusNotifier, NotifierService, NotifierServiceError};
+use proto::validator::Message_MessageType as MessageType;
+use proto::{self, consensus::ConsensusPeerMessage};
 use pylogger;
 
-pub struct PyConsensusNotifier {
-    py_consensus_notifier: PyObject,
+pub struct PyNotifierService {
+    py_notifier_service: PyObject,
 }
 
-impl PyConsensusNotifier {
-    pub fn new(py_consensus_notifier: PyObject) -> Self {
-        PyConsensusNotifier {
-            py_consensus_notifier,
+impl PyNotifierService {
+    pub fn new(py_notifier_service: PyObject) -> Self {
+        PyNotifierService {
+            py_notifier_service,
         }
     }
+}
 
-    fn call_py_fn<T: ToPyObject>(&self, py_fn_name: &str, obj: T) {
+impl NotifierService for PyNotifierService {
+    fn notify<T: Message>(
+        &self,
+        message_type: MessageType,
+        message: T,
+    ) -> Result<(), NotifierServiceError> {
+        let payload = message
+            .write_to_bytes()
+            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
-        self.py_consensus_notifier
-            .call_method(py, py_fn_name, (obj,), None)
+        self.py_notifier_service
+            .call_method(py, "notify", (message_type.value(), payload), None)
             .map(|_| ())
             .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    &format!("Unable to call consensus_notifier.{}", py_fn_name),
-                    py_err,
-                );
-                ()
-            }).unwrap_or(())
+                pylogger::exception(py, "Unable to notify consensus", py_err);
+                NotifierServiceError("FFI error notifying consensus".into())
+            })
     }
 }
 
-impl Clone for PyConsensusNotifier {
+impl Clone for PyNotifierService {
     fn clone(&self) -> Self {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
-        PyConsensusNotifier {
-            py_consensus_notifier: self.py_consensus_notifier.clone_ref(py),
+        PyNotifierService {
+            py_notifier_service: self.py_notifier_service.clone_ref(py),
         }
     }
 }
 
-impl ConsensusNotifier for PyConsensusNotifier {
-    fn notify_block_new(&self, block: &Block) {
-        self.call_py_fn("notify_block_new", block)
+macro_rules! check_null {
+    ($($arg:expr) , *) => {
+        $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
     }
+}
 
-    fn notify_block_valid(&self, block_id: &str) {
-        self.call_py_fn("notify_block_valid", block_id)
-    }
+#[repr(u32)]
+#[derive(Debug)]
+pub enum ErrorCode {
+    Success = 0,
 
-    fn notify_block_invalid(&self, block_id: &str) {
-        self.call_py_fn("notify_block_invalid", block_id)
-    }
+    // Input errors
+    NullPointerProvided = 0x01,
+    InvalidArgument = 0x02,
+}
 
-    fn notify_block_commit(&self, block_id: &str) {
-        self.call_py_fn("notify_block_commit", block_id)
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_new(
+    py_notifier_service_ptr: *mut py_ffi::PyObject,
+    consensus_notifier_ptr: *mut *const c_void,
+) -> ErrorCode {
+    check_null!(py_notifier_service_ptr);
+
+    let py = Python::assume_gil_acquired();
+    let py_notifier_service = PyObject::from_borrowed_ptr(py, py_notifier_service_ptr);
+
+    *consensus_notifier_ptr = Box::into_raw(Box::new(PyNotifierService::new(
+        py_notifier_service
+    ))) as *const c_void;
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> ErrorCode {
+    check_null!(notifier);
+    Box::from_raw(notifier as *mut PyNotifierService);
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
+    notifier: *mut c_void,
+    peer_id: *const c_char,
+) -> ErrorCode {
+    check_null!(notifier, peer_id);
+
+    match deref_cstr(peer_id) {
+        Ok(peer_id) => {
+            (*(notifier as *mut PyNotifierService)).notify_peer_connected(peer_id);
+            ErrorCode::Success
+        }
+        Err(err) => err,
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
+    notifier: *mut c_void,
+    peer_id: *const c_char,
+) -> ErrorCode {
+    check_null!(notifier, peer_id);
+
+    match deref_cstr(peer_id) {
+        Ok(peer_id) => {
+            (*(notifier as *mut PyNotifierService)).notify_peer_disconnected(peer_id);
+            ErrorCode::Success
+        }
+        Err(err) => err,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
+    notifier: *mut c_void,
+    message_bytes: *const u8,
+    message_len: usize,
+    sender_id_bytes: *const u8,
+    sender_id_len: usize,
+) -> ErrorCode {
+    check_null!(notifier, message_bytes, sender_id_bytes);
+
+    let message_slice = slice::from_raw_parts(message_bytes, message_len);
+    let message: ConsensusPeerMessage = match protobuf::parse_from_bytes(&message_slice) {
+        Ok(message) => message,
+        Err(err) => {
+            error!("Failed to parse ConsensusPeerMessage: {:?}", err);
+            return ErrorCode::InvalidArgument;
+        }
+    };
+
+    let sender_id = slice::from_raw_parts(sender_id_bytes, sender_id_len);
+    (*(notifier as *mut PyNotifierService)).notify_peer_message(message, &sender_id);
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_block_new(
+    notifier: *mut c_void,
+    block_bytes: *const u8,
+    block_bytes_len: usize,
+) -> ErrorCode {
+    check_null!(notifier, block_bytes);
+
+    let block: Block = {
+        let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+            Ok(block) => block,
+            Err(err) => {
+                error!("Failed to parse block bytes: {:?}", err);
+                return ErrorCode::InvalidArgument;
+            }
+        };
+        proto_block.into()
+    };
+
+    (*(notifier as *mut PyNotifierService)).notify_block_new(&block);
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
+    notifier: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(notifier, block_id);
+
+    match deref_cstr(block_id) {
+        Ok(block_id) => {
+            (*(notifier as *mut PyNotifierService)).notify_block_valid(block_id);
+            ErrorCode::Success
+        }
+        Err(err) => err,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
+    notifier: *mut c_void,
+    block_id: *const c_char,
+) -> ErrorCode {
+    check_null!(notifier, block_id);
+
+    match deref_cstr(block_id) {
+        Ok(block_id) => {
+            (*(notifier as *mut PyNotifierService)).notify_block_invalid(block_id);
+            ErrorCode::Success
+        }
+        Err(err) => err,
+    }
+}
+
+unsafe fn deref_cstr<'a>(cstr: *const c_char) -> Result<&'a str, ErrorCode> {
+    CStr::from_ptr(cstr)
+        .to_str()
+        .map_err(|_| ErrorCode::InvalidArgument)
 }
