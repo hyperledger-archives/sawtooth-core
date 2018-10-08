@@ -31,9 +31,7 @@ fn main() {
             .map(|a| a.as_ref())
             .collect::<Vec<&str>>(),
         includes: &["../../families/smallbank/protos"],
-        customize: Customize {
-            ..Default::default()
-        },
+        customize: Customize::default(),
     }).expect("Error generating rust files from smallbank protos");
 }
 
