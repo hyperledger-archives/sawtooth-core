@@ -13,10 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import hashlib
 
 from collections import namedtuple
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageEnvelope
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageHeader
 
 
 class UnknownBlock(Exception):
@@ -63,16 +68,15 @@ class ConsensusProxy:
             local_peer_info=self._public_key)
 
     # Using network service
-    def send_to(self, peer_id, message):
+    def send_to(self, peer_id, message, connection_id):
+        envelope = self._wrap_consensus_message(message, connection_id)
         self._gossip.send_consensus_message(
             peer_id=peer_id.hex(),
-            message=message,
-            public_key=self._public_key)
+            message_envelope=envelope)
 
-    def broadcast(self, message):
-        self._gossip.broadcast_consensus_message(
-            message=message,
-            public_key=self._public_key)
+    def broadcast(self, message, connection_id):
+        envelope = self._wrap_consensus_message(message, connection_id)
+        self._gossip.broadcast_consensus_message(message_envelope=envelope)
 
     # Using block publisher
     def initialize_block(self, previous_id):
@@ -219,3 +223,20 @@ class ConsensusProxy:
             raise UnknownBlock()
 
         return blocks
+
+    def _wrap_consensus_message(self, message, connection_id):
+        _, name, version = self._consensus_registry.get_engine_info()
+        header = ConsensusPeerMessageHeader(
+            signer_public_key=self._public_key,
+            message_sha512=hashlib.sha512(message).digest(),
+            name=name,
+            version=version,
+        ).SerializeToString()
+
+        signature = bytes.fromhex(self._identity_signer.sign(header))
+        envelope = ConsensusPeerMessageEnvelope(
+            header=header,
+            message=message,
+            header_signature=signature)
+
+        return envelope

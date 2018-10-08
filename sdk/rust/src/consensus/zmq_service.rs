@@ -41,18 +41,11 @@ fn generate_correlation_id() -> String {
 pub struct ZmqService {
     sender: ZmqMessageSender,
     timeout: Duration,
-    name: String,
-    version: String,
 }
 
 impl ZmqService {
-    pub fn new(sender: ZmqMessageSender, timeout: Duration, name: String, version: String) -> Self {
-        ZmqService {
-            sender,
-            timeout,
-            name,
-            version,
-        }
+    pub fn new(sender: ZmqMessageSender, timeout: Duration) -> Self {
+        ZmqService { sender, timeout }
     }
 
     /// Serialize and send a request, wait for the default timeout, and receive and parse an
@@ -105,8 +98,6 @@ impl Service for ZmqService {
         let mut message = ConsensusPeerMessage::new();
         message.set_message_type(message_type.into());
         message.set_content(payload);
-        message.set_name(self.name.clone());
-        message.set_version(self.version.clone());
 
         let mut request = ConsensusSendToRequest::new();
         request.set_message(message);
@@ -456,8 +447,7 @@ mod tests {
         let svc_thread = thread::spawn(move || {
             let connection = ZmqMessageConnection::new(&addr);
             let (sender, _) = connection.create();
-            let mut svc =
-                ZmqService::new(sender, Duration::from_secs(10), "mock".into(), "0".into());
+            let mut svc = ZmqService::new(sender, Duration::from_secs(10));
 
             svc.send_to(&Default::default(), Default::default(), Default::default())
                 .unwrap();
