@@ -76,8 +76,6 @@ impl ZmqDriver {
         let startup_state = register(
             &mut validator_sender,
             Duration::from_secs(REGISTER_TIMEOUT),
-            engine.name(),
-            engine.version(),
         )?;
 
         let driver_thread = thread::spawn(move || {
@@ -89,14 +87,11 @@ impl ZmqDriver {
             )
         });
 
-        let (name, version) = { (engine.name(), engine.version()) };
         engine.start(
             update_receiver,
             Box::new(ZmqService::new(
                 validator_sender_clone,
                 Duration::from_secs(SERVICE_TIMEOUT),
-                name,
-                version,
             )),
             startup_state,
         );
@@ -158,12 +153,8 @@ fn driver_loop(
 pub fn register(
     sender: &mut MessageSender,
     timeout: Duration,
-    name: String,
-    version: String,
 ) -> Result<StartupState, Error> {
-    let mut request = ConsensusRegisterRequest::new();
-    request.set_name(name);
-    request.set_version(version);
+    let request = ConsensusRegisterRequest::new();
     let request = request.write_to_bytes()?;
 
     let mut msg = sender
@@ -285,6 +276,16 @@ fn handle_update(
             let mut request: ConsensusNotifyBlockCommit =
                 protobuf::parse_from_bytes(msg.get_content())?;
             Update::BlockCommit(request.take_block_id().into())
+        }
+        CONSENSUS_NOTIFY_BATCH_NEW => {
+            let mut request: ConsensusNotifyBatchNew =
+                protobuf::parse_from_bytes(msg.get_content())?;
+            Update::BatchNew(request.take_batch_id().into())
+        }
+        CONSENSUS_NOTIFY_BATCH_INVALID => {
+            let mut request: ConsensusNotifyBatchInvalid =
+                protobuf::parse_from_bytes(msg.get_content())?;
+            Update::BatchInvalid(request.take_batch_id().into())
         }
         unexpected => {
             return Err(Error::ReceiveError(format!(

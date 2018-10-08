@@ -152,7 +152,8 @@ class BlockPublisher(OwnedPointer):
                  config_dir,
                  permission_verifier,
                  batch_observers,
-                 batch_injector_factory=None):
+                 batch_injector_factory=None,
+                 consensus_notifier=None):
         """
         Initialize the BlockPublisher object
 
@@ -203,6 +204,7 @@ class BlockPublisher(OwnedPointer):
             ctypes.py_object(permission_verifier),
             ctypes.py_object(batch_observers),
             ctypes.py_object(batch_injector_factory),
+            ctypes.py_object(consensus_notifier),
             ctypes.byref(self.pointer)))
 
     def _call(self, method, *args, library=LIBRARY):

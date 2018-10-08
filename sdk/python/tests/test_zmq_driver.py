@@ -162,6 +162,14 @@ class TestDriver(unittest.TestCase):
             consensus_pb2.ConsensusNotifyBlockCommit(),
             Message.CONSENSUS_NOTIFY_BLOCK_COMMIT)
 
+        self.send_req_rep(
+            consensus_pb2.ConsensusNotifyBatchNew(),
+            Message.CONSENSUS_NOTIFY_BATCH_NEW)
+
+        self.send_req_rep(
+            consensus_pb2.ConsensusNotifyBatchInvalid(),
+            Message.CONSENSUS_NOTIFY_BATCH_INVALID)
+
         self.assertEqual(
             [msg_type for (msg_type, data) in self.engine.updates],
             [
@@ -172,6 +180,8 @@ class TestDriver(unittest.TestCase):
                 Message.CONSENSUS_NOTIFY_BLOCK_VALID,
                 Message.CONSENSUS_NOTIFY_BLOCK_INVALID,
                 Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
+                Message.CONSENSUS_NOTIFY_BATCH_NEW,
+                Message.CONSENSUS_NOTIFY_BATCH_INVALID,
             ])
 
         self.driver.stop()

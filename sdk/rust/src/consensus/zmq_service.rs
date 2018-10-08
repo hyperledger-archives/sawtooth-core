@@ -41,12 +41,8 @@ fn generate_correlation_id() -> String {
 pub fn register(
     sender: &mut MessageSender,
     timeout: Duration,
-    name: String,
-    version: String,
 ) -> Result<(Block, Vec<PeerInfo>), Error> {
-    let mut request = ConsensusRegisterRequest::new();
-    request.set_name(name);
-    request.set_version(version);
+    let request = ConsensusRegisterRequest::new();
     let request = request.write_to_bytes()?;
 
     let mut msg = sender
@@ -116,17 +112,13 @@ pub fn register(
 pub struct ZmqService {
     sender: ZmqMessageSender,
     timeout: Duration,
-    name: String,
-    version: String,
 }
 
 impl ZmqService {
-    pub fn new(sender: ZmqMessageSender, timeout: Duration, name: String, version: String) -> Self {
+    pub fn new(sender: ZmqMessageSender, timeout: Duration) -> Self {
         ZmqService {
             sender,
             timeout,
-            name,
-            version,
         }
     }
 
@@ -180,8 +172,6 @@ impl Service for ZmqService {
         let mut message = ConsensusPeerMessage::new();
         message.set_message_type(message_type.into());
         message.set_content(payload);
-        message.set_name(self.name.clone());
-        message.set_version(self.version.clone());
 
         let mut request = ConsensusSendToRequest::new();
         request.set_message(message);

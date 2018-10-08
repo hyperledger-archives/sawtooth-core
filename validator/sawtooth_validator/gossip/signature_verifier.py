@@ -23,6 +23,8 @@ from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageHeader
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator import metrics
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -113,6 +115,30 @@ def is_valid_transaction(txn):
     return True
 
 
+def is_valid_consensus_message(message_envelope):
+    # validate consensus message signature
+    header = ConsensusPeerMessageHeader()
+    header.ParseFromString(message_envelope.header)
+
+    context = create_context('secp256k1')
+    public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
+    if not context.verify(message_envelope.header_signature,
+                          message_envelope.header,
+                          public_key):
+        LOGGER.debug("transaction signature invalid for txn: %s",
+                     message_envelope.header_signature)
+        return False
+
+    # verify the message field matches the header
+    message_sha512 = hashlib.sha512(message_envelope.message).hexdigest()
+    if message_sha512 != header.message_sha512:
+        LOGGER.debug("message doesn't match message_sha512 of the header for"
+                     "message envelope: %s", message_envelope.header_signature)
+        return False
+
+    return True
+
+
 class GossipMessageSignatureVerifier(Handler):
     def __init__(self):
         self._seen_cache = TimedCache()
@@ -120,6 +146,8 @@ class GossipMessageSignatureVerifier(Handler):
             'already_validated_batch_dropped_count', instance=self)
         self._block_dropped_count = COLLECTOR.counter(
             'already_validated_block_dropped_count', instance=self)
+        self._msg_dropped_count = COLLECTOR.counter(
+            'already_validated_msg_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
         obj, tag, _ = message_content
@@ -148,6 +176,19 @@ class GossipMessageSignatureVerifier(Handler):
                 return HandlerResult(status=HandlerStatus.DROP)
 
             self._seen_cache[obj.header_signature] = None
+            return HandlerResult(status=HandlerStatus.PASS)
+
+        if tag == GossipMessage.CONSENSUS:
+            if obj.signature in self._seen_cache:
+                self._msg_dropped_count.inc()
+                return HandlerResult(status=HandlerStatus.DROP)
+
+            if not is_valid_consensus_message(obj):
+                LOGGER.debug("consensus message signature is invalid: %s",
+                             obj.signature)
+                return HandlerResult(status=HandlerStatus.DROP)
+
+            self._seen_cache[obj.signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
         # should drop the message if it does not have a valid content_type

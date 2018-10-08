@@ -37,6 +37,7 @@ use protobuf;
 
 use batch::Batch;
 use block::Block;
+use consensus::notifier::ConsensusNotifier;
 use execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;
 use journal;
@@ -124,13 +125,6 @@ pub trait ChainReader: Send + Sync {
     fn count_committed_transactions(&self) -> Result<usize, ChainReadError>;
     fn get_block_by_block_num(&self, block_num: u64) -> Result<Option<Block>, ChainReadError>;
     fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError>;
-}
-
-pub trait ConsensusNotifier: Send + Sync {
-    fn notify_block_new(&self, block: &Block);
-    fn notify_block_valid(&self, block_id: &str);
-    fn notify_block_invalid(&self, block_id: &str);
-    fn notify_block_commit(&self, block_id: &str);
 }
 
 /// Holds the results of Block Validation.
