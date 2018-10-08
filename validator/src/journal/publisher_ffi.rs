@@ -24,7 +24,7 @@ use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use block::Block;
-use consensus::notifier_ffi::PyConsensusNotifier;
+use consensus::notifier_ffi::PyNotifierService;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
@@ -75,7 +75,7 @@ pub unsafe extern "C" fn block_publisher_new(
     permission_verifier_ptr: *mut py_ffi::PyObject,
     batch_observers_ptr: *mut py_ffi::PyObject,
     batch_injector_factory_ptr: *mut py_ffi::PyObject,
-    consensus_notifier_ptr: *mut py_ffi::PyObject,
+    consensus_notifier_service_ptr: *mut c_void,
     block_publisher_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn block_publisher_new(
         permission_verifier_ptr,
         batch_observers_ptr,
         batch_injector_factory_ptr,
-        consensus_notifier_ptr
+        consensus_notifier_service_ptr
     );
 
     let py = Python::assume_gil_acquired();
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn block_publisher_new(
     let permission_verifier = PyObject::from_borrowed_ptr(py, permission_verifier_ptr);
     let batch_observers = PyObject::from_borrowed_ptr(py, batch_observers_ptr);
     let batch_injector_factory = PyObject::from_borrowed_ptr(py, batch_injector_factory_ptr);
-    let consensus_notifier = PyObject::from_borrowed_ptr(py, consensus_notifier_ptr);
+    let consensus_notifier_service = Box::from_raw(consensus_notifier_service_ptr as *mut PyNotifierService);
 
     let chain_head = if chain_head == Python::None(py) {
         None
@@ -156,8 +156,10 @@ pub unsafe extern "C" fn block_publisher_new(
         permission_verifier,
         batch_observers,
         batch_injector_factory,
-        Box::new(PyConsensusNotifier::new(consensus_notifier)),
+        consensus_notifier_service.clone(),
     );
+
+    Box::into_raw(consensus_notifier_service);
 
     *block_publisher_ptr = Box::into_raw(Box::new(publisher)) as *const c_void;
 
