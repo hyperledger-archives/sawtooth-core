@@ -25,6 +25,7 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.consensus.notifier import ConsensusNotifier
 from sawtooth_validator.consensus.proxy import ConsensusProxy
+from sawtooth_validator.consensus.registry import ConsensusRegistry
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
@@ -235,7 +236,10 @@ class Validator:
             monitor=True,
             max_future_callback_workers=10)
 
-        consensus_notifier = ConsensusNotifier(consensus_service)
+        consensus_registry = ConsensusRegistry()
+
+        consensus_notifier = ConsensusNotifier(consensus_service,
+                                               consensus_registry)
 
         # -- Setup P2P Networking -- #
         gossip = Gossip(
@@ -392,7 +396,8 @@ class Validator:
             gossip=gossip,
             identity_signer=identity_signer,
             settings_view_factory=SettingsViewFactory(state_view_factory),
-            state_view_factory=state_view_factory)
+            state_view_factory=state_view_factory,
+            consensus_registry=consensus_registry)
 
         consensus_handlers.add(
             consensus_dispatcher,
