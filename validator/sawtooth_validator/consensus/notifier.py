@@ -15,7 +15,6 @@
 
 import ctypes
 from enum import IntEnum
-import hashlib
 import logging
 
 
@@ -23,10 +22,6 @@ from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
-from sawtooth_validator.ffi import OwnedPointer
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf import consensus_pb2
-from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 
@@ -48,8 +43,8 @@ class _NotifierService:
 
 
 class ErrorCode(IntEnum):
-    Success = 0
-    NullPointerProvided = 0x01
+    Success = CommonErrorCode.Success
+    NullPointerProvided = CommonErrorCode.NullPointerProvided
     InvalidArgument = 0x02
 
 

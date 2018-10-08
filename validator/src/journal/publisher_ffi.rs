@@ -24,7 +24,7 @@ use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
 use batch::Batch;
 use block::Block;
-use consensus::notifier_ffi::PyNotifierService;
+use consensus::notifier::BackgroundConsensusNotifier;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
@@ -114,7 +114,8 @@ pub unsafe extern "C" fn block_publisher_new(
     let permission_verifier = PyObject::from_borrowed_ptr(py, permission_verifier_ptr);
     let batch_observers = PyObject::from_borrowed_ptr(py, batch_observers_ptr);
     let batch_injector_factory = PyObject::from_borrowed_ptr(py, batch_injector_factory_ptr);
-    let consensus_notifier_service = Box::from_raw(consensus_notifier_service_ptr as *mut PyNotifierService);
+    let consensus_notifier_service =
+        Box::from_raw(consensus_notifier_service_ptr as *mut BackgroundConsensusNotifier);
 
     let chain_head = if chain_head == Python::None(py) {
         None

@@ -18,7 +18,7 @@
 #![allow(unknown_lints)]
 
 use block::Block;
-use consensus::notifier_ffi::PyNotifierService;
+use consensus::notifier::BackgroundConsensusNotifier;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
@@ -101,7 +101,8 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
-    let consensus_notifier_service = Box::from_raw(consensus_notifier_service as *mut PyNotifierService);
+    let consensus_notifier_service =
+        Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));

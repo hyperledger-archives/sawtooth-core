@@ -15,6 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+
 use block::Block;
 
 use crypto::digest::Digest;
@@ -174,5 +178,108 @@ fn from_hex<T: AsRef<str>>(hex_string: T, id_name: &str) -> Vec<u8> {
     match hex::decode(hex_string.as_ref()) {
         Ok(d) => d,
         Err(err) => panic!("{} is invalid hex: {:?}", id_name, err),
+    }
+}
+
+#[derive(Debug)]
+enum ConsensusNotification {
+    PeerConnected(String),
+    PeerDisconnected(String),
+    PeerMessage((ConsensusPeerMessage, String)),
+    BlockNew(Block),
+    BlockValid(String),
+    BlockInvalid(String),
+    BlockCommit(String),
+    BatchNew(String),
+    BatchInvalid(String),
+}
+
+#[derive(Clone)]
+pub struct BackgroundConsensusNotifier {
+    tx: Arc<Mutex<Sender<ConsensusNotification>>>,
+}
+
+impl BackgroundConsensusNotifier {
+    pub fn new<T: ConsensusNotifier + 'static>(notifier: T) -> Self {
+        let (tx, rx) = channel();
+        let thread_builder = thread::Builder::new().name("BackgroundConsensusNotifier".into());
+        thread_builder
+            .spawn(move || loop {
+                if let Ok(notification) = rx.recv() {
+                    handle_notification(&notifier, notification);
+                } else {
+                    break;
+                }
+            }).expect("Failed to spawn BackgroundConsensusNotifier thread");
+        BackgroundConsensusNotifier {
+            tx: Arc::new(Mutex::new(tx)),
+        }
+    }
+
+    fn send_notification(&self, notification: ConsensusNotification) {
+        self.tx
+            .lock()
+            .expect("Lock poisoned")
+            .send(notification)
+            .expect("Failed to send notification to background thread");
+    }
+}
+
+impl ConsensusNotifier for BackgroundConsensusNotifier {
+    fn notify_peer_connected(&self, peer_id: &str) {
+        self.send_notification(ConsensusNotification::PeerConnected(peer_id.into()))
+    }
+
+    fn notify_peer_disconnected(&self, peer_id: &str) {
+        self.send_notification(ConsensusNotification::PeerDisconnected(peer_id.into()))
+    }
+
+    fn notify_peer_message(&self, message: ConsensusPeerMessage, sender_id: &str) {
+        self.send_notification(ConsensusNotification::PeerMessage((
+            message,
+            sender_id.into(),
+        )))
+    }
+
+    fn notify_block_new(&self, block: &Block) {
+        self.send_notification(ConsensusNotification::BlockNew(block.clone()))
+    }
+
+    fn notify_block_valid(&self, block_id: &str) {
+        self.send_notification(ConsensusNotification::BlockValid(block_id.into()))
+    }
+
+    fn notify_block_invalid(&self, block_id: &str) {
+        self.send_notification(ConsensusNotification::BlockInvalid(block_id.into()))
+    }
+
+    fn notify_block_commit(&self, block_id: &str) {
+        self.send_notification(ConsensusNotification::BlockCommit(block_id.into()))
+    }
+
+    fn notify_batch_new(&self, batch_id: &str) {
+        self.send_notification(ConsensusNotification::BatchNew(batch_id.into()))
+    }
+
+    fn notify_batch_invalid(&self, batch_id: &str) {
+        self.send_notification(ConsensusNotification::BatchInvalid(batch_id.into()))
+    }
+}
+
+fn handle_notification<T: ConsensusNotifier>(notifier: &T, notification: ConsensusNotification) {
+    match notification {
+        ConsensusNotification::PeerConnected(peer_id) => notifier.notify_peer_connected(&peer_id),
+        ConsensusNotification::PeerDisconnected(peer_id) => {
+            notifier.notify_peer_disconnected(&peer_id)
+        }
+        ConsensusNotification::PeerMessage((msg, sender_id)) => {
+            notifier.notify_peer_message(msg, &sender_id)
+        }
+        ConsensusNotification::BlockNew(block) => notifier.notify_block_new(&block),
+        ConsensusNotification::BlockValid(block_id) => notifier.notify_block_valid(&block_id),
+        ConsensusNotification::BlockInvalid(block_id) => notifier.notify_block_invalid(&block_id),
+        ConsensusNotification::BlockCommit(block_id) => notifier.notify_block_commit(&block_id),
+        ConsensusNotification::BatchNew(batch_id) => notifier.notify_batch_new(&batch_id),
+        ConsensusNotification::BatchInvalid(batch_id) => notifier.notify_batch_invalid(&batch_id),
     }
 }
