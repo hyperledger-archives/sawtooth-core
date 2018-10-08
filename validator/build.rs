@@ -74,9 +74,7 @@ fn main() {
                 .map(|proto_file| proto_file.file_path.as_ref())
                 .collect::<Vec<&str>>(),
             includes: &["src", PROTO_FILES_DIR],
-            customize: Customize {
-                ..Default::default()
-            },
+            customize: Customize::default(),
         }).expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());

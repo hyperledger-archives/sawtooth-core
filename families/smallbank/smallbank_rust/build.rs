@@ -41,9 +41,7 @@ fn main() {
             .map(|proto_file| proto_file.as_ref())
             .collect::<Vec<&str>>(),
         includes: &["../protos"],
-        customize: Customize {
-            ..Default::default()
-        },
+        customize: Customize::default(),
     }).expect("Error generating rust files from smallbank protos");
 
     // Create mod.rs accordingly
