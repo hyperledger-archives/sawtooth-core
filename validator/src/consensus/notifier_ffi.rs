@@ -24,7 +24,9 @@ use protobuf::{self, Message, ProtobufEnum};
 use py_ffi;
 
 use block::Block;
-use consensus::notifier::{ConsensusNotifier, NotifierService, NotifierServiceError};
+use consensus::notifier::{
+    BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
+};
 use proto::validator::Message_MessageType as MessageType;
 use proto::{self, consensus::ConsensusPeerMessage};
 use pylogger;
@@ -101,8 +103,8 @@ pub unsafe extern "C" fn consensus_notifier_new(
     let py = Python::assume_gil_acquired();
     let py_notifier_service = PyObject::from_borrowed_ptr(py, py_notifier_service_ptr);
 
-    *consensus_notifier_ptr = Box::into_raw(Box::new(PyNotifierService::new(
-        py_notifier_service
+    *consensus_notifier_ptr = Box::into_raw(Box::new(BackgroundConsensusNotifier::new(
+        PyNotifierService::new(py_notifier_service),
     ))) as *const c_void;
 
     ErrorCode::Success
@@ -111,7 +113,7 @@ pub unsafe extern "C" fn consensus_notifier_new(
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> ErrorCode {
     check_null!(notifier);
-    Box::from_raw(notifier as *mut PyNotifierService);
+    Box::from_raw(notifier as *mut BackgroundConsensusNotifier);
     ErrorCode::Success
 }
 
@@ -124,7 +126,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
 
     match deref_cstr(peer_id) {
         Ok(peer_id) => {
-            (*(notifier as *mut PyNotifierService)).notify_peer_connected(peer_id);
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_connected(peer_id);
             ErrorCode::Success
         }
         Err(err) => err,
@@ -140,7 +142,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
 
     match deref_cstr(peer_id) {
         Ok(peer_id) => {
-            (*(notifier as *mut PyNotifierService)).notify_peer_disconnected(peer_id);
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_disconnected(peer_id);
             ErrorCode::Success
         }
         Err(err) => err,
@@ -167,7 +169,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     };
 
     let sender_id = slice::from_raw_parts(sender_id_bytes, sender_id_len);
-    (*(notifier as *mut PyNotifierService)).notify_peer_message(message, &sender_id);
+    (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_message(message, &sender_id);
 
     ErrorCode::Success
 }
@@ -192,7 +194,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
         proto_block.into()
     };
 
-    (*(notifier as *mut PyNotifierService)).notify_block_new(&block);
+    (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_new(&block);
 
     ErrorCode::Success
 }
@@ -206,7 +208,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
 
     match deref_cstr(block_id) {
         Ok(block_id) => {
-            (*(notifier as *mut PyNotifierService)).notify_block_valid(block_id);
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_valid(block_id);
             ErrorCode::Success
         }
         Err(err) => err,
@@ -222,7 +224,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
 
     match deref_cstr(block_id) {
         Ok(block_id) => {
-            (*(notifier as *mut PyNotifierService)).notify_block_invalid(block_id);
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_invalid(block_id);
             ErrorCode::Success
         }
         Err(err) => err,
