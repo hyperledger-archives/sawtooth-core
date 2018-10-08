@@ -231,7 +231,7 @@ mod test {
             }).collect();
 
         let mut previous_block_id = "B2";
-        let mut block_num = 3;
+        let block_num = 3;
         let chain2 = ["B3-2", "B4-2", "B5-2"]
             .iter()
             .map(|ref mut block_id| {
@@ -241,7 +241,7 @@ mod test {
             }).collect();
 
         let mut previous_block_id = "B3-2";
-        let mut block_num = 4;
+        let block_num = 4;
         let chain3 = ["B4-3", "B5-3"]
             .iter()
             .map(|ref mut block_id| {
@@ -278,7 +278,7 @@ mod test {
 
     #[test]
     fn test_dependency_in_other_fork() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
             .into_iter()
@@ -297,7 +297,7 @@ mod test {
 
     #[test]
     fn test_dependency_in_chain() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
             .into_iter()
@@ -316,7 +316,7 @@ mod test {
 
     #[test]
     fn test_dependency_in_chain_chain_head_greater() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B3-1b0t0", "B3-1b0t1", "B3-1b0t2"]
             .into_iter()
@@ -335,7 +335,7 @@ mod test {
 
     #[test]
     fn test_dependency_in_uncommitted() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
             .into_iter()
@@ -354,7 +354,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_batches() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let batches = ["B6b0".into(), "B6b1".into()];
 
@@ -374,7 +374,7 @@ mod test {
 
     #[test]
     fn test_no_duplicates_because_batches_in_other_fork() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let batches = ["B3b0".into(), "B3b1".into()];
 
@@ -394,7 +394,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_batches_duplicate_in_branch() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let batches = ["B2b0".into(), "B2b1".into()];
 
@@ -413,7 +413,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_batches_duplicate_in_uncommitted() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let batches = ["B5-2b0".into(), "B5-2b1".into()];
 
@@ -432,7 +432,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_batches_duplicate_in_other_fork() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let batches = ["B2b0".into(), "B2b1".into()];
 
@@ -452,7 +452,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_transactions() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions = [
             "B6b0t0".into(),
@@ -479,7 +479,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_transactions_duplicate_in_branch() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2b0t2".into()];
 
@@ -498,7 +498,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_transactions_duplicate_in_uncommitted() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2-1b0t1".into()];
 
@@ -517,7 +517,7 @@ mod test {
 
     #[test]
     fn test_no_duplicate_transactions_duplicate_in_other_fork() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions = ["B6b0t0".into(), "B6b0t1".into(), "B2b0t1".into()];
 
@@ -537,11 +537,10 @@ mod test {
 
     #[test]
     fn test_before_genesis() {
-        let (block_manager, block_store) = setup_state();
+        let block_manager = setup_state();
 
         let transactions = ["B0b0t0".into(), "B0b0t1".into(), "B0b0t2".into()];
         let batches = ["B0b0".into(), "B0b1".into()];
-        let block_store_clone = block_store.clone();
 
         assert_eq!(
             validate_no_duplicate_batches(
@@ -676,8 +675,8 @@ mod test {
         }
     }
 
-    fn setup_state() -> (BlockManager, InMemoryBlockStore) {
-        let mut block_manager = BlockManager::new();
+    fn setup_state() -> BlockManager {
+        let block_manager = BlockManager::new();
 
         for branch in create_chains_to_put_in_block_manager() {
             block_manager
@@ -689,7 +688,7 @@ mod test {
             .add_store("commit", block_store.clone())
             .expect("The block manager failed to add a blockstore");
 
-        (block_manager, *block_store)
+        block_manager
     }
 
 }
