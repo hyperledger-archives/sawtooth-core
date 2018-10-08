@@ -5,6 +5,7 @@ from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
 from sawtooth_validator.consensus.proxy import StartupInfo
+from sawtooth_validator.consensus.registry import EngineInfo
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 
@@ -38,19 +39,16 @@ class TestHandlers(unittest.TestCase):
             peers=['dead', 'beef'],
             local_peer_info=b'abc')
         self.mock_proxy.register.return_value = mock_startup_info
-        handler = handlers.ConsensusRegisterHandler(
-            self.mock_proxy, self.mock_consensus_notifier)
+        handler = handlers.ConsensusRegisterHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        request.name = "test"
-        request.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.assertEqual(response.chain_head.block_id, bytes.fromhex("dead"))
         self.assertEqual(response.peers[0].peer_id, bytes.fromhex("dead"))
         self.assertEqual(response.local_peer_info.peer_id, b'abc')
-        self.mock_proxy.register.assert_called_with()
+        self.mock_proxy.register.assert_called_with('', '', None)
 
     def test_consensus_send_to_handler(self):
         handler = handlers.ConsensusSendToHandler(self.mock_proxy)
@@ -59,14 +57,13 @@ class TestHandlers(unittest.TestCase):
         request.peer_id = b"test"
         request.message.message_type = "test"
         request.message.content = b"test"
-        request.message.name = "test"
-        request.message.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.send_to.assert_called_with(
             request.peer_id,
-            request.message.SerializeToString())
+            request.message.SerializeToString(),
+            None)
 
     def test_consensus_broadcast_handler(self):
         handler = handlers.ConsensusBroadcastHandler(self.mock_proxy)
@@ -74,13 +71,11 @@ class TestHandlers(unittest.TestCase):
         request = request_class()
         request.message.message_type = "test"
         request.message.content = b"test"
-        request.message.name = "test"
-        request.message.version = "test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.broadcast.assert_called_with(
-            request.message.SerializeToString())
+            request.message.SerializeToString(), None)
 
     def test_consensus_initialize_block_handler(self):
         handler = handlers.ConsensusInitializeBlockHandler(self.mock_proxy)
@@ -240,10 +235,11 @@ class TestProxy(unittest.TestCase):
         self._mock_block_manager = MockBlockManager()
         self._mock_block_publisher = Mock()
         self._mock_chain_controller = Mock()
-        self._mock_gossip = Mock()
-        self._mock_identity_signer = Mock()
+        self._mock_gossip = MockGossip()
+        self._mock_identity_signer = MockIdentitySigner()
         self._mock_settings_view_factory = Mock()
         self._mock_state_view_factory = Mock()
+        self._consensus_registry = MockConsensusRegistry()
         self._proxy = ConsensusProxy(
             block_manager=self._mock_block_manager,
             chain_controller=self._mock_chain_controller,
@@ -251,13 +247,15 @@ class TestProxy(unittest.TestCase):
             gossip=self._mock_gossip,
             identity_signer=self._mock_identity_signer,
             settings_view_factory=self._mock_settings_view_factory,
-            state_view_factory=self._mock_state_view_factory)
+            state_view_factory=self._mock_state_view_factory,
+            consensus_registry=self._consensus_registry)
 
     def test_send_to(self):
-        self._proxy.send_to(peer_id=b'peer_id', message=b'message')
+        self._proxy.send_to(
+            peer_id=b'peer_id', message=b'message', connection_id=b'')
 
     def test_broadcast(self):
-        self._proxy.broadcast(message=b'message')
+        self._proxy.broadcast(message=b'message', connection_id=b'')
 
     # Using block publisher
     def test_initialize_block(self):
@@ -420,6 +418,32 @@ class MockBlockManager:
 
     def __setitem__(self, key, value):
         self._cache[key] = value
+
+
+class MockConsensusRegistry(Mock):
+    def get_engine_info(self):
+        return EngineInfo('mock-id', 'mock-name', 'mock-version')
+
+
+class MockGossip(Mock):
+    def peer_to_public_key(self, peer):
+        return 'mock-{}'.format(peer)
+
+    def get_peers(self):
+        return []
+
+
+class MockPubKey:
+    def as_bytes(self):
+        return 'mock-pubkey-as-bytes'.encode()
+
+
+class MockIdentitySigner(Mock):
+    def get_public_key(self):
+        return MockPubKey()
+
+    def sign(self, message):
+        return 'abcd'
 
 
 class MockStateView:

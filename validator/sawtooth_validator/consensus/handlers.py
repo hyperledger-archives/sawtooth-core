@@ -177,7 +177,8 @@ class ConsensusSendToHandler(ConsensusServiceHandler):
         try:
             self._proxy.send_to(
                 request.peer_id,
-                request.message.SerializeToString())
+                request.message.SerializeToString(),
+                connection_id)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("ConsensusSendTo")
             response.status =\
@@ -198,7 +199,9 @@ class ConsensusBroadcastHandler(ConsensusServiceHandler):
 
     def handle_request(self, request, response, connection_id):
         try:
-            self._proxy.broadcast(request.message.SerializeToString())
+            self._proxy.broadcast(
+                request.message.SerializeToString(),
+                connection_id)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("ConsensusBroadcast")
             response.status =\

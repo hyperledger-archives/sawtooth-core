@@ -52,6 +52,7 @@ message GossipMessage {
         CONTENT_TYPE_UNSET = 0;
         BLOCK = 1;
         BATCH = 2;
+        CONSENSUS = 3;
     }
     bytes content = 1;
     ContentType content_type = 2;
@@ -111,10 +112,4 @@ message GossipBatchByTransactionIdRequest {
     string nonce = 2;
     uint32 time_to_live = 3;
 
-}
-
-message GossipConsensusMessage {
-    bytes message = 1;
-    bytes sender_id = 2;
-    uint32 time_to_live = 3;
 }
