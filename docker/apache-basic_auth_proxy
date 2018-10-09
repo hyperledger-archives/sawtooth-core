@@ -30,7 +30,7 @@
 #     -v /var/run/docker.sock:/var/run/docker.sock \
 #     apache-basic_auth_proxy
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
     && apt-get install -y apache2 \

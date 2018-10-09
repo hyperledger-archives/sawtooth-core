@@ -16,9 +16,12 @@
 
 # -------------===  build ===-------------
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN apt-get update \
+ && apt-get install gnupg -y
+
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update
@@ -42,7 +45,7 @@ RUN apt-get install -y -q --allow-downgrades \
     python3-cryptography>=1.7.1 \
     python3-dev \
     python3-lmdb \
-    python3-netifaces=0.10.4-0.1build2 \
+    python3-netifaces \
     python3-pyformance \
     python3-secp256k1 \
     python3-toml \

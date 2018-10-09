@@ -15,7 +15,7 @@
 
 # docker build -f perf/intkey_workload/Dockerfile -t intkey-workload-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \

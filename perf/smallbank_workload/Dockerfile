@@ -14,7 +14,7 @@
 
 # docker build -f perf/smallbank_workload/Dockerfile -t smallbank-workload-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \

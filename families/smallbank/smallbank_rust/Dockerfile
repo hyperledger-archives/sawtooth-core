@@ -14,7 +14,7 @@
 
 # docker build -f families/smallbank/smallbank_rust/Dockerfile -t sawtooth-smallbank-tp-rust-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \

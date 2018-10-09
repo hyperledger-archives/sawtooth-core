@@ -14,7 +14,7 @@
 
 # docker build -f sdk/examples/intkey_rust/Dockerfile -t sawtooth-intkey-tp-rust-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \
