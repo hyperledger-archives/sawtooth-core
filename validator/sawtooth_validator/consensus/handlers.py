@@ -19,6 +19,7 @@ import logging
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.consensus.proxy import NoChainHead
+from sawtooth_validator.consensus.proxy import NotConfiguredEngine
 from sawtooth_validator.consensus.proxy import UnknownBlock
 
 from sawtooth_validator.protobuf import consensus_pb2
@@ -108,7 +109,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         try:
             startup_info = self._proxy.register(
                 request.name, request.version, connection_id)
-        except NoChainHead as e:
+        except (NoChainHead, NotConfiguredEngine) as e:
             LOGGER.warning('Consensus engine %s %s could not be registered due'
                            ' to exception: %s',
                            request.name, request.version, type(e).__name__)

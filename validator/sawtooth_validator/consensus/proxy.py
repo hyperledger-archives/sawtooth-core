@@ -32,6 +32,11 @@ class NoChainHead(Exception):
     """No chain head exists yet."""
 
 
+class NotConfiguredEngine(Exception):
+    """The name and/or version of the consensus engine that is attempting to
+    register do not match what is configured on-chain."""
+
+
 StartupInfo = namedtuple(
     'SignupInfo',
     ['chain_head', 'peers', 'local_peer_info'])
@@ -59,6 +64,12 @@ class ConsensusProxy:
         chain_head = self._chain_controller.chain_head
         if chain_head is None:
             raise NoChainHead()
+
+        # Only register engine if it matches the engine that is configured in
+        # the on-chain settings
+        config_name, config_version = self._get_configured_engine(chain_head)
+        if engine_name != config_name or engine_version != config_version:
+            raise NotConfiguredEngine()
 
         self._consensus_registry.register_engine(
             connection_id, engine_name, engine_version)
@@ -227,6 +238,23 @@ class ConsensusProxy:
             raise UnknownBlock()
 
         return blocks
+
+    def _get_configured_engine(self, block):
+        block_header = BlockHeader()
+        block_header.ParseFromString(block.header)
+
+        settings_view = self._settings_view_factory.create_settings_view(
+            block_header.state_root_hash)
+
+        try:
+            engine_name = settings_view.get_setting(
+                'sawtooth.consensus.algorithm.name')
+            engine_version = settings_view.get_setting(
+                'sawtooth.consensus.algorithm.version')
+        except KeyError:
+            raise NotConfiguredEngine()
+
+        return (engine_name, engine_version)
 
     def _wrap_consensus_message(self, message, connection_id):
         _, name, version = self._consensus_registry.get_engine_info()
