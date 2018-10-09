@@ -28,6 +28,10 @@ class UnknownBlock(Exception):
     """The given block could not be found."""
 
 
+class NoChainHead(Exception):
+    """No chain head exists yet."""
+
+
 StartupInfo = namedtuple(
     'SignupInfo',
     ['chain_head', 'peers', 'local_peer_info'])
@@ -54,7 +58,7 @@ class ConsensusProxy:
     def register(self, engine_name, engine_version, connection_id):
         chain_head = self._chain_controller.chain_head
         if chain_head is None:
-            return None
+            raise NoChainHead()
 
         self._consensus_registry.register_engine(
             connection_id, engine_name, engine_version)
