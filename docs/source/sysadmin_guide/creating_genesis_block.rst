@@ -65,7 +65,8 @@ submit the genesis block.
 
       [sawtooth@system]$ sawset proposal create --key /etc/sawtooth/keys/validator.priv \
       -o config.batch \
-      sawtooth.consensus.algorithm=poet \
+      sawtooth.consensus.algorithm.name=poet \
+      sawtooth.consensus.algorithm.version=1.1.2 \
       sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
@@ -80,8 +81,11 @@ submit the genesis block.
    ``-o config.batch``
     Wraps the proposal transaction in a batch named ``config.batch``.
 
-   ``sawtooth.consensus.algorithm=poet``
+   ``sawtooth.consensus.algorithm.name=poet``
     Changes the consensus algorithm to PoET.
+
+    ``sawtooth.consensus.algorithm.version=1.1.2``
+     Changes the version of the consensus algorithm to 1.1.2.
 
    ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)"``
     Adds the public key for the PoET Validator Registry transaction

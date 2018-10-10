@@ -246,7 +246,8 @@ a ``GenesisData`` list of batches for the genesis block.
         $ sawset proposal create \
           -k <signing-key-file> \
           -o sawset.batch \
-          sawtooth.consensus.algorithm=poet \
+          sawtooth.consensus.algorithm.name=poet \
+          sawtooth.consensus.algorithm.version=1.1.2 \
           sawtooth.poet.initial_wait_timer={value} \
           sawtooth.poet.target_wait_time={value} \
           sawtooth.poet.population_estimate_sample_size={value}
