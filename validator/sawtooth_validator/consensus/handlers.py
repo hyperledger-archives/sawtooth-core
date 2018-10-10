@@ -152,10 +152,11 @@ class ConsensusRegisterBlockNewSyncHandler(Handler):
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
 
     @property
     def request_type(self):
-        return validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+        return self._request_type
 
     def handle(self, connection_id, message_content):
         forks = self._proxy.forks()
@@ -346,11 +347,15 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
 
 
 class ConsensusCheckBlocksNotifier(Handler):
-    request_type = validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
-
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = \
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
+
+    @property
+    def request_type(self):
+        return self._request_type
 
     def handle(self, connection_id, message_content):
         request = consensus_pb2.ConsensusCheckBlocksRequest()
