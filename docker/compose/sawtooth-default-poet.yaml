@@ -49,7 +49,8 @@ services:
           -o config-genesis.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
-          sawtooth.consensus.algorithm=poet \
+          sawtooth.consensus.algorithm.name=poet \
+          sawtooth.consensus.algorithm.version=1.1.2 \
           sawtooth.poet.report_public_key_pem=\
           \\\"$$(cat /poet-shared/simulator_rk_pub.pem)\\\" \
           sawtooth.poet.valid_enclave_measurements=$$(cat /poet-shared/poet-enclave-measurement) \

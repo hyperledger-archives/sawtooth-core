@@ -79,7 +79,8 @@ items:
                 && if [ ! -e config.batch ]; then \
                     sawset proposal create \
                       -k /etc/sawtooth/keys/validator.priv \
-                      sawtooth.consensus.algorithm=poet \
+                      sawtooth.consensus.algorithm.name=poet \
+                      sawtooth.consensus.algorithm.version=1.1.2 \
                       sawtooth.poet.report_public_key_pem=\"$(cat /etc/sawtooth/simulator_rk_pub.pem)\" \
                       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
                       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename) \
@@ -585,4 +586,3 @@ items:
         protocol: TCP
         port: 8800
         targetPort: 8800
-
