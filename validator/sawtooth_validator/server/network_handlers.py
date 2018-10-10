@@ -54,8 +54,6 @@ from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersRequestHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
-from sawtooth_validator.gossip.gossip_handlers import \
-    GossipConsensusMessageHandler
 from sawtooth_validator.networking.dispatch import Priority
 from sawtooth_validator.networking.handlers import PingHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
@@ -393,11 +391,4 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
         ResponderBatchResponseHandler(responder, gossip),
-        thread_pool)
-
-    # GOSSIP_CONSENSUS_MESSAGE
-
-    dispatcher.add_handler(
-        validator_pb2.Message.GOSSIP_CONSENSUS_MESSAGE,
-        GossipConsensusMessageHandler(consensus_notifier),
         thread_pool)

@@ -314,7 +314,8 @@ setting.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+      sawtooth.consensus.algorithm.name: poet
+      sawtooth.consensus.algorithm.version: 1.1.2
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
@@ -519,7 +520,8 @@ in :doc:`ubuntu`.
 
       $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
       -o config.batch \
-      sawtooth.consensus.algorithm=poet \
+      sawtooth.consensus.algorithm.name=poet \
+      sawtooth.consensus.algorithm.version=1.1.2 \
       sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
@@ -885,7 +887,9 @@ setting.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+
+      sawtooth.consensus.algorithm.name: poet
+      sawtooth.consensus.algorithm.version: 1.1.2
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
@@ -1371,7 +1375,8 @@ Use the following steps to create and submit a batch containing the new setting.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+      sawtooth.consensus.algorithm.name: poet
+      sawtooth.consensus.algorithm.version: 1.1.2
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...

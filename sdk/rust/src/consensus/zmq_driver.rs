@@ -89,14 +89,11 @@ impl ZmqDriver {
             )
         });
 
-        let (name, version) = { (engine.name(), engine.version()) };
         engine.start(
             update_receiver,
             Box::new(ZmqService::new(
                 validator_sender_clone,
                 Duration::from_secs(SERVICE_TIMEOUT),
-                name,
-                version,
             )),
             startup_state,
         );

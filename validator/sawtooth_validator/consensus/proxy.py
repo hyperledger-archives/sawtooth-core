@@ -13,14 +13,28 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import hashlib
 
 from collections import namedtuple
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageEnvelope
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageHeader
 
 
 class UnknownBlock(Exception):
     """The given block could not be found."""
+
+
+class NoChainHead(Exception):
+    """No chain head exists yet."""
+
+
+class NotConfiguredEngine(Exception):
+    """The name and/or version of the consensus engine that is attempting to
+    register do not match what is configured on-chain."""
 
 
 StartupInfo = namedtuple(
@@ -34,7 +48,8 @@ class ConsensusProxy:
 
     def __init__(self, block_manager, block_publisher,
                  chain_controller, gossip, identity_signer,
-                 settings_view_factory, state_view_factory):
+                 settings_view_factory, state_view_factory,
+                 consensus_registry):
         self._block_manager = block_manager
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
@@ -43,11 +58,25 @@ class ConsensusProxy:
         self._public_key = self._identity_signer.get_public_key().as_bytes()
         self._settings_view_factory = settings_view_factory
         self._state_view_factory = state_view_factory
+        self._consensus_registry = consensus_registry
 
-    def register(self):
+    @property
+    def consensus_registry(self):
+        return self._consensus_registry
+
+    def register(self, engine_name, engine_version, connection_id):
         chain_head = self._chain_controller.chain_head
         if chain_head is None:
-            return None
+            raise NoChainHead()
+
+        # Only register engine if it matches the engine that is configured in
+        # the on-chain settings
+        config_name, config_version = self._get_configured_engine(chain_head)
+        if engine_name != config_name or engine_version != config_version:
+            raise NotConfiguredEngine()
+
+        self._consensus_registry.register_engine(
+            connection_id, engine_name, engine_version)
 
         return StartupInfo(
             chain_head=chain_head,
@@ -58,16 +87,15 @@ class ConsensusProxy:
             local_peer_info=self._public_key)
 
     # Using network service
-    def send_to(self, peer_id, message):
+    def send_to(self, peer_id, message, connection_id):
+        envelope = self._wrap_consensus_message(message, connection_id)
         self._gossip.send_consensus_message(
             peer_id=peer_id.hex(),
-            message=message,
-            public_key=self._public_key)
+            message_envelope=envelope)
 
-    def broadcast(self, message):
-        self._gossip.broadcast_consensus_message(
-            message=message,
-            public_key=self._public_key)
+    def broadcast(self, message, connection_id):
+        envelope = self._wrap_consensus_message(message, connection_id)
+        self._gossip.broadcast_consensus_message(message_envelope=envelope)
 
     # Using block publisher
     def initialize_block(self, previous_id):
@@ -214,3 +242,37 @@ class ConsensusProxy:
             raise UnknownBlock()
 
         return blocks
+
+    def _get_configured_engine(self, block):
+        block_header = BlockHeader()
+        block_header.ParseFromString(block.header)
+
+        settings_view = self._settings_view_factory.create_settings_view(
+            block_header.state_root_hash)
+
+        try:
+            engine_name = settings_view.get_setting(
+                'sawtooth.consensus.algorithm.name')
+            engine_version = settings_view.get_setting(
+                'sawtooth.consensus.algorithm.version')
+        except KeyError:
+            raise NotConfiguredEngine()
+
+        return (engine_name, engine_version)
+
+    def _wrap_consensus_message(self, message, connection_id):
+        _, name, version = self._consensus_registry.get_engine_info()
+        header = ConsensusPeerMessageHeader(
+            signer_public_key=self._public_key,
+            message_sha512=hashlib.sha512(message).digest(),
+            name=name,
+            version=version,
+        ).SerializeToString()
+
+        signature = bytes.fromhex(self._identity_signer.sign(header))
+        envelope = ConsensusPeerMessageEnvelope(
+            header=header,
+            message=message,
+            header_signature=signature)
+
+        return envelope

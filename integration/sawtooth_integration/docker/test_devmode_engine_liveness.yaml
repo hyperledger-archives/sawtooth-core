@@ -163,7 +163,8 @@ services:
           -o config-genesis.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
-          sawtooth.consensus.algorithm=None \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
           sawtooth.consensus.min_wait_time=2 \
           sawtooth.consensus.max_wait_time=4 \
           -o config.batch && \

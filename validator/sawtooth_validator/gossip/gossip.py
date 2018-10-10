@@ -26,7 +26,6 @@ from enum import Enum
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.network_pb2 import GossipConsensusMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
 from sawtooth_validator.protobuf.network_pb2 import \
     GossipBatchByTransactionIdRequest
@@ -331,23 +330,24 @@ class Gossip:
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def send_consensus_message(self, peer_id, message, public_key):
+    def send_consensus_message(self, peer_id, message_envelope):
         connection_id = self._network.public_key_to_connection_id(peer_id)
 
         self.send(
-            validator_pb2.Message.GOSSIP_CONSENSUS_MESSAGE,
-            GossipConsensusMessage(
-                message=message,
-                sender_id=public_key,
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            GossipMessage(
+                content_type=GossipMessage.CONSENSUS,
+                content=message_envelope.SerializeToString(),
                 time_to_live=0).SerializeToString(),
             connection_id)
 
-    def broadcast_consensus_message(self, message, public_key):
+    def broadcast_consensus_message(self, message_envelope):
         self.broadcast(
-            GossipConsensusMessage(
-                message=message,
+            GossipMessage(
+                content_type=GossipMessage.CONSENSUS,
+                content=message_envelope.SerializeToString(),
                 time_to_live=self.get_time_to_live()),
-            validator_pb2.Message.GOSSIP_CONSENSUS_MESSAGE)
+            validator_pb2.Message.GOSSIP_MESSAGE)
 
     def send(self, message_type, message, connection_id, one_way=False):
         """Sends a message via the network.

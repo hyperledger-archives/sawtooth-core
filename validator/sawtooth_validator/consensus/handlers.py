@@ -18,6 +18,8 @@ import logging
 
 from google.protobuf.message import DecodeError
 
+from sawtooth_validator.consensus.proxy import NoChainHead
+from sawtooth_validator.consensus.proxy import NotConfiguredEngine
 from sawtooth_validator.consensus.proxy import UnknownBlock
 
 from sawtooth_validator.protobuf import consensus_pb2
@@ -48,13 +50,15 @@ class ConsensusServiceHandler(Handler):
         request_type,
         response_class,
         response_type,
+        proxy
     ):
         self._request_class = request_class
         self._request_type = request_type
         self._response_class = response_class
         self._response_type = response_type
+        self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         raise NotImplementedError()
 
     @property
@@ -74,6 +78,11 @@ class ConsensusServiceHandler(Handler):
         return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         request = self._request_class()
         response = self._response_class()
         response.status = response.OK
@@ -84,7 +93,8 @@ class ConsensusServiceHandler(Handler):
             response.status = response.BAD_REQUEST
             handler_status = HandlerStatus.RETURN
         else:
-            handler_status = self.handle_request(request, response)
+            handler_status = self.handle_request(
+                request, response, connection_id)
 
         return HandlerResult(
             status=handler_status,
@@ -93,20 +103,24 @@ class ConsensusServiceHandler(Handler):
 
 
 class ConsensusRegisterHandler(ConsensusServiceHandler):
-    def __init__(self, proxy, consensus_notifier):
+    def __init__(self, proxy):
         super().__init__(
             consensus_pb2.ConsensusRegisterRequest,
             validator_pb2.Message.CONSENSUS_REGISTER_REQUEST,
             consensus_pb2.ConsensusRegisterResponse,
-            validator_pb2.Message.CONSENSUS_REGISTER_RESPONSE)
+            validator_pb2.Message.CONSENSUS_REGISTER_RESPONSE,
+            proxy)
 
         self._proxy = proxy
-        self._consensus_notifier = consensus_notifier
 
-    def handle_request(self, request, response):
-        startup_info = self._proxy.register()
-
-        if startup_info is None:
+    def handle_request(self, request, response, connection_id):
+        try:
+            startup_info = self._proxy.register(
+                request.name, request.version, connection_id)
+        except (NoChainHead, NotConfiguredEngine) as e:
+            LOGGER.warning('Consensus engine %s %s could not be registered due'
+                           ' to exception: %s',
+                           request.name, request.version, type(e).__name__)
             response.status = consensus_pb2.ConsensusRegisterResponse.NOT_READY
             return HandlerStatus.RETURN
 
@@ -134,9 +148,6 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
 
         response.local_peer_info.peer_id = local_peer_info
 
-        self._consensus_notifier.add_registered_engine(request.name,
-                                                       request.version)
-
         LOGGER.info(
             "Consensus engine registered: %s %s",
             request.name,
@@ -149,12 +160,18 @@ class ConsensusRegisterBlockNewSyncHandler(Handler):
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
 
     @property
     def request_type(self):
-        return validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+        return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         forks = self._proxy.forks()
 
         if not forks:
@@ -172,14 +189,16 @@ class ConsensusSendToHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSendToRequest,
             validator_pb2.Message.CONSENSUS_SEND_TO_REQUEST,
             consensus_pb2.ConsensusSendToResponse,
-            validator_pb2.Message.CONSENSUS_SEND_TO_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SEND_TO_RESPONSE,
+            proxy)
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.send_to(
                 request.peer_id,
-                request.message.SerializeToString())
+                request.message.SerializeToString(),
+                connection_id)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("ConsensusSendTo")
             response.status =\
@@ -194,13 +213,16 @@ class ConsensusBroadcastHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusBroadcastRequest,
             validator_pb2.Message.CONSENSUS_BROADCAST_REQUEST,
             consensus_pb2.ConsensusBroadcastResponse,
-            validator_pb2.Message.CONSENSUS_BROADCAST_RESPONSE)
+            validator_pb2.Message.CONSENSUS_BROADCAST_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
-            self._proxy.broadcast(request.message.SerializeToString())
+            self._proxy.broadcast(
+                request.message.SerializeToString(),
+                connection_id)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("ConsensusBroadcast")
             response.status =\
@@ -215,11 +237,12 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusInitializeBlockRequest,
             validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusInitializeBlockResponse,
-            validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.initialize_block(request.previous_id)
         except MissingPredecessor:
@@ -242,11 +265,12 @@ class ConsensusSummarizeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSummarizeBlockRequest,
             validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusSummarizeBlockResponse,
-            validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             summary = self._proxy.summarize_block()
             response.summary = summary
@@ -270,11 +294,12 @@ class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusFinalizeBlockRequest,
             validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusFinalizeBlockResponse,
-            validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             response.block_id = self._proxy.finalize_block(request.data)
         except BlockNotInitialized:
@@ -297,11 +322,12 @@ class ConsensusCancelBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCancelBlockRequest,
             validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_REQUEST,
             consensus_pb2.ConsensusCancelBlockResponse,
-            validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.cancel_block()
         except BlockNotInitialized:
@@ -321,11 +347,12 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCheckBlocksRequest,
             validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST,
             consensus_pb2.ConsensusCheckBlocksResponse,
-            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.check_blocks(request.block_ids)
         except UnknownBlock:
@@ -340,13 +367,22 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
 
 
 class ConsensusCheckBlocksNotifier(Handler):
-    request_type = validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
-
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = \
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
+
+    @property
+    def request_type(self):
+        return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         request = consensus_pb2.ConsensusCheckBlocksRequest()
 
         try:
@@ -371,11 +407,12 @@ class ConsensusCommitBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCommitBlockRequest,
             validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_REQUEST,
             consensus_pb2.ConsensusCommitBlockResponse,
-            validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.commit_block(request.block_id)
         except UnknownBlock:
@@ -395,11 +432,12 @@ class ConsensusIgnoreBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusIgnoreBlockRequest,
             validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_REQUEST,
             consensus_pb2.ConsensusIgnoreBlockResponse,
-            validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.ignore_block(request.block_id)
         except UnknownBlock:
@@ -419,11 +457,12 @@ class ConsensusFailBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusFailBlockRequest,
             validator_pb2.Message.CONSENSUS_FAIL_BLOCK_REQUEST,
             consensus_pb2.ConsensusFailBlockResponse,
-            validator_pb2.Message.CONSENSUS_FAIL_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_FAIL_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             self._proxy.fail_block(request.block_id)
         except UnknownBlock:
@@ -443,11 +482,12 @@ class ConsensusBlocksGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusBlocksGetRequest,
             validator_pb2.Message.CONSENSUS_BLOCKS_GET_REQUEST,
             consensus_pb2.ConsensusBlocksGetResponse,
-            validator_pb2.Message.CONSENSUS_BLOCKS_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_BLOCKS_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             blocks = []
             for block in self._proxy.blocks_get(request.block_ids):
@@ -478,11 +518,12 @@ class ConsensusChainHeadGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusChainHeadGetRequest,
             validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_REQUEST,
             consensus_pb2.ConsensusChainHeadGetResponse,
-            validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             chain_head = self._proxy.chain_head_get()
 
@@ -514,11 +555,12 @@ class ConsensusSettingsGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSettingsGetRequest,
             validator_pb2.Message.CONSENSUS_SETTINGS_GET_REQUEST,
             consensus_pb2.ConsensusSettingsGetResponse,
-            validator_pb2.Message.CONSENSUS_SETTINGS_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SETTINGS_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             response.entries.extend([
                 ConsensusSettingsEntry(
@@ -544,11 +586,12 @@ class ConsensusStateGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusStateGetRequest,
             validator_pb2.Message.CONSENSUS_STATE_GET_REQUEST,
             consensus_pb2.ConsensusStateGetResponse,
-            validator_pb2.Message.CONSENSUS_STATE_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_STATE_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
-    def handle_request(self, request, response):
+    def handle_request(self, request, response, connection_id):
         try:
             response.entries.extend([
                 ConsensusStateEntry(
@@ -566,3 +609,15 @@ class ConsensusStateGetHandler(ConsensusServiceHandler):
                 consensus_pb2.ConsensusStateGetResponse.SERVICE_ERROR
 
         return HandlerStatus.RETURN
+
+
+def verify_consensus_engine(proxy, request_type, connection_id):
+    """Only accept this request if it is from the registered consensus
+    engine or is a registration request."""
+
+    registered_engine = proxy.consensus_registry.get_engine_info()
+
+    return (
+        request_type == validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+        or connection_id == registered_engine.connection_id
+    )
