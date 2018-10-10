@@ -51,7 +51,8 @@ PoET Validator Registry transaction processors.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+      sawtooth.consensus.algorithm.name: PoET
+      sawtooth.consensus.algorithm.version: 0.1
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
@@ -76,5 +77,3 @@ PoET Validator Registry transaction processors.
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
-
-
