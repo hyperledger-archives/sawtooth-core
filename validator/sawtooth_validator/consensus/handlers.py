@@ -50,11 +50,13 @@ class ConsensusServiceHandler(Handler):
         request_type,
         response_class,
         response_type,
+        proxy
     ):
         self._request_class = request_class
         self._request_type = request_type
         self._response_class = response_class
         self._response_type = response_type
+        self._proxy = proxy
 
     def handle_request(self, request, response, connection_id):
         raise NotImplementedError()
@@ -76,6 +78,11 @@ class ConsensusServiceHandler(Handler):
         return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         request = self._request_class()
         response = self._response_class()
         response.status = response.OK
@@ -101,7 +108,8 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusRegisterRequest,
             validator_pb2.Message.CONSENSUS_REGISTER_REQUEST,
             consensus_pb2.ConsensusRegisterResponse,
-            validator_pb2.Message.CONSENSUS_REGISTER_RESPONSE)
+            validator_pb2.Message.CONSENSUS_REGISTER_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -159,6 +167,11 @@ class ConsensusRegisterBlockNewSyncHandler(Handler):
         return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         forks = self._proxy.forks()
 
         if not forks:
@@ -176,7 +189,8 @@ class ConsensusSendToHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSendToRequest,
             validator_pb2.Message.CONSENSUS_SEND_TO_REQUEST,
             consensus_pb2.ConsensusSendToResponse,
-            validator_pb2.Message.CONSENSUS_SEND_TO_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SEND_TO_RESPONSE,
+            proxy)
         self._proxy = proxy
 
     def handle_request(self, request, response, connection_id):
@@ -199,7 +213,8 @@ class ConsensusBroadcastHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusBroadcastRequest,
             validator_pb2.Message.CONSENSUS_BROADCAST_REQUEST,
             consensus_pb2.ConsensusBroadcastResponse,
-            validator_pb2.Message.CONSENSUS_BROADCAST_RESPONSE)
+            validator_pb2.Message.CONSENSUS_BROADCAST_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -222,7 +237,8 @@ class ConsensusInitializeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusInitializeBlockRequest,
             validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusInitializeBlockResponse,
-            validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_INITIALIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -249,7 +265,8 @@ class ConsensusSummarizeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSummarizeBlockRequest,
             validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusSummarizeBlockResponse,
-            validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SUMMARIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -277,7 +294,8 @@ class ConsensusFinalizeBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusFinalizeBlockRequest,
             validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_REQUEST,
             consensus_pb2.ConsensusFinalizeBlockResponse,
-            validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_FINALIZE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -304,7 +322,8 @@ class ConsensusCancelBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCancelBlockRequest,
             validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_REQUEST,
             consensus_pb2.ConsensusCancelBlockResponse,
-            validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CANCEL_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -328,7 +347,8 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCheckBlocksRequest,
             validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST,
             consensus_pb2.ConsensusCheckBlocksResponse,
-            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -358,6 +378,11 @@ class ConsensusCheckBlocksNotifier(Handler):
         return self._request_type
 
     def handle(self, connection_id, message_content):
+        if not verify_consensus_engine(self._proxy,
+                                       self._request_type,
+                                       connection_id):
+            return HandlerResult(status=HandlerStatus.DROP)
+
         request = consensus_pb2.ConsensusCheckBlocksRequest()
 
         try:
@@ -382,7 +407,8 @@ class ConsensusCommitBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusCommitBlockRequest,
             validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_REQUEST,
             consensus_pb2.ConsensusCommitBlockResponse,
-            validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_COMMIT_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -406,7 +432,8 @@ class ConsensusIgnoreBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusIgnoreBlockRequest,
             validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_REQUEST,
             consensus_pb2.ConsensusIgnoreBlockResponse,
-            validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_IGNORE_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -430,7 +457,8 @@ class ConsensusFailBlockHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusFailBlockRequest,
             validator_pb2.Message.CONSENSUS_FAIL_BLOCK_REQUEST,
             consensus_pb2.ConsensusFailBlockResponse,
-            validator_pb2.Message.CONSENSUS_FAIL_BLOCK_RESPONSE)
+            validator_pb2.Message.CONSENSUS_FAIL_BLOCK_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -454,7 +482,8 @@ class ConsensusBlocksGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusBlocksGetRequest,
             validator_pb2.Message.CONSENSUS_BLOCKS_GET_REQUEST,
             consensus_pb2.ConsensusBlocksGetResponse,
-            validator_pb2.Message.CONSENSUS_BLOCKS_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_BLOCKS_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -489,7 +518,8 @@ class ConsensusChainHeadGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusChainHeadGetRequest,
             validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_REQUEST,
             consensus_pb2.ConsensusChainHeadGetResponse,
-            validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_CHAIN_HEAD_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -525,7 +555,8 @@ class ConsensusSettingsGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusSettingsGetRequest,
             validator_pb2.Message.CONSENSUS_SETTINGS_GET_REQUEST,
             consensus_pb2.ConsensusSettingsGetResponse,
-            validator_pb2.Message.CONSENSUS_SETTINGS_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_SETTINGS_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -555,7 +586,8 @@ class ConsensusStateGetHandler(ConsensusServiceHandler):
             consensus_pb2.ConsensusStateGetRequest,
             validator_pb2.Message.CONSENSUS_STATE_GET_REQUEST,
             consensus_pb2.ConsensusStateGetResponse,
-            validator_pb2.Message.CONSENSUS_STATE_GET_RESPONSE)
+            validator_pb2.Message.CONSENSUS_STATE_GET_RESPONSE,
+            proxy)
 
         self._proxy = proxy
 
@@ -577,3 +609,15 @@ class ConsensusStateGetHandler(ConsensusServiceHandler):
                 consensus_pb2.ConsensusStateGetResponse.SERVICE_ERROR
 
         return HandlerStatus.RETURN
+
+
+def verify_consensus_engine(proxy, request_type, connection_id):
+    """Only accept this request if it is from the registered consensus
+    engine or is a registration request."""
+
+    registered_engine = proxy.consensus_registry.get_engine_info()
+
+    return (
+        request_type == validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+        or connection_id == registered_engine.connection_id
+    )
