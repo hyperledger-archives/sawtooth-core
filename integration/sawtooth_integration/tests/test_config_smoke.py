@@ -104,6 +104,8 @@ class TestConfigSmoke(unittest.TestCase):
         settings = self._read_from_stdout(command, args).split('\n')
 
         _expected_output = [
+            'sawtooth.consensus.algorithm.name: Devmode',
+            'sawtooth.consensus.algorithm.version: 0.1',
             'sawtooth.settings.vote.authorized_keys: {:15}'.format(
                 TEST_PUBKEY),
             'x: 1',

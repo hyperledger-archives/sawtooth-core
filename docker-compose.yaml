@@ -143,7 +143,15 @@ services:
         cp ./target/release/sawtooth-validator bin/sawtooth-validator
         cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so
         sawadm keygen
-        sawadm genesis
+        sawset genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
+          -o config.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
         sawtooth-validator -vv \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \

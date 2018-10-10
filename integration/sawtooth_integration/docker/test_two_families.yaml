@@ -90,7 +90,12 @@ services:
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawadm genesis config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
+          -o config.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -vv \
             --bind component:tcp://eth0:4004 \
             --bind consensus:tcp://eth0:5005 \

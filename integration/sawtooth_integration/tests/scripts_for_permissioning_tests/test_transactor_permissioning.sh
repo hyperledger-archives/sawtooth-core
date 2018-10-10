@@ -53,4 +53,8 @@ transactor = "allow_dave_walter_deny_chuck_mallory"
 "transactor.batch_signer" = "deny_dave_from_sending_batches"
 EOM
 
-sawset proposal create -k /root/.sawtooth/keys/walter.priv sawtooth.identity.allowed_keys=$(cat /root/.sawtooth/keys/walter.pub) -o config.batch
+sawset proposal create -k /root/.sawtooth/keys/walter.priv \
+  sawtooth.identity.allowed_keys=$(cat /root/.sawtooth/keys/walter.pub) \
+  sawtooth.consensus.algorithm.name=Devmode \
+  sawtooth.consensus.algorithm.version=0.1 \
+  -o config.batch

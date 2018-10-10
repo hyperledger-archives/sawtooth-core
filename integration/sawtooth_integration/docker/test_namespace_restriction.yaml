@@ -123,6 +123,8 @@ services:
           -o config_transaction_families.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
           sawtooth.validator.batch_injectors=block_info \
           'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \
           -o config.batch && \
