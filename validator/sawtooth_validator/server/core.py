@@ -25,6 +25,7 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.consensus.notifier import ConsensusNotifier
 from sawtooth_validator.consensus.proxy import ConsensusProxy
+from sawtooth_validator.consensus.registry import ConsensusRegistry
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
@@ -236,7 +237,10 @@ class Validator:
             max_incoming_connections=20,
             max_future_callback_workers=10)
 
-        consensus_notifier = ConsensusNotifier(consensus_service)
+        consensus_registry = ConsensusRegistry()
+
+        consensus_notifier = ConsensusNotifier(consensus_service,
+                                               consensus_registry)
 
         # -- Setup P2P Networking -- #
         gossip = Gossip(
@@ -310,7 +314,8 @@ class Validator:
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory)
+            batch_injector_factory=batch_injector_factory,
+            consensus_notifier=consensus_notifier)
 
         block_validator = BlockValidator(
             block_manager=block_manager,
@@ -389,7 +394,8 @@ class Validator:
             gossip=gossip,
             identity_signer=identity_signer,
             settings_view_factory=SettingsViewFactory(state_view_factory),
-            state_view_factory=state_view_factory)
+            state_view_factory=state_view_factory,
+            consensus_registry=consensus_registry)
 
         consensus_handlers.add(
             consensus_dispatcher,
@@ -399,6 +405,7 @@ class Validator:
 
         self._block_status_store = block_status_store
 
+        self._consensus_notifier = consensus_notifier
         self._consensus_dispatcher = consensus_dispatcher
         self._consensus_service = consensus_service
         self._consensus_thread_pool = consensus_thread_pool

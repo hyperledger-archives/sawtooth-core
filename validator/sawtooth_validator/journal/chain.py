@@ -75,7 +75,7 @@ class ChainController(OwnedPointer):
             state_database.pointer,
             chain_head_lock.pointer,
             block_status_store.pointer,
-            ctypes.py_object(consensus_notifier),
+            consensus_notifier.pointer,
             ctypes.py_object(observers),
             ctypes.c_long(state_pruning_block_depth),
             ctypes.c_long(fork_cache_keep_time),

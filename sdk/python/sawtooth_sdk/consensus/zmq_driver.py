@@ -56,9 +56,7 @@ class ZmqDriver(Driver):
                 self._updates,
                 ZmqService(
                     stream=self._stream,
-                    timeout=SERVICE_TIMEOUT,
-                    name=self._engine.name(),
-                    version=self._engine.version()),
+                    timeout=SERVICE_TIMEOUT),
                 startup_state)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("Uncaught engine exception")
@@ -165,6 +163,18 @@ class ZmqDriver(Driver):
             notification.ParseFromString(message.content)
 
             data = notification.block_id
+
+        elif type_tag == Message.CONSENSUS_NOTIFY_BATCH_NEW:
+            notification = consensus_pb2.ConsensusNotifyBatchNew()
+            notification.ParseFromString(message.content)
+
+            data = notification.batch_id
+
+        elif type_tag == Message.CONSENSUS_NOTIFY_BATCH_INVALID:
+            notification = consensus_pb2.ConsensusNotifyBatchInvalid()
+            notification.ParseFromString(message.content)
+
+            data = notification.batch_id
 
         else:
             raise exceptions.ReceiveError(
