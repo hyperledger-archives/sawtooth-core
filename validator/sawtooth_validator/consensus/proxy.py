@@ -60,6 +60,10 @@ class ConsensusProxy:
         self._state_view_factory = state_view_factory
         self._consensus_registry = consensus_registry
 
+    @property
+    def consensus_registry(self):
+        return self._consensus_registry
+
     def register(self, engine_name, engine_version, connection_id):
         chain_head = self._chain_controller.chain_head
         if chain_head is None:
