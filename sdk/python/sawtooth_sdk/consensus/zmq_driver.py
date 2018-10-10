@@ -56,9 +56,7 @@ class ZmqDriver(Driver):
                 self._updates,
                 ZmqService(
                     stream=self._stream,
-                    timeout=SERVICE_TIMEOUT,
-                    name=self._engine.name(),
-                    version=self._engine.version()),
+                    timeout=SERVICE_TIMEOUT),
                 startup_state)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception("Uncaught engine exception")
