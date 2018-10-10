@@ -66,6 +66,9 @@ class ConsensusProxy:
             ],
             local_peer_info=self._public_key)
 
+    def is_active_engine_id(self, connection_id):
+        return self._consensus_registry.is_active_engine_id(connection_id)
+
     # Using network service
     def send_to(self, peer_id, message_type, content, connection_id):
         message = self._wrap_consensus_message(

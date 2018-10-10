@@ -170,6 +170,8 @@ message ConsensusNotifyAck {}
 //    NOT_READY
 //        The validator is not accepting requests, usually because it is still
 //        starting up
+//    NOT_ACTIVE_ENGINE
+//        The consensus engine making the request is not the active engine
 //
 // Additionally, messages may have the following additional return statuses:
 //
@@ -206,6 +208,8 @@ message ConsensusSendToResponse {
     NOT_READY = 4;
 
     UNKNOWN_PEER = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
   Status status = 1;
 }
@@ -229,6 +233,7 @@ message ConsensusBroadcastResponse {
     BAD_REQUEST = 2;
     SERVICE_ERROR = 3;
     NOT_READY = 4;
+    NOT_ACTIVE_ENGINE = 5;
   }
   Status status = 1;
 }
@@ -252,6 +257,8 @@ message ConsensusInitializeBlockResponse {
 
     INVALID_STATE = 5;
     UNKNOWN_BLOCK = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
   }
   Status status = 1;
 }
@@ -270,6 +277,8 @@ message ConsensusSummarizeBlockResponse {
 
     INVALID_STATE = 5;
     BLOCK_NOT_READY = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
   }
   Status status = 1;
 
@@ -294,6 +303,8 @@ message ConsensusFinalizeBlockResponse {
 
     INVALID_STATE = 5;
     BLOCK_NOT_READY = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
   }
   Status status = 1;
 
@@ -313,6 +324,8 @@ message ConsensusCancelBlockResponse {
     NOT_READY = 4;
 
     INVALID_STATE = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -343,6 +356,8 @@ message ConsensusCheckBlocksResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -367,6 +382,8 @@ message ConsensusCommitBlockResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -387,6 +404,8 @@ message ConsensusIgnoreBlockResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -406,6 +425,8 @@ message ConsensusFailBlockResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -428,6 +449,8 @@ message ConsensusBlocksGetResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -446,6 +469,8 @@ message ConsensusChainHeadGetResponse {
     NOT_READY = 4;
 
     NO_CHAIN_HEAD = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -469,6 +494,8 @@ message ConsensusSettingsGetResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;
@@ -492,6 +519,8 @@ message ConsensusStateGetResponse {
     NOT_READY = 4;
 
     UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
   }
 
   Status status = 1;

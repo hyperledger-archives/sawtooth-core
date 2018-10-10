@@ -20,7 +20,7 @@ def add(
         dispatcher,
         thread_pool,
         consensus_proxy,
-        consensus_notifier,
+        consensus_notifier
 ):
 
     handler = handlers.ConsensusRegisterHandler(consensus_proxy)
