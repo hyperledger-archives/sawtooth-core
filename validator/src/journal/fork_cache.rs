@@ -92,8 +92,6 @@ impl ForkCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
 
     // Setup a cache and a vector for expired items to be sent to
     fn setup() -> ForkCache {

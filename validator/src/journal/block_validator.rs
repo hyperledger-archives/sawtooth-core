@@ -776,8 +776,8 @@ mod test {
 
         fn validate_block(
             &self,
-            block: &Block,
-            previous_state_root: Option<&String>,
+            _block: &Block,
+            _previous_state_root: Option<&String>,
         ) -> Result<BlockValidationResult, ValidationError> {
             self.result.clone()
         }
@@ -788,8 +788,8 @@ mod test {
 
         fn validate_block(
             &self,
-            block: &Block,
-            previous_state_root: Option<&String>,
+            _block: &Block,
+            _previous_state_root: Option<&String>,
         ) -> Result<(), ValidationError> {
             self.result.clone()
         }
@@ -819,8 +819,8 @@ mod test {
 
         fn validate_block(
             &self,
-            block: &Block,
-            previous_state_root: Option<&String>,
+            _block: &Block,
+            _previous_state_root: Option<&String>,
         ) -> Result<(), ValidationError> {
             if *self.called.lock().expect("Error acquiring Mock2 lock") {
                 return self.every_other.clone();
@@ -840,16 +840,16 @@ mod test {
 
         fn get<'a>(
             &'a self,
-            block_ids: &[&str],
+            _block_ids: &[&str],
         ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
             unimplemented!();
         }
 
-        fn put(&mut self, block: Vec<Block>) -> Result<(), BlockStoreError> {
+        fn put(&mut self, _block: Vec<Block>) -> Result<(), BlockStoreError> {
             unimplemented!();
         }
 
-        fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
+        fn delete(&mut self, _block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError> {
             unimplemented!();
         }
     }

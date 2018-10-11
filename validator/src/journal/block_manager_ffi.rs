@@ -459,7 +459,9 @@ mod test {
             let store = create_block_store(db_path);
 
             let block_manager = BlockManager::new();
-            block_manager.add_store("commit_store", Box::new(store.clone()));
+            block_manager
+                .add_store("commit_store", Box::new(store.clone()))
+                .expect("The commitstore can be added");
 
             let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
             let block_b = create_block("B", 2, "A");
