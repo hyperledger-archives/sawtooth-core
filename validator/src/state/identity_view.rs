@@ -17,8 +17,7 @@
 
 use std::iter::repeat;
 
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
+use crypto::sha256_digest_str;
 use protobuf;
 
 use proto::identity::Policy;
@@ -203,9 +202,7 @@ fn policy_address(name: &str) -> String {
 }
 
 fn short_hash(s: &str, length: usize) -> String {
-    let mut sha = Sha256::new();
-    sha.input(s.as_bytes());
-    sha.result_str()[..length].to_string()
+    sha256_digest_str(s)[..length].to_string()
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@
 
 extern crate cbor;
 extern crate cpython;
-extern crate crypto;
+extern crate crypto as rust_crypto;
 extern crate hex;
 extern crate libc;
 extern crate lmdb_zero;
@@ -31,6 +31,7 @@ extern crate log;
 extern crate rand;
 
 // exported modules
+pub mod crypto;
 pub mod database;
 pub mod execution;
 pub mod journal;
