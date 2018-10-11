@@ -24,8 +24,7 @@ use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
 
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
+use crypto::sha256_digest_strs;
 
 use batch::Batch;
 use block::Block;
@@ -450,19 +449,18 @@ impl CandidateBlock {
                 None,
             ).expect("BlockBuilder has no method 'set_state_hash'");
 
-        let mut hasher = Sha256::new();
-
-        for batch in builder
+        let batches = builder
             .getattr(py, "batches")
             .expect("BlockBuilder has no attribute 'batches'")
             .extract::<Vec<Batch>>(py)
-            .expect("Unable to extract PyList of Batches as Vec<Batch>")
-        {
-            hasher.input_str(&batch.header_signature);
-        }
-        let mut bytes = vec![0; hasher.output_bytes()];
-        hasher.result(&mut bytes);
-        self.summary = Some(bytes);
+            .expect("Unable to extract PyList of Batches as Vec<Batch>");
+
+        let batch_ids: Vec<&str> = batches
+            .iter()
+            .map(|batch| batch.header_signature.as_str())
+            .collect();
+
+        self.summary = Some(sha256_digest_strs(batch_ids.as_slice()));
         self.remaining_batches = pending_batches;
 
         Ok(self.summary.clone())

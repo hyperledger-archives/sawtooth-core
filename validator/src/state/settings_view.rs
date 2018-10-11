@@ -19,8 +19,7 @@ use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
+use crypto::sha256_digest_str;
 use protobuf;
 
 use state::StateDatabaseError;
@@ -172,9 +171,7 @@ fn setting_address(key: &str) -> String {
 }
 
 fn short_hash(s: &str) -> String {
-    let mut sha = Sha256::new();
-    sha.input(s.as_bytes());
-    sha.result_str()[..ADDRESS_PART_SIZE].to_string()
+    sha256_digest_str(s)[..ADDRESS_PART_SIZE].to_string()
 }
 
 #[cfg(test)]
