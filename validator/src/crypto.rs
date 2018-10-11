@@ -1,34 +1,24 @@
-use rust_crypto::digest::Digest;
-use rust_crypto::sha2::{Sha256, Sha512};
+use hex;
+use openssl;
 
-pub fn sha256_digest_str(strs: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.input(item.as_bytes());
-    hasher.result_str()
+pub fn sha256_digest_str(item: &str) -> String {
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.extend(openssl::sha::sha256(item.as_bytes()).iter());
+    hex::encode(bytes)
 }
 
 pub fn sha256_digest_strs(strs: &[&str]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-
-    for item in items {
-        hasher.input_str(item);
+    let mut hasher = openssl::sha::Sha256::new();
+    for item in strs {
+        hasher.update(item.as_bytes());
     }
-
-    let mut bytes = vec![0; hasher.output_bytes()];
-    hasher.result(&mut bytes);
-
+    let mut bytes = Vec::new();
+    bytes.extend(hasher.finish().iter());
     bytes
 }
 
-pub fn sha512_digest_bytes(bytes: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha512::new();
-
-    for item in items {
-        hasher.input_str(item);
-    }
-
-    let mut bytes = vec![0; hasher.output_bytes()];
-    hasher.result(&mut bytes);
-
+pub fn sha512_digest_bytes(item: &[u8]) -> Vec<u8> {
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.extend(openssl::sha::sha512(item).iter());
     bytes
 }
