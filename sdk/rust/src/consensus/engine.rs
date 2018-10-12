@@ -38,6 +38,7 @@ pub enum Update {
 }
 
 #[derive(Clone, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct BlockId(Vec<u8>);
 impl Deref for BlockId {
     type Target = Vec<u8>;
@@ -93,6 +94,7 @@ impl fmt::Debug for Block {
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd)]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct PeerId(Vec<u8>);
 impl Deref for PeerId {
     type Target = Vec<u8>;
