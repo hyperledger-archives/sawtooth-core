@@ -179,6 +179,10 @@ impl BlockManagerState {
             .references_by_block_id
             .write()
             .expect("Acquiring reference write lock; lock poisoned");
+        let mut block_by_block_id = self
+            .block_by_block_id
+            .write()
+            .expect("Acquiring block pool write lock; lock poisoned");
         let blockstore_by_name = self
             .blockstore_by_name
             .read()
@@ -227,10 +231,6 @@ impl BlockManagerState {
                     last_block.previous_block_id.clone(),
                 ),
             );
-            let mut block_by_block_id = self
-                .block_by_block_id
-                .write()
-                .expect("Acquiring block pool write lock; lock poisoned");
             block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
             blocks_with_references.into_iter().for_each(|block| {
@@ -248,12 +248,7 @@ impl BlockManagerState {
 
         COLLECTOR
             .gauge("BlockManager.pool_size", None, None)
-            .set_value(
-                self.block_by_block_id
-                    .read()
-                    .expect("Acquiring block pool read lock; lock poisoned")
-                    .len(),
-            );
+            .set_value(block_by_block_id.len());
 
         Ok(())
     }
