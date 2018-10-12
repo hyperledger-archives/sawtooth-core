@@ -26,17 +26,17 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sou
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update
 
-RUN apt-get install -y -q --allow-downgrades \
+RUN apt-get install -y -q \
     git \
     python3 \
     python3-stdeb
 
-RUN apt-get install -y -q --allow-downgrades \
+RUN apt-get install -y -q \
     python3-grpcio \
     python3-grpcio-tools \
     python3-protobuf
 
-RUN apt-get install -y -q --allow-downgrades \
+RUN apt-get install -y -q \
     libssl-dev \
     openssl \
     pkg-config \

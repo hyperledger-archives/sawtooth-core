@@ -46,7 +46,7 @@ RUN apt-get install -y -q \
     bandit \
     coverage --upgrade
 
-RUN apt-get install -y -q --allow-downgrades \
+RUN apt-get install -y -q \
     build-essential \
     git \
     libssl-dev \
@@ -56,7 +56,7 @@ RUN apt-get install -y -q --allow-downgrades \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
-RUN apt-get install -y -q --allow-downgrades \
+RUN apt-get install -y -q \
     build-essential \
     curl \
     libssl-dev \
