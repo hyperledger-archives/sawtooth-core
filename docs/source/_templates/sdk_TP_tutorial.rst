@@ -1813,7 +1813,7 @@ Addressing is implemented as follows:
 .. code-block:: go
 
     func makeAddress(name string) string {
-	    return Namespace + hexdigest(name)[:64]
+        return Namespace + hexdigest(name)[:64]
     }
 
 {% elif language == 'Rust' %}

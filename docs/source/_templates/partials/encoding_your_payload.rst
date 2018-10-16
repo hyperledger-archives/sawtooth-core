@@ -23,6 +23,22 @@ Transaction Processor uses a payload of three key/value pairs encoded as
 
     const payloadBytes = cbor.encode(payload)
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        cbor "github.com/brianolson/cbor_go"
+    )
+
+    payloadData := make(map[string]interface{})
+    payloadData["Verb"] = "set"
+    payloadData["Name"] = "foo"
+    payloadData["Value"] = 42
+
+    // check if err is nil before continuing
+    payloadBytes, err := cbor.Dumps(payloadData)
+
 {% else %}
 
 .. code-block:: python
