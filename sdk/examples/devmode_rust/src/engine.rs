@@ -58,7 +58,7 @@ impl DevmodeService {
         self.service
             .get_blocks(vec![block_id.clone()])
             .expect("Failed to get block")
-            .remove(&block_id)
+            .remove(block_id)
             .unwrap()
     }
 
