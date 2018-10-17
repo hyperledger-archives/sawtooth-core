@@ -34,18 +34,18 @@ class TestBasicAuth(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         wait_until_status('http://rest-api:8008/blocks', status_code=200)
-        wait_until_status('http://basic_auth_proxy/sawtooth', status_code=401)
+        wait_until_status('http://basic-auth-proxy/sawtooth', status_code=401)
 
     def test_http_basic_auth(self):
         """Checks that a Basic Auth request can be made with unencrypted HTTP.
         """
-        url = 'http://basic_auth_proxy/sawtooth/blocks'
+        url = 'http://basic-auth-proxy/sawtooth/blocks'
         self._assert_valid_authed_request(url)
 
     def test_ssl_basic_auth(self):
         """Checks that a Basic Auth request can be made with encrypted HTTPS.
         """
-        url = 'https://basic_auth_proxy/sawtooth/blocks'
+        url = 'https://basic-auth-proxy/sawtooth/blocks'
         self._assert_valid_authed_request(url)
 
     def _assert_valid_authed_request(self, url):

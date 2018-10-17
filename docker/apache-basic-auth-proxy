@@ -21,14 +21,14 @@
 # Build:
 #   $ cd sawtooth-core/docker
 #   $ docker build . \
-#     -f apache-basic_auth_proxy \
-#     -t apache-basic_auth_proxy
+#     -f apache-basic-auth-proxy \
+#     -t apache-basic-auth-proxy
 #
 # Run:
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core \
 #     -v /var/run/docker.sock:/var/run/docker.sock \
-#     apache-basic_auth_proxy
+#     apache-basic-auth-proxy
 
 FROM ubuntu:bionic
 
@@ -40,13 +40,13 @@ RUN apt-get update \
 
 RUN openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
     -keyout /tmp/.ssl.key -out /tmp/.ssl.crt \
-    -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=basic_auth_proxy
+    -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=basic-auth-proxy
 
 RUN echo "sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr." >/tmp/.password
 
 RUN echo "\
 \n\
-ServerName basic_auth_proxy\n\
+ServerName basic-auth-proxy\n\
 ServerAdmin sawtooth@sawtooth\n\
 DocumentRoot /var/www/html\n\
 \n\
