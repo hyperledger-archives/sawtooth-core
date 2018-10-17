@@ -99,7 +99,7 @@ impl ZmqDriver {
                 version,
             )),
             startup_state,
-        );
+        )?;
 
         driver_thread.join().expect("Driver panicked")
     }

@@ -169,7 +169,7 @@ pub trait Engine {
         updates: Receiver<Update>,
         service: Box<Service>,
         startup_state: StartupState,
-    );
+    ) -> Result<(), Error>;
 
     /// Get the version of this engine
     fn version(&self) -> String;

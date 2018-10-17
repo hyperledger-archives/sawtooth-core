@@ -45,7 +45,7 @@ pub mod tests {
             let service = Box::new(MockService {});
             let (_sender, receiver) = channel();
             self.engine
-                .start(receiver, service, Default::default());
+                .start(receiver, service, Default::default())?;
             Ok(())
         }
 
