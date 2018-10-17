@@ -214,7 +214,7 @@ impl Engine for DevmodeEngine {
         updates: Receiver<Update>,
         service: Box<Service>,
         startup_state: StartupState,
-    ) {
+    ) -> Result<(), Error> {
         let mut service = DevmodeService::new(service);
         let mut chain_head = startup_state.chain_head;
 
@@ -359,6 +359,8 @@ impl Engine for DevmodeEngine {
                 service.broadcast_published_block(new_block_id);
             }
         }
+
+        Ok(())
     }
 
     fn version(&self) -> String {
