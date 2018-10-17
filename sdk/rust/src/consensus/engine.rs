@@ -72,7 +72,7 @@ pub struct PeerInfo {
 }
 
 /// A consensus-related message sent between peers
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PeerMessage {
     pub message_type: String,
     pub content: Vec<u8>,
