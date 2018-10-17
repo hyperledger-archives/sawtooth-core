@@ -37,7 +37,6 @@ your own transaction family.
 
 * The :doc:`/transaction_family_specifications/settings_transaction_family`
   provides a methodology for storing on-chain configuration settings.
-  Settings is written in Python.
   The family name is ``sawtooth_settings``;
   the associated transaction processor is ``settings-tp`` (see
   :doc:`/cli/settings-tp`).
