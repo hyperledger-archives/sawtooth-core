@@ -96,7 +96,7 @@ impl ZmqDriver {
                 Duration::from_secs(SERVICE_TIMEOUT),
             )),
             startup_state,
-        );
+        )?;
 
         driver_thread.join().expect("Driver panicked")
     }
