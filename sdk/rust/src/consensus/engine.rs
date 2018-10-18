@@ -228,7 +228,7 @@ pub mod tests {
             updates: Receiver<Update>,
             _service: Box<Service>,
             _startup_state: StartupState,
-        ) {
+        ) -> Result<(), Error> {
             (*self.calls.lock().unwrap()).push("start".into());
             loop {
                 match updates.recv_timeout(Duration::from_millis(100)) {
@@ -273,6 +273,8 @@ pub mod tests {
                     }
                 }
             }
+
+            Ok(())
         }
         fn version(&self) -> String {
             "0".into()
@@ -311,7 +313,9 @@ pub mod tests {
             .unwrap();
         let handle = thread::spawn(move || {
             let svc = Box::new(MockService {});
-            mock_engine.start(receiver, svc, Default::default());
+            mock_engine
+                .start(receiver, svc, Default::default())
+                .unwrap();
         });
         sender.send(Update::Shutdown).unwrap();
         handle.join().unwrap();
