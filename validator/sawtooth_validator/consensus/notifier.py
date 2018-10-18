@@ -17,7 +17,6 @@ import hashlib
 import logging
 
 
-from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import consensus_pb2
 from sawtooth_validator.protobuf import validator_pb2
@@ -29,12 +28,12 @@ class ConsensusNotifier:
     """Handles sending notifications to the consensus engine using the provided
     interconnect service."""
 
-    def __init__(self, consensus_service):
+    def __init__(self, consensus_service, consensus_registry):
         self._service = consensus_service
-        self._registered_engines = ConcurrentSet()
+        self._consensus_registry = consensus_registry
 
     def _notify(self, message_type, message):
-        if self._registered_engines:
+        if self._consensus_registry:
             futures = self._service.send_all(
                 message_type,
                 message.SerializeToString())
@@ -102,7 +101,3 @@ class ConsensusNotifier:
             validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
             consensus_pb2.ConsensusNotifyBlockCommit(
                 block_id=bytes.fromhex(block_id)))
-
-    def add_registered_engine(self, engine_name, engine_version):
-        """Add to list of registered consensus engines"""
-        self._registered_engines.add((engine_name, engine_version))

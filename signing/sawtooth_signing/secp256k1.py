@@ -48,10 +48,13 @@ class Secp256k1PrivateKey(PrivateKey):
         return self._private_key
 
     @staticmethod
+    def from_bytes(byte_str):
+        return Secp256k1PrivateKey(secp256k1.PrivateKey(byte_str, ctx=__CTX__))
+
+    @staticmethod
     def from_hex(hex_str):
         try:
-            priv = binascii.unhexlify(hex_str)
-            return Secp256k1PrivateKey(secp256k1.PrivateKey(priv, ctx=__CTX__))
+            return Secp256k1PrivateKey.from_bytes(binascii.unhexlify(hex_str))
         except Exception as e:
             raise ParseError('Unable to parse hex private key: {}'.format(e))
 
@@ -80,14 +83,16 @@ class Secp256k1PublicKey(PublicKey):
             return self._public_key.serialize()
 
     @staticmethod
+    def from_bytes(byte_str):
+        public_key = __PK__.deserialize(byte_str)
+        return Secp256k1PublicKey(secp256k1.PublicKey(public_key, ctx=__CTX__))
+
+    @staticmethod
     def from_hex(hex_str):
         try:
-            public_key = __PK__.deserialize(binascii.unhexlify(hex_str))
-
-            return Secp256k1PublicKey(
-                secp256k1.PublicKey(public_key, ctx=__CTX__))
+            return Secp256k1PublicKey.from_bytes(binascii.unhexlify(hex_str))
         except Exception as e:
-            raise ParseError('Unable to parse public key: {}'.format(e))
+            raise ParseError('Unable to parse hex public key: {}'.format(e))
 
 
 class Secp256k1Context(Context):
@@ -109,10 +114,11 @@ class Secp256k1Context(Context):
 
     def verify(self, signature, message, public_key):
         try:
-            sig_bytes = bytes.fromhex(signature)
+            if isinstance(signature, str):
+                signature = bytes.fromhex(signature)
 
             sig = public_key.secp256k1_public_key.ecdsa_deserialize_compact(
-                sig_bytes)
+                signature)
             return public_key.secp256k1_public_key.ecdsa_verify(message, sig)
         # pylint: disable=broad-except
         except Exception:
