@@ -31,9 +31,9 @@ extern crate openssl;
 extern crate rand;
 
 // exported modules
-pub mod crypto;
 pub mod database;
 pub mod execution;
+pub mod hashlib;
 pub mod journal;
 mod metrics;
 pub mod proto;

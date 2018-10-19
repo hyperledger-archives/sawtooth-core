@@ -29,7 +29,7 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use crypto::sha512_digest_bytes;
+use hashlib::sha512_digest_bytes;
 
 use protobuf;
 use protobuf::Message;
