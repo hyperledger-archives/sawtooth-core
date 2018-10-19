@@ -32,10 +32,10 @@ extern crate rand;
 extern crate uluru;
 
 // exported modules
-pub mod crypto;
 pub mod database;
 pub mod execution;
 pub mod gossip;
+pub mod hashlib;
 pub mod journal;
 mod metrics;
 pub mod proto;

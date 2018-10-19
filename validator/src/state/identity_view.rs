@@ -17,7 +17,7 @@
 
 use std::iter::repeat;
 
-use crypto::sha256_digest_str;
+use hashlib::sha256_digest_str;
 use protobuf;
 
 use proto::identity::Policy;
