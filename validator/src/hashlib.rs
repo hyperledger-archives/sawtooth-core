@@ -2,9 +2,7 @@ use hex;
 use openssl;
 
 pub fn sha256_digest_str(item: &str) -> String {
-    let mut bytes: Vec<u8> = Vec::new();
-    bytes.extend(openssl::sha::sha256(item.as_bytes()).iter());
-    hex::encode(bytes)
+    hex::encode(openssl::sha::sha256(item.as_bytes()))
 }
 
 pub fn sha256_digest_strs(strs: &[&str]) -> Vec<u8> {
