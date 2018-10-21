@@ -73,7 +73,7 @@ RUSTSDKDIR := $(HTMLDIR)/rust_sdk
 rust:
 	mkdir -p $(RUSTSDKDIR)/
 	cd $(SAWTOOTH)/sdk/rust/; cargo doc --no-deps --lib;
-	rm $(SAWTOOTH)/sdk/rust/target/doc/.lock
+	rm -f $(SAWTOOTH)/sdk/rust/target/doc/.lock
 	cp -r $(SAWTOOTH)/sdk/rust/target/doc/ $(RUSTSDKDIR)/doc
 
 html: templates cli python rust
