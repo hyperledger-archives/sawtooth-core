@@ -54,6 +54,7 @@ class ChainController(OwnedPointer):
         chain_head_lock,
         block_status_store,
         consensus_notifier,
+        consensus_registry,
         state_pruning_block_depth=1000,
         fork_cache_keep_time=300,  # seconds
         data_dir=None,
@@ -80,7 +81,8 @@ class ChainController(OwnedPointer):
             ctypes.c_long(state_pruning_block_depth),
             ctypes.c_long(fork_cache_keep_time),
             ctypes.c_char_p(data_dir.encode()),
-            ctypes.byref(self.pointer))
+            ctypes.byref(self.pointer),
+            ctypes.py_object(consensus_registry))
 
     def start(self):
         _libexec('chain_controller_start', self.pointer)

@@ -331,6 +331,7 @@ class Validator:
             chain_head_lock=block_publisher.chain_head_lock,
             block_status_store=block_status_store,
             consensus_notifier=consensus_notifier,
+            consensus_registry=consensus_registry,
             state_pruning_block_depth=state_pruning_block_depth,
             fork_cache_keep_time=fork_cache_keep_time,
             data_dir=data_dir,
@@ -409,6 +410,7 @@ class Validator:
         self._consensus_dispatcher = consensus_dispatcher
         self._consensus_service = consensus_service
         self._consensus_thread_pool = consensus_thread_pool
+        self._consensus_registry = consensus_registry
 
         self._client_thread_pool = client_thread_pool
         self._sig_pool = sig_pool
