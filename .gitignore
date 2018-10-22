@@ -34,6 +34,7 @@
 /families/settings/sawtooth_settings/target/
 /families/settings/sawtooth_settings/bin/
 /families/settings/sawtooth_settings/Cargo.lock
+/families/settings/tests/sawtooth_settings_test/protobuf/
 /families/smallbank/smallbank_rust/target/
 /families/smallbank/smallbank_rust/Cargo.lock
 /families/smallbank/smallbank_rust/bin/

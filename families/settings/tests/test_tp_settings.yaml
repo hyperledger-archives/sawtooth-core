@@ -54,8 +54,7 @@ services:
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/sawtooth-core/families/settings:\
-            /project/sawtooth-core/families/settings/tests:\
+        PYTHONPATH: "/project/sawtooth-core/families/settings/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"
