@@ -115,36 +115,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response, connection_id):
-        startup_info = self._proxy.register(
-            request.name, request.version, connection_id)
-
-        if startup_info is None:
-            response.status = consensus_pb2.ConsensusRegisterResponse.NOT_READY
-            return HandlerStatus.RETURN
-
-        chain_head = startup_info.chain_head
-        peers = [bytes.fromhex(peer_id) for peer_id in startup_info.peers]
-        local_peer_info = startup_info.local_peer_info
-
-        block_header = BlockHeader()
-        block_header.ParseFromString(chain_head.header)
-
-        response.chain_head.block_id = bytes.fromhex(
-            chain_head.header_signature)
-
-        response.chain_head.previous_id =\
-            bytes.fromhex(block_header.previous_block_id)
-        response.chain_head.signer_id =\
-            bytes.fromhex(block_header.signer_public_key)
-        response.chain_head.block_num = block_header.block_num
-        response.chain_head.payload = block_header.consensus
-
-        response.peers.extend([
-            consensus_pb2.ConsensusPeerInfo(peer_id=peer_id)
-            for peer_id in peers
-        ])
-
-        response.local_peer_info.peer_id = local_peer_info
+        self._proxy.register(request.name, request.version, connection_id)
 
         LOGGER.info(
             "Consensus engine registered: %s %s",

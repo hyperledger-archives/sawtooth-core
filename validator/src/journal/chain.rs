@@ -816,9 +816,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             }
         }
 
-        self.consensus_notifier
-            .notify_block_commit(&block.header_signature);
-
         // Check if active consensus engine needs to be updated
         let settings_view: SettingsView = self
             .state_view_factory
@@ -862,6 +859,17 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             })?;
 
         if !is_active_engine {
+            match self.consensus_registry.get_active_engine_info() {
+                Ok(Some(engine_info)) => {
+                    self.consensus_notifier
+                        .notify_engine_deactivated(engine_info.connection_id);
+                }
+                Err(err) => {
+                    // Not a fatal error; just won't notify old engine that it's deactivated
+                    warn!("Error getting active engine info: {:?}", err);
+                }
+                _ => (),
+            }
             self.consensus_registry
                 .activate_engine(&name, &version)
                 .map_err(|reg_err| {
@@ -869,6 +877,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     warn!("{}", err_str);
                     ChainControllerError::ConsensusError(err_str)
                 })?;
+            self.consensus_notifier.notify_engine_activated(block);
+        } else {
+            self.consensus_notifier
+                .notify_block_commit(&block.header_signature);
         }
 
         Ok(())

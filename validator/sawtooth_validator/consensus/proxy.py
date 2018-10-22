@@ -16,8 +16,6 @@
 import hashlib
 import logging
 
-from collections import namedtuple
-
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
 from sawtooth_validator.protobuf.consensus_pb2 import \
@@ -31,11 +29,6 @@ class UnknownBlock(Exception):
     """The given block could not be found."""
 
 
-StartupInfo = namedtuple(
-    'SignupInfo',
-    ['chain_head', 'peers', 'local_peer_info'])
-
-
 class ConsensusProxy:
     """Receives requests from the consensus engine handlers and delegates them
     to the appropriate components."""
@@ -43,7 +36,7 @@ class ConsensusProxy:
     def __init__(self, block_manager, block_publisher,
                  chain_controller, gossip, identity_signer,
                  settings_view_factory, state_view_factory,
-                 consensus_registry):
+                 consensus_registry, consensus_notifier):
         self._block_manager = block_manager
         self._chain_controller = chain_controller
         self._block_publisher = block_publisher
@@ -81,6 +74,7 @@ class ConsensusProxy:
         if engine_name == conf_name and engine_version == conf_version:
             self._consensus_registry.activate_engine(
                 engine_name, engine_version)
+            self._consensus_notifier.notify_engine_activated(chain_head)
 
             LOGGER.info(
                 "Consensus engine activated: %s %s",

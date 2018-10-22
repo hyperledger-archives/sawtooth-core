@@ -135,6 +135,10 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(request.version, 'test-version')
 
         self.send_req_rep(
+            consensus_pb2.ConsensusNotifyEngineActivated(),
+            Message.CONSENSUS_NOTIFY_ENGINE_ACTIVATED)
+
+        self.send_req_rep(
             consensus_pb2.ConsensusNotifyPeerConnected(),
             Message.CONSENSUS_NOTIFY_PEER_CONNECTED)
 

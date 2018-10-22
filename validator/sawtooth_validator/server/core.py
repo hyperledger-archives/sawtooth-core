@@ -239,8 +239,10 @@ class Validator:
 
         consensus_registry = ConsensusRegistry()
 
-        consensus_notifier = ConsensusNotifier(consensus_service,
-                                               consensus_registry)
+        consensus_notifier = ConsensusNotifier(
+            consensus_service,
+            consensus_registry,
+            identity_signer.get_public_key().as_hex())
 
         # -- Setup P2P Networking -- #
         gossip = Gossip(
@@ -257,6 +259,8 @@ class Validator:
             maximum_peer_connectivity=maximum_peer_connectivity,
             topology_check_frequency=1
         )
+
+        consensus_notifier.set_gossip(gossip)
 
         completer = Completer(
             block_manager=block_manager,
@@ -396,7 +400,8 @@ class Validator:
             identity_signer=identity_signer,
             settings_view_factory=SettingsViewFactory(state_view_factory),
             state_view_factory=state_view_factory,
-            consensus_registry=consensus_registry)
+            consensus_registry=consensus_registry,
+            consensus_notifier=consensus_notifier)
 
         consensus_handlers.add(
             consensus_dispatcher,

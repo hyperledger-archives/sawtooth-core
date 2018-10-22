@@ -149,6 +149,17 @@ message ConsensusNotifyBlockCommit {
   bytes block_id = 1;
 }
 
+// The engine has been activated
+message ConsensusNotifyEngineActivated {
+  // Startup Info
+  ConsensusBlock chain_head = 1;
+  repeated ConsensusPeerInfo peers = 2;
+  ConsensusPeerInfo local_peer_info = 3;
+}
+
+// The engine has been deactivated
+message ConsensusNotifyEngineDeactivated {}
+
 // Confirm that the notification was received. The validator message
 // correlation id is used to determine which notification this is an ack for.
 message ConsensusNotifyAck {}
