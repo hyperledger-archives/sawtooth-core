@@ -34,6 +34,9 @@ RUN apt-get install -y -q --allow-downgrades \
     python3-protobuf
 
 RUN apt-get install -y -q --allow-downgrades \
+    libssl-dev \
+    openssl \
+    pkg-config \
     python3-cbor \
     python3-colorlog \
     python3-cryptography>=1.7.1 \
