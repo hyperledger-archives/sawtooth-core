@@ -16,8 +16,16 @@ items:
           name: sawtooth-0
       spec:
         containers:
+          - name: sawtooth-devmode-engine
+            image: hyperledger/sawtooth-devmode-engine:1.1
+            command:
+              - bash
+            args:
+              - -c
+              - "devmode-rust -C tcp://$HOSTNAME:5050"
+
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.0
+            image: hyperledger/sawtooth-settings-tp:1.1
             command:
               - bash
             args:
@@ -25,7 +33,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.0
+            image: hyperledger/sawtooth-intkey-tp-python:1.1
             command:
               - bash
             args:
@@ -33,7 +41,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.0
+            image: hyperledger/sawtooth-xo-tp-python:1.1
             command:
               - bash
             args:
@@ -41,10 +49,12 @@ items:
               - "xo-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.0
+            image: hyperledger/sawtooth-validator:1.1
             ports:
               - name: tp
                 containerPort: 4004
+              - name: consensus
+                containerPort: 5050
               - name: validators
                 containerPort: 8800
             command:
@@ -58,10 +68,11 @@ items:
               && sawtooth-validator -vv \
                   --endpoint tcp://$SAWTOOTH_0_SERVICE_HOST:8800 \
                   --bind component:tcp://eth0:4004 \
+                  --bind consensus:tcp://eth0:5050 \
                   --bind network:tcp://eth0:8800"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.0
+            image: hyperledger/sawtooth-rest-api:1.1
             ports:
               - name: api
                 containerPort: 8008
@@ -72,7 +83,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-all:1.0
+            image: hyperledger/sawtooth-shell:1.1
             command:
               - bash
             args:
@@ -92,6 +103,10 @@ items:
         protocol: TCP
         port: 4004
         targetPort: 4004
+      - name: "5050"
+        protocol: TCP
+        port: 5050
+        targetPort: 5050
       - name: "8008"
         protocol: TCP
         port: 8008
