@@ -58,3 +58,6 @@ therefore the validator will let it write at any address. This is
 legitimate for :doc:`transaction
 families<../transaction_family_specifications>` which are reviewed thoroughly,
 like the ones included in Sawtooth.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

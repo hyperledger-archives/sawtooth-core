@@ -249,3 +249,9 @@ Rust components:
 **Note:** The `run_tests` command provides the ``-x`` flag to allow you to exclude
 various components from the tests. You can also specify which tests to run
 with the ``-m`` flag. Run the command `run_tests -h` for help.
+
+License
+-------
+
+Hyperledger Sawtooth software is licensed under the [Apache License Version 2.0](LICENSE) software license.
+
