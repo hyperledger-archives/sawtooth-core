@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f adm/Dockerfile-installed -t sawtooth-admin-tools .
+# docker build -f perf/smallbank_workload/Dockerfile-installed-bionic -t sawtooth-smallbank-workload .
 
-# -------------=== admin tools build ===-------------
-FROM ubuntu:xenial as adm-builder
+# -------------=== smallbank workload build ===-------------
+FROM ubuntu:bionic as smallbank-workload-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -41,16 +41,16 @@ RUN /root/.cargo/bin/cargo install cargo-deb
 
 COPY . /project
 
-WORKDIR /project/adm
+WORKDIR /project/perf/smallbank_workload
 
-RUN sed -i -e s/version.*$/version\ =\ \"$(../bin/get_version)\"/ Cargo.toml
+RUN sed -i -e s/version.*$/version\ =\ \"$(../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
-# -------------=== admin tools docker build ===-------------
-FROM ubuntu:xenial
+# -------------=== smallbank workload docker build ===-------------
+FROM ubuntu:bionic
 
-COPY --from=adm-builder /project/adm/target/debian/sawadm_*.deb /tmp
+COPY --from=smallbank-workload-builder /project/perf/smallbank_workload/target/debian/sawtooth-smallbank-workload*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawadm_*.deb || true \
+ && dpkg -i /tmp/sawtooth-smallbank-workload*.deb || true \
  && apt-get -f -y install

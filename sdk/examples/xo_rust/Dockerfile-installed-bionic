@@ -1,4 +1,4 @@
-# Copyright 2018 Intel Corporation
+# Copyright 2018 Cargill Incorporated
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f perf/intkey_workload/Dockerfile-installed -t sawtooth-intkey-workload .
+# docker build -f sdk/examples/xo_rust/Dockerfile-installed-bionic -t sawtooth-xo-tp-rust .
 
-# -------------=== intkey workload build ===-------------
-FROM ubuntu:xenial as intkey-workload-builder
+# -------------=== xo rust build ===-------------
+FROM ubuntu:bionic as xo-rust-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -41,16 +41,16 @@ RUN /root/.cargo/bin/cargo install cargo-deb
 
 COPY . /project
 
-WORKDIR /project/perf/intkey_workload
+WORKDIR /project/sdk/examples/xo_rust/
 
-RUN sed -i -e s/version.*$/version\ =\ \"$(../../bin/get_version)\"/ Cargo.toml
+RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
-# -------------=== intkey workload docker build ===-------------
-FROM ubuntu:xenial
+# -------------=== xo rust docker build ===-------------
+FROM ubuntu:bionic
 
-COPY --from=intkey-workload-builder /project/perf/intkey_workload/target/debian/sawtooth-intkey-workload*.deb /tmp
+COPY --from=xo-rust-builder /project/sdk/examples/xo_rust/target/debian/xo_rust_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawtooth-intkey-workload*.deb || true \
+ && dpkg -i /tmp/xo_rust_*.deb || true \
  && apt-get -f -y install

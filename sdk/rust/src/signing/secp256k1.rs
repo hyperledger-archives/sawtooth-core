@@ -261,17 +261,6 @@ mod secp256k1_test {
         "2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088";
     static KEY1_PUB_HEX: &'static str =
         "026a2c795a9776f75464aa3bda3534c3154a6e91b357b1181d3f515110f84b67c5";
-    #[cfg(feature = "pem")]
-    static KEY1_PEM: &'static str =
-        "\
-         -----BEGIN EC PRIVATE KEY-----\n\
-         MIIBEwIBAQQgLx57ehMNe6naAGizuwuh155+dxEDAsn3RsPCpj/kAIiggaUwgaIC\n\
-         AQEwLAYHKoZIzj0BAQIhAP////////////////////////////////////7///wv\n\
-         MAYEAQAEAQcEQQR5vmZ++dy7rFWgYpXOhwsHApv82y3OKNlZ8oFbFvgXmEg62ncm\n\
-         o8RlXaT7/A4RCKj9F7RIpoVUGZxH0I/7ENS4AiEA/////////////////////rqu\n\
-         3OavSKA7v9JejNA2QUECAQGhRANCAARqLHlal3b3VGSqO9o1NMMVSm6Rs1exGB0/\n\
-         UVEQ+EtnxZ4x2Fxo8jS9RXYwXNkR+a8gndHmKtZVnin+ywfDNgxY\n\
-         -----END EC PRIVATE KEY-----";
 
     static KEY2_PRIV_HEX: &'static str =
         "51b845c2cdde22fe646148f0b51eaf5feec8c82ee921d5e0cbe7619f3bb9c62d";
@@ -326,7 +315,6 @@ mod secp256k1_test {
         // Without password
         let priv_key1 = Secp256k1PrivateKey::from_hex(KEY1_PRIV_HEX).unwrap();
         let pem_contents = priv_key1.to_pem().unwrap();
-        assert_eq!(pem_contents.trim(), KEY1_PEM);
 
         let parsed_priv_key = Secp256k1PrivateKey::from_pem(&pem_contents).unwrap();
         let parsed_pub_key = context.get_public_key(&parsed_priv_key).unwrap();

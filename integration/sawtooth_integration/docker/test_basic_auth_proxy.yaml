@@ -97,15 +97,15 @@ services:
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
-  basic_auth_proxy:
+  basic-auth-proxy:
     build:
       context: ../../..
-      dockerfile: ./docker/apache-basic_auth_proxy
+      dockerfile: ./docker/apache-basic-auth-proxy
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: apache-basic_auth_proxy:$ISOLATION_ID
+    image: apache-basic-auth-proxy:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -138,7 +138,7 @@ services:
     depends_on:
       - validator
       - rest-api
-      - basic_auth_proxy
+      - basic-auth-proxy
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v

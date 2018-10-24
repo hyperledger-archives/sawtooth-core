@@ -24,7 +24,7 @@
 #   $ cd sawtooth-core
 #   $ docker run -v $(pwd):/project/sawtooth-core sawtooth-dev-javascript
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 LABEL "install-type"="mounted"
 

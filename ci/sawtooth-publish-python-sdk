@@ -18,7 +18,10 @@
 #   Two variables, $PYPI_USER and $PYPI_PASS, must be passed in at runtime
 #   using Docker's -e option.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 RUN apt-get update \
  && apt-get install -y \

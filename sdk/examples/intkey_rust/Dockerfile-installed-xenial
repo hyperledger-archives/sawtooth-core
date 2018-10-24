@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f families/smallbank/smallbank_rust/Dockerfile-installed -t sawtooth-smallbank-tp-rust .
+# docker build -f sdk/examples/intkey_rust/Dockerfile-installed-xenial -t sawtooth-intkey-tp-rust .
 
-# -------------=== smallbank rust build ===-------------
-FROM ubuntu:xenial as smallbank-rust-builder
+# -------------=== intkey rust build ===-------------
+FROM ubuntu:xenial as intkey-rust-builder
 
 ENV VERSION=AUTO_STRICT
 
@@ -41,16 +41,16 @@ RUN /root/.cargo/bin/cargo install cargo-deb
 
 COPY . /project
 
-WORKDIR /project/families/smallbank/smallbank_rust/
+WORKDIR /project/sdk/examples/intkey_rust/
 
 RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
-# -------------=== smallbank rust docker build ===-------------
+# -------------=== intkey rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=smallbank-rust-builder /project/families/smallbank/smallbank_rust/target/debian/smallbank_rust_*.deb /tmp
+COPY --from=intkey-rust-builder /project/sdk/examples/intkey_rust/target/debian/intkey_rust_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/smallbank_rust_*.deb || true \
+ && dpkg -i /tmp/intkey_rust_*.deb || true \
  && apt-get -f -y install

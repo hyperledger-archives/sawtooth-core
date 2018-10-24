@@ -19,7 +19,7 @@ services:
   settings-tp:
     build:
       context: .
-      dockerfile: families/settings/Dockerfile-installed
+      dockerfile: families/settings/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -33,7 +33,7 @@ services:
   intkey-tp-python:
     build:
       context: .
-      dockerfile: sdk/examples/intkey_python/Dockerfile-installed
+      dockerfile: sdk/examples/intkey_python/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -47,7 +47,7 @@ services:
   xo-tp-python:
     build:
       context: .
-      dockerfile: sdk/examples/xo_python/Dockerfile-installed
+      dockerfile: sdk/examples/xo_python/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -61,7 +61,7 @@ services:
   validator:
     build:
       context: .
-      dockerfile: validator/Dockerfile-installed
+      dockerfile: validator/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -87,7 +87,7 @@ services:
   rest-api:
     build:
       context: .
-      dockerfile: rest_api/Dockerfile-installed
+      dockerfile: rest_api/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -120,7 +120,7 @@ services:
   admin-tools:
     build:
       context: .
-      dockerfile: adm/Dockerfile-installed
+      dockerfile: adm/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -131,7 +131,7 @@ services:
   sawtooth-cli:
     build:
       context: .
-      dockerfile: cli/Dockerfile-installed
+      dockerfile: cli/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -142,7 +142,7 @@ services:
   block-info-tp:
     build:
       context: .
-      dockerfile: families/block_info/Dockerfile-installed
+      dockerfile: families/block_info/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -153,7 +153,7 @@ services:
   identity-tp:
     build:
       context: .
-      dockerfile: families/identity/Dockerfile-installed
+      dockerfile: families/identity/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -164,7 +164,7 @@ services:
   python-sdk:
     build:
       context: .
-      dockerfile: sdk/python/Dockerfile-installed
+      dockerfile: sdk/python/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -175,7 +175,7 @@ services:
   signing:
     build:
       context: .
-      dockerfile: signing/Dockerfile-installed
+      dockerfile: signing/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -208,7 +208,7 @@ services:
   integration:
     build:
       context: .
-      dockerfile: integration/Dockerfile-installed
+      dockerfile: integration/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -219,7 +219,7 @@ services:
   smallbank-workload:
     build:
       context: .
-      dockerfile: perf/smallbank_workload/Dockerfile-installed
+      dockerfile: perf/smallbank_workload/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -230,7 +230,7 @@ services:
   intkey-workload:
     build:
       context: .
-      dockerfile: perf/intkey_workload/Dockerfile-installed
+      dockerfile: perf/intkey_workload/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -241,7 +241,7 @@ services:
   devmode-rust:
     build:
       context: .
-      dockerfile: sdk/examples/devmode_rust/Dockerfile-installed
+      dockerfile: sdk/examples/devmode_rust/Dockerfile-installed-${DISTRO}
       args:
         - http_proxy
         - https_proxy
@@ -252,6 +252,6 @@ services:
   sawtooth-meta:
     build:
       context: .
-      dockerfile: ci/sawtooth-meta
+      dockerfile: ci/sawtooth-meta-${DISTRO}
     image: sawtooth-meta:${ISOLATION_ID}
     container_name: sawtooth-meta

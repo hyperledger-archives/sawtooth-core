@@ -14,7 +14,7 @@
 
 # docker build -f adm/Dockerfile -t sawtooth-adm-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \

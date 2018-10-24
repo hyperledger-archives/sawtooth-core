@@ -16,16 +16,16 @@ version: '3.6'
 
 services:
 
-  apache-basic_auth_proxy:
+  apache-basic-auth-proxy:
     build:
       context: ../
-      dockerfile: ./apache-basic_auth_proxy
+      dockerfile: ./apache-basic-auth-proxy
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: apache-basic_auth_proxy:${ISOLATION_ID}
-    container_name: apache-basic_auth_proxy-default
+    image: apache-basic-auth-proxy:${ISOLATION_ID}
+    container_name: apache-basic-auth-proxy-default
 
   sawtooth-stats-grafana:
     build:

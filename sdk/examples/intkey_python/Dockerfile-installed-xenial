@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/examples/intkey_python/Dockerfile-installed -t sawtooth-intkey-tp-python .
+# docker build -f sdk/examples/intkey_python/Dockerfile-installed-xenial -t sawtooth-intkey-tp-python .
 
 # -------------=== signing build ===-------------
 FROM ubuntu:xenial as sawtooth-signing-builder

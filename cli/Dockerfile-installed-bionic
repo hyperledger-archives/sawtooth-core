@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# docker build -f sdk/python/Dockerfile-installed -t sawtooth-sdk-python .
+# docker build -f cli/Dockerfile-installed-bionic -t sawtooth-cli-builder .
 
 # -------------=== signing build ===-------------
-FROM ubuntu:xenial as sawtooth-signing-builder
+FROM ubuntu:bionic as sawtooth-signing-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-protobuf \
@@ -42,36 +45,41 @@ RUN /project/bin/protogen \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
-# -------------=== python sdk build ===-------------
 
-FROM ubuntu:xenial as sawtooth-sdk-python-builder
+# -------------=== cli build ===-------------
+FROM ubuntu:bionic as cli-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
-    python3-colorlog \
     python3-protobuf \
     python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio \
     python3-toml \
-    python3-yaml \
-    python3-zmq
+    python3-grpcio-tools \
+    python3-grpcio
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 
 COPY . /project
 
-RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
- && cd /project/sdk/python \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+ && apt-get update \
+ && dpkg -i /tmp/python3-sawtooth-*.deb || true \
+ && apt-get -f -y install
+
+RUN /project/bin/protogen \
+ && cd /project/cli \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \
  && python3 setup.py --command-packages=stdeb.command debianize \
@@ -79,13 +87,16 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
 
-# -------------=== python sdk docker build ===-------------
-FROM ubuntu:xenial
+# -------------=== cli docker build ===-------------
+FROM ubuntu:bionic
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
+COPY --from=cli-builder /project/python3-sawtooth-cli*.deb /tmp
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \

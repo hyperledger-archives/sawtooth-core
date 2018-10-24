@@ -14,7 +14,7 @@
 
 # docker build -f sdk/examples/xo_rust/Dockerfile -t sawtooth-xo-tp-rust-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \

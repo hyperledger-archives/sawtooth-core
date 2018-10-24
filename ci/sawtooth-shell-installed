@@ -16,15 +16,18 @@
 
 # -------------=== signing build ===-------------
 
-FROM ubuntu:xenial as sawtooth-signing-builder
+FROM ubuntu:bionic as sawtooth-signing-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-protobuf \
@@ -46,15 +49,18 @@ RUN /project/bin/protogen \
 
 # -------------=== python sdk build ===-------------
 
-FROM ubuntu:xenial as sawtooth-sdk-python-builder
+FROM ubuntu:bionic as sawtooth-sdk-python-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-colorlog \
@@ -82,15 +88,18 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
 
 # -------------=== python xo tp build ===-------------
 
-FROM ubuntu:xenial as python-xo-tp-builder
+FROM ubuntu:bionic as python-xo-tp-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-cbor \
@@ -118,15 +127,18 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
 
 # -------------=== settings build ===-------------
 
-FROM ubuntu:xenial as sawtooth-settings-builder
+FROM ubuntu:bionic as sawtooth-settings-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-colorlog \
@@ -153,15 +165,18 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
 
 # -------------=== python intkey tp build ===-------------
 
-FROM ubuntu:xenial as python-intkey-tp-builder
+FROM ubuntu:bionic as python-intkey-tp-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-cbor \
@@ -188,15 +203,18 @@ RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
 
 
 # -------------=== validator build ===-------------
-FROM ubuntu:xenial as sawtooth-validator-builder
+FROM ubuntu:bionic as sawtooth-validator-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     libssl-dev \
     openssl \
@@ -248,15 +266,18 @@ RUN dpkg -i /tmp/python3-sawtooth-signing*.deb || true \
 
 
 # -------------=== cli build ===-------------
-FROM ubuntu:xenial as cli-builder
+FROM ubuntu:bionic as cli-builder
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
- && apt-get install -y -q --allow-downgrades \
+ && apt-get install -y -q \
     git \
     python3 \
     python3-protobuf \
@@ -269,7 +290,7 @@ COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 
 COPY . /project
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
@@ -286,7 +307,10 @@ RUN /project/bin/protogen \
 
 
 # -------------=== sawtooth shell docker build ===-------------
-FROM ubuntu:xenial
+FROM ubuntu:bionic
+
+RUN apt-get update \
+ && apt-get install gnupg -y
 
 COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
@@ -295,7 +319,7 @@ COPY --from=cli-builder /project/python3-sawtooth-cli* /tmp
 COPY --from=python-intkey-tp-builder /project/sdk/examples/python3-sawtooth-intkey*.deb /tmp
 COPY --from=python-xo-tp-builder /project/sdk/examples/python3-sawtooth-xo*.deb /tmp
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
  && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \

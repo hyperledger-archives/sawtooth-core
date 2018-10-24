@@ -42,12 +42,14 @@ apt-get install -y -q \
     python3-appdirs \
     python3-cbor \
     python3-cffi \
-    python3-cffi \
     python3-colorlog \
+    python3-cryptography \
+    python3-cryptography-vectors \
     python3-flake8 \
     python3-hypothesis \
     python3-idna \
     python3-iso8601 \
+    python3-mock \
     python3-lmdb \
     python3-pip \
     python3-pkgconfig \
@@ -57,6 +59,7 @@ apt-get install -y -q \
     python3-pycparser \
     python3-pytest \
     python3-setuptools \
+    python3-six \
     python3-stdeb \
     python3-toml \
     python3-yaml \
