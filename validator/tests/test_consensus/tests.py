@@ -428,7 +428,7 @@ class MockBlockManager:
 
 
 class MockConsensusRegistry(Mock):
-    def get_engine_info(self):
+    def get_active_engine_info(self):
         return EngineInfo('mock-id', 'mock-name', 'mock-version')
 
 

@@ -226,7 +226,7 @@ class ConsensusProxy:
         return blocks
 
     def _wrap_consensus_message(self, content, message_type, connection_id):
-        _, name, version = self._consensus_registry.get_engine_info()
+        _, name, version = self._consensus_registry.get_active_engine_info()
         header = ConsensusPeerMessageHeader(
             signer_id=self._public_key,
             content_sha512=hashlib.sha512(content).digest(),
