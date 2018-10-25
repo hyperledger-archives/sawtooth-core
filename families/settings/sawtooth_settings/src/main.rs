@@ -21,7 +21,6 @@ extern crate cfg_if;
 cfg_if! {
      if #[cfg(target_arch = "wasm32")] {
         extern crate sabre_sdk;
-        pub mod protos;
      } else {
         #[macro_use]
         extern crate clap;

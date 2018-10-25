@@ -22,7 +22,7 @@ cfg_if! {
          use sabre_sdk::TransactionHandler;
          use sabre_sdk::TpProcessRequest;
          use sabre_sdk::{WasmPtr, execute_entrypoint};
-         use setting::{ Setting,
+         use protos::setting::{ Setting,
                         Setting_Entry};
      } else {
          use sawtooth_sdk::messages::processor::TpProcessRequest;

@@ -30,7 +30,10 @@ fn main() {
     let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
 
-    let proto_src_files = glob_simple("../protos/*.proto");
+    let mut proto_src_files = glob_simple("../protos/*.proto");
+    let main_proto_src_files = glob_simple("../../../protos/*.proto");
+    proto_src_files.extend(main_proto_src_files);
+
     println!("{:?}", proto_src_files);
 
     fs::create_dir_all(&dest_path).expect("Unable to create protobuf out dir");
@@ -61,7 +64,7 @@ fn main() {
             .iter()
             .map(|a| a.as_ref())
             .collect::<Vec<&str>>(),
-        includes: &["../protos"],
+        includes: &["../protos", "../../../protos"],
         customize: Customize {
             ..Default::default()
         },
