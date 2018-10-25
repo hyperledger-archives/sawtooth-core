@@ -40,6 +40,13 @@ class _NotifierService:
                 active_engine.connection_id
             ).result()
 
+    def notify_id(self, message_type, message, connection_id):
+        self._service.send(
+            message_type,
+            bytes(message),
+            connection_id
+        ).result()
+
 
 class ErrorCode(IntEnum):
     Success = CommonErrorCode.Success

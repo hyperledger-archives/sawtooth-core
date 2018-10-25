@@ -53,6 +53,13 @@ pub trait NotifierService: Sync + Send {
         message_type: MessageType,
         message: T,
     ) -> Result<(), NotifierServiceError>;
+
+    fn notify_id<T: Message>(
+        &self,
+        message_type: MessageType,
+        message: T,
+        connection_id: String,
+    ) -> Result<(), NotifierServiceError>;
 }
 
 impl<T: NotifierService> ConsensusNotifier for T {

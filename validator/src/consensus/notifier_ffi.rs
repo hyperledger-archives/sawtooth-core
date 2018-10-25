@@ -64,6 +64,32 @@ impl NotifierService for PyNotifierService {
                 NotifierServiceError("FFI error notifying consensus".into())
             })
     }
+
+    fn notify_id<T: Message>(
+        &self,
+        message_type: MessageType,
+        message: T,
+        connection_id: String,
+    ) -> Result<(), NotifierServiceError> {
+        let payload = message
+            .write_to_bytes()
+            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_notifier_service
+            .call_method(
+                py,
+                "notify_id",
+                (message_type.value(), payload, connection_id),
+                None,
+            ).map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(py, "Unable to notify consensus", py_err);
+                NotifierServiceError("FFI error notifying consensus".into())
+            })
+    }
 }
 
 impl Clone for PyNotifierService {
