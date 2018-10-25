@@ -32,13 +32,13 @@ class _NotifierService:
         self._consensus_registry = consensus_registry
 
     def notify(self, message_type, message):
-        if self._consensus_registry:
-            message_bytes = bytes(message)
-            futures = self._service.send_all(
+        active_engine = self._consensus_registry.get_active_engine_info()
+        if active_engine is not None:
+            self._service.send(
                 message_type,
-                message_bytes)
-            for future in futures:
-                future.result()
+                bytes(message),
+                active_engine.connection_id
+            ).result()
 
 
 class ErrorCode(IntEnum):
