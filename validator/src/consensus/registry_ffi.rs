@@ -63,6 +63,36 @@ impl ConsensusRegistry for PyConsensusRegistry {
             })
     }
 
+    fn get_active_engine_info(&self) -> Result<Option<EngineInfo>, ConsensusRegistryError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let res = self
+            .py_consensus_registry
+            .call_method(py, "get_active_engine_info", NoArgs, None)
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call consensus_registry.get_active_engine_info",
+                    py_err,
+                );
+                ConsensusRegistryError(
+                    "FFI error calling consensus_registry.get_active_engine_info".into(),
+                )
+            })?;
+
+        res.extract::<(String, String, String)>(py)
+            .map(|tuple| {
+                Some(EngineInfo {
+                    connection_id: tuple.0,
+                    name: tuple.1,
+                    version: tuple.2,
+                })
+            })
+            // get_active_engine_info returns None if no engine is active
+            .or(Ok(None))
+    }
+
     fn is_active_engine_name_version(
         &self,
         name: &str,
