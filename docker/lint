@@ -91,7 +91,7 @@ RUN curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/proto
 
 RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
  && chmod +x /usr/bin/rustup-init \
- && rustup-init -y
+ && rustup-init -y --default-toolchain stable-2018-09-13
 
 ENV PATH=$PATH:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin \
     CARGO_INCREMENTAL=0
