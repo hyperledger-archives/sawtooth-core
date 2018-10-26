@@ -102,6 +102,10 @@ class BlockCache(MutableMapping):
         with self._lock:
             return iter(self._cache)
 
+    def block_iter(self):
+        with self._lock:
+            return map(lambda v: v.value, iter(self._cache.values()))
+
     def __len__(self):
         with self._lock:
             return len(self._cache)
