@@ -430,8 +430,7 @@ mod tests {
         ) => {
             let mut response = $rep;
             response.set_status($status);
-            let (_, _): (_, $req_type) =
-                recv_rep($socket, $req_msg_type, response, $rep_msg_type);
+            let (_, _): (_, $req_type) = recv_rep($socket, $req_msg_type, response, $rep_msg_type);
         };
     }
 
