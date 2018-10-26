@@ -21,6 +21,9 @@ from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
 from sawtooth_validator.ffi import OwnedPointer
+from sawtooth_validator import ffi
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 
 class ChainObserver(metaclass=ABCMeta):
@@ -33,6 +36,12 @@ class ChainObserver(metaclass=ABCMeta):
             receipts (dict of {str: receipt}): Map of transaction signatures to
                 transaction receipts for all transactions in the block."""
         raise NotImplementedError()
+
+
+class _BlockPayload(ctypes.Structure):
+    _fields_ = [('block_ptr', ctypes.POINTER(ctypes.c_uint8)),
+                ('block_len', ctypes.c_size_t),
+                ('block_cap', ctypes.c_size_t)]
 
 
 class ChainController(OwnedPointer):
@@ -90,6 +99,44 @@ class ChainController(OwnedPointer):
     def fail_block(self, block):
         _pylibexec('chain_controller_fail_block', self.pointer,
                    ctypes.py_object(block))
+
+    def forks(self, head):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result(
+            pointer_type=_BlockPayload)
+
+        head = ctypes.c_char_p(head.encode())
+
+        _libexec(
+            'chain_controller_forks',
+            self.pointer,
+            head,
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        # Check if NULL
+        if not vec_ptr:
+            return None
+
+        blocks = []
+        for i in range(vec_len.value):
+            block_payload = vec_ptr[i]
+            payload = ffi.from_rust_vec(
+                block_payload.block_ptr,
+                ctypes.c_size_t(block_payload.block_len),
+                ctypes.c_size_t(block_payload.block_cap),
+            )
+            block = Block()
+            block.ParseFromString(payload)
+            blocks.append(BlockWrapper(block))
+
+        LIBRARY.call(
+            "chain_controller_reclaim_block_payload_vec",
+            vec_ptr,
+            vec_len,
+            vec_cap)
+
+        return blocks
 
     def commit_block(self, block):
         _pylibexec('chain_controller_commit_block', self.pointer,

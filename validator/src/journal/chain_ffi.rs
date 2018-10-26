@@ -17,6 +17,7 @@
 use cpython;
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
+use ffi::PyIteratorWrapper;
 use journal::block_validator::{BlockValidator, ValidationError};
 use journal::block_wrapper::BlockWrapper;
 use journal::chain::*;
@@ -25,12 +26,14 @@ use py_ffi;
 use pylogger;
 use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
+use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::sync::mpsc::Sender;
 use std::thread;
 
 use protobuf::Message;
 
+use proto::block::Block;
 use proto::transaction_receipt::TransactionReceipt;
 
 #[repr(u32)]
@@ -225,6 +228,71 @@ macro_rules! chain_controller_block_ffi {
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &mut block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct BlockPayload {
+    block_bytes: *const u8,
+    block_cap: usize,
+    block_len: usize,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chain_controller_reclaim_block_payload_vec(
+    vec_ptr: *mut BlockPayload,
+    vec_len: usize,
+    vec_cap: usize,
+) -> isize {
+    Vec::from_raw_parts(vec_ptr, vec_len, vec_cap);
+
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chain_controller_forks(
+    chain_controller: *mut c_void,
+    head: *const c_char,
+    forks: *mut *const BlockPayload,
+    forks_len: *mut usize,
+    forks_cap: *mut usize,
+) -> ErrorCode {
+    check_null!(chain_controller, head);
+
+    let head = match CStr::from_ptr(head).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidBlockId,
+    };
+
+    let block_wrappers =
+        (*(chain_controller as *mut ChainController<PyBlockCache, PyBlockValidator>)).forks();
+
+    let payloads: Vec<BlockPayload> = block_wrappers
+        .into_iter()
+        .map(|block_wrapper| {
+            let proto_block: Block = block_wrapper.block().into();
+            let bytes = proto_block
+                .write_to_bytes()
+                .expect("Failed to serialize proto Block");
+
+            let payload = BlockPayload {
+                block_cap: bytes.capacity(),
+                block_len: bytes.len(),
+                block_bytes: bytes.as_slice().as_ptr(),
+            };
+
+            mem::forget(bytes);
+
+            payload
+        }).collect();
+
+    *forks_cap = payloads.capacity();
+    *forks_len = payloads.len();
+    *forks = payloads.as_slice().as_ptr();
+
+    mem::forget(payloads);
+
+    ErrorCode::Success
+}
 
 #[no_mangle]
 pub extern "C" fn chain_controller_queue_block(
@@ -476,6 +544,22 @@ impl BlockCache for PyBlockCache {
                 None
             }
             Ok(res) => Some(res.extract(py).expect("Unable to extract block")),
+        }
+    }
+
+    fn iter(&self) -> Box<Iterator<Item = BlockWrapper>> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        match self
+            .py_block_cache
+            .call_method(py, "block_iter", cpython::NoArgs, None)
+        {
+            Err(py_err) => {
+                pylogger::exception(py, "Unable to call __iter__ on BlockCache", py_err);
+                Box::new(Vec::new().into_iter())
+            }
+            Ok(py_iter) => Box::new(PyIteratorWrapper::new(py_iter)),
         }
     }
 }
