@@ -16,7 +16,6 @@
  */
 
 use std::ffi::CStr;
-use std::marker::PhantomData;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
@@ -25,6 +24,7 @@ use py_ffi;
 use pylogger;
 
 use block::Block;
+use ffi::PyIteratorWrapper;
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
@@ -381,54 +381,6 @@ fn unwrap_block(py: Python, block_wrapper: PyObject) -> PyObject {
     block_wrapper
         .getattr(py, "block")
         .expect("Unable to get block from block wrapper")
-}
-
-struct PyIteratorWrapper<T> {
-    py_iter: PyObject,
-    target_type: PhantomData<T>,
-    xform: Box<Fn(Python, PyObject) -> PyObject>,
-}
-
-impl<T> PyIteratorWrapper<T>
-where
-    for<'source> T: FromPyObject<'source>,
-{
-    fn new(py_iter: PyObject) -> Self {
-        PyIteratorWrapper::with_xform(py_iter, Box::new(|_, obj| obj))
-    }
-
-    fn with_xform(py_iter: PyObject, xform: Box<Fn(Python, PyObject) -> PyObject>) -> Self {
-        PyIteratorWrapper {
-            py_iter,
-            target_type: PhantomData,
-            xform,
-        }
-    }
-}
-
-impl<T> Iterator for PyIteratorWrapper<T>
-where
-    for<'source> T: FromPyObject<'source>,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-        match self.py_iter.call_method(py, "__next__", NoArgs, None) {
-            Ok(py_obj) => Some(
-                (*self.xform)(py, py_obj)
-                    .extract(py)
-                    .expect("Unable to convert py obj"),
-            ),
-            Err(py_err) => {
-                if py_err.get_type(py).name(py) != "StopIteration" {
-                    pylogger::exception(py, "Unable to iterate; aborting", py_err);
-                }
-                None
-            }
-        }
-    }
 }
 
 #[cfg(test)]
