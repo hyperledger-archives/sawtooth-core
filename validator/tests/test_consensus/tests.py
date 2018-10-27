@@ -54,28 +54,29 @@ class TestHandlers(unittest.TestCase):
         handler = handlers.ConsensusSendToHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        request.peer_id = b"test"
-        request.message.message_type = "test"
-        request.message.content = b"test"
+        request.receiver_id = b"test"
+        request.message_type = "test"
+        request.content = b"test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.send_to.assert_called_with(
-            request.peer_id,
-            request.message.SerializeToString(),
+            request.receiver_id,
+            request.message_type,
+            request.content,
             None)
 
     def test_consensus_broadcast_handler(self):
         handler = handlers.ConsensusBroadcastHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        request.message.message_type = "test"
-        request.message.content = b"test"
+        request.message_type = "test"
+        request.content = b"test"
         result = handler.handle(None, request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.broadcast.assert_called_with(
-            request.message.SerializeToString(), None)
+            request.message_type, request.content, None)
 
     def test_consensus_initialize_block_handler(self):
         handler = handlers.ConsensusInitializeBlockHandler(self.mock_proxy)
@@ -252,10 +253,16 @@ class TestProxy(unittest.TestCase):
 
     def test_send_to(self):
         self._proxy.send_to(
-            peer_id=b'peer_id', message=b'message', connection_id=b'')
+            peer_id=b'peer_id',
+            content=b'message',
+            message_type='message_type',
+            connection_id=b'')
 
     def test_broadcast(self):
-        self._proxy.broadcast(message=b'message', connection_id=b'')
+        self._proxy.broadcast(
+            content=b'message',
+            message_type='message_type',
+            connection_id=b'')
 
     # Using block publisher
     def test_initialize_block(self):

@@ -17,37 +17,31 @@ syntax = "proto3";
 
 // --== Data Structures ==--
 
-// A consensus-related message sent between peers
-message ConsensusPeerMessage {
-  // Interpretation is left to the consensus engine implementation
-  string message_type = 1;
-
-  // The opaque payload to send to other nodes
-  bytes content = 2;
-}
-
 message ConsensusPeerMessageHeader {
   // Public key for the component internal to the validator that
   // signed the message
-  bytes signer_public_key = 1;
+  bytes signer_id = 1;
 
   // The sha512 hash of the encoded message
-  bytes message_sha512 = 2;
+  bytes content_sha512 = 2;
+  // Interpretation is left to the consensus engine implementation
+  string message_type = 5;
 
   // Used to identify the consensus engine that produced this message
   string name = 3;
   string version = 4;
 }
 
-message ConsensusPeerMessageEnvelope {
+// A consensus-related message sent between peers
+message ConsensusPeerMessage {
   // The serialized version of the ConsensusPeerMessageHeader
   bytes header = 1;
 
   // The signature derived from signing the header
   bytes header_signature = 3;
 
-  // The serialized version of the ConsensusPeerMessage
-  bytes message = 2;
+  // The opaque payload to send to other nodes
+  bytes content = 2;
 }
 
 // All information about a block that is relevant to consensus
@@ -127,7 +121,9 @@ message ConsensusNotifyPeerDisconnected {
 
 // A new message was received from a peer
 message ConsensusNotifyPeerMessage {
+  // The message sent
   ConsensusPeerMessage message = 1;
+  // The node that sent the message, not necessarily the node that created it
   bytes sender_id = 2;
 }
 
@@ -188,8 +184,17 @@ message ConsensusNotifyAck {}
 
 // Send a consensus message to a specific, connected peer
 message ConsensusSendToRequest {
-  ConsensusPeerMessage message = 1;
-  bytes peer_id = 2;
+  // Payload to send to peer
+  //
+  // NOTE: This payload will be wrapped up in a ConsensusPeerMessage struct,
+  // which includes computing its SHA-512 digest, inserting this engine's
+  // registration info, and the validator's public key, and signing everything
+  // with the validator's private key.
+  bytes content = 1;
+  string message_type = 3;
+
+  // Peer that this message is destined for
+  bytes receiver_id = 2;
 }
 
 message ConsensusSendToResponse {
@@ -207,7 +212,14 @@ message ConsensusSendToResponse {
 
 // Broadcast a consensus message to all peers
 message ConsensusBroadcastRequest {
-  ConsensusPeerMessage message = 1;
+  // Payload to broadcast peers
+  //
+  // NOTE: This payload will be wrapped up in a ConsensusPeerMessage struct,
+  // which includes computing its SHA-512 digest, inserting this engine's
+  // registration info, and the validator's public key, and signing everything
+  // with the validator's private key.
+  bytes content = 1;
+  string message_type = 2;
 }
 
 message ConsensusBroadcastResponse {

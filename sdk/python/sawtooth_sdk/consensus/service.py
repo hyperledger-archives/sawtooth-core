@@ -33,11 +33,11 @@ class Service(metaclass=abc.ABCMeta):
     # -- P2P --
 
     @abc.abstractmethod
-    def send_to(self, peer_id, message_type, payload):
+    def send_to(self, receiver_id, message_type, payload):
         '''Send a consensus message to a specific connected peer.
 
         Args:
-            peer_id (bytes)
+            receiver_id (bytes)
             message_type (str)
             payload (bytes)
         '''

@@ -258,8 +258,11 @@ fn handle_update(
         CONSENSUS_NOTIFY_PEER_MESSAGE => {
             let mut request: ConsensusNotifyPeerMessage =
                 protobuf::parse_from_bytes(msg.get_content())?;
+            let mut header: ConsensusPeerMessageHeader =
+                protobuf::parse_from_bytes(request.get_message().get_header())?;
+            let mut message = request.take_message();
             Update::PeerMessage(
-                request.take_message().into(),
+                from_consensus_peer_message(message, header),
                 request.take_sender_id().into(),
             )
         }
@@ -321,12 +324,21 @@ impl From<ConsensusPeerInfo> for PeerInfo {
     }
 }
 
-impl From<ConsensusPeerMessage> for PeerMessage {
-    fn from(mut c_msg: ConsensusPeerMessage) -> PeerMessage {
-        PeerMessage {
-            message_type: c_msg.take_message_type(),
-            content: c_msg.take_content(),
-        }
+fn from_consensus_peer_message(
+    mut c_msg: ConsensusPeerMessage,
+    mut c_msg_header: ConsensusPeerMessageHeader,
+) -> PeerMessage {
+    PeerMessage {
+        header: PeerMessageHeader {
+            signer_id: c_msg_header.take_signer_id(),
+            content_sha512: c_msg_header.take_content_sha512(),
+            message_type: c_msg_header.take_message_type(),
+            name: c_msg_header.take_name(),
+            version: c_msg_header.take_version(),
+        },
+        header_bytes: c_msg.take_header(),
+        header_signature: c_msg.take_header_signature(),
+        content: c_msg.take_content(),
     }
 }
 
