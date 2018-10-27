@@ -95,13 +95,10 @@ impl Service for ZmqService {
         message_type: &str,
         payload: Vec<u8>,
     ) -> Result<(), Error> {
-        let mut message = ConsensusPeerMessage::new();
-        message.set_message_type(message_type.into());
-        message.set_content(payload);
-
         let mut request = ConsensusSendToRequest::new();
-        request.set_message(message);
-        request.set_peer_id((*peer).clone().into());
+        request.set_content(payload);
+        request.set_message_type(message_type.into());
+        request.set_receiver_id((*peer).clone().into());
 
         let response: ConsensusSendToResponse = self.rpc(
             &request,
@@ -113,12 +110,9 @@ impl Service for ZmqService {
     }
 
     fn broadcast(&mut self, message_type: &str, payload: Vec<u8>) -> Result<(), Error> {
-        let mut message = ConsensusPeerMessage::new();
-        message.set_message_type(message_type.into());
-        message.set_content(payload);
-
         let mut request = ConsensusBroadcastRequest::new();
-        request.set_message(message);
+        request.set_content(payload);
+        request.set_message_type(message_type.into());
 
         let response: ConsensusBroadcastResponse = self.rpc(
             &request,
