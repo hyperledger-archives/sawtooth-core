@@ -310,7 +310,7 @@ impl<'a> TransactionProcessor<'a> {
                                     }
                                 };
                                 match sender.reply(
-                                    Message_MessageType::TP_PROCESS_RESPONSE,
+                                    Message_MessageType::PING_RESPONSE,
                                     message.get_correlation_id(),
                                     &serialized,
                                 ) {
