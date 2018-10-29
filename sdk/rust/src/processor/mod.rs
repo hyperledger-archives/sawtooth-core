@@ -281,11 +281,10 @@ impl<'a> TransactionProcessor<'a> {
                                     }
                                 };
 
-                                let x: &[u8] = &serialized;
                                 match sender.reply(
                                     Message_MessageType::TP_PROCESS_RESPONSE,
                                     message.get_correlation_id(),
-                                    x,
+                                    &serialized,
                                 ) {
                                     Ok(_) => (),
                                     Err(SendError::DisconnectedError) => {
@@ -310,11 +309,10 @@ impl<'a> TransactionProcessor<'a> {
                                         continue;
                                     }
                                 };
-                                let x: &[u8] = &serialized;
                                 match sender.reply(
                                     Message_MessageType::TP_PROCESS_RESPONSE,
                                     message.get_correlation_id(),
-                                    x,
+                                    &serialized,
                                 ) {
                                     Ok(_) => (),
                                     Err(SendError::DisconnectedError) => {
