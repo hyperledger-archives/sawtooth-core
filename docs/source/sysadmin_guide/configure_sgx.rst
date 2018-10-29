@@ -549,7 +549,7 @@ You can follow the logs by running:
     -u sawtooth-poet-engine \
     -u sawtooth-rest-api \
     -u sawtooth-intkey-tp-python \
-    -u sawtooth-identity-tp.service
+    -u sawtooth-identity-tp
 
 Additional logging output can be found in ``/var/log/sawtooth/``.
 For more information, see :doc:`log_configuration`.
