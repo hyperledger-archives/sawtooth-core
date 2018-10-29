@@ -39,9 +39,9 @@ Use these commands to start each Sawtooth component as a service:
     $ sudo systemctl start sawtooth-poet-engine.service
 
 This command starts the required transaction processors:
-PoET Validator Registry (`sawtooth-poet-validator-registry-tp`),
-Settings (`sawtooth-settings-tp.service), and
-Identity (`sawtooth-identity-tp.service`).  It also starts the IntegerKey
+PoET Validator Registry (``sawtooth-poet-validator-registry-tp``),
+Settings (``sawtooth-settings-tp``), and
+Identity (``sawtooth-identity-tp``).  It also starts the IntegerKey
 transaction processor (``sawtooth-intkey-tp-python``), which is used in a
 later procedure to test basic Sawtooth functionality.
 
@@ -73,10 +73,10 @@ Use the following command to view the log output.
     -u sawtooth-validator \
     -u sawtooth-settings-tp \
     -u sawtooth-poet-validator-registry-tp \
+    -u sawtooth-poet-engine \
     -u sawtooth-rest-api \
     -u sawtooth-intkey-tp-python \
-    -u sawtooth-identity-tp.service \
-    -u sawtooth-poet-engine.service
+    -u sawtooth-identity-tp
 
 This command shows the output that would have been displayed on the console
 if you ran the components manually.
