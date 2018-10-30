@@ -14,7 +14,7 @@ For general Hyperledger Sawtooth discussions:
 
 For Hyperledger Sawtooth Consensus discussions:
 
-  `#sawtooth-consensus <https://chat.hyperledger.org/channel/sawtooth-consensus>`_
+  `#sawtooth-consensus-dev <https://chat.hyperledger.org/channel/sawtooth-consensus-dev>`_
 
 
 Mailing Lists
