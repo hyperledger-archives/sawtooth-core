@@ -127,7 +127,7 @@ class Service(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_blocks(self, block_ids):
-        '''Retrive consensus-related information about blocks.
+        '''Retrieve consensus-related information about blocks.
 
         Args:
             block_ids (list[bytes])
