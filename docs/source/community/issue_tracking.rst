@@ -16,7 +16,10 @@ Hyperledger Sawtooth uses JIRA as our issue tracking system:
 https://jira.hyperledger.org/projects/STL
 
 If you want to contribute to Hyperledger Sawtooth quickly, we have a list of
-issues that will help you get involved right away. See the open Sawtooth issues:
+issues that will help you get involved right away. Log into
+`jira.hyperledger.org <https://jira.hyperledger.org>`_ (requires a
+`Linux Foundation Account <https://identity.linuxfoundation.org/>`_)
+and see the Sawtooth "help-wanted" list:
 
 https://jira.hyperledger.org/issues/?filter=10612
 
