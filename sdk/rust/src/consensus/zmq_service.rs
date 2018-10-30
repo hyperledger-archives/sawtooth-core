@@ -302,6 +302,13 @@ impl Service for ZmqService {
             .collect())
     }
 
+    fn get_block_by_id(&mut self, block_id: BlockId) -> Result<Block, Error> {
+        self.get_blocks(vec![block_id.clone()])?
+            .get(&block_id)
+            .map(|b| b.clone())
+            .ok_or_else(|| Error::UnknownBlock("Block not found".into()))
+    }
+
     fn get_chain_head(&mut self) -> Result<Block, Error> {
         let request = ConsensusChainHeadGetRequest::new();
 

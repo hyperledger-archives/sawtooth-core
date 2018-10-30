@@ -66,6 +66,9 @@ pub trait Service {
     /// Retrieve consensus-related information about blocks
     fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<HashMap<BlockId, Block>, Error>;
 
+    /// Retrieve consensus-related information about a particular block
+    fn get_block_by_id(&mut self, block_id: BlockId) -> Result<Block, Error>;
+
     /// Get the chain head block.
     fn get_chain_head(&mut self) -> Result<Block, Error>;
 
@@ -131,6 +134,9 @@ pub mod tests {
             &mut self,
             _block_ids: Vec<BlockId>,
         ) -> Result<HashMap<BlockId, Block>, Error> {
+            Ok(Default::default())
+        }
+        fn get_block_by_id(&mut self, _block_id: BlockId) -> Result<Block, Error> {
             Ok(Default::default())
         }
         fn get_chain_head(&mut self) -> Result<Block, Error> {
