@@ -83,9 +83,9 @@ impl ZmqDriver {
         let driver_thread = thread::spawn(move || {
             driver_loop(
                 update_sender,
-                self.stop_receiver,
+                &self.stop_receiver,
                 validator_sender,
-                validator_receiver,
+                &validator_receiver,
             )
         });
 
@@ -96,7 +96,7 @@ impl ZmqDriver {
                 Duration::from_secs(SERVICE_TIMEOUT),
             )),
             startup_state,
-        );
+        )?;
 
         driver_thread.join().expect("Driver panicked")
     }
@@ -118,14 +118,14 @@ impl Stop {
 
 fn driver_loop(
     mut update_sender: Sender<Update>,
-    stop_receiver: Receiver<()>,
+    stop_receiver: &Receiver<()>,
     mut validator_sender: ZmqMessageSender,
-    validator_receiver: Receiver<Result<Message, ReceiveError>>,
+    validator_receiver: &Receiver<Result<Message, ReceiveError>>,
 ) -> Result<(), Error> {
     loop {
         match validator_receiver.recv_timeout(Duration::from_millis(100)) {
             Err(RecvTimeoutError::Timeout) => {
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
@@ -143,7 +143,7 @@ fn driver_loop(
                 if let Err(err) = handle_update(&msg, &mut validator_sender, &mut update_sender) {
                     break Err(err);
                 }
-                if let Ok(_) = stop_receiver.try_recv() {
+                if stop_receiver.try_recv().is_ok() {
                     update_sender.send(Update::Shutdown)?;
                     break Ok(());
                 }
@@ -199,7 +199,7 @@ pub fn register(
                     ConsensusRegisterResponse_Status::NOT_READY => {
                         thread::sleep(retry_delay);
                         if retry_delay < MAX_RETRY_DELAY {
-                            retry_delay = retry_delay * 2;
+                            retry_delay *= 2;
                             if retry_delay > MAX_RETRY_DELAY {
                                 retry_delay = MAX_RETRY_DELAY;
                             }
@@ -337,7 +337,7 @@ impl From<ProtobufError> for Error {
             IoError(err) => Error::EncodingError(format!("{}", err)),
             WireError(err) => Error::EncodingError(format!("{:?}", err)),
             Utf8(err) => Error::EncodingError(format!("{}", err)),
-            MessageNotInitialized { message: err } => Error::EncodingError(format!("{}", err)),
+            MessageNotInitialized { message: err } => Error::EncodingError(err.to_string()),
         }
     }
 }

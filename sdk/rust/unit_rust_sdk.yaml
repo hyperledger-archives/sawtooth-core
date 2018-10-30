@@ -29,4 +29,5 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/rust
-    command: cargo test
+    # Test that the SDK compiles with default features both enabled and disabled
+    command: bash -c "cargo test && cargo test --no-default-features"

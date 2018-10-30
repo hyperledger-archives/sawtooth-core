@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-#[cfg(feature = "pem")]
-mod pem_loader;
 pub mod secp256k1;
 
 use std;
@@ -156,7 +154,7 @@ impl<'a> CryptoFactory<'a> {
     ///
     /// * `context` - a cryptographic context
     pub fn new(context: &'a Context) -> Self {
-        CryptoFactory { context: context }
+        CryptoFactory { context }
     }
 
     /// Returns the context associated with this factory
@@ -196,10 +194,7 @@ impl<'a> Signer<'a> {
     /// * `context` - a cryptographic context
     /// * `private_key` - private key
     pub fn new(context: &'a Context, key: &'a PrivateKey) -> Self {
-        Signer {
-            context: context,
-            key: key,
-        }
+        Signer { context, key }
     }
 
     /// Signs the given message.

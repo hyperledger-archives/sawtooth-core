@@ -17,7 +17,6 @@
 
 extern crate cbor;
 extern crate cpython;
-extern crate crypto;
 extern crate hex;
 extern crate libc;
 extern crate lmdb_zero;
@@ -27,12 +26,14 @@ extern crate python3_sys as py_ffi;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+extern crate openssl;
 #[cfg(test)]
 extern crate rand;
 
 // exported modules
 pub mod database;
 pub mod execution;
+pub mod hashlib;
 pub mod journal;
 mod metrics;
 pub mod proto;

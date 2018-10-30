@@ -27,13 +27,23 @@ use sawtooth_sdk::consensus::{engine::*, service::Service};
 
 const DEFAULT_WAIT_TIME: u64 = 0;
 
+#[derive(Default)]
+struct LogGuard {
+    not_ready_to_summarize: bool,
+    not_ready_to_finalize: bool,
+}
+
 pub struct DevmodeService {
     service: Box<Service>,
+    log_guard: LogGuard,
 }
 
 impl DevmodeService {
     pub fn new(service: Box<Service>) -> Self {
-        DevmodeService { service }
+        DevmodeService {
+            service,
+            log_guard: LogGuard::default(),
+        }
     }
 
     fn get_chain_head(&mut self) -> Block {
@@ -43,12 +53,12 @@ impl DevmodeService {
             .expect("Failed to get chain head")
     }
 
-    fn get_block(&mut self, block_id: BlockId) -> Block {
-        debug!("Getting block {:?}", block_id);
+    fn get_block(&mut self, block_id: &BlockId) -> Block {
+        debug!("Getting block {:?}", &block_id);
         self.service
             .get_blocks(vec![block_id.clone()])
             .expect("Failed to get block")
-            .remove(&block_id)
+            .remove(block_id)
             .unwrap()
     }
 
@@ -63,18 +73,26 @@ impl DevmodeService {
         debug!("Finalizing block");
         let mut summary = self.service.summarize_block();
         while let Err(Error::BlockNotReady) = summary {
-            warn!("Block not ready to summarize");
+            if !self.log_guard.not_ready_to_summarize {
+                self.log_guard.not_ready_to_summarize = true;
+                warn!("Block not ready to summarize");
+            }
             sleep(time::Duration::from_secs(1));
             summary = self.service.summarize_block();
         }
+        self.log_guard.not_ready_to_summarize = false;
 
         let consensus: Vec<u8> = create_consensus(&summary.expect("Failed to summarize block"));
         let mut block_id = self.service.finalize_block(consensus.clone());
         while let Err(Error::BlockNotReady) = block_id {
-            warn!("Block not ready to finalize");
+            if !self.log_guard.not_ready_to_finalize {
+                self.log_guard.not_ready_to_finalize = true;
+                warn!("Block not ready to finalize");
+            }
             sleep(time::Duration::from_secs(1));
             block_id = self.service.finalize_block(consensus.clone());
         }
+        self.log_guard.not_ready_to_finalize = false;
 
         block_id.expect("Failed to finalize block")
     }
@@ -129,14 +147,11 @@ impl DevmodeService {
         let block = block.clone();
 
         self.service
-            .send_to(
-                &PeerId::from(block.signer_id),
-                "received",
-                Vec::from(block.block_id),
-            ).expect("Failed to send block received");
+            .send_to(&block.signer_id, "received", Vec::from(block.block_id))
+            .expect("Failed to send block received");
     }
 
-    fn send_block_ack(&mut self, sender_id: PeerId, block_id: BlockId) {
+    fn send_block_ack(&mut self, sender_id: &PeerId, block_id: BlockId) {
         self.service
             .send_to(&sender_id, "ack", Vec::from(block_id))
             .expect("Failed to send block ack");
@@ -158,8 +173,8 @@ impl DevmodeService {
 
         let wait_time = if let Ok(settings) = settings_result {
             let ints: Vec<u64> = vec![
-                settings.get("sawtooth.consensus.min_wait_time").unwrap(),
-                settings.get("sawtooth.consensus.max_wait_time").unwrap(),
+                &settings["sawtooth.consensus.min_wait_time"],
+                &settings["sawtooth.consensus.max_wait_time"],
             ].iter()
             .map(|string| string.parse::<u64>())
             .map(|result| result.unwrap_or(0))
@@ -199,7 +214,7 @@ impl Engine for DevmodeEngine {
         updates: Receiver<Update>,
         service: Box<Service>,
         startup_state: StartupState,
-    ) {
+    ) -> Result<(), Error> {
         let mut service = DevmodeService::new(service);
         let mut chain_head = startup_state.chain_head;
 
@@ -237,7 +252,7 @@ impl Engine for DevmodeEngine {
                         }
 
                         Update::BlockValid(block_id) => {
-                            let block = service.get_block(block_id.clone());
+                            let block = service.get_block(&block_id);
 
                             service.send_block_received(&block);
 
@@ -258,7 +273,7 @@ impl Engine for DevmodeEngine {
                             } else if block.block_num < chain_head.block_num {
                                 let mut chain_block = chain_head;
                                 loop {
-                                    chain_block = service.get_block(chain_block.previous_id);
+                                    chain_block = service.get_block(&chain_block.previous_id);
                                     if chain_block.block_num == block.block_num {
                                         break;
                                     }
@@ -299,7 +314,7 @@ impl Engine for DevmodeEngine {
                                     let block_id = BlockId::from(message.content);
                                     info!(
                                         "Received block published message from {:?}: {:?}",
-                                        sender_id, block_id
+                                        &sender_id, block_id
                                     );
                                 }
 
@@ -307,16 +322,16 @@ impl Engine for DevmodeEngine {
                                     let block_id = BlockId::from(message.content);
                                     info!(
                                         "Received block received message from {:?}: {:?}",
-                                        sender_id, block_id
+                                        &sender_id, block_id
                                     );
-                                    service.send_block_ack(sender_id, block_id);
+                                    service.send_block_ack(&sender_id, block_id);
                                 }
 
                                 DevmodeMessage::Ack => {
                                     let block_id = BlockId::from(message.content);
                                     info!(
                                         "Received ack message from {:?}: {:?}",
-                                        sender_id, block_id
+                                        &sender_id, block_id
                                     );
                                 }
                             }
@@ -344,6 +359,8 @@ impl Engine for DevmodeEngine {
                 service.broadcast_published_block(new_block_id);
             }
         }
+
+        Ok(())
     }
 
     fn version(&self) -> String {

@@ -29,8 +29,7 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use crypto::digest::Digest;
-use crypto::sha2::Sha512;
+use hashlib::sha512_digest_bytes;
 
 use protobuf;
 use protobuf::Message;
@@ -772,13 +771,8 @@ fn text_to_string(text_val: Value) -> Result<String, StateDatabaseError> {
 
 /// Creates a hash of the given bytes
 fn hash(input: &[u8]) -> Vec<u8> {
-    let mut sha = Sha512::new();
-    sha.input(input);
-
-    let mut vec: Vec<u8> = vec![0; sha.output_bytes()];
-    sha.result(vec.as_mut_slice());
-
-    let (hash, _rest) = vec.split_at(vec.len() / 2);
+    let bytes = sha512_digest_bytes(input);
+    let (hash, _rest) = bytes.split_at(bytes.len() / 2);
     hash.to_vec()
 }
 

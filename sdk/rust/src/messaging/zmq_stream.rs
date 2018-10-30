@@ -79,7 +79,7 @@ impl ZmqMessageSender {
     fn new(ctx: zmq::Context, address: String, router: InboundRouter) -> Self {
         ZmqMessageSender {
             context: ctx,
-            address: address,
+            address,
             inbound_router: router,
             outbound_sender: None,
         }
@@ -103,7 +103,7 @@ impl ZmqMessageSender {
 
 impl MessageSender for ZmqMessageSender {
     fn send(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
@@ -129,7 +129,7 @@ impl MessageSender for ZmqMessageSender {
     }
 
     fn reply(
-        &mut self,
+        &self,
         destination: Message_MessageType,
         correlation_id: &str,
         contents: &[u8],
@@ -168,7 +168,7 @@ struct InboundRouter {
 impl InboundRouter {
     fn new(inbound_tx: SyncSender<MessageResult>) -> Self {
         InboundRouter {
-            inbound_tx: inbound_tx,
+            inbound_tx,
             expected_replies: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -199,7 +199,7 @@ impl InboundRouter {
         }
     }
 
-    fn expect_reply(&mut self, correlation_id: String) -> Receiver<MessageResult> {
+    fn expect_reply(&self, correlation_id: String) -> Receiver<MessageResult> {
         let (expect_tx, expect_rx) = channel();
         let mut expected_replies = self.expected_replies.lock().unwrap();
         expected_replies.insert(correlation_id, expect_tx);
@@ -239,10 +239,10 @@ impl SendReceiveStream {
 
         SendReceiveStream {
             address: String::from(address),
-            socket: socket,
-            outbound_recv: outbound_recv,
-            inbound_router: inbound_router,
-            monitor_socket: monitor_socket,
+            socket,
+            outbound_recv,
+            inbound_router,
+            monitor_socket,
         }
     }
 

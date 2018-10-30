@@ -84,8 +84,6 @@
 /sdk/go/src/gopkg.in/
 /sdk/rust/target
 /sdk/rust/Cargo.lock
-/sdk/rust/src/messages/*.rs
-!/sdk/rust/src/messages/mod.rs
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

@@ -53,6 +53,9 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     git \
+    libssl-dev \
+    openssl \
+    pkg-config \
     python3 \
     python3-dev \
     python3-grpcio \
@@ -93,6 +96,7 @@ RUN dpkg -i /tmp/python3-sawtooth-signing*.deb || true \
  && mkdir bin \
  && if [ -d "lib" ]; then rm -rf lib; fi \
  && mkdir lib \
+ && sed -i -e "0,/version.*$/ s/version.*$/version\ =\ \"$(../bin/get_version)\"/" Cargo.toml \
  && cargo build --release \
  && cp ./target/release/sawtooth-validator bin/sawtooth-validator \
  && cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so \

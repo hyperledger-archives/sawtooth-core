@@ -15,6 +15,8 @@
  * -----------------------------------------------------------------------------
  */
 
+#![allow(unknown_lints)]
+
 extern crate ctrlc;
 extern crate protobuf;
 extern crate rand;
@@ -83,7 +85,7 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    fn register(&mut self, mut sender: ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
+    fn register(&mut self, sender: &ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
@@ -134,7 +136,7 @@ impl<'a> TransactionProcessor<'a> {
         true
     }
 
-    fn unregister(&mut self, mut sender: ZmqMessageSender) {
+    fn unregister(&mut self, sender: &ZmqMessageSender) {
         let request = TpUnregisterRequest::new();
         info!("sending TpUnregisterRequest");
         let serialized = match request.write_to_bytes() {
@@ -169,6 +171,7 @@ impl<'a> TransactionProcessor<'a> {
     /// Connects the transaction processor to a validator and starts
     /// listening for requests and routing them to an appropriate
     /// transaction handler.
+    #[allow(cyclomatic_complexity)]
     pub fn start(&mut self) {
         let unregister = Arc::new(AtomicBool::new(false));
         let r = unregister.clone();
@@ -189,13 +192,13 @@ impl<'a> TransactionProcessor<'a> {
             let (mut sender, receiver) = self.conn.create();
 
             if unregister.load(Ordering::SeqCst) {
-                self.unregister(sender.clone());
+                self.unregister(&sender);
                 restart = false;
                 continue;
             }
 
             // if registration is not succesful, retry
-            if self.register(sender.clone(), &unregister.clone()) {
+            if self.register(&sender, &unregister.clone()) {
                 ()
             } else {
                 continue;
@@ -203,7 +206,7 @@ impl<'a> TransactionProcessor<'a> {
 
             loop {
                 if unregister.load(Ordering::SeqCst) {
-                    self.unregister(sender.clone());
+                    self.unregister(&sender);
                     restart = false;
                     break;
                 }

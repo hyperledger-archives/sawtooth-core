@@ -27,7 +27,6 @@ from sawtooth_signing.core import Context
 
 __CONTEXTBASE__ = secp256k1.Base(ctx=None, flags=secp256k1.ALL_FLAGS)
 __CTX__ = __CONTEXTBASE__.ctx
-__PK__ = secp256k1.PublicKey(ctx=__CTX__)  # Cache object to use as factory
 
 
 class Secp256k1PrivateKey(PrivateKey):
@@ -84,8 +83,8 @@ class Secp256k1PublicKey(PublicKey):
 
     @staticmethod
     def from_bytes(byte_str):
-        public_key = __PK__.deserialize(byte_str)
-        return Secp256k1PublicKey(secp256k1.PublicKey(public_key, ctx=__CTX__))
+        public_key = secp256k1.PublicKey(byte_str, raw=True, ctx=__CTX__)
+        return Secp256k1PublicKey(public_key)
 
     @staticmethod
     def from_hex(hex_str):

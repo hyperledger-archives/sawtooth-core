@@ -103,6 +103,8 @@ pub trait BlockCache: Send + Sync {
     fn put(&mut self, block: BlockWrapper);
 
     fn get(&self, block_id: &str) -> Option<BlockWrapper>;
+
+    fn iter(&self) -> Box<Iterator<Item = BlockWrapper>>;
 }
 
 #[derive(Debug)]
@@ -254,7 +256,7 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
         result.transaction_count = result.new_chain.iter().map(|b| b.num_transactions()).sum();
 
         info!(
-            "Comparing current chain head '{}' against new block '{}'",
+            "Building fork resolution for chain head '{}' against new block '{}'",
             &chain_head, &block
         );
 
@@ -524,6 +526,26 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
 
     pub fn ignore_block(&self, block: &BlockWrapper) {
         info!("Ignoring block {}", block)
+    }
+
+    // Returns all blocks in forks not on the chain with the given head. If head is None, uses the
+    // current chain head. If head is not found, returns None.
+    pub fn forks(&self) -> Vec<BlockWrapper> {
+        let state = self
+            .state
+            .read()
+            .expect("No lock holder should have poisoned the lock");
+
+        let mut forks: Vec<BlockWrapper> = state.block_cache.iter().collect();
+
+        forks.sort_by(|left, right| {
+            left.block_num()
+                .cmp(&right.block_num())
+                .then(left.header_signature().cmp(&right.header_signature()))
+        });
+        forks.dedup_by(|left, right| left.header_signature() == right.header_signature());
+
+        forks
     }
 
     pub fn fail_block(&self, block: &mut BlockWrapper) {
