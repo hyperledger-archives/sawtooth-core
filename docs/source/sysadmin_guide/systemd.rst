@@ -2,87 +2,119 @@
 Running Sawtooth as a Service
 *****************************
 
-When installing Sawtooth using apt-get, *systemd* units are added for the
-following components. These can then be started, stopped, and restarted using
-the *systemctl* command:
+When you installed Sawtooth with ``apt-get``, ``systemd`` units were added for
+the Sawtooth components (validator, REST API, transaction processors, and
+consensus engines). This procedure describes how to use the ``systemctl``
+command to start, stop, and restart Sawtooth components as ``systemd`` services.
 
-* validator
-* transaction processors
-* rest_api
+To learn more about ``systemd`` and the ``systemctl`` command, see the `Digital
+Ocean systemctl guide`_.
 
-To learn more about *systemd* and the *systemctl* command, check out `this
-guide`_:
-
-.. _this guide: https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units
-
-
-Viewing Console Output
-----------------------
-
-To view the console output that you would see if you ran the components
-manually, run the following command:
-
-.. code-block:: console
-
-  $ sudo journalctl -f \
-      -u sawtooth-validator \
-      -u sawtooth-settings-tp \
-      -u sawtooth-poet-validator-registry-tp \
-      -u sawtooth-rest-api
-
-Validator Start-up Process
-==========================
-
-Create Genesis Block
---------------------
-
-The first validator created in a new network must load a genesis block on
-creation to enable other validators to join the network. Prior to starting the
-first validator, run the following commands to generate a genesis block that
-the first validator can load:
-
-.. code-block:: console
-
-  $ sawtooth keygen --key-dir ~/sawtooth
-  $ sawset genesis --key ~/sawtooth.priv
-  $ sawadm genesis config-genesis.batch
-
-Running Sawtooth
-----------------
+.. _Digital Ocean systemctl guide: https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units
 
 .. note::
-  Before starting the ``validator`` component you may need to generate
-  the validator keypairs using the following command:
+
+   Each node in the Sawtooth network must run the same set of transaction
+   processors. If this node will join an existing Sawtooth network, make sure
+   that you know the full list of required transaction processors, and have
+   installed any custom transaction processors.
+
+   If necessary, add the additional transaction processors to all ``systemctl``
+   commands in this procedure.
+
+
+Start the Sawtooth Services
+===========================
+
+Use these commands to start each Sawtooth component as a service:
+
+.. code-block:: console
+
+    $ sudo systemctl start sawtooth-rest-api.service
+    $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl start sawtooth-validator.service
+    $ sudo systemctl start sawtooth-settings-tp.service
+    $ sudo systemctl start sawtooth-intkey-tp-python.service
+    $ sudo systemctl start sawtooth-identity-tp.service
+    $ sudo systemctl start sawtooth-poet-engine.service
+
+This command starts the required transaction processors:
+PoET Validator Registry (``sawtooth-poet-validator-registry-tp``),
+Settings (``sawtooth-settings-tp``), and
+Identity (``sawtooth-identity-tp``).  It also starts the IntegerKey
+transaction processor (``sawtooth-intkey-tp-python``), which is used in a
+later procedure to test basic Sawtooth functionality.
+
+
+Check Service Status
+====================
+
+Run this command to verify that the Sawtooth services are running:
+
+.. code-block:: console
+
+    $ sudo systemctl status sawtooth-rest-api.service
+    $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl status sawtooth-validator.service
+    $ sudo systemctl status sawtooth-settings-tp.service
+    $ sudo systemctl status sawtooth-intkey-tp-python.service
+    $ sudo systemctl status sawtooth-identity-tp.service
+    $ sudo systemctl status sawtooth-poet-engine.service
+
+
+View Sawtooth Logs
+==================
+
+Use the following command to view the log output.
+
+.. code-block:: console
+
+    $ sudo journalctl -f \
+    -u sawtooth-validator \
+    -u sawtooth-settings-tp \
+    -u sawtooth-poet-validator-registry-tp \
+    -u sawtooth-poet-engine \
+    -u sawtooth-rest-api \
+    -u sawtooth-intkey-tp-python \
+    -u sawtooth-identity-tp
+
+This command shows the output that would have been displayed on the console
+if you ran the components manually.
+
+Additional logging output can be found in ``/var/log/sawtooth/``. For more
+information, see :doc:`log_configuration`.
+
+
+Stop or Restart the Sawtooth Services
+=====================================
+
+If you need to stop or restart the Sawtooth services for any reason, use the
+following commands:
+
+* Stop Sawtooth services:
 
   .. code-block:: console
 
-    $ sudo sawadm keygen
+     $ sudo systemctl stop sawtooth-rest-api.service
+     $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
+     $ sudo systemctl stop sawtooth-validator.service
+     $ sudo systemctl stop sawtooth-settings-tp.service
+     $ sudo systemctl stop sawtooth-intkey-tp-python.service
+     $ sudo systemctl stop sawtooth-identity-tp.service
+     $ sudo systemctl stop sawtooth-poet-engine.service
 
+* Restart Sawtooth services:
 
-To start a component using *systemd*, run the following command where
-`COMPONENT` is one of:
+  .. code-block:: console
 
-  * validator
-  * rest-api
-  * intkey-tp-python
-  * settings-tp
-  * xo-tp-python
+     $ sudo systemctl restart sawtooth-rest-api.service
+     $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
+     $ sudo systemctl restart sawtooth-validator.service
+     $ sudo systemctl restart sawtooth-settings-tp.service
+     $ sudo systemctl restart sawtooth-intkey-tp-python.service
+     $ sudo systemctl restart sawtooth-identity-tp.service
+     $ sudo systemctl restart sawtooth-poet-engine.service
 
-.. code-block:: console
-
-  $ sudo systemctl start sawtooth-COMPONENT
-
-To see the status of a component run:
-
-.. code-block:: console
-
-  $ sudo systemctl status sawtooth-COMPONENT
-
-Likewise, to stop a component run:
-
-.. code-block:: console
-
-  $ sudo systemctl stop sawtooth-COMPONENT
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

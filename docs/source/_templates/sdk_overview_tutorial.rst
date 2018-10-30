@@ -16,19 +16,21 @@
     {% set lowercase_lang = 'rust' %}
 {% endif %}
 
-This tutorial describes how to develop a Sawtooth application with an example
-transaction family, using the Sawtooth {{ language }} SDK.
+Overview
+========
 
+This tutorial shows how to use the Sawtooth {{ language }} SDK to develop a
+simple application (also called a transaction family).
 A transaction family includes these components:
 
-* A transaction processor to define the business logic for your application.
+* A **transaction processor** to define the business logic for your application.
   The transaction processor is responsible for registering with the validator,
   handling transaction payloads and associated metadata, and getting/setting
   state as needed.
 
-* A data model to record and store data
+* A **data model** to record and store data.
 
-* A client to handle the client logic for your application.
+* A **client** to handle the client logic for your application.
   The client is responsible for creating and signing transactions, combining
   those transactions into batches, and submitting them to the validator. The
   client can post batches through the REST API or connect directly to the
@@ -53,29 +55,42 @@ to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
 
 {% endif %}
 
-
 .. note::
 
    This tutorial demonstrates the relevant concepts for a Sawtooth transaction
    processor and client, but does not create a complete implementation.
 
-   * For a full implementation of the tic-tac-toe transaction family, see
-     ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
 
-   * For full implementations in other languages, see
-     ``https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples``.
+{% if language == 'Rust' %}
 
-Prerequisites
-=============
+   For a full Rust implementation of the XO transaction family, see
+   ``/{project}/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
 
- * A working Sawtooth development environment, as described in
-   :doc:`/app_developers_guide/installing_sawtooth`
+{% elif language == 'Go' %}
 
- * Familiarity with the basic Sawtooth concepts introduced in
-   :doc:`/app_developers_guide/installing_sawtooth`
+   For a full Go implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-go/tree/master/examples/xo_go
+   <https://github.com/hyperledger/sawtooth-sdk-go/tree/master/examples/xo_go>`_.
 
- * Understanding of the Sawtooth transaction and batch data structures as
-   described in :doc:`/architecture/transactions_and_batches`
+{% elif language == 'Java' %}
+
+   For a full Java implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-java/tree/master/examples/xo_java
+   <https://github.com/hyperledger/sawtooth-sdk-java/tree/master/examples/xo_java>`_.
+
+{% elif language == 'JavaScript' %}
+
+   For a full JavaScript implementation of the XO transaction family, see
+   `https://github.com/hyperledger/sawtooth-sdk-javascript/tree/master/examples/xo
+   <https://github.com/hyperledger/sawtooth-sdk-javascript/tree/master/examples/xo>`_.
+
+{% else %}
+
+   For a full Python implementation of the XO transaction family, see
+   ``/{project}/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
+
+{% endif %}
+
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

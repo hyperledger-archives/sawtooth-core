@@ -2,25 +2,28 @@
 Using a Proxy Server to Authorize the REST API
 **********************************************
 
-As a lightweight shim on top of internal communications, requests sent to the
-*Hyperledger Sawtooth* REST API are simply passed on to the validator, without
-any sort of authorization. While this is in keeping with the public nature of
-blockchains, that behavior may not be desirable in every use case. Rather than
-internally implementing one authorization scheme or another, the REST API is
-designed to work well behind a proxy server, allowing any available
-authorization scheme to be implemented externally.
+The Sawtooth REST API is designed to be a lightweight shim on top of internal
+communications. When the REST API receives a request, it passes that request to
+the validator without any authorization. While this behavior is appropriate for
+the public nature of blockchains, the lack of authorization might not be
+desirable in some situations. For these cases, you can configure the REST API to
+work behind a proxy server.
+
+This section explains how the REST API handles proxy server issues, then shows
+how to set up an Apache proxy server for the REST API.
 
 
-Forwarding URL Info with Headers
-================================
+About Proxying the REST API
+===========================
 
-For the most part putting the REST API behind a proxy server should just work.
-The majority of what it does will work equally well whether or not it is
-communicating directly with a client. The notable exceptions being the `"link"`
-parameter sent back in the response envelope, and the `"previous"` and `"next"`
-links that are sent back with a paging response. These URLs can be a
-convenience for clients, but not when crucial URL information is destroyed by
-proxying. In that case, a link that should look like this:
+In general, putting the REST API behind a proxy server works as expected. The
+REST API has the same behavior as if it were communicating directly with a
+client. The notable exception is how URLs are handled; specifically, the
+``link`` parameter that is sent back in the response envelope, and the
+``previous`` and ``next`` links that are sent back with a paging response.
+
+These URLs are a convenience for clients, but the proxy can destroy crucial URL
+information.  For example, a correct link should look this this:
 
 .. code-block:: json
 
@@ -28,7 +31,7 @@ proxying. In that case, a link that should look like this:
      "link": "https://hyperledger.org/sawtooth/blocks?head=..."
    }
 
-Might instead look like this:
+Instead, the "destroyed" link might look like this:
 
 .. code-block:: json
 
@@ -36,243 +39,225 @@ Might instead look like this:
      "link": "http://localhost:8008/blocks?head=..."
    }
 
-The solution to this problem is sending the destroyed information using HTTP
-request headers. The Sawtooth REST API will properly recognize and parse two
-sorts of headers.
-
+The solution to this problem is to send the destroyed information with HTTP
+request headers. The Sawtooth REST API will properly recognize and parse
+information in both "X-Forwarded" and "Forwarded" headers.
 
 "X-Forwarded" Headers
 ---------------------
 
-Although they aren't part of any standard, the various *X-Forwarded* headers
-are a very common way of communicating useful information about a proxy. There
-are three of these headers that the REST API may look for when building links.
+Although they aren't part of any standard, "X-Forwarded" headers are a common
+way to communicate information about a proxy. When the REST API builds a link,
+it looks for the following types of "X-Forwarded" headers:
 
-.. list-table::
-   :widths: 20, 44, 16
-   :header-rows: 1
+* ``X-Forwarded-Host``:
+  Domain name of the proxy server (for example, ``hyperledger.org``)
 
-   * - header
-     - description
-     - example
-   * - **X-Forwarded-Host**
-     - The domain name of the proxy server.
-     - *hyperledger.org*
-   * - **X-Forwarded-Proto**
-     - The protocol/scheme used to make request.
-     - *https*
-   * - **X-Forwarded-Path**
-     - An uncommon header implemented specially by the REST API to handle extra
-       path information. Only necessary if the proxy endpoints do not map
-       directly to the REST API endpoints (i.e.
-       *"hyperledger.org/sawtooth/blocks"* -> *"localhost:8008/blocks"*).
-     - */sawtooth*
+* ``X-Forwarded-Proto``:
+  Protocol/scheme used to make requests (for example, ``https``)
 
+* ``X-Forwarded-Path``:
+  Extra path information (for example, ``/sawtooth``). This uncommon header is
+  implemented by the REST API. It is necessary only if the proxy endpoints do
+  not map directly to the REST API endpoints, that is, when
+  ``hyperledger.org/sawtooth/blocks`` does not map to ``localhost:8008/blocks``.
 
-"Forwarded" Header
-------------------
+"Forwarded" Headers
+-------------------
 
-Although less common, the same information can be sent using a single
-*Forwarded* header, standardized by
-`RFC7239 <https://tools.ietf.org/html/rfc7239#section-4>`_. The Forwarded
-header contains semi-colon-separated key value pairs. It might for example look
-like this:
+This type of header is less common, but a single "Forwarded" header sends the
+same information as multiple "X-Forwarded" headers.  The "Forwarded" header,
+which is standardized by
+`RFC7239 <https://tools.ietf.org/html/rfc7239#section-4>`_, contains
+semicolon-separated key-value pairs, as in this example:
 
 .. code-block:: text
 
    Forwarded: for=196.168.1.1; host=proxy1.com, host=proxy2.com; proto="https"
 
-There are three keys in particular the REST API will look for when building
-response links:
+When the REST API builds a response link, it looks for the following keys:
 
-.. list-table::
-   :widths: 8, 52, 20
-   :header-rows: 1
+* ``host``:
+  Domain name of the proxy server (for example, ``host=hyperledger.org``)
 
-   * - key
-     - description
-     - example
-   * - **host**
-     - The domain name of the proxy server.
-     - *host=hyperledger.org*
-   * - **proto**
-     - The protocol/scheme used to make request.
-     - *proto=https*
-   * - **path**
-     - An non-standard key header used to handle extra path information. Only
-       necessary if the proxy endpoints do not map directly to the REST API
-       endpoints (i.e. *"hyperledger.org/sawtooth/blocks"* ->
-       *"localhost:8008/blocks"*).
-     - *path="/sawtooth"*
+* ``proto``:
+  Protocol/scheme used to make requests (for example, ``proto=https``)
+
+* ``path``:
+  Extra path information (for example, ``path="/sawtooth"``). This non-standard
+  key header is necessary only if the proxy endpoints do not map directly to
+  the REST API endpoints, that is, when ``hyperledger.org/sawtooth/blocks`` does
+  not map to ``localhost:8008/blocks``.
 
 .. note::
 
-   Any key in a *Forwarded* header can be set multiple times, each instance
-   comma-separated, allowing for a chain of proxy information to be traced.
-   However, the REST API will always reference the leftmost of any particular
-   key. It is only interested in producing an accurate link for the original
-   client.
+   Any key in a "Forwarded" header can be set multiple times, using commas to
+   separate each setting. (See the ``host`` values in the example above.)
+   Repeating a key allows a chain of proxy information to be traced. However,
+   the REST API always uses the left-most value for a particular key so that it
+   can produce an accurate link for the client.
 
 
-Apache Proxy Setup Guide
-========================
+Set Up an Apache Proxy Server for the REST API
+==============================================
 
-For further clarification, this section walks through the setup of a simple
-`Apache 2 <https://httpd.apache.org/>`_ proxy server secured with Basic Auth
-and https, pointed at an instance of the *Sawtooth* REST API.
-
-
-Install Apache
---------------
-
-We'll begin by installing Apache and its components. These commands may require
-``sudo``.
-
-.. code-block:: console
-
-   $ apt-get update
-   $ apt-get install -y apache2
-   $ a2enmod ssl
-   $ a2enmod headers
-   $ a2enmod proxy_http
-
-
-Set Up Passwords and Certificates
----------------------------------
-
-First we'll create a password file for the user *"sawtooth"*, with the password
-*"sawtooth"*. You can
-`generate other .htpasswd files <http://www.htaccesstools.com/htpasswd-generator/>`_
-as well, just make sure to authorize those users in the config file below.
-
-.. code-block:: console
-
-   $ echo "sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr." >/tmp/.password
-
-Then we'll use ``openssl`` to build a self-signed SSL certificate. This
-certificate will not be good enough for most HTTP clients, but is suitable for
-testing purposes.
-
-.. code-block:: console
-
-   $ openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
-       -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=sawtooth \
-       -keyout /tmp/.ssl.key \
-       -out /tmp/.ssl.crt
-
-
-Configure Proxy
----------------
-
-Now we'll set up the proxy by editing an Apache config files. This may require
-``sudo``.
-
-.. code-block:: console
-
-   $ vi /etc/apache2/sites-enabled/000-default.conf
-
-Edit the file to look like this:
-
-.. code-block:: apache
-
-   <VirtualHost *:443>
-       ServerName sawtooth
-       ServerAdmin sawtooth@sawtooth
-       DocumentRoot /var/www/html
-
-       SSLEngine on
-       SSLCertificateFile /tmp/.ssl.crt
-       SSLCertificateKeyFile /tmp/.ssl.key
-       RequestHeader set X-Forwarded-Proto "https"
-
-       <Location />
-           Options Indexes FollowSymLinks
-           AllowOverride None
-           AuthType Basic
-           AuthName "Enter password"
-           AuthUserFile "/tmp/.password"
-           Require user sawtooth
-           Require all denied
-       </Location>
-   </VirtualHost>
-
-   ProxyPass /sawtooth http://localhost:8008
-   ProxyPassReverse /sawtooth http://localhost:8008
-   RequestHeader set X-Forwarded-Path "/sawtooth"
+This procedure sets up a simple `Apache 2 <https://httpd.apache.org/>`_ proxy
+server that is secured with Basic Auth and https, then configures the proxy
+server for an instance of the Sawtooth REST API.
 
 .. note::
 
-   Apache will automatically set the *X-Forwarded-Host* header.
+   This procedure covers only the information for Sawtooth configuration. It
+   does not cover other Apache configuration or security settings.
 
+1. Install the Apache web server and enable the required modules, then restart
+   Apache to load these modules.
 
-Start Apache, a Validator, and the REST API
--------------------------------------------
+   .. code-block:: console
 
-Start or restart Apache as appropriate. This may require ``sudo``.
+      $ sudo apt-get update
+      $ sudo apt-get install -y apache2
+      $ sudo a2enmod ssl
+      $ sudo a2enmod headers
+      $ sudo a2enmod proxy_http
+      $ sudo systemctl restart apache2
 
-.. code-block:: console
+#. Create a password file for the user ``sawtooth``. Enter a new password when
+   the ``htpasswd`` command prompts for it.
 
-   $ apachectl start
+    .. code-block:: console
 
-.. code-block:: console
+       $ sudo htpasswd -c /etc/apache2/.htpassword sawtooth
 
-   $ apachectl restart
+    .. tip::
 
+       You can repeat this command to generate passwords for other users, but
+       you must omit the ``-c`` option from the ``htpasswd`` command. You must
+       also remember to authorize those users in the proxy configuration file
+       (later in this procedure).
 
-Start a validator, and the REST API.
+#. Obtain or create an SSL certificate.
 
-.. code-block:: console
+   * You can use ``openssl`` to build a self-signed SSL certificate. This
+     certificate is not suitable for most HTTP clients, but it is good enough
+     for testing purposes.
 
-   $ sawadm keygen
-   $ sawadm genesis
-   $ sawtooth-validator -v --endpoint localhost:8800
-   $ sawtooth-rest-api -v
+     .. code-block:: console
 
+        $ sudo mkdir /etc/apache2/keys
+        $ sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
+        -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=sawtooth \
+        -keyout /etc/apache2/keys/.ssl.key \
+        -out /etc/apache2/keys/.ssl.crt
 
-Send Test Requests
-------------------
+   * You can get a free trusted certificate from
+     `Let's Encrypt <https://letsencrypt.org/>`_. Follow the instructions at
+     `letsencrypt.org/getting-started <https://letsencrypt.org/getting-started/>`_.
 
-Finally, let's use ``curl`` to make some requests and make sure everything
-worked. We'll start by querying the REST API directly:
+#. Configure the proxy with settings for the Sawtooth REST API.
 
-.. code-block:: console
+   a. Create an Apache configuration file.
 
-   $ curl http://localhost:8008/blocks
+      .. code-block:: console
 
-The response link should look like this:
+         $ sudo vi /etc/apache2/sites-available/000-sawtooth-rest-api.conf
 
-.. code-block:: json
+   #. Add the following contents to this file.
 
-   {
-     "link": "http://localhost:8008/blocks?head=..."
-   }
+      .. code-block:: apache
 
-You should also be able to get back a ``401`` by querying the proxy without
-authorization:
+         <VirtualHost *:443>
+             ServerName sawtooth
+             ServerAdmin sawtooth@sawtooth
+             DocumentRoot /var/www/html
 
-.. code-block:: console
+             SSLEngine on
+             SSLCertificateFile /etc/apache2/keys/.ssl.crt
+             SSLCertificateKeyFile /etc/apache2/keys/.ssl.key
+             RequestHeader set X-Forwarded-Proto "https"
 
-   $ curl https://localhost/sawtooth/blocks --insecure
+             <Location />
+                 Options Indexes FollowSymLinks
+                 AllowOverride None
+                 AuthType Basic
+                 AuthName "Enter password"
+                 AuthUserFile "/etc/apache2/.htpassword"
+                 Require user sawtooth
+                 Require all denied
+             </Location>
+         </VirtualHost>
 
-.. note::
+         ProxyPass /sawtooth http://localhost:8008
+         ProxyPassReverse /sawtooth http://localhost:8008
+         RequestHeader set X-Forwarded-Path "/sawtooth"
 
-   The ``--insecure`` flag just forces curl to complete the request even though
-   there isn't an official SSL Certificate. It does *not* bypass Basic Auth.
+      .. note::
 
-And finally, if we send a properly authorized request:
+         Apache automatically sets the "X-Forwarded-Host" header.
 
-.. code-block:: console
+   #. Run the following commands to disable the default Apache landing page and
+      enable the new authenticated proxy configuration.
 
-   $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:sawtooth
+      .. code-block:: console
 
-We should get back a response that looks very similar to querying the REST API
-directly, but with a new *link* that reflects the URL we sent the request to:
+         $ sudo a2dissite 000-default.conf
+         $ sudo a2ensite 000-sawtooth-rest-api.conf
 
-.. code-block:: json
+   #. Restart Apache to apply the changes.
 
-   {
-     "link": "https://localhost/sawtooth/blocks?head=..."
-   }
+      .. code-block:: console
+
+         $ sudo systemctl restart apache2
+
+#. Send some test requests to verify the proxy configuration. This step uses
+   ``curl`` to send requests to the REST API to make sure that everything works.
+
+   a. Start by querying the REST API directly.
+
+      .. code-block:: console
+
+         $ curl http://localhost:8008/blocks
+
+      The response should look like this example:
+
+      .. code-block:: json
+
+         {
+           "link": "http://localhost:8008/blocks?head=..."
+         }
+
+      A failed request might mean that the REST API is not running. To restart
+      the REST API as a service, see :doc:`systemd`.
+
+   #. Next, query the proxy without authorization. This command should return
+      a ``401`` error.
+
+      .. code-block:: console
+
+         $ curl https://localhost/sawtooth/blocks --insecure
+
+      .. note::
+
+         The ``--insecure`` flag forces ``curl`` to complete the request even
+         if there isn't an official SSL certificate. It does not bypass
+         basic authentication.
+
+   #. Finally, send a properly authorized request. Replace ``{password}`` in the
+      following example with the password for the ``sawtooth`` user.
+
+      .. code-block:: console
+
+         $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:{password}
+
+      The response is similar to a direct query response, but ``link`` shows the
+      URL used to send this request.
+
+      .. code-block:: json
+
+         {
+           "link": "https://localhost/sawtooth/blocks?head=..."
+         }
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

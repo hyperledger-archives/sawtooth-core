@@ -8,6 +8,7 @@ development.
 .. toctree::
    :maxdepth: 2
 
+   sdk_table.rst
    go_sdk
    javascript_sdk
    python_sdk

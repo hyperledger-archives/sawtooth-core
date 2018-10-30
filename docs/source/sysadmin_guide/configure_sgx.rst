@@ -1,10 +1,20 @@
-**************************************************
-Using Sawtooth with the SGX Implementation of PoET
-**************************************************
+****************************
+Using Sawtooth with PoET-SGX
+****************************
 
 .. note::
 
-    These instructions have been tested on Ubuntu 16.04 only.
+   PoET-SGX is currently not compatible with Sawtooth 1.1. Users looking to
+   leverage PoET-SGX should remain on Sawtooth 1.0. PoET-SGX is being upgraded
+   to be made compatible with 1.1 and will be released before the end of 2018.
+
+This procedure describes how to install, configure, and run Hyperledger Sawtooth
+with PoET simulator consensus on a system with |Intel (R)| Software Guard
+Extensions (SGX).
+
+.. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
+
+These instructions have been tested on Ubuntu 16.04 only.
 
 Prerequisites
 =============
@@ -37,15 +47,15 @@ You can verify the BIOS version after the machine has booted by running:
 
 .. _install-sgx:
 
-Install SGX/PSW
-===============
+Install SGX and PSW
+===================
 
-Install the prerequisites for SGX/PSW:
+Install the prerequisites for SGX and the Intel SGX Platform Software (PSW).
 
 .. code-block:: console
 
   $ sudo apt-get update &&
-    sudo apt-get install -q -y \
+    sudo apt-get install -y \
         alien \
         autoconf \
         automake \
@@ -126,8 +136,10 @@ After ensuring that the SGX kernel module is loaded, go to the next section
 to install and configure Sawtooth.
 
 
-Configuring Sawtooth to Use SGX
-===============================
+Configuring Sawtooth to Use PoET-SGX
+====================================
+
+This section describes the Sawtooth steps to configure PoET-SGX consensus.
 
 Install Sawtooth
 ----------------
@@ -137,8 +149,9 @@ Install Sawtooth
     $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
     $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
     $ sudo apt-get update
-    $ sudo apt-get install -y -q \
+    $ sudo apt-get install -y \
       sawtooth \
+      python3-sawtooth-poet-engine \
       python3-sawtooth-poet-sgx
 
 Certificate File
@@ -150,15 +163,16 @@ The configuration process requires an SGX certificate file in PEM format
 Instructions for creating your own service provider certificate can be found
 `here <https://software.intel.com/en-us/articles/how-to-create-self-signed-certificates-for-use-with-intel-sgx-remote-attestation-using>`_.
 
-After your certificate is created you'll need to register it with the
+After your certificate is created, you'll need to register it with the
 attestation service.
 `Click here <https://software.intel.com/formfill/sgx-onboarding>`_ for the
 registration form.
 
-Configure the Validator to Use SGX PoET
----------------------------------------
+Configure the Validator for PoET-SGX
+------------------------------------
 
-After installing Sawtooth, add config settings so PoET will work properly.
+After installing Sawtooth, add config settings so PoET-SGX will work properly.
+
 
 Create the file ``/etc/sawtooth/poet_enclave_sgx.toml``
 with your favorite editor (such as vi):
@@ -170,7 +184,7 @@ with your favorite editor (such as vi):
 Add the following lines, replacing [example] with the spid value provided by
 Intel:
 
-.. code-block:: console
+.. code-block:: ini
 
     # Service Provider ID. It is linked to the key pair used to authenticate with
     # the attestation service.
@@ -205,9 +219,9 @@ Create validator keys:
     required for the first validator only.  For additional validators, you
     can skip the rest of this procedure. Continue with :ref:`val-config`.
 
-Become the sawtooth user and change to ``/tmp``.
+Become the ``sawtooth`` user and change to ``/tmp``.
 In the following commands, the prompt ``[sawtooth@system]`` shows the commands
-that must be executed as the sawtooth user.
+that must be executed as the ``sawtooth`` user.
 
 .. code-block:: console
 
@@ -313,7 +327,7 @@ Create the file ``/etc/sawtooth/validator.toml``:
 
 Add the following content to the file:
 
-.. code-block:: console
+.. code-block:: ini
 
     #
     # Hyperledger Sawtooth -- Validator Configuration
@@ -329,7 +343,8 @@ Add the following content to the file:
     # network and component.
     bind = [
       "network:tcp://eno1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
     # The type of peering approach the validator should take. Choices are 'static'
@@ -366,7 +381,7 @@ Next, locate the ``endpoint`` section in this file.
 Replace the external interface and port values with either the
 publicly addressable IP address and port or the NAT values for your validator.
 
-.. code-block:: console
+.. code-block:: ini
 
     endpoint = "tcp://[external interface]:[port]"
 
@@ -375,26 +390,28 @@ Replace the seed address and port values with either the
 publicly addressable IP address and port or the NAT values for the other nodes
 in your network.
 
-.. code-block:: console
+.. code-block:: ini
 
     seeds = ["tcp://[seed address 1]:[port]",
              "tcp://[seed address 2]:[port]"]
 
 If necessary, change the network bind interface in the ``bind`` section.
 
-.. code-block:: console
+.. code-block:: ini
 
     bind = [
       "network:tcp://eno1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
 The default network bind interface is "eno1". If this device
 doesn't exist on your machine, change the ``network`` definition to
 specify the correct bind interface.
 
-.. Important::
+.. tip::
 
+    Make sure that all values in this setting are valid for your network.
     If the bind interface doesn't exist,
     you may see a ZMQ error in the sawtooth-validator
     systemd logs when attempting to start the validator, as in this example\:
@@ -410,12 +427,101 @@ specify the correct bind interface.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Unit entered failed state.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Failed with result 'exit-code'.
 
-Restrict permssions on ``validator.toml`` to protect the network private key.
+(Optional) Change the network keys to specify secured network communication
+between nodes in the network. By default, the network is unsecured.
+
+Locate the ``network_public_key`` and ``network_private_key`` settings.
+These items specify the curve ZMQ key pair used to create a secured
+network based on side-band sharing of a single network key pair to all
+participating nodes.
+
+Next, generate your network keys.
+
+ * This example shows how to use Python to generate these keys:
+
+   .. code-block:: python
+
+       python
+        ...
+       >>> import zmq
+       >>> (public, secret) = zmq.curve_keypair()
+       >>> print public
+       wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)
+       >>> print secret
+       r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*
+
+ * Or you could use the following steps to compile and run ``curve_keygen``
+   to generate the keys:
+
+   .. code-block:: console
+
+      $ sudo apt-get install g++ libzmq3-dev
+        ...
+      $ wget https://raw.githubusercontent.com/zeromq/libzmq/master/tools/curve_keygen.cpp
+       ...
+      $ g++ curve_keygen.cpp -o curve_keygen -lzmq
+
+      $./curve_keygen
+      == CURVE PUBLIC KEY ==
+      -so<iWpS=5uINn*eV$=J)F%lEFd=@g:g@GqmL2C]
+      == CURVE SECRET KEY ==
+      G1.mNaJLnJxb6BWsY=P[K3D({+uww!T&LC3(Xq:B
+
+Finally, replace the example values in the validator config file with your
+unique network keys.
+
+.. code-block:: ini
+
+    network_public_key = '{nw-public-key}'
+    network_private_key = '{nw-private-key}'
+
+After saving your changes,
+restrict permissions on ``validator.toml`` to protect the network private key.
 
 .. code-block:: console
 
     $ sudo chown root:sawtooth /etc/sawtooth/validator.toml
     $ sudo chown 640 /etc/sawtooth/validator.toml
+
+.. _rest-api-config:
+
+Change the REST API Config File
+-------------------------------
+
+Create the REST API configuration file, ``/etc/sawtooth/rest_api.toml``
+by copying the example file from ``/etc/sawtooth/rest_api.toml.example``.
+
+.. code-block:: console
+
+    $ sudo cp /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
+
+Use ``sudo`` to edit this file.
+
+.. code-block:: console
+
+    $ sudo vi /etc/sawtooth/rest_api.toml
+
+If necessary, change the ``bind`` setting to specify where the REST API
+listens for incoming communication.
+Be sure to remove the ``#`` comment character to activate this setting.
+
+.. code-block:: console
+
+    bind = ["127.0.0.1:8008"]
+
+If necessary, change the ``connect`` setting, which specifies where the
+REST API can find this node's validator on the network.
+Be sure to remove the ``#`` comment character to activate this setting.
+
+.. code-block:: console
+
+    connect = "tcp://localhost:4004"
+
+.. note::
+
+   To learn how to put the REST API behind a proxy server,
+   see :doc:`rest_auth_proxy`.
+
 
 Start the Sawtooth Services
 ---------------------------
@@ -426,9 +532,11 @@ Use these commands to start the Sawtooth services:
 
     $ sudo systemctl start sawtooth-rest-api.service
     $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl start sawtooth-poet-engine.service
     $ sudo systemctl start sawtooth-validator.service
     $ sudo systemctl start sawtooth-settings-tp.service
     $ sudo systemctl start sawtooth-intkey-tp-python.service
+    $ sudo systemctl start sawtooth-identity-tp.service
 
 You can follow the logs by running:
 
@@ -436,12 +544,15 @@ You can follow the logs by running:
 
     $ sudo journalctl -f \
     -u sawtooth-validator \
-    -u sawtooth-tp_settings \
+    -u sawtooth-settings-tp \
     -u sawtooth-poet-validator-registry-tp \
+    -u sawtooth-poet-engine \
     -u sawtooth-rest-api \
-    -u sawtooth-intkey-tp-python
+    -u sawtooth-intkey-tp-python \
+    -u sawtooth-identity-tp
 
 Additional logging output can be found in ``/var/log/sawtooth/``.
+For more information, see :doc:`log_configuration`.
 
 To verify that the services are running:
 
@@ -449,9 +560,11 @@ To verify that the services are running:
 
     $ sudo systemctl status sawtooth-rest-api.service
     $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl status sawtooth-poet-engine.service
     $ sudo systemctl status sawtooth-validator.service
     $ sudo systemctl status sawtooth-settings-tp.service
     $ sudo systemctl status sawtooth-intkey-tp-python.service
+    $ sudo systemctl status sawtooth-identity-tp.service
 
 Stop or Restart the Sawtooth Services
 -------------------------------------
@@ -465,9 +578,11 @@ Stop Sawtooth services:
 
     $ sudo systemctl stop sawtooth-rest-api.service
     $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl stop sawtooth-poet-engine.service
     $ sudo systemctl stop sawtooth-validator.service
     $ sudo systemctl stop sawtooth-settings-tp.service
     $ sudo systemctl stop sawtooth-intkey-tp-python.service
+    $ sudo systemctl stop sawtooth-identity-tp.service
 
 Restart Sawtooth services:
 
@@ -475,9 +590,11 @@ Restart Sawtooth services:
 
     $ sudo systemctl restart sawtooth-rest-api.service
     $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
+    $ sudo systemctl restart sawtooth-poet-engine.service
     $ sudo systemctl restart sawtooth-validator.service
     $ sudo systemctl restart sawtooth-settings-tp.service
     $ sudo systemctl restart sawtooth-intkey-tp-python.service
+    $ sudo systemctl restart sawtooth-identity-tp.service
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

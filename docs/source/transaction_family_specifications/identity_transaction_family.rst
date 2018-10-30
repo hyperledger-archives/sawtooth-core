@@ -44,8 +44,8 @@ State
 Policies
 --------
 A policy will have a name and a list of entries. Each policy entry will have a
-type and a key list. The type will be either PERMIT_KEY or DENY_KEY and the key
-list will be a list of public keys.
+list of type/key pairs. The type will be either PERMIT_KEY or DENY_KEY.
+Each key in a type/key pair will be a public key.
 
 .. code-block:: protobuf
 
@@ -55,22 +55,25 @@ list will be a list of public keys.
   }
 
   message Policy {
-    enum Type {
-      PERMIT_KEY = 0;
-      DENY_KEY = 1;
+
+    enum EntryType {
+      ENTRY_TYPE_UNSET = 0;
+      PERMIT_KEY = 1;
+      DENY_KEY = 2;
     }
 
     message Entry {
       // Whether this is a PERMIT_KEY or DENY_KEY entry
-      Type type = 1;
-      // This should be a public key or * to refer to all participants.
-      string key = 2;
+      EntryType type = 1;
 
+      // This should a public key or * to refer to all participants.
+      string key = 2;
     }
 
     // name of the policy, this should be unique.
     string name = 1;
 
+    // list of Entries
     // The entries will be processed in order from first to last.
     repeated Entry entries = 2;
   }
@@ -181,11 +184,6 @@ Family
 
 - family_name: "sawtooth_identity"
 - family_version: "1.0"
-
-Encoding
---------
-
-The encoding field must be set to "application/protobuf".
 
 Execution
 =========

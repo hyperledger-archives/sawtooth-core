@@ -146,9 +146,12 @@ Dependencies
 ------------
 None.
 
-Encoding
---------
-The encoding field must be set to 'application/protobuf'
+Family
+------
+
+- family_name: "block_info"
+- family_version: "1.0"
+
 
 Execution
 =========

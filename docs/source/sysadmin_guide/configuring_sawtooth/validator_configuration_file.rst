@@ -8,41 +8,37 @@ also contains settings for optional authorization roles and transactor
 permissions.
 
 If the config directory contains a file named ``validator.toml``, the
-configuration settings are applied when the validator starts. (By default, the
-config directory is ``/etc/sawtooth/``; see :doc:`path_configuration_file` for
-more information.) Specifying an option on the command line overrides the
+configuration settings are applied when the validator starts.
+Specifying an option on the command line overrides the
 setting in the configuration file.
 
-Note: By default, the config directory is /etc/sawtooth/.
-See :doc:`path_configuration_file` for more information.
+.. note::
+
+   By default, the config directory is ``/etc/sawtooth/``.
+   See :doc:`path_configuration_file` for more information.
 
 An example configuration file is in ``/etc/sawtooth/validator.toml.example``.
 To create a validator configuration file, copy the example file to the config
 directory and name it ``validator.toml``. Then edit the file to change the
 example configuration options as necessary for your system.
 
-.. Note::
+.. note::
 
-  See :doc:`../configure_sgx` for an example of changing the settings in
-  ``validator.toml`` when configuring Sawtooth with the SGX implementation of
-  PoET.
+  For the procedures that show how to change configuration settings in this
+  file, see :doc:`../off_chain_settings` and :doc:`../configure_sgx`.
 
 The ``validator.toml`` configuration file has the following options:
 
-- ``bind`` = [ "``endpoint``", "``endpoint``" ]
+- ``bind = [ "network:{endpoint}", "component:{endpoint}", "consensus:{endpoint}", ]``
 
-  Sets the network and component endpoints. Default network bind interface:
-  ``tcp://127.0.0.1:8800``. Default component bind interface:
-  ``tcp://127.0.0.1:4004``.
-
-  Each string has the format ``{option}:{endpoint}``, where
-  ``{option}`` is either ``network`` or ``component``. For example:
+  Sets the network, component, and consensus endpoints. The default values are:
 
   .. code-block:: none
 
     bind = [
       "network:tcp://127.0.0.1:8800",
-      "component:tcp://127.0.0.1:4004"
+      "component:tcp://127.0.0.1:4004",
+      "consensus:tcp://127.0.0.1:5050"
     ]
 
 - ``peering = "{static,dynamic}"``
@@ -129,8 +125,11 @@ The ``validator.toml`` configuration file has the following options:
 
 - ``opentsdb_url`` = "`value`"
 
-  Sets the host and port for Open TSDB database (used for metrics).
+  Sets the host and port for an Open TSDB database (used for metrics).
   Default: none.
+
+  For example of using the ``opentsdb_`` settings, see
+  :doc:`../grafana_configuration`.
 
 - ``opentsdb_db`` = "`name`"
 

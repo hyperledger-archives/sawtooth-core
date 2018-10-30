@@ -137,10 +137,10 @@ helper functions.
 
     class XOHandler extends TransactionHandler {
       constructor () {
-        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+        super(XO_FAMILY, ['1.0'], [XO_NAMESPACE])
       }
 
-      apply (transactionProcessRequest, stateStore) {
+      apply (transactionProcessRequest, context) {
         //
 
 Note that the ``XOHandler`` class extends the ``TransactionHandler`` class defined in the
@@ -241,10 +241,6 @@ XoTransactionHandler``, which is where most of the handler's work is done.
         @property
         def family_versions(self):
             return ['1.0']
-
-        @property
-        def encodings(self):
-            return ['csv-utf8']
 
         @property
         def namespaces(self):
@@ -956,15 +952,15 @@ name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
 the space (which will be an empty string if the action isn't ``take``).
 
 An XO transaction request payload consists of the UTF-8 encoding of a
-string with exactly two commas, formatted as follows:
+string with exactly two commas, which is formatted as follows:
 
 ``<name>,<action>,<space>``
 
-where
-
-* <name> is a nonempty string not containing the character ``|``
-* <action> is either ``take`` or ``create``
-* <space> is an integer strictly between 0 and 10 if the action is ``take``
+* ``<name>`` is the game name as a non-empty string not containing the character
+  ``|``. If the action is `create`, the new name must be unique.
+* ``<action>`` is the game action: `create`, `take`, or `delete`
+* ``<space>`` is the location on the board, as an integer between 1-9
+  (inclusive), if the action is `take`
 
 {% if language == 'JavaScript' %}
 
