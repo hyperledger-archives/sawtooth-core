@@ -22,6 +22,11 @@ StartupState = namedtuple(
     ['chain_head', 'peers', 'local_peer_info'])
 
 
+PeerMessage = namedtuple(
+    'PeerMessage',
+    ['header', 'header_bytes', 'header_signature', 'content'])
+
+
 class Engine(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def start(self, updates, service, startup_state):

@@ -330,22 +330,22 @@ class Gossip:
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def send_consensus_message(self, peer_id, message_envelope):
+    def send_consensus_message(self, peer_id, message):
         connection_id = self._network.public_key_to_connection_id(peer_id)
 
         self.send(
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipMessage(
                 content_type=GossipMessage.CONSENSUS,
-                content=message_envelope.SerializeToString(),
+                content=message.SerializeToString(),
                 time_to_live=self.get_time_to_live()).SerializeToString(),
             connection_id)
 
-    def broadcast_consensus_message(self, message_envelope):
+    def broadcast_consensus_message(self, message):
         self.broadcast(
             GossipMessage(
                 content_type=GossipMessage.CONSENSUS,
-                content=message_envelope.SerializeToString(),
+                content=message.SerializeToString(),
                 time_to_live=self.get_time_to_live()),
             validator_pb2.Message.GOSSIP_MESSAGE)
 

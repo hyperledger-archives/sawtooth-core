@@ -38,14 +38,11 @@ class ZmqService(Service):
 
     # -- P2P --
 
-    def send_to(self, peer_id, message_type, payload):
-        message = consensus_pb2.ConsensusPeerMessage(
-            message_type=message_type,
-            content=payload)
-
+    def send_to(self, receiver_id, message_type, payload):
         request = consensus_pb2.ConsensusSendToRequest(
-            message=message,
-            peer_id=peer_id)
+            message_type=message_type,
+            content=payload,
+            receiver_id=receiver_id)
 
         response = self._send(
             request=request,
@@ -57,11 +54,9 @@ class ZmqService(Service):
                 'Failed with status {}'.format(response.status))
 
     def broadcast(self, message_type, payload):
-        message = consensus_pb2.ConsensusPeerMessage(
+        request = consensus_pb2.ConsensusBroadcastRequest(
             message_type=message_type,
             content=payload)
-
-        request = consensus_pb2.ConsensusBroadcastRequest(message=message)
 
         response = self._send(
             request=request,

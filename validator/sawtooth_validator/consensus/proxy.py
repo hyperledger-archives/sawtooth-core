@@ -18,8 +18,7 @@ import hashlib
 from collections import namedtuple
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.consensus_pb2 import \
-    ConsensusPeerMessageEnvelope
+from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
 from sawtooth_validator.protobuf.consensus_pb2 import \
     ConsensusPeerMessageHeader
 
@@ -68,15 +67,17 @@ class ConsensusProxy:
             local_peer_info=self._public_key)
 
     # Using network service
-    def send_to(self, peer_id, message, connection_id):
-        envelope = self._wrap_consensus_message(message, connection_id)
+    def send_to(self, peer_id, message_type, content, connection_id):
+        message = self._wrap_consensus_message(
+            content, message_type, connection_id)
         self._gossip.send_consensus_message(
             peer_id=peer_id.hex(),
-            message_envelope=envelope)
+            message=message)
 
-    def broadcast(self, message, connection_id):
-        envelope = self._wrap_consensus_message(message, connection_id)
-        self._gossip.broadcast_consensus_message(message_envelope=envelope)
+    def broadcast(self, message_type, content, connection_id):
+        message = self._wrap_consensus_message(
+            content, message_type, connection_id)
+        self._gossip.broadcast_consensus_message(message=message)
 
     # Using block publisher
     def initialize_block(self, previous_id):
@@ -224,19 +225,20 @@ class ConsensusProxy:
 
         return blocks
 
-    def _wrap_consensus_message(self, message, connection_id):
+    def _wrap_consensus_message(self, content, message_type, connection_id):
         _, name, version = self._consensus_registry.get_engine_info()
         header = ConsensusPeerMessageHeader(
-            signer_public_key=self._public_key,
-            message_sha512=hashlib.sha512(message).digest(),
+            signer_id=self._public_key,
+            content_sha512=hashlib.sha512(content).digest(),
+            message_type=message_type,
             name=name,
             version=version,
         ).SerializeToString()
 
         signature = bytes.fromhex(self._identity_signer.sign(header))
-        envelope = ConsensusPeerMessageEnvelope(
+        message = ConsensusPeerMessage(
             header=header,
-            message=message,
+            content=content,
             header_signature=signature)
 
-        return envelope
+        return message

@@ -22,8 +22,6 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
-from sawtooth_validator.protobuf.consensus_pb2 import \
-    ConsensusPeerMessageEnvelope
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
@@ -248,11 +246,8 @@ class GossipBroadcastHandler(Handler):
             if not self._completer.get_block(obj.header_signature):
                 self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.CONSENSUS:
-            peer_message = ConsensusPeerMessage()
-            peer_message.ParseFromString(obj.message)
-
             self._notifier.notify_peer_message(
-                message=peer_message,
+                message=obj,
                 sender_id=bytes.fromhex(
                     self._gossip.peer_to_public_key(connection_id)))
         else:
@@ -273,7 +268,7 @@ def gossip_message_preprocessor(message_content_bytes):
         obj = Batch()
         obj.ParseFromString(gossip_message.content)
     elif tag == GossipMessage.CONSENSUS:
-        obj = ConsensusPeerMessageEnvelope()
+        obj = ConsensusPeerMessage()
         obj.ParseFromString(gossip_message.content)
 
     content = obj, tag, gossip_message.time_to_live

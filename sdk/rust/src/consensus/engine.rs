@@ -74,8 +74,24 @@ pub struct PeerInfo {
 /// A consensus-related message sent between peers
 #[derive(Default, Debug, Clone)]
 pub struct PeerMessage {
-    pub message_type: String,
+    pub header: PeerMessageHeader,
+    pub header_bytes: Vec<u8>,
+    pub header_signature: Vec<u8>,
     pub content: Vec<u8>,
+}
+
+/// A header associated with a consensus-related message sent from a peer, can be used to verify
+/// the origin of the message
+#[derive(Default, Debug, Clone)]
+pub struct PeerMessageHeader {
+    /// The public key of the validator where this message originated
+    ///
+    /// NOTE: This may not be the validator that sent the message
+    pub signer_id: Vec<u8>,
+    pub content_sha512: Vec<u8>,
+    pub message_type: String,
+    pub name: String,
+    pub version: String,
 }
 
 /// Engine is the only trait that needs to be implemented when adding a new consensus engine.
