@@ -273,6 +273,9 @@ class ZmqService(Service):
             for block in response.blocks
         }
 
+    def get_block_by_id(self, block_id):
+        return self.get_blocks([block_id])[block_id]
+
     def get_chain_head(self):
         request = consensus_pb2.ConsensusChainHeadGetRequest()
 

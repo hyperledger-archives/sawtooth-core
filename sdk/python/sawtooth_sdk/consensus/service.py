@@ -137,6 +137,17 @@ class Service(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
+    def get_block_by_id(self, block_id):
+        '''Retrieve consensus-related information about a particular block.
+
+        Args:
+            block_id (bytes)
+
+        Return:
+            block
+        '''
+
+    @abc.abstractmethod
     def get_chain_head(self):
         '''Retrieve consensus-related information about the chain head.
 
