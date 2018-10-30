@@ -14,10 +14,10 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from sawtooth_settings.protobuf.settings_pb2 import SettingsPayload
-from sawtooth_settings.protobuf.settings_pb2 import SettingProposal
-from sawtooth_settings.protobuf.settings_pb2 import SettingVote
-from sawtooth_settings.protobuf.setting_pb2 import Setting
+from sawtooth_settings_test.protobuf.settings_pb2 import SettingsPayload
+from sawtooth_settings_test.protobuf.settings_pb2 import SettingProposal
+from sawtooth_settings_test.protobuf.settings_pb2 import SettingVote
+from sawtooth_settings_test.protobuf.setting_pb2 import Setting
 
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16

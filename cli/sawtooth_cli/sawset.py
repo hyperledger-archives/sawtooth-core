@@ -99,6 +99,10 @@ def _do_config_proposal_create(args):
         except IOError as e:
             raise CliException(
                 'Unable to write to batch file: {}'.format(str(e)))
+    elif args.sabre_output is not None:
+        for i, txn in enumerate(txns):
+            with open("{}-{}".format(args.sabre_output, i), 'wb') as outfile:
+                outfile.write(txn.payload)
     elif args.url is not None:
         rest_client = RestClient(args.url)
         rest_client.send_batches(batch_list)
@@ -548,6 +552,13 @@ def create_parser(prog_name):
         type=str,
         help="identify the URL of a validator's REST API",
         default='http://localhost:8008')
+
+    prop_target_group.add_argument(
+        '--sabre-output',
+        type=str,
+        help='specify an output file to write the settings payload to '
+             'for the sabre cli'
+    )
 
     prop_parser.add_argument(
         'setting',

@@ -42,7 +42,6 @@ cd $top_dir
 rm -rf build/
 rm -rf cli/sawtooth_cli/protobuf/
 rm -rf consensus/poet/commont/sawtooth_poet_common/protobuf/
-rm -rf families/settings/sawtooth_settings/protobuf/
 rm -rf rest_api/sawtooth_rest_api/protobuf/
 rm -rf sdk/python/sawtooth_sdk/protobuf/
 rm -rf validator/sawtooth_validator/protobuf/

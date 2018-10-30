@@ -32,10 +32,10 @@ services:
       - validator
     command: |
       bash -c "
-        bin/protogen
-        cd families/settings
-        python3 setup.py clean --all
-        python3 setup.py build
+        cd families/settings/sawtooth_settings
+        cargo build --release
+        mkdir -p bin
+        cp target/release/settings-tp bin/settings-tp
         settings-tp -vv -C tcp://validator:4004
       "
     stop_signal: SIGKILL

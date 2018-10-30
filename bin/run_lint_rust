@@ -26,6 +26,7 @@ dirs="
     $top_dir/perf/sawtooth_workload
     $top_dir/perf/intkey_workload
     $top_dir/perf/smallbank_workload
+    $top_dir/families/settings/sawtooth_settings
 "
 
 exitcode=0
