@@ -25,6 +25,9 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
     Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
+from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
+from sawtooth_validator.protobuf.consensus_pb2 import \
+    ConsensusPeerMessageHeader
 from sawtooth_validator.gossip import signature_verifier as verifier
 from sawtooth_validator.gossip import structure_verifier
 
@@ -161,6 +164,30 @@ class TestMessageValidation(unittest.TestCase):
 
         return block_list
 
+    def _create_consensus_message(self, valid=True):
+        name, version = "test", "1.0"
+        content = b"123"
+        message_type = "test"
+        header_bytes = ConsensusPeerMessageHeader(
+            signer_id=bytes.fromhex(self.public_key),
+            content_sha512=hashlib.sha512(content).digest(),
+            message_type=message_type,
+            name=name,
+            version=version,
+        ).SerializeToString()
+
+        if valid:
+            signature = bytes.fromhex(self.signer.sign(header_bytes))
+        else:
+            signature = b"bad_signature"
+
+        message = ConsensusPeerMessage(
+            header=header_bytes,
+            content=content,
+            header_signature=signature)
+
+        return message
+
     def test_valid_transaction(self):
         txn_list = self._create_transactions(1)
         txn = txn_list[0]
@@ -228,3 +255,11 @@ class TestMessageValidation(unittest.TestCase):
         block = block_list[0]
         valid = verifier.is_valid_block(block)
         self.assertFalse(valid)
+
+    def test_valid_consensus_message(self):
+        message = self._create_consensus_message()
+        self.assertTrue(verifier.is_valid_consensus_message(message))
+
+    def test_invalid_consensus_message(self):
+        message = self._create_consensus_message(valid=False)
+        self.assertFalse(verifier.is_valid_consensus_message(message))
