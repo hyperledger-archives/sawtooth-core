@@ -123,7 +123,7 @@ def is_valid_consensus_message(message):
     context = create_context('secp256k1')
     public_key = Secp256k1PublicKey.from_bytes(header.signer_id)
     if not context.verify(message.header_signature,
-                          message.content,
+                          message.header,
                           public_key):
         LOGGER.debug("message signature invalid for message: %s",
                      message.header_signature)
