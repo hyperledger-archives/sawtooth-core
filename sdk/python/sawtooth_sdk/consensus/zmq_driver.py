@@ -20,6 +20,7 @@ from threading import Thread
 
 from sawtooth_sdk.consensus.driver import Driver
 from sawtooth_sdk.consensus.engine import StartupState
+from sawtooth_sdk.consensus.engine import PeerMessage
 from sawtooth_sdk.consensus.zmq_service import ZmqService
 from sawtooth_sdk.consensus import exceptions
 from sawtooth_sdk.messaging.stream import Stream
@@ -138,7 +139,16 @@ class ZmqDriver(Driver):
             notification = consensus_pb2.ConsensusNotifyPeerMessage()
             notification.ParseFromString(message.content)
 
-            data = notification.message, notification.sender_id
+            header = consensus_pb2.ConsensusPeerMessageHeader()
+            header.ParseFromString(notification.message.header)
+
+            peer_message = PeerMessage(
+                header=header,
+                header_bytes=notification.message.header,
+                header_signature=notification.message.header_signature,
+                content=notification.message.content)
+
+            data = peer_message, notification.sender_id
 
         elif type_tag == Message.CONSENSUS_NOTIFY_BLOCK_NEW:
             notification = consensus_pb2.ConsensusNotifyBlockNew()

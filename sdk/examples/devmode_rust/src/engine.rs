@@ -309,7 +309,7 @@ impl Engine for DevmodeEngine {
                         }
 
                         Update::PeerMessage(message, sender_id) => {
-                            match DevmodeMessage::from_str(message.message_type.as_ref()).unwrap() {
+                            match DevmodeMessage::from_str(message.header.message_type.as_ref()).unwrap() {
                                 DevmodeMessage::Published => {
                                     let block_id = BlockId::from(message.content);
                                     info!(

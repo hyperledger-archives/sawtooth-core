@@ -115,25 +115,25 @@ def is_valid_transaction(txn):
     return True
 
 
-def is_valid_consensus_message(message_envelope):
+def is_valid_consensus_message(message):
     # validate consensus message signature
     header = ConsensusPeerMessageHeader()
-    header.ParseFromString(message_envelope.header)
+    header.ParseFromString(message.header)
 
     context = create_context('secp256k1')
-    public_key = Secp256k1PublicKey.from_bytes(header.signer_public_key)
-    if not context.verify(message_envelope.header_signature,
-                          message_envelope.header,
+    public_key = Secp256k1PublicKey.from_bytes(header.signer_id)
+    if not context.verify(message.header_signature,
+                          message.header,
                           public_key):
         LOGGER.debug("message signature invalid for message: %s",
-                     message_envelope.header_signature)
+                     message.header_signature)
         return False
 
     # verify the message field matches the header
-    message_sha512 = hashlib.sha512(message_envelope.message).digest()
-    if message_sha512 != header.message_sha512:
-        LOGGER.debug("message doesn't match message_sha512 of the header for"
-                     "message envelope: %s", message_envelope.header_signature)
+    content_sha512 = hashlib.sha512(message.content).digest()
+    if content_sha512 != header.content_sha512:
+        LOGGER.debug("message doesn't match content_sha512 of the header for"
+                     "message envelope: %s", message.header_signature)
         return False
 
     return True
