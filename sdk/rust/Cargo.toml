@@ -18,6 +18,12 @@ name = "sawtooth-sdk"
 version = "0.1.0"
 authors = ["Bitwise IO, Inc.", "Intel Corporation"]
 build = "build.rs"
+license = "Apache-2.0"
+description = """\
+    Hyperledger Sawtooth is an enterprise blockchain platform for building \
+    distributed ledger applications and networks.
+"""
+documentation = "https://sawtooth.hyperledger.org/docs/core/releases/latest/"
 
 [features]
 default = ["pem"]
