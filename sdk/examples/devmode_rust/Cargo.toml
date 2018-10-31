@@ -13,7 +13,7 @@ clap = "2"
 log = "0.3.0"
 log4rs = "0.7.0"
 rand = "0.4.2"
-sawtooth_sdk = { path = "../../rust" }
+sawtooth-sdk = { path = "../../rust" }
 
 [package.metadata.deb]
 maintainer = "sawtooth"

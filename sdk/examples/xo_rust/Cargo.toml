@@ -19,7 +19,7 @@ version = "0.8.0"
 authors = ["Bitwise IO, Inc."]
 
 [dependencies]
-sawtooth_sdk = { path = "../../rust" }
+sawtooth-sdk = { path = "../../rust" }
 rust-crypto = "0.2"
 clap = "2"
 log = "0.4"

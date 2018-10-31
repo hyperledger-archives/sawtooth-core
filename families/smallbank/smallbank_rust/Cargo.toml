@@ -21,7 +21,7 @@ authors = ["Intel Corporation"]
 build = "build.rs"
 
 [dependencies]
-sawtooth_sdk = { path = "../../../sdk/rust" }
+sawtooth-sdk = { path = "../../../sdk/rust" }
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }

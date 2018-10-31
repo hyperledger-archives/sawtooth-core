@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 [package]
-name = "sawtooth_sdk"
+name = "sawtooth-sdk"
 version = "0.1.0"
 authors = ["Bitwise IO, Inc.", "Intel Corporation"]
 build = "build.rs"
