@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+import logging
 
 from collections import namedtuple
 
@@ -21,6 +22,9 @@ from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
 from sawtooth_validator.protobuf.consensus_pb2 import \
     ConsensusPeerMessageHeader
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class UnknownBlock(Exception):
@@ -49,22 +53,39 @@ class ConsensusProxy:
         self._settings_view_factory = settings_view_factory
         self._state_view_factory = state_view_factory
         self._consensus_registry = consensus_registry
+        self._consensus_notifier = consensus_notifier
 
     def register(self, engine_name, engine_version, connection_id):
-        chain_head = self._chain_controller.chain_head
-        if chain_head is None:
-            return None
-
         self._consensus_registry.register_engine(
             connection_id, engine_name, engine_version)
 
-        return StartupInfo(
-            chain_head=chain_head,
-            peers=[
-                self._gossip.peer_to_public_key(peer)
-                for peer in self._gossip.get_peers()
-            ],
-            local_peer_info=self._public_key)
+    def activate_if_configured(self, engine_name, engine_version):
+        # Wait until chain head is committed
+        chain_head = None
+        while chain_head is None:
+            try:
+                chain_head = self.chain_head_get()
+            except UnknownBlock:
+                pass
+
+        header = BlockHeader()
+        header.ParseFromString(chain_head.header)
+        settings_view = self._settings_view_factory.create_settings_view(
+            header.state_root_hash)
+
+        conf_name = settings_view.get_setting(
+            'sawtooth.consensus.algorithm.name')
+        conf_version = settings_view.get_setting(
+            'sawtooth.consensus.algorithm.version')
+
+        if engine_name == conf_name and engine_version == conf_version:
+            self._consensus_registry.activate_engine(
+                engine_name, engine_version)
+
+            LOGGER.info(
+                "Consensus engine activated: %s %s",
+                engine_name,
+                engine_version)
 
     def is_active_engine_id(self, connection_id):
         return self._consensus_registry.is_active_engine_id(connection_id)

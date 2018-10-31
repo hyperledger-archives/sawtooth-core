@@ -154,6 +154,32 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         return HandlerStatus.RETURN_AND_PASS
 
 
+class ConsensusRegisterActivateHandler(Handler):
+    def __init__(self, proxy):
+        self._proxy = proxy
+        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+
+    @property
+    def request_type(self):
+        return self._request_type
+
+    def handle(self, connection_id, message_content):
+        # If this is the configured consensus engine, make it active. This is
+        # necessary for setting the active engine on genesis and when the
+        # configured engine is changed to an engine that is not registered yet
+        request = consensus_pb2.ConsensusRegisterRequest()
+
+        try:
+            request.ParseFromString(message_content)
+        except DecodeError:
+            LOGGER.exception("Unable to decode ConsensusRegisterRequest")
+            return HandlerResult(status=HandlerResult.DROP)
+
+        self._proxy.activate_if_configured(request.name, request.version)
+
+        return HandlerResult(status=HandlerStatus.PASS)
+
+
 class ConsensusRegisterBlockNewSyncHandler(Handler):
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
