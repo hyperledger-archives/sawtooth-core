@@ -13,91 +13,105 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
+import ctypes
+from enum import IntEnum
 import logging
 
 
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf import consensus_pb2
-from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator import ffi
+from sawtooth_validator.ffi import PY_LIBRARY
+from sawtooth_validator.ffi import LIBRARY
+from sawtooth_validator.ffi import CommonErrorCode
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ConsensusNotifier:
-    """Handles sending notifications to the consensus engine using the provided
-    interconnect service."""
-
+class _NotifierService:
     def __init__(self, consensus_service, consensus_registry):
         self._service = consensus_service
         self._consensus_registry = consensus_registry
 
-    def _notify(self, message_type, message):
+    def notify(self, message_type, message):
         if self._consensus_registry:
+            message_bytes = bytes(message)
             futures = self._service.send_all(
                 message_type,
-                message.SerializeToString())
+                message_bytes)
             for future in futures:
                 future.result()
+
+
+class ErrorCode(IntEnum):
+    Success = CommonErrorCode.Success
+    NullPointerProvided = CommonErrorCode.NullPointerProvided
+    InvalidArgument = 0x02
+
+
+class ConsensusNotifier(ffi.OwnedPointer):
+    """Handles sending notifications to the consensus engine using the provided
+    interconnect service."""
+
+    def __init__(self, consensus_service, consensus_registry):
+        super().__init__('consensus_notifier_drop')
+
+        self._notifier_service = _NotifierService(
+            consensus_service,
+            consensus_registry)
+
+        PY_LIBRARY.call(
+            'consensus_notifier_new',
+            ctypes.py_object(self._notifier_service),
+            ctypes.byref(self.pointer))
+
+    def _notify(self, fn_name, *args):
+        return_code = LIBRARY.call(
+            fn_name,
+            self.pointer,
+            *args)
+
+        if return_code == ErrorCode.Success:
+            return
+        if return_code == ErrorCode.NullPointerProvided:
+            raise TypeError("Provided null pointer(s)")
+        if return_code == ErrorCode.InvalidArgument:
+            raise ValueError("Input was not valid ")
 
     def notify_peer_connected(self, peer_id):
         """A new peer was added"""
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_PEER_CONNECTED,
-            consensus_pb2.ConsensusNotifyPeerConnected(
-                peer_info=consensus_pb2.ConsensusPeerInfo(
-                    peer_id=bytes.fromhex(peer_id))))
+            "consensus_notifier_notify_peer_connected",
+            ctypes.c_char_p(peer_id.encode()))
 
     def notify_peer_disconnected(self, peer_id):
         """An existing peer was dropped"""
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_PEER_DISCONNECTED,
-            consensus_pb2.ConsensusNotifyPeerDisconnected(
-                peer_id=bytes.fromhex(peer_id)))
+            "consensus_notifier_notify_peer_disconnected",
+            ctypes.c_char_p(peer_id.encode()))
 
     def notify_peer_message(self, message, sender_id):
         """A new message was received from a peer"""
+        payload = message.SerializeToString()
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_PEER_MESSAGE,
-            consensus_pb2.ConsensusNotifyPeerMessage(
-                message=message,
-                sender_id=sender_id))
+            "consensus_notifier_notify_peer_message",
+            payload,
+            len(payload),
+            sender_id,
+            len(sender_id))
 
     def notify_block_new(self, block):
         """A new block was received and passed initial consensus validation"""
-        summary = hashlib.sha256()
-        for batch in block.batches:
-            summary.update(batch.header_signature.encode())
-        block_header = BlockHeader()
-        block_header.ParseFromString(block.header)
+        payload = block.SerializeToString()
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_NEW,
-            consensus_pb2.ConsensusNotifyBlockNew(
-                block=consensus_pb2.ConsensusBlock(
-                    block_id=bytes.fromhex(block.header_signature),
-                    previous_id=bytes.fromhex(block_header.previous_block_id),
-                    signer_id=bytes.fromhex(block_header.signer_public_key),
-                    block_num=block_header.block_num,
-                    payload=block_header.consensus,
-                    summary=summary.digest())))
+            "consensus_notifier_notify_block_new", payload, len(payload))
 
     def notify_block_valid(self, block_id):
         """This block can be committed successfully"""
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_VALID,
-            consensus_pb2.ConsensusNotifyBlockValid(
-                block_id=bytes.fromhex(block_id)))
+            "consensus_notifier_notify_block_valid",
+            ctypes.c_char_p(block_id.encode()))
 
     def notify_block_invalid(self, block_id):
         """This block cannot be committed successfully"""
         self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_INVALID,
-            consensus_pb2.ConsensusNotifyBlockInvalid(
-                block_id=bytes.fromhex(block_id)))
-
-    def notify_block_commit(self, block_id):
-        """This block has been committed"""
-        self._notify(
-            validator_pb2.Message.CONSENSUS_NOTIFY_BLOCK_COMMIT,
-            consensus_pb2.ConsensusNotifyBlockCommit(
-                block_id=bytes.fromhex(block_id)))
+            "consensus_notifier_notify_block_invalid",
+            ctypes.c_char_p(block_id.encode()))

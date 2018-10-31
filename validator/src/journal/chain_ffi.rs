@@ -18,7 +18,8 @@
 #![allow(unknown_lints)]
 
 use block::Block;
-use cpython::{self, ObjectProtocol, PyClone, PyList, PyObject, Python, PythonObject, ToPyObject};
+use consensus::notifier::BackgroundConsensusNotifier;
+use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
@@ -70,7 +71,7 @@ pub unsafe extern "C" fn chain_controller_new(
     state_database: *const c_void,
     chain_head_lock: *const c_void,
     block_validation_result_cache: *const c_void,
-    consensus_notifier: *mut py_ffi::PyObject,
+    consensus_notifier_service: *mut c_void,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
     fork_cache_keep_time: u32,
@@ -83,7 +84,7 @@ pub unsafe extern "C" fn chain_controller_new(
         block_validator,
         state_database,
         chain_head_lock,
-        consensus_notifier,
+        consensus_notifier_service,
         observers,
         data_directory
     );
@@ -100,7 +101,8 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
-    let py_consensus_notifier = PyObject::from_borrowed_ptr(py, consensus_notifier);
+    let consensus_notifier_service =
+        Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -127,7 +129,7 @@ pub unsafe extern "C" fn chain_controller_new(
         commit_store.clone(),
         chain_head_lock_ref.clone(),
         results_cache,
-        Box::new(PyConsensusNotifier::new(py_consensus_notifier)),
+        consensus_notifier_service.clone(),
         data_dir.into(),
         state_pruning_block_depth,
         observer_wrappers,
@@ -137,6 +139,7 @@ pub unsafe extern "C" fn chain_controller_new(
 
     *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
 
+    Box::into_raw(consensus_notifier_service);
     Box::into_raw(commit_store);
 
     ErrorCode::Success
@@ -391,99 +394,6 @@ impl ChainObserver for PyChainObserver {
             .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
-                ()
-            }).unwrap_or(())
-    }
-}
-
-struct PyConsensusNotifier {
-    py_consensus_notifier: PyObject,
-}
-
-impl PyConsensusNotifier {
-    fn new(py_consensus_notifier: PyObject) -> Self {
-        PyConsensusNotifier {
-            py_consensus_notifier,
-        }
-    }
-}
-
-impl Clone for PyConsensusNotifier {
-    fn clone(&self) -> Self {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        PyConsensusNotifier {
-            py_consensus_notifier: self.py_consensus_notifier.clone_ref(py),
-        }
-    }
-}
-
-impl ConsensusNotifier for PyConsensusNotifier {
-    fn notify_block_new(&self, block: &Block) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_consensus_notifier
-            .call_method(py, "notify_block_new", (block,), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    "Unable to call consensus_notifier.notify_block_new",
-                    py_err,
-                );
-                ()
-            }).unwrap_or(())
-    }
-
-    fn notify_block_valid(&self, block_id: &str) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_consensus_notifier
-            .call_method(py, "notify_block_valid", (block_id,), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    "Unable to call consensus_notifier.notify_block_valid",
-                    py_err,
-                );
-                ()
-            }).unwrap_or(())
-    }
-
-    fn notify_block_invalid(&self, block_id: &str) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_consensus_notifier
-            .call_method(py, "notify_block_invalid", (block_id,), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    "Unable to call consensus_notifier.notify_block_invalid",
-                    py_err,
-                );
-                ()
-            }).unwrap_or(())
-    }
-
-    fn notify_block_commit(&self, block_id: &str) {
-        let gil_guard = Python::acquire_gil();
-        let py = gil_guard.python();
-
-        self.py_consensus_notifier
-            .call_method(py, "notify_block_commit", (block_id,), None)
-            .map(|_| ())
-            .map_err(|py_err| {
-                pylogger::exception(
-                    py,
-                    "Unable to call consensus_notifier.notify_block_commit",
-                    py_err,
-                );
                 ()
             }).unwrap_or(())
     }
