@@ -113,7 +113,8 @@ class EventBroadcaster(ChainObserver):
         '''
         # If latest known block is not the current chain head, catch up
         catchup_up_blocks = []
-        if last_known_block_id != self._block_store.chain_head.identifier:
+        chain_head = self._block_store.chain_head
+        if chain_head and last_known_block_id != chain_head.identifier:
             # Start from the chain head and get blocks until we reach the
             # known block
             for block in self._block_store.get_predecessor_iter():
