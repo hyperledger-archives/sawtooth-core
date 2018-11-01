@@ -202,7 +202,7 @@ paths:
         characters specified.
 
         Note that the partial address in `address` parameter should have even 
-        number of hecadeximal characters (i.e., complete bytes).
+        number of hexadecimal characters (i.e., complete bytes).
         
       parameters:
         - $ref: "#/parameters/head"
