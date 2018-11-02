@@ -45,13 +45,6 @@ impl BlockInfoPayload {
         {
             let next_block = payload.get_block();
 
-            if next_block.get_block_num() < 0 {
-                return Err(ApplyError::InvalidTransaction(format!(
-                    "Invalid block num: {}",
-                    next_block.get_block_num()
-                )));
-            }
-
             if !(validate_hex(next_block.get_previous_block_id(), 128)
                 || next_block.get_previous_block_id() == "0000000000000000")
             {
@@ -70,13 +63,6 @@ impl BlockInfoPayload {
                 return Err(ApplyError::InvalidTransaction(format!(
                     "Invalid header signature '{}'",
                     next_block.get_header_signature()
-                )));
-            }
-
-            if next_block.get_timestamp() <= 0 {
-                return Err(ApplyError::InvalidTransaction(format!(
-                    "Invalid timestamp '{}'",
-                    next_block.get_timestamp()
                 )));
             }
         }
