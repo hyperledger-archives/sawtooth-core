@@ -51,6 +51,7 @@ fn validate_timestamp(timestamp: u64, tolerance: u64) -> Result<(), ApplyError> 
     Ok(())
 }
 
+#[derive(Default)]
 pub struct BlockInfoTransactionHandler {
     family_name: String,
     family_versions: Vec<String>,
