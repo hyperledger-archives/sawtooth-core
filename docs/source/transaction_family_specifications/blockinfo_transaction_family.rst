@@ -36,9 +36,9 @@ Address
 The top-level namespace of this transaction family is 00b10c. This namespace is
 further subdivided based on the next two characters as follows:
 
-00b10c00
-  Information about other namespaces; the "metadata namespace"
 00b10c01
+  Information about the block info config and metadata; the "metadata namespace"
+00b10c00
   Historic block information; the "block info namespace"
 
 Under the metadata namespace, the “zero-address” formed by concatenating the
