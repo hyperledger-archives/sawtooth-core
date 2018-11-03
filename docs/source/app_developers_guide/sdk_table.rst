@@ -37,12 +37,12 @@ The Maturity column shows the general maturity level of each feature:
 The available SDKs are in the following repositories:
 
 * Python:
-  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_python
-  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_python>`_
+  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/python
+  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/python>`_
 
 * Rust:
-  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust
-  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust>`_
+  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/rust
+  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/rust>`_
 
 * Go:
   `https://github.com/hyperledger/sawtooth-sdk-go
