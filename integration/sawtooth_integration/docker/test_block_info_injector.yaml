@@ -104,7 +104,7 @@ services:
             --bind consensus:tcp://eth0:5005 \
     \""
     environment:
-      PYTHONPATH: "/project/sawtooth-core/families/block_info/python"
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   devmode:
@@ -166,6 +166,6 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
-        /project/sawtooth-core/families/block_info/python:\
+        /project/sawtooth-core/families/block_info:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"

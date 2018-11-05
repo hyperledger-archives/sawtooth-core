@@ -60,7 +60,7 @@ def main(args=None):
 
     # Generate block info protos
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
-    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
+    protoc(proto_dir, "families/block_info", "sawtooth_block_info_injector/protobuf")
 
 
 def protoc(src_dir, base_dir, pkg, language="python"):

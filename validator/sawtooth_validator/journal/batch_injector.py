@@ -85,7 +85,7 @@ class DefaultBatchInjectorFactory:
         """Returns a new batch injector"""
         if injector == "block_info":
             block_info_injector = importlib.import_module(
-                "sawtooth_block_info.injector")
+                "sawtooth_block_info_injector.injector")
 
             return block_info_injector.BlockInfoInjector(
                 self._state_view_factory, self._signer)
