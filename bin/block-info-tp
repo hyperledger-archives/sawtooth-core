@@ -16,7 +16,7 @@
 # ------------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/block_info/sawtooth_block_info/bin/block_info
+bin=$top_dir/families/block_info/sawtooth_block_info/bin/block-info-tp
 
 if [ -e $bin ]
 then

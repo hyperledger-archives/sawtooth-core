@@ -15,7 +15,7 @@
 # ------------------------------------------------------------------------------
 
 [package]
-name = "block_info"
+name = "sawtooth-block-info-tp"
 version = "1.0.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
@@ -25,15 +25,18 @@ depends = "$auto"
 assets = [
     ["packaging/systemd/sawtooth-block-info-tp.service",
     "/lib/systemd/system/sawtooth-block-info-tp.service", "644"],
-    ["../../../bin/block-info-tp-deb", "/usr/bin/block-info-tp", "755"],
     ["packaging/systemd/sawtooth-block-info-tp", "/etc/default/sawtooth-block-info-tp", "644"],
-    ["target/release/block_info", "/usr/bin/block_info", "755"],
+    ["target/release/block-info-tp", "/usr/bin/block-info-tp", "755"],
 ]
 maintainer-scripts = "packaging/ubuntu"
 conf-files = [
     "/lib/systemd/system/sawtooth-block-info-tp.service",
     "/etc/default/sawtooth-block-info-tp"
 ]
+
+[[bin]]
+name = "block-info-tp"
+path = "./src/main.rs"
 
 [dependencies]
 clap = "2"
