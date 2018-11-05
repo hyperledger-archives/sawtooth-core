@@ -156,6 +156,6 @@ services:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: sawtooth-devmode-rust-local:${ISOLATION_ID}
+    image: sawtooth-devmode-engine-rust-local:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core

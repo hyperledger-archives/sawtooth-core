@@ -170,7 +170,7 @@ services:
       "
 
   devmode-rust:
-    image: sawtooth-devmode-rust:${ISOLATION_ID}
+    image: sawtooth-devmode-engine-rust:${ISOLATION_ID}
     volumes:
       - ../../build/debs:/build/debs
     command: |

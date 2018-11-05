@@ -168,7 +168,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
-    command: devmode-rust --connect tcp://validator-0:5005 -v
+    command: devmode-engine-rust --connect tcp://validator-0:5005 -v
     stop_signal: SIGKILL
 
   devmode-1:
@@ -183,7 +183,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
-    command: devmode-rust --connect tcp://validator-1:5005 -v
+    command: devmode-engine-rust --connect tcp://validator-1:5005 -v
     stop_signal: SIGKILL
 
   devmode-2:
@@ -198,7 +198,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
-    command: devmode-rust --connect tcp://validator-2:5005 -v
+    command: devmode-engine-rust --connect tcp://validator-2:5005 -v
     stop_signal: SIGKILL
 
   devmode-3:
@@ -213,7 +213,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
-    command: devmode-rust --connect tcp://validator-3:5005 -v
+    command: devmode-engine-rust --connect tcp://validator-3:5005 -v
     stop_signal: SIGKILL
 
   devmode-4:
@@ -228,7 +228,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
-    command: devmode-rust --connect tcp://validator-4:5005 -v
+    command: devmode-engine-rust --connect tcp://validator-4:5005 -v
     stop_signal: SIGKILL
 
   rest-api-0:

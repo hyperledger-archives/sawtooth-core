@@ -257,7 +257,7 @@ def start_processors(num, processor_func):
 # consensus engine
 
 def engine_cmd(num):
-    return 'devmode-rust --connect {s} {v}'.format(
+    return 'devmode-engine-rust --connect {s} {v}'.format(
         s=engine_connection_address(num),
         v='-v'
     )

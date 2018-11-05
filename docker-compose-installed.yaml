@@ -246,8 +246,8 @@ services:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: sawtooth-devmode-rust:${ISOLATION_ID}
-    container_name: sawtooth-devmode-rust
+    image: sawtooth-devmode-engine-rust:${ISOLATION_ID}
+    container_name: sawtooth-devmode-engine-rust
 
   sawtooth-meta:
     build:

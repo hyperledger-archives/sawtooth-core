@@ -1,4 +1,4 @@
-sawtooth-devmode-rust (@VERSION@) unstable; urgency=low
+sawtooth-devmode-engine-rust (@VERSION@) unstable; urgency=low
 
   * change data here
 
