@@ -23,6 +23,7 @@ rest-api
 intkey-tp-python
 xo-tp-python
 settings-tp
+block-info-tp
 identity-tp
 devmode-engine-rust
 "

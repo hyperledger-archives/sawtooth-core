@@ -41,4 +41,4 @@ CMD cd families/block_info/sawtooth_block_info \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \
- && cp ./target/release/block-info ./bin/block-info
+ && cp ./target/release/block-info-tp ./bin/block-info-tp
