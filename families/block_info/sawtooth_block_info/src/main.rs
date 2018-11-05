@@ -19,6 +19,8 @@
 extern crate cfg_if;
 extern crate crypto;
 extern crate hex;
+#[macro_use]
+extern crate log;
 extern crate protobuf;
 
 cfg_if! {
@@ -27,8 +29,6 @@ cfg_if! {
     } else {
         #[macro_use]
         extern crate clap;
-        #[macro_use]
-        extern crate log;
         extern crate log4rs;
         extern crate rustc_serialize;
         extern crate sawtooth_sdk;
