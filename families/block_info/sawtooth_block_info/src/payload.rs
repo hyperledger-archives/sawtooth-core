@@ -48,22 +48,28 @@ impl BlockInfoPayload {
             if !(validate_hex(next_block.get_previous_block_id(), 128)
                 || next_block.get_previous_block_id() == "0000000000000000")
             {
-                return Err(ApplyError::InvalidTransaction(format!(
+                let warning_string = format!(
                     "Invalid previous block id '{}'",
                     next_block.get_previous_block_id()
-                )));
+                );
+                warn!("Invalid Transaction: {}", &warning_string);
+                return Err(ApplyError::InvalidTransaction(warning_string));
             }
             if !validate_hex(next_block.get_signer_public_key(), 66) {
-                return Err(ApplyError::InvalidTransaction(format!(
+                let warning_string = format!(
                     "Invalid signer public_key '{}'",
                     next_block.get_signer_public_key()
-                )));
+                );
+                warn!("Invalid Transaction: {}", &warning_string);
+                return Err(ApplyError::InvalidTransaction(warning_string));
             }
             if !validate_hex(next_block.get_header_signature(), 128) {
-                return Err(ApplyError::InvalidTransaction(format!(
+                let warning_string = format!(
                     "Invalid header signature '{}'",
                     next_block.get_header_signature()
-                )));
+                );
+                warn!("Invalid Transaction: {}", &warning_string);
+                return Err(ApplyError::InvalidTransaction(warning_string));
             }
         }
 
@@ -73,7 +79,9 @@ impl BlockInfoPayload {
 
 fn parse_protobuf<M: protobuf::Message>(bytes: &[u8]) -> Result<M, ApplyError> {
     protobuf::parse_from_bytes(bytes).map_err(|err| {
-        ApplyError::InvalidTransaction(format!("Failed to serialize protobuf: {:?}", err))
+        let warning_string = format!("Failed to serialize protobuf: {:?}", err);
+        warn!("Invalid Transaction: {}", &warning_string);
+        ApplyError::InvalidTransaction(warning_string)
     })
 }
 

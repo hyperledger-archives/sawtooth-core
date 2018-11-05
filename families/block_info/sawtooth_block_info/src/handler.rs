@@ -42,10 +42,12 @@ fn validate_timestamp(timestamp: u64, tolerance: u64) -> Result<(), ApplyError> 
         .expect("System time is before Unix epoch.")
         .as_secs();
     if timestamp < (now - tolerance) || (now + tolerance) < timestamp {
-        return Err(ApplyError::InvalidTransaction(format!(
+        let warning_string = format!(
             "Timestamp must be less than local time. Expected {0} in ({1}-{2}, {1}+{2})",
             timestamp, now, tolerance
-        )));
+        );
+        warn!("Invalid Transaction: {}", &warning_string);
+        return Err(ApplyError::InvalidTransaction(warning_string));
     }
 
     Ok(())
@@ -82,19 +84,22 @@ impl BlockInfoTransactionHandler {
                     ));
                 }
                 if payload.block.previous_block_id != previous_block.header_signature {
-                    return Err(ApplyError::InvalidTransaction(
-                        format!(
+                    let warning_string = format!(
                             "Previous block id must match header signature of previous block. Expected {}, Found {}",
                             previous_block.header_signature,
-                            payload.block.previous_block_id),
-                    ));
+                            payload.block.previous_block_id,
+                    );
+                    warn!("Invalid transaction: {}", &warning_string);
+                    return Err(ApplyError::InvalidTransaction(warning_string));
                 }
 
                 if payload.block.timestamp < previous_block.timestamp {
-                    return Err(ApplyError::InvalidTransaction(format!(
+                    let warning_string = format!(
                         "Timestamp must be greater than previous block's. Got {}, expected >{}",
                         payload.block.timestamp, previous_block.timestamp
-                    )));
+                    );
+                    warn!("Invalid Transaction: {}", &warning_string);
+                    return Err(ApplyError::InvalidTransaction(warning_string));
                 }
             } else {
                 return Err(ApplyError::InternalError(
@@ -147,15 +152,14 @@ impl BlockInfoTransactionHandler {
             }
 
             if payload.block.block_num != config.latest_block + 1 {
-                return Err(ApplyError::InvalidTransaction(format!(
+                let warning_string = format!(
                     "Current block is {}, but latest block calculated from config is {}",
                     &payload.block.block_num,
                     &config.latest_block + 1
-                )));
-            } else {
-                config.latest_block = payload.block.block_num;
+                );
+                warn!("Invalid Transaction: {}", &warning_string);
+                return Err(ApplyError::InvalidTransaction(warning_string));
             }
-
             Ok(Some(config))
         } else {
             Ok(None)
