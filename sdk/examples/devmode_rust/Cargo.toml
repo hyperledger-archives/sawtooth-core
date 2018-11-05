@@ -1,11 +1,11 @@
 [package]
-name = "sawtooth-devmode-rust"
+name = "sawtooth-devmode-engine-rust"
 version = "0.1.0"
 authors = ["Intel Corporation"]
 description = "Hyperledger Sawtooth DevMode Rust consensus engine"
 
 [[bin]]
-name = "devmode-rust"
+name = "devmode-engine-rust"
 path = "src/main.rs"
 
 [dependencies]
@@ -19,8 +19,8 @@ sawtooth_sdk = { path = "../../rust" }
 maintainer = "sawtooth"
 depends = "$auto"
 assets = [
-    ["packaging/systemd/sawtooth-devmode-rust.service", "/lib/systemd/system/sawtooth-devmode-rust.service", "640"],
-    ["packaging/systemd/sawtooth-devmode-rust", "/etc/default/sawtooth-devmode-rust", "640"],
-    ["target/release/devmode-rust", "/usr/bin/devmode-rust", "755"]
+    ["packaging/systemd/sawtooth-devmode-engine-rust.service", "/lib/systemd/system/sawtooth-devmode-engine-rust.service", "640"],
+    ["packaging/systemd/sawtooth-devmode-engine-rust", "/etc/default/sawtooth-devmode-engine-rust", "640"],
+    ["target/release/devmode-engine-rust", "/usr/bin/devmode-engine-rust", "755"]
 ]
 maintainer-scripts = "packaging/ubuntu"

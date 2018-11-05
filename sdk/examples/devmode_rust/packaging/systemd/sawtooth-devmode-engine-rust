@@ -13,4 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-#SAWTOOTH_DEVMODE_RUST_ARGS=-v -C tcp://localhost:5050
+#SAWTOOTH_DEVMODE_ENGINE_RUST_ARGS=-v -C tcp://localhost:5050

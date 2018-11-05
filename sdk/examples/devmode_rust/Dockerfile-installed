@@ -50,8 +50,8 @@ RUN /root/.cargo/bin/cargo deb
 # -------------=== devmode rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=devmode-rust-builder /project/sdk/examples/devmode_rust/target/debian/sawtooth-devmode-rust_*.deb /tmp
+COPY --from=devmode-rust-builder /project/sdk/examples/devmode_rust/target/debian/sawtooth-devmode-engine-rust_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawtooth-devmode-rust_*.deb || true \
+ && dpkg -i /tmp/sawtooth-devmode-engine-rust_*.deb || true \
  && apt-get -f -y install
