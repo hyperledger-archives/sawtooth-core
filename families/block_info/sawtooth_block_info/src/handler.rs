@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Bitwise IO
+ * Copyright 2018 Bitwise IO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 
-use block_info::{BlockInfo, BlockInfoConfig, BlockInfoTxn};
-use hex;
-use protobuf;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use addressing::NAMESPACE;
+use payload::BlockInfoPayload;
+use state::{BlockInfoState, Config, DEFAULT_SYNC_TOLERANCE, DEFAULT_TARGET_COUNT};
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -35,26 +34,6 @@ cfg_if! {
         use sawtooth_sdk::processor::handler::TransactionContext;
         use sawtooth_sdk::processor::handler::TransactionHandler;
     }
-}
-
-const NAMESPACE: &str = "00b10c";
-const DEFAULT_SYNC_TOLERANCE: u64 = 60 * 5;
-const DEFAULT_TARGET_COUNT: u64 = 256;
-
-fn parse_protobuf<M: protobuf::Message>(bytes: &[u8]) -> Result<M, ApplyError> {
-    protobuf::parse_from_bytes(bytes).map_err(|err| {
-        ApplyError::InvalidTransaction(format!("Failed to serialize protobuf: {:?}", err))
-    })
-}
-
-fn serialize_protobuf<M: protobuf::Message>(message: &M) -> Result<Vec<u8>, ApplyError> {
-    protobuf::Message::write_to_bytes(message).map_err(|err| {
-        ApplyError::InvalidTransaction(format!("Failed to serialize protobuf: {:?}", err))
-    })
-}
-
-fn validate_hex(string: &str, length: usize) -> bool {
-    hex::decode(string).is_ok() && string.len() == length
 }
 
 fn validate_timestamp(timestamp: u64, tolerance: u64) -> Result<(), ApplyError> {
@@ -72,14 +51,6 @@ fn validate_timestamp(timestamp: u64, tolerance: u64) -> Result<(), ApplyError> 
     Ok(())
 }
 
-fn get_config_addr() -> String {
-    format!("{}01{}", NAMESPACE, "0".repeat(62))
-}
-
-fn create_block_address(block_num: u64) -> String {
-    format!("{}00{:062x}", NAMESPACE, block_num)
-}
-
 pub struct BlockInfoTransactionHandler {
     family_name: String,
     family_versions: Vec<String>,
@@ -92,6 +63,101 @@ impl BlockInfoTransactionHandler {
             family_name: "block_info".to_string(),
             family_versions: vec!["1.0".to_string()],
             namespaces: vec![NAMESPACE.to_string()],
+        }
+    }
+
+    pub fn execute_block_info_transaction(
+        &self,
+        payload: BlockInfoPayload,
+        state: &mut BlockInfoState,
+    ) -> Result<(), ApplyError> {
+        if let Some(config) = Self::mutate_config_if_exists(&payload, state)? {
+            validate_timestamp(payload.block.timestamp, config.sync_tolerance)?;
+
+            if let Some(previous_block) = state.get_block_by_num(config.latest_block)? {
+                if previous_block.block_num != config.latest_block {
+                    return Err(ApplyError::InternalError(
+                        "Config and state out of synce. Latest block has different block num from block in state".into(),
+                    ));
+                }
+                if payload.block.previous_block_id != previous_block.header_signature {
+                    return Err(ApplyError::InvalidTransaction(
+                        format!(
+                            "Previous block id must match header signature of previous block. Expected {}, Found {}",
+                            previous_block.header_signature,
+                            payload.block.previous_block_id),
+                    ));
+                }
+
+                if payload.block.timestamp < previous_block.timestamp {
+                    return Err(ApplyError::InvalidTransaction(format!(
+                        "Timestamp must be greater than previous block's. Got {}, expected >{}",
+                        payload.block.timestamp, previous_block.timestamp
+                    )));
+                }
+            } else {
+                return Err(ApplyError::InternalError(
+                    "Config and state out of sync. Latest block not found in state.".into(),
+                ));
+            }
+
+            state.set_config_and_block(config, payload.block)?;
+        } else {
+            let sync_tolerance = if payload.sync_tolerance != 0 {
+                payload.sync_tolerance
+            } else {
+                DEFAULT_SYNC_TOLERANCE
+            };
+
+            let target_count = if payload.target_count != 0 {
+                payload.target_count
+            } else {
+                DEFAULT_TARGET_COUNT
+            };
+
+            let config = Config {
+                sync_tolerance,
+                target_count,
+                latest_block: payload.block.block_num,
+                oldest_block: payload.block.block_num,
+            };
+
+            validate_timestamp(payload.block.timestamp, config.sync_tolerance)?;
+
+            state.set_config_and_block(config, payload.block)?;
+        }
+
+        Ok(())
+    }
+
+    /// If the config exists in state, modify the target count, sync_tolerance if they are set,
+    /// and update the latest block.
+    fn mutate_config_if_exists(
+        payload: &BlockInfoPayload,
+        state: &mut BlockInfoState,
+    ) -> Result<Option<Config>, ApplyError> {
+        if let Some(mut config) = state.get_config_from_state()? {
+            if payload.target_count != 0 {
+                config.target_count = payload.target_count;
+            }
+
+            if payload.sync_tolerance != 0 {
+                config.sync_tolerance = payload.sync_tolerance;
+            }
+
+            if payload.block.block_num != config.latest_block + 1 {
+                return Err(ApplyError::InvalidTransaction(format!(
+                    "Current block is {}, but latest block calculated from config is {}",
+                    &payload.block.block_num,
+                    &config.latest_block + 1
+                )));
+            } else {
+                config.latest_block = payload.block.block_num;
+            }
+
+            Ok(Some(config))
+        } else {
+            Ok(None)
         }
     }
 }
@@ -114,178 +180,10 @@ impl TransactionHandler for BlockInfoTransactionHandler {
         request: &TpProcessRequest,
         context: &mut TransactionContext,
     ) -> Result<(), ApplyError> {
-        // Unpack payload
-        let txn: BlockInfoTxn = parse_protobuf(request.get_payload())?;
-        let next_block = txn.get_block();
-        let target_count = txn.get_target_count();
-        let sync_tolerance = txn.get_sync_tolerance();
+        let payload = BlockInfoPayload::new(request.get_payload())?;
+        let mut state = BlockInfoState::new(context);
 
-        // Validate block info fields
-        if next_block.get_block_num() < 0 {
-            return Err(ApplyError::InvalidTransaction(format!(
-                "Invalid block num: {}",
-                next_block.get_block_num()
-            )));
-        }
-
-        if !(validate_hex(next_block.get_previous_block_id(), 128)
-            || next_block.get_previous_block_id() == "0000000000000000")
-        {
-            return Err(ApplyError::InvalidTransaction(format!(
-                "Invalid previous block id '{}'",
-                next_block.get_previous_block_id()
-            )));
-        }
-        if !validate_hex(next_block.get_signer_public_key(), 66) {
-            return Err(ApplyError::InvalidTransaction(format!(
-                "Invalid signer public_key '{}'",
-                next_block.get_signer_public_key()
-            )));
-        }
-        if !validate_hex(next_block.get_header_signature(), 128) {
-            return Err(ApplyError::InvalidTransaction(format!(
-                "Invalid header signature '{}'",
-                next_block.get_header_signature()
-            )));
-        }
-
-        if next_block.get_timestamp() <= 0 {
-            return Err(ApplyError::InvalidTransaction(format!(
-                "Invalid timestamp '{}'",
-                next_block.get_timestamp()
-            )));
-        }
-
-        // Get config and previous block (according to the block info in the
-        // transaction) from state
-        let entries = context.get_state(vec![get_config_addr()]);
-        let mut config = BlockInfoConfig::new();
-
-        // If there is no config in state, we don't know anything about what's
-        // in state, so we have to treat this as the first entry
-        let (sets, deletes) = match entries {
-            Ok(Some(entries)) => {
-                config = parse_protobuf(&entries)?;
-
-                // If the config was changed in this transaction, update it
-                if sync_tolerance != 0 {
-                    config.sync_tolerance = sync_tolerance;
-                }
-                if target_count != 0 {
-                    config.target_count = target_count;
-                }
-
-                if next_block.get_block_num() != config.latest_block + 1 {
-                    return Err(ApplyError::InvalidTransaction(format!(
-                        "Block number must be one more than previous
-                        block's. Got {} expected {}",
-                        next_block.get_block_num(),
-                        config.latest_block
-                    )));
-                }
-
-                validate_timestamp(next_block.get_timestamp(), config.get_sync_tolerance())?;
-
-                let mut block_entries =
-                    context.get_state(vec![create_block_address(config.get_latest_block())])?;
-
-                let prev_block: BlockInfo = match block_entries {
-                    None => {
-                        return Err(ApplyError::InvalidTransaction(String::from(
-                            "Config and state out of sync. Latest block not found in state.",
-                        )));
-                    }
-                    Some(block_entries) => parse_protobuf(&block_entries)?,
-                };
-
-                if prev_block.get_block_num() != config.get_latest_block() {
-                    return Err(ApplyError::InvalidTransaction(String::from(
-                        "Block info stored at latest block has incorrect block num.",
-                    )));
-                }
-
-                if prev_block.get_header_signature() != next_block.get_previous_block_id() {
-                    return Err(ApplyError::InvalidTransaction(format!(
-                        "Previous block id must match header signature of
-                         previous block. Got {}, expected {}",
-                        next_block.get_previous_block_id(),
-                        prev_block.get_header_signature()
-                    )));
-                }
-
-                if next_block.get_timestamp() < prev_block.get_timestamp() {
-                    return Err(ApplyError::InvalidTransaction(format!(
-                        "Timestamp must be greater than previous block's. Got {},
-                         expected {}",
-                        next_block.get_timestamp(),
-                        prev_block.get_timestamp()
-                    )));
-                }
-
-                let mut deletes: Vec<String> = Vec::new();
-                let mut sets: Vec<(String, Vec<u8>)> = Vec::new();
-
-                // Compute  deletes
-                config.set_latest_block(next_block.get_block_num());
-                while config.get_latest_block() - config.get_oldest_block()
-                    > config.get_target_count()
-                {
-                    deletes.push(create_block_address(config.get_oldest_block()));
-                    let oldest_block = config.get_oldest_block();
-                    config.set_oldest_block(oldest_block + 1);
-                }
-
-                // Compute sets
-                let mut sets = HashMap::new();
-                sets.insert(get_config_addr(), serialize_protobuf(&config)?);
-                sets.insert(
-                    create_block_address(next_block.get_block_num()),
-                    serialize_protobuf(next_block)?,
-                );
-
-                (sets, deletes)
-            }
-            _ => {
-                // If target count or sync tolerance were not specified in the
-                // txn, use default values.
-                config.set_target_count(if target_count != 0 {
-                    target_count
-                } else {
-                    DEFAULT_TARGET_COUNT
-                });
-                config.set_sync_tolerance(if sync_tolerance != 0 {
-                    sync_tolerance
-                } else {
-                    DEFAULT_SYNC_TOLERANCE
-                });
-                config.set_latest_block(next_block.get_block_num());
-                config.set_oldest_block(next_block.get_block_num());
-
-                validate_timestamp(next_block.get_timestamp(), config.get_sync_tolerance())?;
-
-                let config_bytes = serialize_protobuf(&config)?;
-                let block_bytes = serialize_protobuf(next_block)?;
-
-                let mut sets = HashMap::new();
-                sets.insert(get_config_addr(), config_bytes);
-                sets.insert(
-                    create_block_address(next_block.get_block_num()),
-                    block_bytes,
-                );
-
-                (sets, Vec::new())
-            }
-        };
-
-        if !deletes.is_empty() {
-            context.delete_state(deletes.to_vec())?;
-        }
-
-        if !sets.is_empty() {
-            context.set_state(sets)?;
-        }
-
-        Ok(())
+        self.execute_block_info_transaction(payload, &mut state)
     }
 }
 
