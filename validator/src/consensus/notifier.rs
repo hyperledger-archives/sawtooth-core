@@ -94,21 +94,7 @@ impl<T: NotifierService> ConsensusNotifier for T {
     }
 
     fn notify_block_new(&self, block: &Block) {
-        let summary = summarize(block);
-
-        let mut consensus_block = ConsensusBlock::new();
-        consensus_block.set_block_id(from_hex(&block.header_signature, "block.header_signature"));
-        consensus_block.set_previous_id(from_hex(
-            &block.previous_block_id,
-            "block.previous_block_id",
-        ));
-        consensus_block.set_signer_id(from_hex(
-            &block.signer_public_key,
-            "block.signer_public_key",
-        ));
-        consensus_block.set_block_num(block.block_num);
-        consensus_block.set_payload(block.consensus.clone());
-        consensus_block.set_summary(summary);
+        let consensus_block = get_consensus_block(block);
 
         let mut notification = ConsensusNotifyBlockNew::new();
         notification.set_block(consensus_block);
@@ -142,14 +128,30 @@ impl<T: NotifierService> ConsensusNotifier for T {
     }
 }
 
-fn summarize(block: &Block) -> Vec<u8> {
+fn get_consensus_block(block: &Block) -> ConsensusBlock {
     let batch_ids: Vec<&str> = block
         .batches
         .iter()
         .map(|batch| batch.header_signature.as_str())
         .collect();
 
-    sha256_digest_strs(batch_ids.as_slice())
+    let summary = sha256_digest_strs(batch_ids.as_slice());
+
+    let mut consensus_block = ConsensusBlock::new();
+    consensus_block.set_block_id(from_hex(&block.header_signature, "block.header_signature"));
+    consensus_block.set_previous_id(from_hex(
+        &block.previous_block_id,
+        "block.previous_block_id",
+    ));
+    consensus_block.set_signer_id(from_hex(
+        &block.signer_public_key,
+        "block.signer_public_key",
+    ));
+    consensus_block.set_block_num(block.block_num);
+    consensus_block.set_payload(block.consensus.clone());
+    consensus_block.set_summary(summary);
+
+    consensus_block
 }
 
 fn from_hex<T: AsRef<str>>(hex_string: T, id_name: &str) -> Vec<u8> {
