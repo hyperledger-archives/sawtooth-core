@@ -528,8 +528,8 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         info!("Ignoring block {}", block)
     }
 
-    // Returns all blocks in forks not on the chain with the given head. If head is None, uses the
-    // current chain head. If head is not found, returns None.
+    // Returns all valid blocks in forks not on the chain with the given head. If head is None,
+    // uses the current chain head. If head is not found, returns None.
     pub fn forks(&self) -> Vec<BlockWrapper> {
         let state = self
             .state
@@ -546,6 +546,9 @@ impl<BC: BlockCache + 'static, BV: BlockValidator + 'static> ChainController<BC,
         forks.dedup_by(|left, right| left.header_signature() == right.header_signature());
 
         forks
+            .into_iter()
+            .filter(|blockw| blockw.status() == BlockStatus::Valid)
+            .collect()
     }
 
     pub fn fail_block(&self, block: &mut BlockWrapper) {
