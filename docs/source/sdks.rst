@@ -24,8 +24,11 @@ Go
 Javascript
 ----------
 
-- `Transaction Processor and Signing
-  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/>`__
+- `Transaction Processor
+  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/module-processor.html>`__
+
+- `Signing
+  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/module-signing.html>`__
 
 Rust
 ----
