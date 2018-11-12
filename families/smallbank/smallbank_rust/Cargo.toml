@@ -24,7 +24,6 @@ build = "build.rs"
 sawtooth-sdk = { path = "../../../sdk/rust" }
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 clap = "2"
 protobuf = "2.0"
 log = "0.3"
