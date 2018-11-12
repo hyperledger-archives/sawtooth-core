@@ -22,7 +22,7 @@ items:
               - bash
             args:
               - -c
-              - "devmode-rust -C tcp://$HOSTNAME:5050"
+              - "devmode-engine-rust -C tcp://$HOSTNAME:5050"
 
           - name: sawtooth-settings-tp
             image: hyperledger/sawtooth-settings-tp:1.1

@@ -78,7 +78,7 @@ services:
     image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: devmode-rust --connect tcp://validator-0:5005 -vv
+    command: devmode-engine-rust --connect tcp://validator-0:5005 -vv
     stop_signal: SIGKILL
 
   devmode-engine-1:
@@ -92,7 +92,7 @@ services:
     image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: devmode-rust --connect tcp://validator-1:5005 -vv
+    command: devmode-engine-rust --connect tcp://validator-1:5005 -vv
     stop_signal: SIGKILL
 
   devmode-engine-2:
@@ -106,7 +106,7 @@ services:
     image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: devmode-rust --connect tcp://validator-2:5005 -vv
+    command: devmode-engine-rust --connect tcp://validator-2:5005 -vv
     stop_signal: SIGKILL
 
   devmode-engine-3:
@@ -120,7 +120,7 @@ services:
     image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: devmode-rust --connect tcp://validator-3:5005 -vv
+    command: devmode-engine-rust --connect tcp://validator-3:5005 -vv
     stop_signal: SIGKILL
 
   devmode-engine-4:
@@ -135,7 +135,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: |
-      bash -c "sleep 15 && devmode-rust --connect tcp://validator-4:5005 -v"
+      bash -c "sleep 15 && devmode-engine-rust --connect tcp://validator-4:5005 -v"
     stop_signal: SIGKILL
 
   validator-0:

@@ -20,8 +20,8 @@ After=network.target
 [Service]
 User=sawtooth
 Group=sawtooth
-EnvironmentFile=-/etc/default/sawtooth-devmode-rust
-ExecStart=/usr/bin/devmode-rust $SAWTOOTH_DEVMODE_RUST_ARGS
+EnvironmentFile=-/etc/default/sawtooth-devmode-engine-rust
+ExecStart=/usr/bin/devmode-engine-rust $SAWTOOTH_DEVMODE_ENGINE_RUST_ARGS
 Restart=on-failure
 
 [Install]

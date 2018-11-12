@@ -188,10 +188,10 @@ services:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: sawtooth-devmode-rust-local:${ISOLATION_ID}
+    image: sawtooth-devmode-engine-rust-local:${ISOLATION_ID}
     volumes:
       - ./:/project/sawtooth-core
-    container_name: sawtooth-devmode-rust-local
+    container_name: sawtooth-devmode-engine-rust-local
     depends_on:
       - validator
     command: |
@@ -199,7 +199,7 @@ services:
         cd sdk/examples/devmode_rust
         cargo build --release
         mkdir -p bin
-        cp ./target/release/devmode-rust bin/devmode-rust
-        devmode-rust -v --connect tcp://validator:5050
+        cp ./target/release/devmode-engine-rust bin/devmode-engine-rust
+        devmode-engine-rust -v --connect tcp://validator:5050
       "
     stop_signal: SIGKILL
