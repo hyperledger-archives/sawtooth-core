@@ -53,7 +53,6 @@ sabre-sdk = {git = "https://github.com/hyperledger/sawtooth-sabre"}
 sawtooth-sdk = { path = "../../../sdk/rust" }
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 log4rs = "0.7"
 
 
