@@ -31,6 +31,7 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.protobuf import genesis_pb2
 from sawtooth_validator.protobuf import block_pb2
+from sawtooth_validator.protobuf import transaction_receipt_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -48,7 +49,8 @@ class GenesisController:
                  data_dir,
                  config_dir,
                  chain_id_manager,
-                 batch_sender):
+                 batch_sender,
+                 receipt_store):
         """Creates a GenesisController.
 
         Args:
@@ -67,6 +69,8 @@ class GenesisController:
             chain_id_manager (ChainIdManager): utility class to manage the
             chain id file.
             batch_sender: interface to broadcast batches to the network.
+            receipt_store: (TransactionReceiptStore): store for transaction
+                state deltas and events
         """
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
@@ -79,6 +83,7 @@ class GenesisController:
         self._config_dir = config_dir
         self._chain_id_manager = chain_id_manager
         self._batch_sender = batch_sender
+        self._txn_receipt_store = receipt_store
 
     def requires_genesis(self):
         """
@@ -166,6 +171,7 @@ class GenesisController:
             scheduler.finalize()
             scheduler.complete(block=True)
 
+        txn_receipts = []
         state_hash = initial_state_root
         for batch in genesis_batches:
             result = scheduler.get_batch_execution_result(
@@ -176,6 +182,11 @@ class GenesisController:
                     .format(batch.header_signature))
             if result.state_hash is not None:
                 state_hash = result.state_hash
+
+            txn_results = scheduler.get_transaction_execution_results(
+                batch.header_signature)
+            txn_receipts += self._make_receipts(txn_results)
+
         LOGGER.debug('Produced state hash %s for genesis block.', state_hash)
 
         block_builder = self._generate_genesis_block()
@@ -205,6 +216,7 @@ class GenesisController:
         self._block_manager.put([blkw.block])
         self._block_manager.persist(blkw.identifier, "commit_store")
 
+        self._txn_receipt_store.chain_update(block, txn_receipts)
         self._chain_id_manager.save_block_chain_id(block.header_signature)
 
         LOGGER.debug('Deleting genesis data.')
@@ -273,3 +285,14 @@ class GenesisController:
         signature = self._identity_signer.sign(header_bytes)
         block.set_signature(signature)
         return block
+
+    def _make_receipts(self, results):
+        receipts = []
+        for result in results:
+            receipt = transaction_receipt_pb2.TransactionReceipt()
+            receipt.data.extend([data for data in result.data])
+            receipt.state_changes.extend(result.state_changes)
+            receipt.events.extend(result.events)
+            receipt.transaction_id = result.signature
+            receipts.append(receipt)
+        return receipts
