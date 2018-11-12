@@ -354,7 +354,8 @@ class Validator:
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,
-            batch_sender=batch_sender)
+            batch_sender=batch_sender,
+            receipt_store=receipt_store)
 
         responder = Responder(completer)
 
