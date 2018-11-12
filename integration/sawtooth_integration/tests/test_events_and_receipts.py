@@ -21,7 +21,9 @@ import urllib.error
 
 import cbor
 
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_intkey.processor.handler import INTKEY_ADDRESS_PREFIX
 from sawtooth_intkey.processor.handler import make_intkey_address
 from sawtooth_sdk.messaging.stream import Stream
 
@@ -35,6 +37,7 @@ from sawtooth_sdk.protobuf import transaction_receipt_pb2
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 WAIT = 300
+NULL_BLOCK_IDENTIFIER = "0000000000000000"
 
 
 class TestEventsAndReceipts(unittest.TestCase):
@@ -42,6 +45,27 @@ class TestEventsAndReceipts(unittest.TestCase):
         """Tests that a client can subscribe and unsubscribe from events."""
         response = self._subscribe()
         self.assert_subscribe_response(response)
+
+        response = self._unsubscribe()
+        self.assert_unsubscribe_response(response)
+
+    def test_subscribe_and_unsubscribe_with_catch_up(self):
+        """Tests that a client can subscribe and unsubscribe from events."""
+        response = self._subscribe(
+            last_known_block_ids=[NULL_BLOCK_IDENTIFIER])
+        self.assert_subscribe_response(response)
+
+        # Ensure that it receives the genesis block
+        msg = self.stream.receive().result()
+        self.assertEqual(
+            msg.message_type,
+            validator_pb2.Message.CLIENT_EVENTS)
+        event_list = events_pb2.EventList()
+        event_list.ParseFromString(msg.content)
+        events = event_list.events
+        self.assertEqual(len(events), 2)
+        self.assert_block_commit_event(events[0], 0)
+        self.assert_state_event(events[1], '000000')
 
         response = self._unsubscribe()
         self.assert_unsubscribe_response(response)
@@ -60,8 +84,9 @@ class TestEventsAndReceipts(unittest.TestCase):
             event_list = events_pb2.EventList()
             event_list.ParseFromString(msg.content)
             events = event_list.events
-            self.assertEqual(len(events), 1)
+            self.assertEqual(len(events), 2)
             self.assert_block_commit_event(events[0], i)
+            self.assert_state_event(events[1], INTKEY_ADDRESS_PREFIX)
 
         self._unsubscribe()
 
@@ -122,7 +147,7 @@ class TestEventsAndReceipts(unittest.TestCase):
             event_list = events_pb2.EventList()
             event_list.ParseFromString(msg.content)
             events = event_list.events
-            self.assertEqual(len(events), 1)
+            self.assertEqual(len(events), 2)
             block_commit_event = events[0]
             block_id = list(filter(
                 lambda attr: attr.key == "block_id",
@@ -155,6 +180,7 @@ class TestEventsAndReceipts(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        wait_for_rest_apis(['rest-api:8008'])
         cls.batch_submitter = BatchSubmitter(WAIT)
 
     def setUp(self):
@@ -189,6 +215,22 @@ class TestEventsAndReceipts(unittest.TestCase):
             subscriptions = [
                 events_pb2.EventSubscription(
                     event_type="sawtooth/block-commit"),
+                # Subscribe to the settings state events, to test genesis
+                # catch-up.
+                events_pb2.EventSubscription(
+                    event_type="sawtooth/state-delta",
+                    filters=[events_pb2.EventFilter(
+                        key='address',
+                        match_string='000000.*',
+                        filter_type=events_pb2.EventFilter.REGEX_ANY)]),
+                # Subscribe to the intkey state events, to test additional
+                # events.
+                events_pb2.EventSubscription(
+                    event_type="sawtooth/state-delta",
+                    filters=[events_pb2.EventFilter(
+                        key='address',
+                        match_string='{}.*'.format(INTKEY_ADDRESS_PREFIX),
+                        filter_type=events_pb2.EventFilter.REGEX_ANY)]),
             ]
         if last_known_block_ids is None:
             last_known_block_ids = []
@@ -237,6 +279,13 @@ class TestEventsAndReceipts(unittest.TestCase):
             client_receipt_pb2.ClientReceiptGetResponse.OK)
 
         return receipt_response.receipts
+
+    def assert_state_event(self, event, address_prefix):
+        self.assertEqual(event.event_type, "sawtooth/state-delta")
+        state_change_list = transaction_receipt_pb2.StateChangeList()
+        state_change_list.ParseFromString(event.data)
+        for change in state_change_list.state_changes:
+            self.assertTrue(change.address.startswith(address_prefix))
 
     def assert_events_get_response(self, msg):
         self.assertEqual(
