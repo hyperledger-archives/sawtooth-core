@@ -51,12 +51,12 @@ RUN /root/.cargo/bin/cargo deb
 # -------------=== settings rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=settings-rust-builder /project/families/settings/sawtooth_settings/target/debian/sawtooth_settings_*.deb /tmp
+COPY --from=settings-rust-builder /project/families/settings/sawtooth_settings/target/debian/sawtooth-settings*.deb /tmp
 
 RUN apt-get update \
  && apt-get install -y \
     libssl-dev \
     libzmq3-dev \
     systemd \
- && dpkg -i /tmp/sawtooth_settings_*.deb || true \
+ && dpkg -i /tmp/sawtooth-settings*.deb || true \
  && apt-get -f -y install
