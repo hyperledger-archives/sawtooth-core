@@ -15,7 +15,7 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/sdk/examples/devmode_rust/bin/devmode-rust
+bin=$top_dir/sdk/examples/devmode_rust/bin/devmode-engine-rust
 
 if [ -e $bin ]
 then

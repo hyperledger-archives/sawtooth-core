@@ -40,4 +40,4 @@ CMD cd sdk/examples/devmode_rust \
  && rm -rf ./bin/ \
  && mkdir -p ./bin/ \
  && cargo build --release \
- && cp ./target/release/devmode-rust ./bin/devmode-rust
+ && cp ./target/release/devmode-engine-rust ./bin/devmode-engine-rust

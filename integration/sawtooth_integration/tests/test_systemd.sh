@@ -27,7 +27,7 @@ intkey-tp-python
 xo-tp-python
 settings-tp
 identity-tp
-devmode-rust
+devmode-engine-rust
 "
 
 if [ -z $ISOLATION_ID ]

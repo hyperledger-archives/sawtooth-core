@@ -59,11 +59,11 @@ services:
         \""
 
   devmode-engine:
-    image: hyperledger/sawtooth-devmode-engine:1.1
-    container_name: sawtooth-devmode-engine-default
+    image: hyperledger/sawtooth-devmode-engine-rust:1.1
+    container_name: sawtooth-devmode-engine-rust-default
     depends_on:
       - validator
-    entrypoint: devmode-rust -C tcp://validator:5050
+    entrypoint: devmode-engine-rust -C tcp://validator:5050
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
