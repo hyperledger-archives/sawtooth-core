@@ -14,10 +14,16 @@
 # ------------------------------------------------------------------------------
 
 [package]
-name = "sawtooth_sdk"
+name = "sawtooth-sdk"
 version = "0.1.0"
 authors = ["Bitwise IO, Inc.", "Intel Corporation"]
 build = "build.rs"
+license = "Apache-2.0"
+description = """\
+    Hyperledger Sawtooth is an enterprise blockchain platform for building \
+    distributed ledger applications and networks.
+"""
+documentation = "https://sawtooth.hyperledger.org/docs/core/releases/latest/"
 
 [features]
 default = ["pem"]
@@ -30,7 +36,7 @@ protobuf="2.0"
 secp256k1 = "0.7.1"
 rand = "0.4.2"
 rust-crypto = "0.2.36"
-zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
+sawtooth-zmq = "0.8.2-dev5"
 uuid = { version = "0.5", features = ["v4"] }
 log = "0.3"
 libc = "0.2"
