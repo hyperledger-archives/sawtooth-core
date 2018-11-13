@@ -19,6 +19,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -84,7 +85,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         self.assertEqual(True, genesis_ctrl.requires_genesis())
 
@@ -105,7 +107,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -127,7 +130,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -154,7 +158,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -184,7 +189,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         with self.assertRaises(InvalidGenesisStateError):
             genesis_ctrl.requires_genesis()
@@ -215,7 +221,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         with self.assertRaises(InvalidGenesisStateError):
             genesis_ctrl.requires_genesis()
@@ -262,7 +269,8 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'))
+            batch_sender=Mock('batch_sender'),
+            receipt_store=MagicMock())
 
         on_done_fn = Mock(return_value='')
         genesis_ctrl.start(on_done_fn)
