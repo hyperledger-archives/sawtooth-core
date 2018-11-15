@@ -23,13 +23,13 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
-from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoTxn
-from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
+from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfoTxn
+from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfo
 
-from sawtooth_block_info.common import FAMILY_NAME
-from sawtooth_block_info.common import FAMILY_VERSION
-from sawtooth_block_info.common import CONFIG_ADDRESS
-from sawtooth_block_info.common import BLOCK_INFO_NAMESPACE
+from sawtooth_block_info_injector.common import FAMILY_NAME
+from sawtooth_block_info_injector.common import FAMILY_VERSION
+from sawtooth_block_info_injector.common import CONFIG_ADDRESS
+from sawtooth_block_info_injector.common import BLOCK_INFO_NAMESPACE
 
 
 class BlockInfoInjector(BatchInjector):

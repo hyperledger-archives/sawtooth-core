@@ -20,10 +20,9 @@ import urllib.request
 import urllib.error
 import base64
 
-from sawtooth_block_info.common import CONFIG_ADDRESS
-from sawtooth_block_info.common import create_block_address
-from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoConfig
-from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
+from sawtooth_block_info_injector.common import CONFIG_ADDRESS
+from sawtooth_block_info_injector.common import create_block_address
+from sawtooth_block_info_injector.protobuf import block_info_pb2
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
@@ -40,13 +39,13 @@ def get_blocks():
 
 
 def get_block_info_config():
-    bic = BlockInfoConfig()
+    bic = block_info_pb2.BlockInfoConfig()
     bic.ParseFromString(get_state(CONFIG_ADDRESS))
     return bic
 
 
 def get_block_info(block_num):
-    bi = BlockInfo()
+    bi = block_info_pb2.BlockInfo()
     bi.ParseFromString(get_state(create_block_address(block_num)))
     return bi
 

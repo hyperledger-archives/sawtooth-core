@@ -1,4 +1,4 @@
-# Copyright 2018 Cargill Incorporated
+# Copyright 2018 Bitwise IO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,37 +14,31 @@
 
 # docker build -f families/block_info/Dockerfile -t sawtooth-block-info-tp-local .
 
-# -------------=== intkey-tp-python build ===-------------
-
-FROM ubuntu:bionic
+FROM ubuntu:xenial
 
 RUN apt-get update \
- && apt-get install gnupg -y
+ && apt-get install -y \
+ curl \
+ gcc \
+ libssl-dev \
+ libzmq3-dev \
+ pkg-config \
+ unzip
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update
+# For Building Protobufs
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+ && curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
+ && unzip protoc-3.5.1-linux-x86_64.zip -d protoc3 \
+ && rm protoc-3.5.1-linux-x86_64.zip
 
-RUN apt-get install -y -q \
-    git \
-    python3 \
-    python3-stdeb
+ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
+    CARGO_INCREMENTAL=0
 
-RUN apt-get install -y -q \
-    python3-grpcio \
-    python3-grpcio-tools \
-    python3-protobuf
+WORKDIR /project/sawtooth-core/
 
-RUN apt-get install -y -q \
-    python3-cbor \
-    python3-colorlog \
-    python3-toml \
-    python3-yaml \
-    python3-zmq
-
-RUN mkdir -p /var/log/sawtooth
-
-ENV PATH=$PATH:/project/sawtooth-core/bin
-
-WORKDIR /project/sawtooth-core
+CMD cd families/block_info/sawtooth_block_info \
+ && echo "\033[0;32m--- Building block-info ---\n\033[0m" \
+ && rm -rf ./bin/ \
+ && mkdir -p ./bin/ \
+ && cargo build --release \
+ && cp ./target/release/block-info-tp ./bin/block-info-tp

@@ -13,10 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-#
-# Sawtooth -- Block Info Transaction Processor Configuration
-#
-
-# The url to connect to a running Validator
-#   connect = "tcp://localhost:4004"
-connect = "tcp://blarg:1234"
+#SAWTOOTH_BLOCK_INFO_TP_ARGS=-v -C tcp://localhost:4004

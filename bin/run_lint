@@ -202,7 +202,6 @@ lint rest_api "$SINCE" || retval=1
 # settings, identity
 PYTHONPATH=$top_dir/families/settings/tests
 PYTHONPATH=$PYTHONPATH:$top_dir/families/identity
-PYTHONPATH=$PYTHONPATH:$top_dir/families/block_info
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 export PYTHONPATH
@@ -217,12 +216,5 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint families/battleship "$SINCE" || retval=1
 
-# block info
-PYTHONPATH=$top_dir/families/block_info
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint families/block_info "$SINCE" || retval=1
 
 exit $retval
