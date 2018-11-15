@@ -167,3 +167,11 @@ services:
     image: block-info-tp-local:${ISOLATION_ID}
     volumes:
         - ../../:/project/sawtooth-core
+
+  identity-rust-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/identity/Dockerfile
+    image: identity-rust-tp-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core

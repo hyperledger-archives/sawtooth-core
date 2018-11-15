@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# docker build -f families/identity/Dockerfile -t sawtooth-identity-tp-local .
+# -------------=== sawtooth identity rust build ===-------------
+FROM ubuntu:xenial as identity-rust-builder
 
-FROM ubuntu:xenial
+ENV VERSION=AUTO_STRICT
 
 RUN apt-get update \
  && apt-get install -y \
@@ -27,22 +28,28 @@ RUN apt-get update \
  unzip
 
 # For Building Protobufs
-RUN curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+ && curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
  && unzip protoc-3.5.1-linux-x86_64.zip -d protoc3 \
  && rm protoc-3.5.1-linux-x86_64.zip
 
-RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
- && chmod +x /usr/bin/rustup-init \
- && rustup-init -y
+ENV PATH=$PATH:/protoc3/bin
+RUN /root/.cargo/bin/cargo install cargo-deb
 
-ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/root/.cargo/bin \
-    CARGO_INCREMENTAL=0
+COPY . /project
 
-WORKDIR /project/sawtooth-core
+WORKDIR /project/families/identity/sawtooth_identity
 
-CMD cd families/identity/sawtooth_identity \
- && echo "\033[0;32m--- Building identity-tp ---\n\033[0m" \
- && rm -rf ./bin/ \
- && mkdir -p ./bin/ \
- && cargo build --release \
- && cp ./target/release/identity-tp ./bin/identity-tp
+RUN /root/.cargo/bin/cargo deb
+
+# -------------=== identity rust docker build ===-------------
+FROM ubuntu:xenial
+
+COPY --from=identity-rust-builder /project/families/identity/sawtooth_identity/target/debian/sawtooth_identity_*.deb /tmp
+
+RUN apt-get update \
+ && apt-get install -y \
+    libssl-dev \
+    libzmq3-dev \
+ && dpkg -i /tmp/sawtooth_identity_*.deb || true \
+ && apt-get -f -y install

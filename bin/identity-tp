@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/bash
 #
 # Copyright 2017 Intel Corporation
 #
@@ -15,22 +15,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
-import sys
-import sysconfig
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+bin=$top_dir/families/identity/sawtooth_identity/bin/identity-tp
 
-build_str = "lib.{}-{}.{}".format(
-    sysconfig.get_platform(),
-    sys.version_info.major, sys.version_info.minor)
-
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'sdk', 'python'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families', 'identity'))
-
-from sawtooth_identity.processor.main import main
-
-if __name__ == '__main__':
-    main()
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build sawtooth_identity_rust first with 'build_all'"
+fi
