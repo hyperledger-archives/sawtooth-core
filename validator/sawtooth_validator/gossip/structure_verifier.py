@@ -19,6 +19,7 @@ from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import network_pb2
+from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -72,8 +73,31 @@ def is_valid_batch(batch):
                          "order of transactions in the batch: %s txn: %s",
                          batch.header_signature, header_txn_id)
             return False
+        txn_header = _deserialize_txn_header(txn.header)
+        for dep in txn_header.dependencies:
+            if not dep:
+                LOGGER.debug("Malformed dependency in batch: %s, txn:%s",
+                             batch.header_signature,
+                             txn.header_signature)
+                return False
 
     return True
+
+
+def _deserialize_txn_header(header):
+    """Deserialize the header bytes into a `TransactionHeader`
+
+    Args:
+        header: The serialized TransactionHeader
+
+    Returns:
+        TransactionHeader
+
+    """
+
+    header = transaction_pb2.TransactionHeader()
+    header.ParseFromString(header)
+    return header
 
 
 class GossipHandlerStructureVerifier(Handler):
