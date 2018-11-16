@@ -22,9 +22,11 @@ RUN apt-get update \
  && apt-get install -y \
     curl \
     gcc \
+    git \
     libssl-dev \
     libzmq3-dev \
     pkg-config \
+    python3 \
     unzip
 
 ENV VERSION=AUTO_STRICT
@@ -42,6 +44,7 @@ COPY . /project
 
 WORKDIR /project/families/settings/sawtooth_settings
 
+RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
 RUN /root/.cargo/bin/cargo deb
 
 # -------------=== settings docker build ===-------------
