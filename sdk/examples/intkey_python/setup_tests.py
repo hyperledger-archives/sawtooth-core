@@ -26,10 +26,18 @@ data_files = []
 if os.path.exists("tests"):
     data_files.append(('/data/tests/intkey', ['tests/test_tp_intkey.py']))
 
+try:
+    os.environ["ST_VERSION"]
+    print('Using ST_VERSION')
+    VERSION = os.environ["ST_VERSION"]
+except KeyError:
+    print('ST_VERSION not set. Using get_version')
+    VERSION = subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip()
+
 setup(
     name='sawtooth-intkey-tests',
-    version=subprocess.check_output(
-        ['../../../bin/get_version']).decode('utf-8').strip(),
+    version=VERSION,
     description='Sawtooth Intkey Python Test',
     author='Hyperledger Sawtooth',
     url='https://github.com/hyperledger/sawtooth-core',
