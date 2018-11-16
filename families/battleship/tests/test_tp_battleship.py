@@ -1,4 +1,5 @@
 # Copyright 2017 Intel Corporation
+# Copyright 2018 Bitwise IO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,21 +16,30 @@
 
 import logging
 import json
-
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_processor_test.transaction_processor_test_case \
-    import TransactionProcessorTestCase
-from sawtooth_battleship_test.battleship_message_factory \
-    import BattleshipMessageFactory
-
-from sawtooth_battleship.battleship_board import BoardLayout
-from sawtooth_battleship.battleship_board import create_nonces
-from sawtooth_battleship.battleship_board import ShipPosition
+from sawtooth_processor_test.transaction_processor_test_case import TransactionProcessorTestCase
+from battleship_message_factory import BattleshipMessageFactory
+from battleship_board import BoardLayout
+from battleship_board import create_nonces
+from battleship_board import ShipPosition
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class TestBattleship(TransactionProcessorTestCase):
+    """Tests the Battleship transaction processor.
+
+    Spins up a local mock validator that the transaction processor running in another process and/or
+    Docker container connects to. In this class, we send normal requests such as joining games, etc
+    through `self.validator.send`, and then also manage the responses that the transaction processor
+    gets for retrieving/setting state with `self.validator.respond`.
+
+    Tests may hang for 10 minutes if something goes wrong and e.g. the validator waits and wrongly
+    expects a response from the transaction processor. The hang will often occur in a different test
+    method than the one that caused the issue. If that happens, you may want to add the line
+    `test-method-prefix = NAME_OF_METHOD` to `nose2.cfg` to run only that failing test method.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -43,548 +53,565 @@ class TestBattleship(TransactionProcessorTestCase):
 
         cls.test_ships = ["AAAAA", "BBBB", "CCC", "DD", "DD", "SSS", "SSS"]
         cls.validator.register_comparator(
-            Message.TP_STATE_SET_REQUEST, compare_set_request)
+            Message.TP_STATE_SET_REQUEST, TestBattleship.compare_set_request
+        )
 
-    # invalid inputs
+        cls.layout = BoardLayout(10)
+        cls.layout.append(ShipPosition(text="AA", row=0, column=0, orientation="horizontal"))
+
+    @staticmethod
+    def compare_set_request(req1, req2):
+        if len(req1.entries) != len(req2.entries):
+            return False
+
+        def loads(entries):
+            """Converts a list of entries of stringified JSON to sorted address -> dict pairs."""
+
+            return sorted(
+                (e.address, json.loads(e.data.decode(), encoding="utf-8")) for e in entries
+            )
+
+        return loads(req1.entries) == loads(req2.entries)
+
+    ##################
+    # Invalid Inputs #
+    ##################
 
     def test_no_action(self):
-        payload = {
-            'Name': 'noActionGame',
-            'Action': None
-        }
-
         self.validator.send(
-            self.player_1.create_tp_process_request(payload)
+            self.player_1.create_tp_process_request({"Name": "noActionGame", "Action": None})
         )
 
-        self.send_state_to_tp('noActionGame')
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
-        self.expect_invalid()
+        self.validator.send(self.player_1.create_tp_process_request({"Name": "noActionGame"}))
+
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_invalid_action(self):
-        payload = {
-            'Name': 'invalidAction',
-            'Action': 'MAKE_TACOS'
-        }
-
         self.validator.send(
-            self.player_1.create_tp_process_request(payload)
+            self.player_1.create_tp_process_request(
+                {"Name": "invalidAction", "Action": "MAKE_TACOS"}
+            )
         )
 
-        self.send_state_to_tp('invalidAction')
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_no_name(self):
-        payload = {
-            'Name': '',
-            'Action': 'CREATE'
-        }
-
         self.validator.send(
-            self.player_1.create_tp_process_request(payload)
+            self.player_1.create_tp_process_request({"Name": "", "Action": "CREATE", "Ships": []})
         )
 
-        self.send_state_to_tp('')
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_invalid_name(self):
-        payload = {
-            'Name': 'invalid-name',
-            'Action': 'CREATE'
-        }
-
         self.validator.send(
-            self.player_1.create_tp_process_request(payload)
+            self.player_1.create_tp_process_request(
+                {"Name": "invalid-name", "Action": "CREATE", "Ships": []}
+            )
         )
 
-        self.send_state_to_tp('invalid-name')
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
-        self.expect_invalid()
-
-    # create
+    ####################
+    # Create Game Tests#
+    ####################
 
     def test_create_game_valid(self):
-        self.create_game('createGame')
+        game_name = "createGame"
 
-        self.send_state_to_tp('createGame')
+        self.validator.send(
+            self.player_1.create_tp_process_request(
+                {"Name": game_name, "Action": "CREATE", "Ships": self.test_ships}
+            )
+        )
 
-        self.update_state('createGame', {
-            'Ships': self.test_ships,
-            'State': 'NEW'
-        })
+        self.respond_to_get_with_state(game_name, None)
 
-        self.expect_ok()
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "State": "NEW",
+                "Ships": ["AAAAA", "BBBB", "CCC", "DD", "DD", "SSS", "SSS"],
+                "Player1": None,
+                "HashedBoard1": [],
+                "TargetBoard1": [],
+                "Player2": None,
+                "HashedBoard2": [],
+                "TargetBoard2": [],
+                "LastFireColumn": None,
+                "LastFireRow": None,
+            },
+        )
+
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_create_already_exists(self):
-        self.create_game('alreadyExists')
+        game_name = "alreadyExists"
 
-        self.send_state_to_tp('alreadyExists', {
-            'Ships': self.test_ships,
-            'State': 'NEW'
-        })
+        self.validator.send(
+            self.player_1.create_tp_process_request(
+                {"Name": game_name, "Action": "CREATE", "Ships": []}
+            )
+        )
 
-        self.expect_invalid()
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": self.test_ships,
+                "TargetBoard1": [],
+                "TargetBoard2": [],
+                "HashedBoard1": [],
+                "HashedBoard2": [],
+                "State": "NEW",
+            },
+        )
 
-    # join
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
+
+    ###################
+    # Join Game Tests #
+    ###################
 
     def test_join_game_valid(self):
-        layout = BoardLayout.generate(self.test_ships)
+        game_name = "join_game"
         nonces = create_nonces(10)
 
         # Send join payload to tp
-
-        join_req = create_join_payload('join_game', layout, nonces)
         self.validator.send(
-            self.player_1.create_tp_process_request(join_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "JOIN", "Name": game_name, "Board": self.layout.render_hashed(nonces)}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "HashedBoard1": [],
+                "HashedBoard2": [],
+                "Ships": ["AA"],
+                "State": "NEW",
+                "TargetBoard1": [],
+                "TargetBoard2": [],
+            },
+        )
 
-        self.send_state_to_tp('join_game', {
-            'Ships': self.test_ships,
-            'State': 'NEW'
-        })
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": [],
+                "LastFireColumn": None,
+                "LastFireRow": None,
+                "Player1": self.public_key_1,
+                "Player2": None,
+                "Ships": ["AA"],
+                "State": "NEW",
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [],
+            },
+        )
 
-        # mock state set
-        LOGGER.debug('state update')
-        self.update_state('join_game', {
-            'Ships': self.test_ships,
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'State': 'NEW'
-        })
-
-        self.expect_ok()
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_join_game_too_many_players(self):
-        layout = BoardLayout.generate(self.test_ships)
+        game_name = "full_game"
         nonces = create_nonces(10)
 
-        # Send join payload to tp
-        join_req = create_join_payload('full_game', layout, nonces)
         self.validator.send(
-            self.player_1.create_tp_process_request(join_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "JOIN", "Name": game_name, "Board": self.layout.render_hashed(nonces)}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": self.test_ships,
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "State": "P1-NEXT",
+            },
+        )
 
-        self.send_state_to_tp('full_game', {
-            'Ships': self.test_ships,
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P1-NEXT'
-        })
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_join_nonexistent_game(self):
-        layout = BoardLayout.generate(self.test_ships)
+        game_name = "nonexistent_game"
         nonces = create_nonces(10)
 
-        # Send join payload to tp
-        join_req = create_join_payload('nonexistent_game', layout, nonces)
         self.validator.send(
-            self.player_1.create_tp_process_request(join_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "JOIN", "Name": game_name, "Board": self.layout.render_hashed(nonces)}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(game_name, None)
 
-        self.send_state_to_tp('nonexistent_game')
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
-        self.expect_invalid()
-
-    # fire
+    ###################
+    # Fire Game Tests #
+    ###################
 
     def test_fire_first_move(self):
-        # Create test board
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "fire_game"
         nonces = create_nonces(10)
 
         # Player 1 fires
-        fire_req = create_fire_payload('fire_game', '1', 'B')
-
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req))
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "B", "Column": "1"}
+            )
+        )
 
-        self.send_state_to_tp('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P1-NEXT'
-        })
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "State": "P1-NEXT",
+            },
+        )
 
-        self.update_state('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'LastFireRow': '1',
-            'LastFireColumn': 'B',
-            'State': 'P2-NEXT'
-        })
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "LastFireRow": "B",
+                "LastFireColumn": "1",
+                "State": "P2-NEXT",
+            },
+        )
 
-        self.expect_ok()
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_fire_hit_ship(self):
-        # Create test board
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "fire_game"
         nonces = create_nonces(10)
 
         # Player 2 fires
-        fire_req = \
-            create_fire_payload('fire_game', '1', 'A', 'A', nonces[0][0])
-
         self.validator.send(
-            self.player_2.create_tp_process_request(fire_req))
+            self.player_2.create_tp_process_request(
+                {
+                    "Action": "FIRE",
+                    "Column": "1",
+                    "Name": game_name,
+                    "RevealNonce": nonces[0][0],
+                    "RevealSpace": "A",
+                    "Row": "A",
+                }
+            )
+        )
 
-        self.send_state_to_tp('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P2-NEXT',
-            'LastFireRow': '1',
-            'LastFireColumn': 'A'
-        }, self.player_2)
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "LastFireColumn": "1",
+                "LastFireRow": "A",
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "Ships": ["AA"],
+                "State": "P2-NEXT",
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+            },
+        )
 
-        target_board1 = [['?'] * 10 for _ in range(10)]
-        target_board1[0][0] = 'H'
+        target_board1 = [["?"] * 10 for _ in range(10)]
+        target_board1[0][0] = "H"
 
-        self.update_state('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': target_board1,
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'LastFireRow': '1',
-            'LastFireColumn': 'A',
-            'State': 'P1-NEXT'
-        }, self.player_2)
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "LastFireColumn": "1",
+                "LastFireRow": "A",
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "Ships": ["AA"],
+                "State": "P1-NEXT",
+                "TargetBoard1": target_board1,
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+            },
+            self.player_2,
+        )
 
-        self.expect_ok()
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_fire_miss_ship(self):
-        # Create test board
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "fire_game"
         nonces = create_nonces(10)
 
-        # Player 2 fires
-        fire_req = \
-            create_fire_payload('fire_game', '2', 'A', '-', nonces[1][0])
-
         self.validator.send(
-            self.player_2.create_tp_process_request(fire_req))
+            self.player_2.create_tp_process_request(
+                {
+                    "Action": "FIRE",
+                    "Name": "fire_game",
+                    "Row": "B",
+                    "Column": "1",
+                    "RevealSpace": "-",
+                    "RevealNonce": nonces[1][0],
+                }
+            )
+        )
 
-        self.send_state_to_tp('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P2-NEXT',
-            'LastFireRow': '2',
-            'LastFireColumn': 'A'
-        }, self.player_2)
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "State": "P2-NEXT",
+                "LastFireRow": "B",
+                "LastFireColumn": "1",
+            },
+        )
 
-        target_board1 = [['?'] * 10 for _ in range(10)]
-        target_board1[1][0] = 'M'
+        target_board1 = [["?"] * 10 for _ in range(10)]
+        target_board1[1][0] = "M"
 
-        self.update_state('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': target_board1,
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'LastFireRow': '2',
-            'LastFireColumn': 'A',
-            'State': 'P1-NEXT'
-        }, self.player_2)
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": target_board1,
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "LastFireRow": "B",
+                "LastFireColumn": "1",
+                "State": "P1-NEXT",
+            },
+        )
 
-        self.expect_ok()
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_fire_game_won(self):
-        # Create test board
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "fire_game"
         nonces = create_nonces(10)
 
         # Player 2 fires
-        fire_req = \
-            create_fire_payload('fire_game', '1', 'B', 'A', nonces[0][1])
-
         self.validator.send(
-            self.player_2.create_tp_process_request(fire_req))
+            self.player_2.create_tp_process_request(
+                {
+                    "Action": "FIRE",
+                    "Name": game_name,
+                    "Row": "A",
+                    "Column": "2",
+                    "RevealSpace": "A",
+                    "RevealNonce": nonces[0][1],
+                }
+            )
+        )
 
-        target_board1 = [['?'] * 10 for _ in range(10)]
-        target_board1[0][0] = 'H'
+        target_board1 = [["?"] * 10 for _ in range(10)]
+        target_board1[0][0] = "H"
 
-        self.send_state_to_tp('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': target_board1,
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P2-NEXT',
-            'LastFireRow': '1',
-            'LastFireColumn': 'B'
-        }, self.player_2)
+        for _ in range(1):
+            self.respond_to_get_with_state(
+                game_name,
+                {
+                    "Ships": ["AA"],
+                    "TargetBoard1": target_board1,
+                    "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                    "Player1": self.public_key_1,
+                    "Player2": self.public_key_2,
+                    "HashedBoard1": self.layout.render_hashed(nonces),
+                    "HashedBoard2": self.layout.render_hashed(nonces),
+                    "State": "P2-NEXT",
+                    "LastFireRow": "A",
+                    "LastFireColumn": "2",
+                },
+                self.player_2,
+            )
 
-        target_board1[0][1] = 'H'
+        target_board1[0][1] = "H"
 
-        self.update_state('fire_game', {
-            'Ships': ['AA'],
-            'TargetBoard1': target_board1,
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'LastFireRow': '1',
-            'LastFireColumn': 'B',
-            'State': 'P1-WIN'
-        }, self.player_2)
+        self.respond_to_set_with_state(
+            game_name,
+            {
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "LastFireColumn": "2",
+                "LastFireRow": "A",
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "Ships": ["AA"],
+                "State": "P2-WIN",
+                "TargetBoard1": target_board1,
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+            },
+            self.player_2,
+        )
 
-        self.expect_ok()
+        self.validator.expect(self.player_1.create_tp_response("OK"))
 
     def test_fire_nonexistent_game(self):
-        # Send join payload to tp
-
-        fire_req = create_fire_payload('nonexistent_game', '1', 'A')
+        game_name = "nonexistent_game"
 
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "A", "Column": "1"}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(game_name, None)
 
-        self.send_state_to_tp('nonexistent_game')
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_fire_invalid_row(self):
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
-        nonces = create_nonces(10)
-
-        # Send join payload to tp
-
-        fire_req = create_fire_payload('invalid_row', '100', 'A')
+        game_name = "invalid_row"
 
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "A", "Column": "100"}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "HashedBoard1": [],
+                "HashedBoard2": [],
+                "Ships": [],
+                "State": "NEW",
+                "TargetBoard1": [],
+                "TargetBoard2": [],
+            },
+        )
 
-        self.send_state_to_tp('invalid_row', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P1-NEXT'
-        })
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_fire_invalid_column(self):
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
-        nonces = create_nonces(10)
-
-        # Send join payload to tp
-        fire_req = create_fire_payload('invalid_row', '1', 'Z')
+        game_name = "invalid_column"
 
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "Z", "Column": "1"}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "HashedBoard1": [],
+                "HashedBoard2": [],
+                "Ships": [],
+                "State": "NEW",
+                "TargetBoard1": [],
+                "TargetBoard2": [],
+            },
+        )
 
-        self.send_state_to_tp('invalid_row', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P1-NEXT'
-        })
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_fire_game_over(self):
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "game_over"
         nonces = create_nonces(10)
 
-        # Send join payload to tp
-        fire_req = create_fire_payload('invalid_row', '1', 'A')
-
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "A", "Column": "1"}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "State": "P1-WIN",
+            },
+        )
 
-        self.send_state_to_tp('invalid_row', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P1-WIN'
-        })
-
-        self.expect_invalid()
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
     def test_fire_wrong_turn(self):
-        layout = BoardLayout(10)
-        layout.append(
-            ShipPosition(text='AA', row=0, column=0, orientation='horizontal'))
+        game_name = "wrong_turn"
         nonces = create_nonces(10)
 
-        # Send join payload to tp
-        fire_req = create_fire_payload('invalid_row', '1', 'Z')
-
         self.validator.send(
-            self.player_1.create_tp_process_request(fire_req)
+            self.player_1.create_tp_process_request(
+                {"Action": "FIRE", "Name": game_name, "Row": "A", "Column": "1"}
+            )
         )
 
-        # give state back to tp
+        self.respond_to_get_with_state(
+            game_name,
+            {
+                "Ships": ["AA"],
+                "TargetBoard1": [["?"] * 10 for _ in range(10)],
+                "TargetBoard2": [["?"] * 10 for _ in range(10)],
+                "Player1": self.public_key_1,
+                "Player2": self.public_key_2,
+                "HashedBoard1": self.layout.render_hashed(nonces),
+                "HashedBoard2": self.layout.render_hashed(nonces),
+                "State": "P2-NEXT",
+            },
+        )
 
-        self.send_state_to_tp('invalid_row', {
-            'Ships': ['AA'],
-            'TargetBoard1': [['?'] * 10 for _ in range(10)],
-            'TargetBoard2': [['?'] * 10 for _ in range(10)],
-            'Player1': self.public_key_1,
-            'Player2': self.public_key_2,
-            'HashedBoard1': layout.render_hashed(nonces),
-            'HashedBoard2': layout.render_hashed(nonces),
-            'State': 'P2-NEXT'
-        })
+        self.validator.expect(self.player_1.create_tp_response("INVALID_TRANSACTION"))
 
-        self.expect_invalid()
-
-    # Helper methods
+    ##################
+    # Helper methods #
+    ##################
 
     def create_game(self, name, ships=None, player=None):
-        ships = ships if ships else self.test_ships
+        ships = ships or self.test_ships
 
-        player = player if player else self.player_1
+        player = player or self.player_1
 
-        req_to_tp = player.create_tp_process_request({
-            'Action': 'CREATE',
-            'Name': name,
-            'Ships': ships
-        })
+        req_to_tp = player.create_tp_process_request(
+            {"Action": "CREATE", "Name": name, "Ships": ships}
+        )
         self.validator.send(req_to_tp)
 
-    def send_state_to_tp(self, name, state=None, player=None):
-        state = state if state else {}
-        player = player if player else self.player_1
+    def respond_to_get_with_state(self, name, state, player=None):
+        """Responds to a TpStateGetRequest with the given state."""
 
-        get_req_from_tp = self.validator.expect(
-            player.create_get_request(name))
-        get_res_from_validator = player.create_get_response(name, state)
-        self.validator.respond(get_res_from_validator, get_req_from_tp)
+        player = player or self.player_1
 
-    def update_state(self, name, state=None, player=None):
-        state = state if state else {}
-        player = player if player else self.player_1
-        LOGGER.debug('expecing set')
-        set_req_from_tp = self.validator.expect(
-            player.create_set_request(name, state))
         self.validator.respond(
-            player.create_set_response(name), set_req_from_tp)
+            player.create_get_response(name, state),
+            self.validator.expect(player.create_get_request(name)),
+        )
 
-    def expect_ok(self):
-        self.expect_tp_response('OK')
+    def respond_to_set_with_state(self, name, state, player=None):
+        """Responds to a TpStateSetRequest with the given state."""
 
-    def expect_invalid(self):
-        self.expect_tp_response('INVALID_TRANSACTION')
+        player = player or self.player_1
 
-    def expect_tp_response(self, response):
-        self.validator.expect(
-            self.player_1.create_tp_response(
-                response))
-
-
-def compare_set_request(req1, req2):
-    if len(req1.entries) != len(req2.entries):
-        return False
-
-    entries1 = sorted(
-        [(e.address, json.loads(e.data.decode(), encoding="utf-8"))
-            for e in req1.entries])
-    entries2 = sorted(
-        [(e.address, json.loads(e.data.decode(), encoding="utf-8"))
-            for e in req2.entries])
-    if entries1 != entries2:
-        return False
-
-    return True
-
-
-def create_join_payload(name, board_layout, nonces):
-    return {
-        'Action': 'JOIN',
-        'Name': name,
-        'Board': board_layout.render_hashed(nonces)
-    }
-
-
-def create_fire_payload(
-        name,
-        row,
-        column,
-        reveal_space=None,
-        reveal_nonce=None):
-    return {
-        'Action': 'FIRE',
-        'Name': name,
-        'Row': row,
-        'Column': column,
-        'RevealSpace': reveal_space,
-        'RevealNonce': reveal_nonce
-    }
+        self.validator.respond(
+            player.create_set_response(name),
+            self.validator.expect(player.create_set_request(name, state)),
+        )

@@ -196,6 +196,10 @@ test_block_info() {
   copy_coverage .coverage.block_info_injector
 }
 
+test_battleship() {
+  run_docker_test ./families/battleship/tests/test_tp_battleship.yaml
+}
+
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml
     copy_coverage .coverage.validator

@@ -24,12 +24,11 @@ class BattleshipMessageFactory:
             family_name="battleship",
             family_version="1.0",
             namespace=MessageFactory.sha512("battleship".encode("utf-8"))[0:6],
-            signer=signer
+            signer=signer,
         )
 
     def _game_to_address(self, game):
-        return self._factory.namespace + \
-            self._factory.sha512(game.encode())[0:64]
+        return self._factory.namespace + self._factory.sha512(game.encode())[0:64]
 
     def create_tp_register(self):
         return self._factory.create_tp_register()
@@ -39,13 +38,9 @@ class BattleshipMessageFactory:
 
     def _create_txn(self, txn_function, payload):
 
-        addresses = [self._game_to_address(payload['Name'])]
+        addresses = [self._game_to_address(payload["Name"])]
 
-        return txn_function(
-            json.dumps(payload).encode(),
-            addresses,
-            addresses,
-            [])
+        return txn_function(json.dumps(payload).encode(), addresses, addresses, [])
 
     def create_tp_process_request(self, payload):
         txn_function = self._factory.create_tp_process_request
@@ -59,17 +54,14 @@ class BattleshipMessageFactory:
         addresses = [self._game_to_address(name)]
         return self._factory.create_get_request(addresses)
 
-    def create_get_response(self, game, payload=None):
-        if payload:
-            address = self._game_to_address(game)
-            data = json.dumps({game: payload}).encode()
-            return self._factory.create_get_response({address: data})
-
-        return self._factory.create_get_response({})
+    def create_get_response(self, game, payload):
+        address = self._game_to_address(game)
+        data = json.dumps(payload).encode()
+        return self._factory.create_get_response({address: data})
 
     def create_set_request(self, game, new_state):
         address = self._game_to_address(game)
-        data = json.dumps({game: new_state}).encode()
+        data = json.dumps(new_state).encode()
         return self._factory.create_set_request({address: data})
 
     def create_set_response(self, game):
