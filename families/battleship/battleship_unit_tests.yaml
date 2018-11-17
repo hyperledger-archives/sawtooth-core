@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+version: "3.6"
 
-class BattleshipException(Exception):
-    pass
+services:
 
-
-class BoardLayoutException(BattleshipException):
-    pass
+  battleship-unit-tests:
+    build:
+      context: ../../
+      dockerfile: families/battleship/Dockerfile
+    image: sawtooth-battleship-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    stop_signal: SIGKILL
+    command: "bash -c \"\
+        cd families/battleship && \
+        cargo build --all-targets && \
+        cargo test
+        \""

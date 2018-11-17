@@ -20,10 +20,11 @@ import random
 import string
 import hashlib
 
-from sawtooth_battleship.battleship_exceptions import BoardLayoutException
-
-
 LOGGER = logging.getLogger(__name__)
+
+
+class BoardLayoutException(Exception):
+    pass
 
 
 class BoardLayout:
@@ -59,7 +60,7 @@ class BoardLayout:
                 otherwise invalid.
         """
 
-        board = [['-'] * self.size for i in range(self.size)]
+        board = [["-"] * self.size for _ in range(self.size)]
 
         for position in self.ship_positions:
             orientation = position.orientation
@@ -67,26 +68,24 @@ class BoardLayout:
             col = position.column
             text = position.text
 
-            if orientation == 'horizontal':
+            if orientation == "horizontal":
                 for i in range(0, len(text)):
-                    if board[row][col + i] != '-':
+                    if board[row][col + i] != "-":
                         raise BoardLayoutException(
                             "can not place ship at {}{}, space "
-                            "is occupied with {}".format(
-                                'ABCDEFGHIJ'[col],
-                                row,
-                                board[row][col]))
+                            "is occupied with {}".format("ABCDEFGHIJ"[col], row, board[row][col])
+                        )
                     board[row][col + i] = text[i]
-            elif orientation == 'vertical':
+
+            elif orientation == "vertical":
                 for i in range(0, len(text)):
-                    if board[row + i][col] != '-':
+                    if board[row + i][col] != "-":
                         raise BoardLayoutException(
                             "can not place ship at {}{}, space "
-                            "is occupied with {}".format(
-                                'ABCDEFGHIJ'[col],
-                                row,
-                                board[row][col]))
+                            "is occupied with {}".format("ABCDEFGHIJ"[col], row, board[row][col])
+                        )
                     board[row + i][col] = text[i]
+
             else:
                 assert False, "invalid orientation: {}".format(orientation)
 
@@ -96,31 +95,24 @@ class BoardLayout:
         hashed_board = [[None] * self.size for _ in range(self.size)]
         clear_board = self.render()
 
-        for row in range(0, self.size):
-            for col in range(0, self.size):
-                hashed_board[row][col] = hash_space(
-                    clear_board[row][col], nonces[row][col])
+        for row in range(self.size):
+            for col in range(self.size):
+                hashed_board[row][col] = hash_space(clear_board[row][col], nonces[row][col])
 
         return hashed_board
 
     def serialize(self):
-        data = {}
-        data['size'] = self.size
-        data['positions'] = []
-        for position in self.ship_positions:
-            data['positions'].append(position.serialize())
-        return data
+        return {"size": self.size, "positions": [pos.serialize() for pos in self.ship_positions]}
 
     @staticmethod
     def deserialize(data):
-        layout = BoardLayout(data['size'])
-        for position in data['positions']:
+        layout = BoardLayout(data["size"])
+        for position in data["positions"]:
             layout.append(ShipPosition.deserialize(position))
         return layout
 
     @staticmethod
     def generate(ships, size=10, max_placement_attempts=100):
-
         remaining = list(ships)
         layout = BoardLayout(size)
 
@@ -133,18 +125,15 @@ class BoardLayout:
             while not success:
                 attempts += 1
 
-                orientation = random.choice(
-                    ['horizontal',
-                     'vertical'])
-                if orientation == 'horizontal':
+                orientation = random.choice(["horizontal", "vertical"])
+                if orientation == "horizontal":
                     row = random.randrange(0, size)
                     col = random.randrange(0, size - len(ship) + 1)
                 else:
                     row = random.randrange(0, size - len(ship) + 1)
                     col = random.randrange(0, size)
 
-                position = ShipPosition(
-                    text=ship, row=row, column=col, orientation=orientation)
+                position = ShipPosition(text=ship, row=row, column=col, orientation=orientation)
 
                 try:
                     layout.append(position)
@@ -176,30 +165,26 @@ class ShipPosition:
         self.orientation = orientation
 
     def serialize(self):
-        data = {}
-        data['text'] = self.text
-        data['row'] = self.row
-        data['column'] = self.column
-        data['orientation'] = self.orientation
-        return data
+        return {
+            "text": self.text,
+            "row": self.row,
+            "column": self.column,
+            "orientation": self.orientation,
+        }
 
     @staticmethod
     def deserialize(data):
-        text = data['text']
-        row = data['row']
-        column = data['column']
-        orientation = data['orientation']
-
-        return ShipPosition(text, row, column, orientation)
+        return ShipPosition(data["text"], data["row"], data["column"], data["orientation"])
 
 
 def create_nonces(board_size):
-    nonces = [[None] * board_size for _ in range(board_size)]
-    for row in range(0, board_size):
-        for col in range(0, board_size):
-            nonces[row][col] = ''.join(
-                [random.choice(string.ascii_letters) for _ in range(0, 10)])
-    return nonces
+    return [
+        [
+            "".join([random.choice(string.ascii_letters) for _ in range(0, 10)])
+            for _ in range(board_size)
+        ]
+        for _ in range(board_size)
+    ]
 
 
 def hash_space(space, nonce):

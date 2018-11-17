@@ -206,13 +206,4 @@ PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 export PYTHONPATH
 lint families/settings "$SINCE" || retval=1
 
-# battleship
-PYTHONPATH=$top_dir/families/battleship
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint families/battleship "$SINCE" || retval=1
-
-
 exit $retval
