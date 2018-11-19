@@ -17,7 +17,7 @@ items:
       spec:
         containers:
           - name: sawtooth-devmode-engine
-            image: hyperledger/sawtooth-devmode-engine:1.1
+            image: hyperledger/sawtooth-devmode-engine-rust:1.1
             command:
               - bash
             args:
