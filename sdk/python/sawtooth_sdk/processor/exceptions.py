@@ -33,19 +33,15 @@ class _TpResponseError(Exception):
 
 class InvalidTransaction(_TpResponseError):
     """Raised for an Invalid Transaction."""
-    pass
 
 
 class InternalError(_TpResponseError):
     """Raised when an internal error occurs during transaction processing."""
-    pass
 
 
 class AuthorizationException(Exception):
     """Raised when a authorization error occurs."""
-    pass
 
 
 class LocalConfigurationError(Exception):
     """Raised when a log configuraiton error occurs."""
-    pass
