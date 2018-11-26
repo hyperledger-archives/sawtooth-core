@@ -345,9 +345,15 @@ class _SendReceive:
                 if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
                     zmq_identity, msg_bytes = \
                         yield from self._socket.recv_multipart()
-                    self._received_from_identity(zmq_identity)
-                    self._dispatcher_queue.put_nowait(
-                        (zmq_identity, msg_bytes))
+                    if msg_bytes == b'':
+                        # send ACK for connection probes
+                        LOGGER.debug("ROUTER PROBE FROM %s", zmq_identity)
+                        self._socket.send_multipart(
+                            [bytes(zmq_identity), msg_bytes])
+                    else:
+                        self._received_from_identity(zmq_identity)
+                        self._dispatcher_queue.put_nowait(
+                            (zmq_identity, msg_bytes))
                 else:
                     msg_bytes = yield from self._socket.recv()
                     self._last_message_time = time.time()
