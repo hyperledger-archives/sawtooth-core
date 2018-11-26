@@ -43,7 +43,7 @@ def _create_role_address(name):
     parts = name.split(".", maxsplit=_NUM_PARTS - 1)
 
     hashed_parts = [
-        _short_hash(d.encode()) if i is not 0 else _short_hash(d.encode(), 14)
+        _short_hash(d.encode()) if i != 0 else _short_hash(d.encode(), 14)
         for i, d in enumerate(parts)
     ]
     hashed_parts.extend([_NULL_HASH] * (_NUM_PARTS - len(parts)))
