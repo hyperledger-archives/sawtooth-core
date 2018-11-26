@@ -74,7 +74,8 @@ class TransactionListTests(BaseApiTest):
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100'.format(ID_C, ID_C))
+            '/transactions?head={ID_C}&start={ID_C}&limit=100'.format(
+                ID_C=ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
@@ -147,7 +148,8 @@ class TransactionListTests(BaseApiTest):
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100'.format(ID_B, ID_B))
+            '/transactions?head={ID_B}&start={ID_B}&limit=100'.format(
+                ID_B=ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_B, ID_A)
@@ -204,10 +206,12 @@ class TransactionListTests(BaseApiTest):
             transaction_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
+        link =\
+            '/transactions?head={ID_C}&start={ID_C}&limit=100&id={ID_A},{ID_C}'
+
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100&id={},{}'.format(
-                ID_C, ID_C, ID_A, ID_C))
+            link.format(ID_C=ID_C, ID_A=ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_A, ID_C)
@@ -236,10 +240,12 @@ class TransactionListTests(BaseApiTest):
             ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
+        link =\
+            '/transactions?head={ID_C}&start={ID_C}&limit=100&id={ID_B},{ID_D}'
+
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100&id={},{}'.format(
-                ID_C, ID_C, ID_B, ID_D))
+            link.format(ID_C=ID_C, ID_B=ID_B, ID_D=ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -279,9 +285,10 @@ class TransactionListTests(BaseApiTest):
             head_id=ID_B, transaction_ids=[ID_A], paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
+        link = '/transactions?head={ID_B}&start={ID_B}&limit=100&id={ID_A}'
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=100&id={}'.format(
-                ID_B, ID_B, ID_A))
+            response,
+            link.format(ID_B=ID_B, ID_A=ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_txns_well_formed(response['data'], ID_A)
@@ -348,8 +355,8 @@ class TransactionListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_D)
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=2'.format(
-                ID_D, ID_D))
+            response, '/transactions?head={ID_D}&start={ID_D}&limit=2'.format(
+                ID_D=ID_D))
         self.assert_has_valid_paging(
             response, paging, '/transactions?head={}&start={}&limit=2'.format(
                 ID_D, ID_B))
@@ -389,8 +396,9 @@ class TransactionListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_D)
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=100'.format(
-                ID_D, ID_D))
+            response,
+            '/transactions?head={ID_D}&start={ID_D}&limit=100'.format(
+                ID_D=ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_B, ID_A)
@@ -473,8 +481,8 @@ class TransactionListTests(BaseApiTest):
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100&reverse'.format(
-                ID_C, ID_C))
+            '/transactions?head={ID_C}&start={ID_C}&limit=100&reverse'.format(
+                ID_C=ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)

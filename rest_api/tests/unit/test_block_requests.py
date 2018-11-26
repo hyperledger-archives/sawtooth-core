@@ -69,7 +69,8 @@ class BlockListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100'.format(ID_C, ID_C))
+            response, '/blocks?head={ID_C}&start={ID_C}&limit=100'.format(
+                ID_C=ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], ID_C, ID_B, ID_A)
@@ -140,7 +141,8 @@ class BlockListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100'.format(ID_B, ID_B))
+            response, '/blocks?head={ID_B}&start={ID_B}&limit=100'.format(
+                ID_B=ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_B, ID_A)
@@ -197,9 +199,10 @@ class BlockListTests(BaseApiTest):
             block_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
+        link = '/blocks?head={ID_C}&start={ID_C}&limit=100&id={ID_A},{ID_C}'
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(
-                ID_C, ID_C, ID_A, ID_C))
+            response,
+            link.format(ID_C=ID_C, ID_A=ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_A, ID_C)
@@ -227,9 +230,10 @@ class BlockListTests(BaseApiTest):
             ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
+        link = '/blocks?head={ID_C}&start={ID_C}&limit=100&id={ID_B},{ID_D}'
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(
-                ID_C, ID_C, ID_B, ID_D))
+            response,
+            link.format(ID_C=ID_C, ID_B=ID_B, ID_D=ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -270,8 +274,9 @@ class BlockListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&id={}'.format(
-                ID_B, ID_B, ID_A))
+            response,
+            '/blocks?head={ID_B}&start={ID_B}&limit=100&id={ID_A}'.format(
+                ID_B=ID_B, ID_A=ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], ID_A)
@@ -498,8 +503,9 @@ class BlockListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&reverse'.format(
-                ID_C, ID_C))
+            response,
+            '/blocks?head={ID_C}&start={ID_C}&limit=100&reverse'.format(
+                ID_C=ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], ID_C, ID_B, ID_A)
