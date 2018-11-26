@@ -20,20 +20,17 @@ from abc import abstractmethod
 class NoSuchAlgorithmError(Exception):
     """Thrown when trying to create an algorithm which does not exist.
     """
-    pass
 
 
 class SigningError(Exception):
     """Thrown when an error occurs during the signing process.
     """
-    pass
 
 
 class ParseError(Exception):
     """Thrown when an error occurs during deserialization of a Private or
     Public key from various formats.
     """
-    pass
 
 
 class PrivateKey(metaclass=ABCMeta):
@@ -46,19 +43,16 @@ class PrivateKey(metaclass=ABCMeta):
     def get_algorithm_name(self):
         """Returns the algorithm name used for this private key.
         """
-        pass
 
     @abstractmethod
     def as_hex(self):
         """Return the private key encoded as a hex string.
         """
-        pass
 
     @abstractmethod
     def as_bytes(self):
         """Return the private key bytes.
         """
-        pass
 
 
 class PublicKey(metaclass=ABCMeta):
@@ -71,19 +65,16 @@ class PublicKey(metaclass=ABCMeta):
     def get_algorithm_name(self):
         """Returns the algorithm name used for this public key.
         """
-        pass
 
     @abstractmethod
     def as_hex(self):
         """Return the public key encoded as a hex string.
         """
-        pass
 
     @abstractmethod
     def as_bytes(self):
         """Return the public key bytes.
         """
-        pass
 
 
 class Context(metaclass=ABCMeta):
@@ -94,7 +85,6 @@ class Context(metaclass=ABCMeta):
     def get_algorithm_name(self):
         """Returns the algorithm name.
         """
-        pass
 
     @abstractmethod
     def sign(self, message, private_key):
@@ -113,7 +103,6 @@ class Context(metaclass=ABCMeta):
         Raises:
             SigningError: if any error occurs during the signing process
         """
-        pass
 
     @abstractmethod
     def verify(self, signature, message, public_key):
@@ -149,4 +138,3 @@ class Context(metaclass=ABCMeta):
         Returns:
             (:obj:`PublicKey`) the public key for the given private key
         """
-        pass

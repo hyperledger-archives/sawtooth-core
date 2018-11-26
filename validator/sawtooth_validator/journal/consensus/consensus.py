@@ -53,7 +53,6 @@ class BlockPublisherInterface(metaclass=ABCMeta):
             Returns:
                 none.
         """
-        pass
 
     @abstractmethod
     def initialize_block(self, block_header):
@@ -69,7 +68,6 @@ class BlockPublisherInterface(metaclass=ABCMeta):
             Boolean: True if the candidate block should be built. False if
             no candidate should be built.
         """
-        pass
 
     @abstractmethod
     def check_publish_block(self, block_header):
@@ -84,7 +82,6 @@ class BlockPublisherInterface(metaclass=ABCMeta):
             Boolean: True if the candidate block should be claimed. False if
             the block is not ready to be claimed.
         """
-        pass
 
     @abstractmethod
     def finalize_block(self, block_header):
@@ -99,7 +96,6 @@ class BlockPublisherInterface(metaclass=ABCMeta):
             Boolean: True if the candidate block good and should be generated.
             False if the block should be abandoned.
         """
-        pass
 
 
 class BlockVerifierInterface(metaclass=ABCMeta):
@@ -131,7 +127,6 @@ class BlockVerifierInterface(metaclass=ABCMeta):
             Returns:
                 none.
         """
-        pass
 
     @abstractmethod
     def verify_block(self, block_wrapper):
@@ -142,7 +137,6 @@ class BlockVerifierInterface(metaclass=ABCMeta):
         Returns:
             Boolean: True if the Block is valid, False if the block is invalid.
         """
-        pass
 
 
 class ForkResolverInterface(metaclass=ABCMeta):
@@ -176,7 +170,6 @@ class ForkResolverInterface(metaclass=ABCMeta):
             Returns:
                 none.
         """
-        pass
 
     @abstractmethod
     def compare_forks(self, cur_fork_head, new_fork_head):
@@ -193,4 +186,3 @@ class ForkResolverInterface(metaclass=ABCMeta):
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-        pass

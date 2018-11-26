@@ -58,7 +58,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_will_stop(self):
@@ -69,7 +68,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_validator_discovered(self, url):
@@ -83,7 +81,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_validator_removed(self, url):
@@ -97,7 +94,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_all_batches_committed(self):
@@ -110,7 +106,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_batch_committed(self, batch_id):
@@ -126,7 +121,6 @@ class Workload(metaclass=abc.ABCMeta):
         Returns:
             Nothing
         """
-        pass
 
     @abc.abstractmethod
     def on_batch_not_yet_committed(self):
@@ -140,4 +134,3 @@ class Workload(metaclass=abc.ABCMeta):
             Nothing
 
         """
-        pass
