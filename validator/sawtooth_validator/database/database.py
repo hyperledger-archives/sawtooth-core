@@ -24,7 +24,6 @@ class Database(metaclass=ABCMeta):
     def __init__(self):
         """Constructor for the Database class.
         """
-        pass
 
     def __getitem__(self, key):
         return self.get(key)
@@ -189,13 +188,11 @@ class Cursor(metaclass=ABCMeta):
         """
         Opens the cursor.
         """
-        pass
 
     def close(self):
         """
         Closes the cursor, terminating any state.
         """
-        pass
 
     @abstractmethod
     def iter(self):

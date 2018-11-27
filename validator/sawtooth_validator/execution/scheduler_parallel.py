@@ -1170,4 +1170,3 @@ class _UnscheduledTransactionError(Exception):
     """Thrown when information on a transaction is requested, but the
     transaction has been unscheduled.
     """
-    pass
