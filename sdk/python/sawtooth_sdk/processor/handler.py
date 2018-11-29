@@ -31,7 +31,6 @@ class TransactionHandler(metaclass=abc.ABCMeta):
         family_name should return the name of the transaction family that this
         handler can process, e.g. "intkey"
         """
-        pass
 
     @abc.abstractproperty
     def family_versions(self):
@@ -39,7 +38,6 @@ class TransactionHandler(metaclass=abc.ABCMeta):
         family_versions should return a list of versions this transaction
         family handler can process, e.g. ["1.0"]
         """
-        pass
 
     @abc.abstractproperty
     def namespaces(self):
@@ -47,7 +45,6 @@ class TransactionHandler(metaclass=abc.ABCMeta):
         namespaces should return a list containing all the handler's
         namespaces, e.g. ["abcdef"]
         """
-        pass
 
     @abc.abstractmethod
     def apply(self, transaction, context):
@@ -58,4 +55,3 @@ class TransactionHandler(metaclass=abc.ABCMeta):
         handler understands and will pass in the TpProcessRequest and an
         initialized instance of the Context type.
         """
-        pass
