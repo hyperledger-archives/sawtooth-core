@@ -32,8 +32,8 @@ your own transaction family.
 * The :doc:`/transaction_family_specifications/validator_registry_transaction_family`
   provides a way to add new validators to the network. It is used by the PoET
   consensus algorithm implementation to keep track of other validators.
-  The family name is ``poet_validator_registry``;
-  the associated transaction processor is ``poet-validator-registry-tp``.
+  The family name is ``sawtooth_validator_registry``.
+  The transaction processor is ``poet-validator-registry-tp``.
 
 * The :doc:`/transaction_family_specifications/settings_transaction_family`
   provides a methodology for storing on-chain configuration settings.

@@ -39,7 +39,7 @@ genesis time.
 The optional argument `input_file` specifies one or more files containing
 serialized ``BatchList`` protobuf messages to add to the genesis data. (Use a
 space to separate multiple files.) If no input file is specified,
-``sawadm keygen`` produces an empty genesis block.
+this command produces an empty genesis block.
 
 The output is a file containing a serialized ``GenesisData`` protobuf message.
 This file, when placed at `sawtooth_data`/``genesis.batch``, will trigger
