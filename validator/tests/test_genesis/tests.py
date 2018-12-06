@@ -21,7 +21,6 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock
 from unittest.mock import Mock
-from unittest.mock import patch
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -36,8 +35,6 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
-from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.state.state_view import StateViewFactory
 
 
 class TestGenesisController(unittest.TestCase):
@@ -226,62 +223,6 @@ class TestGenesisController(unittest.TestCase):
 
         with self.assertRaises(InvalidGenesisStateError):
             genesis_ctrl.requires_genesis()
-
-    @patch('sawtooth_validator.execution.scheduler_serial'
-           '.SerialScheduler.complete')
-    def test_empty_batch_file_should_produce_block(
-        self, mock_scheduler_complete
-    ):
-        """
-        In this case, the genesis batch, even with an empty list of batches,
-        should produce a genesis block.
-        Also:
-         - the genesis.batch file should be deleted
-         - the block_chain_id file should be created and populated
-        """
-        genesis_file = self._with_empty_batch_file()
-        block_store = self.make_block_store()
-        block_manager = BlockManager()
-        block_manager.add_commit_store(block_store)
-
-        state_database = NativeLmdbDatabase(
-            os.path.join(self._temp_dir, 'test_genesis.lmdb'),
-            indexes=MerkleDatabase.create_index_configuration(),
-            _size=10 * 1024 * 1024)
-        merkle_db = MerkleDatabase(state_database)
-
-        ctx_mgr = Mock(name='ContextManager')
-        ctx_mgr.get_squash_handler.return_value = Mock()
-        ctx_mgr.get_first_root.return_value = merkle_db.get_merkle_root()
-
-        txn_executor = Mock(name='txn_executor')
-        completer = Mock('completer')
-        completer.add_block = Mock('add_block')
-
-        genesis_ctrl = GenesisController(
-            context_manager=ctx_mgr,
-            transaction_executor=txn_executor,
-            completer=completer,
-            block_store=block_store,
-            state_view_factory=StateViewFactory(state_database),
-            identity_signer=self._signer,
-            block_manager=block_manager,
-            data_dir=self._temp_dir,
-            config_dir=self._temp_dir,
-            chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender'),
-            receipt_store=MagicMock())
-
-        on_done_fn = Mock(return_value='')
-        genesis_ctrl.start(on_done_fn)
-
-        self.assertEqual(False, os.path.exists(genesis_file))
-
-        self.assertEqual(True, block_store.chain_head is not None)
-        self.assertEqual(1, on_done_fn.call_count)
-        self.assertEqual(1, completer.add_block.call_count)
-        self.assertEqual(block_store.chain_head.identifier,
-                         self._read_block_chain_id())
 
     def _with_empty_batch_file(self):
         genesis_batch_file = os.path.join(self._temp_dir, 'genesis.batch')
