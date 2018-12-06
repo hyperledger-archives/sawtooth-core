@@ -19,11 +19,11 @@
 #
 # Build:
 #   $ cd sawtooth-core/ci
-#   $ docker build . -f sawtooth-devmode-engine -t sawtooth-devmode-engine
+#   $ docker build . -f sawtooth-devmode-engine-rust -t sawtooth-devmode-engine-rust
 #
 # Run:
 #   $ cd sawtooth-ci
-#   $ docker run sawtooth-devmode-engine
+#   $ docker run sawtooth-devmode-engine-rust
 
 FROM ubuntu:xenial
 
