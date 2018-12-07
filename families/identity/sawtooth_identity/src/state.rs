@@ -141,7 +141,8 @@ impl<'a> IdentityState<'a> {
                 "identity/update".to_string(),
                 vec![("updated".to_string(), name.to_string())],
                 &[],
-            ).map_err(|_err| {
+            )
+            .map_err(|_err| {
                 #[cfg(not(target_arch = "wasm32"))]
                 warn!("Failed to add event {}", name);
                 ApplyError::InternalError(format!("Failed to add event {}", name))
