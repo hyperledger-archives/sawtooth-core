@@ -126,13 +126,11 @@ impl<'a> IntKeyTransformer<'a> {
             70
         };
 
-        let addresses = RepeatedField::from_vec(vec![
-            addresser
-                .make_address(&payload.name)
-                .chars()
-                .take(address_length)
-                .collect(),
-        ]);
+        let addresses = RepeatedField::from_vec(vec![addresser
+            .make_address(&payload.name)
+            .chars()
+            .take(address_length)
+            .collect()]);
 
         txn_header.set_inputs(addresses.clone());
 

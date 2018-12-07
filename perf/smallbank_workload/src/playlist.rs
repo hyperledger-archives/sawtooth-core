@@ -84,11 +84,9 @@ pub fn generate_smallbank_playlist(
         .collect();
 
     let final_yaml = Yaml::Array(txn_array);
-    try!(
-        emitter
-            .dump(&final_yaml)
-            .map_err(PlaylistError::YamlOutputError)
-    );
+    try!(emitter
+        .dump(&final_yaml)
+        .map_err(PlaylistError::YamlOutputError));
 
     Ok(())
 }
@@ -108,11 +106,9 @@ pub fn process_smallbank_playlist(
 
     let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(
-        signing_context
-            .get_public_key(signing_key)
-            .map_err(PlaylistError::SigningError)
-    );
+    let pub_key = try!(signing_context
+        .get_public_key(signing_key)
+        .map_err(PlaylistError::SigningError));
     let pub_key_hex = pub_key.as_hex();
 
     let start = Instant::now();
@@ -131,11 +127,9 @@ pub fn process_smallbank_playlist(
         txn_header.set_inputs(addresses.clone());
         txn_header.set_outputs(addresses.clone());
 
-        let payload_bytes = try!(
-            payload
-                .write_to_bytes()
-                .map_err(PlaylistError::MessageError)
-        );
+        let payload_bytes = try!(payload
+            .write_to_bytes()
+            .map_err(PlaylistError::MessageError));
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
@@ -146,26 +140,21 @@ pub fn process_smallbank_playlist(
         txn_header.set_signer_public_key(pub_key_hex.clone());
         txn_header.set_batcher_public_key(pub_key_hex.clone());
 
-        let header_bytes = try!(
-            txn_header
-                .write_to_bytes()
-                .map_err(PlaylistError::MessageError)
-        );
+        let header_bytes = try!(txn_header
+            .write_to_bytes()
+            .map_err(PlaylistError::MessageError));
 
-        let signature = try!(
-            signer
-                .sign(&header_bytes)
-                .map_err(PlaylistError::SigningError)
-        );
+        let signature = try!(signer
+            .sign(&header_bytes)
+            .map_err(PlaylistError::SigningError));
 
         txn.set_header(header_bytes);
         txn.set_header_signature(signature);
         txn.set_payload(payload_bytes);
 
-        try!(
-            txn.write_length_delimited_to_writer(output)
-                .map_err(PlaylistError::MessageError)
-        )
+        try!(txn
+            .write_length_delimited_to_writer(output)
+            .map_err(PlaylistError::MessageError))
     }
 
     Ok(())
@@ -246,11 +235,9 @@ pub fn read_smallbank_playlist(
 
 fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
-    try!(
-        input
-            .read_to_string(&mut buf)
-            .map_err(PlaylistError::IoError)
-    );
+    try!(input
+        .read_to_string(&mut buf)
+        .map_err(PlaylistError::IoError));
     Ok(buf.into())
 }
 
@@ -348,7 +335,7 @@ impl From<SmallbankTransactionPayload> for Yaml {
         match payload.payload_type {
             SBPayloadType::CREATE_ACCOUNT => {
                 let data = payload.get_create_account();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("create_account"),
                 "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "customer_name" => Yaml::String(data.customer_name.clone()),
@@ -359,28 +346,28 @@ impl From<SmallbankTransactionPayload> for Yaml {
             }
             SBPayloadType::DEPOSIT_CHECKING => {
                 let data = payload.get_deposit_checking();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("deposit_checking"),
                 "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::WRITE_CHECK => {
                 let data = payload.get_write_check();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("write_check"),
                 "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::TRANSACT_SAVINGS => {
                 let data = payload.get_transact_savings();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("transact_savings"),
                 "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::SEND_PAYMENT => {
                 let data = payload.get_send_payment();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("send_payment"),
                 "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
                 "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id)),
@@ -388,7 +375,7 @@ impl From<SmallbankTransactionPayload> for Yaml {
             }
             SBPayloadType::AMALGAMATE => {
                 let data = payload.get_amalgamate();
-                yaml_map!{
+                yaml_map! {
                 "transaction_type" => Yaml::from_str("amalgamate"),
                 "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
                 "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id))}
