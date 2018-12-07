@@ -76,7 +76,8 @@ impl<'a> BlockInfoState<'a> {
                 ::protobuf::parse_from_bytes::<protos::block_info::BlockInfoConfig>(d)
                     .map_err(|_| {
                         ApplyError::InternalError("Failed to deserialize BlockInfoConfig".into())
-                    })?.into(),
+                    })?
+                    .into(),
             )),
             None => Ok(None),
         }
