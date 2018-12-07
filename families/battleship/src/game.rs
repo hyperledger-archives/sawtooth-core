@@ -202,7 +202,8 @@ impl Board {
                 (0..cols)
                     .map(|_| rng.sample_iter(&Alphanumeric).take(10).collect())
                     .collect()
-            }).collect();
+            })
+            .collect();
 
         let spaces = (0..rows)
             .map(|_| (0..cols).map(|_| '-').collect())
@@ -323,7 +324,8 @@ impl Board {
                     .zip(nonces_row)
                     .map(|(space, nonce)| get_space_hash(*space, nonce))
                     .collect()
-            }).collect()
+            })
+            .collect()
     }
 
     /// Converts the board's spaces to a human-friendly format

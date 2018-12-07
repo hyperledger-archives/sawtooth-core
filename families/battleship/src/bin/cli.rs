@@ -86,7 +86,8 @@ fn run() -> Result<(), Error> {
             (about: "Show Battleship games")
             (@arg name: +required "Name of the game to show")
         )
-    ).get_matches();
+    )
+    .get_matches();
 
     let url = matches.value_of("url").unwrap_or("http://localhost:8008/");
 
@@ -202,7 +203,8 @@ fn run() -> Result<(), Error> {
                         row.iter()
                             .map(|&i| if i == '?' { '.' } else { i })
                             .collect::<String>()
-                    }).collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>()
                     .join("\n")
             }
 
@@ -216,7 +218,8 @@ fn run() -> Result<(), Error> {
                             .zip(r2)
                             .map(|(&i1, &i2)| if i2 == '?' { i1 } else { i2 })
                             .collect()
-                    }).collect()
+                    })
+                    .collect()
             }
 
             println!("Game State:\n{}\n", game.state);
