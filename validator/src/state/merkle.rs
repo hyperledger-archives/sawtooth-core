@@ -709,7 +709,8 @@ impl Node {
                     Key::Text(Text::Text(k.to_string())),
                     Value::Text(Text::Text(v.to_string())),
                 )
-            }).collect();
+            })
+            .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));
 
@@ -868,12 +869,10 @@ mod tests {
             {
                 // check that there is no ChangeLogEntry for the initial root
                 let reader = db.reader().unwrap();
-                assert!(
-                    reader
-                        .index_get(CHANGE_LOG_INDEX, orig_root_bytes)
-                        .expect("A database error occurred")
-                        .is_none()
-                );
+                assert!(reader
+                    .index_get(CHANGE_LOG_INDEX, orig_root_bytes)
+                    .expect("A database error occurred")
+                    .is_none());
             }
 
             let new_root = merkle_db.set("abcd", "data_value".as_bytes()).unwrap();
@@ -939,7 +938,8 @@ mod tests {
                     let key = format!("{:016x}", i);
                     let hash = hex_hash(key.as_bytes());
                     (key, hash)
-                }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
 
             let mut values = HashMap::new();
             for &(ref key, ref hashed) in key_hashes.iter() {
@@ -1152,12 +1152,10 @@ mod tests {
                 assert!(reader.get(addition).is_none());
             }
 
-            assert!(
-                reader
-                    .index_get(CHANGE_LOG_INDEX, &parent_root_bytes)
-                    .expect("DB query should succeed")
-                    .is_none()
-            );
+            assert!(reader
+                .index_get(CHANGE_LOG_INDEX, &parent_root_bytes)
+                .expect("DB query should succeed")
+                .is_none());
 
             assert!(merkle_db.set_merkle_root(parent_root).is_err());
         })
@@ -1242,7 +1240,8 @@ mod tests {
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
-            ].into_iter()
+            ]
+            .into_iter()
             .collect();
 
             let parent_root = merkle_db
@@ -1255,7 +1254,8 @@ mod tests {
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
-            ].into_iter()
+            ]
+            .into_iter()
             .collect();
             let successor_root_middle = merkle_db
                 .update(&updates, &[], false)
@@ -1301,7 +1301,8 @@ mod tests {
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
                 ("ab0001".to_string(), "0002".as_bytes().to_vec()),
                 ("ab0002".to_string(), "0003".as_bytes().to_vec()),
-            ].into_iter()
+            ]
+            .into_iter()
             .collect();
 
             let parent_root = merkle_db
@@ -1313,7 +1314,8 @@ mod tests {
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "change0".as_bytes().to_vec()),
                 ("ab0001".to_string(), "change1".as_bytes().to_vec()),
-            ].into_iter()
+            ]
+            .into_iter()
             .collect();
             let successor_root_middle = merkle_db
                 .update(&updates, &[], false)
@@ -1351,7 +1353,8 @@ mod tests {
                 .index_get(CHANGE_LOG_INDEX, root_hash)
                 .expect("No db errors")
                 .expect("A change log entry"),
-        ).expect("The change log entry to have bytes")
+        )
+        .expect("The change log entry to have bytes")
     }
 
     fn assert_has_successors(change_log: &ChangeLogEntry, successor_roots: &[&[u8]]) {
@@ -1450,7 +1453,8 @@ mod tests {
             Path::new(merkle_path),
             INDEXES.len(),
             Some(120 * 1024 * 1024),
-        ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        )
+        .map_err(|err| DatabaseError::InitError(format!("{}", err)))
         .unwrap();
         LmdbDatabase::new(ctx, &INDEXES)
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))

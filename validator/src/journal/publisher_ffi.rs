@@ -125,7 +125,8 @@ pub extern "C" fn block_publisher_new(
             "BatchPublisher",
             (identity_signer.clone_ref(py), batch_sender),
             None,
-        ).expect("Unable to create BatchPublisher");
+        )
+        .expect("Unable to create BatchPublisher");
 
     let block_wrapper_mod = py
         .import("sawtooth_validator.journal.block_wrapper")

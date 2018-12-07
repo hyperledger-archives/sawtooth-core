@@ -283,7 +283,8 @@ pub unsafe extern "C" fn chain_controller_forks(
             mem::forget(bytes);
 
             payload
-        }).collect();
+        })
+        .collect();
 
     *forks_cap = payloads.capacity();
     *forks_len = payloads.len();
@@ -327,7 +328,8 @@ pub extern "C" fn chain_controller_queue_block(
             builder
                 .spawn(move || {
                     controller.queue_block(block);
-                }).unwrap()
+                })
+                .unwrap()
                 .join()
                 .unwrap();
         });
@@ -378,7 +380,8 @@ pub extern "C" fn chain_controller_submit_blocks_for_verification(
                             ErrorCode::Unknown
                         }
                     },
-                ).unwrap()
+                )
+                .unwrap()
                 .join()
                 .unwrap()
         })
@@ -426,7 +429,8 @@ pub extern "C" fn chain_controller_on_block_received(
                         error!("Unable to call on_block_received: {:?}", err);
                         ErrorCode::Unknown
                     }
-                }).unwrap()
+                })
+                .unwrap()
                 .join()
                 .unwrap()
         })
@@ -665,11 +669,13 @@ impl BlockValidator for PyBlockValidator {
                 "submit_blocks_for_verification",
                 (blocks, py_callback),
                 None,
-            ).map(|_| ())
+            )
+            .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call submit_blocks_for_verification", py_err);
                 ()
-            }).unwrap_or(());
+            })
+            .unwrap_or(());
     }
 }
 
@@ -734,7 +740,8 @@ impl ChainReader for PyBlockStore {
                 } else {
                     Err(py_err)
                 }
-            }).map_err(|py_err| {
+            })
+            .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.chain_head", py_err);
                 ChainReadError::GeneralReadError("Unable to read from python block store".into())
             })
@@ -775,7 +782,8 @@ impl ChainObserver for PyChainObserver {
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 }
 
@@ -817,7 +825,8 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 
     fn notify_block_valid(&self, block_id: &str) {
@@ -834,7 +843,8 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 
     fn notify_block_invalid(&self, block_id: &str) {
@@ -851,7 +861,8 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 
     fn notify_block_commit(&self, block_id: &str) {
@@ -868,7 +879,8 @@ impl ConsensusNotifier for PyConsensusNotifier {
                     py_err,
                 );
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 }
 
@@ -892,7 +904,8 @@ impl ToPyObject for TransactionReceipt {
                 "ParseFromString",
                 (cpython::PyBytes::new(py, &self.write_to_bytes().unwrap()).into_object(),),
                 None,
-            ).expect("Unable to ParseFromString");
+            )
+            .expect("Unable to ParseFromString");
 
         py_txn_receipt
     }

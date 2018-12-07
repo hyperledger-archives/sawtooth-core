@@ -365,7 +365,8 @@ impl CandidateBlock {
             .filter(|(_, txns)| match txns {
                 Some(t) => !t.iter().any(|t| !t.is_valid),
                 None => false,
-            }).map(|(b_id, _)| b_id)
+            })
+            .map(|(b_id, _)| b_id)
             .collect();
 
         let builder = {
@@ -443,7 +444,8 @@ impl CandidateBlock {
                 "set_state_hash",
                 (execution_results.ending_state_hash,),
                 None,
-            ).expect("BlockBuilder has no method 'set_state_hash'");
+            )
+            .expect("BlockBuilder has no method 'set_state_hash'");
 
         let batches = builder
             .getattr(py, "batches")
@@ -485,7 +487,8 @@ impl CandidateBlock {
                 py,
                 "consensus",
                 cpython::PyBytes::new(py, consensus_data.as_slice()),
-            ).expect("BlockHeader has no attribute 'consensus'");
+            )
+            .expect("BlockHeader has no attribute 'consensus'");
 
         self.sign_block(builder);
 

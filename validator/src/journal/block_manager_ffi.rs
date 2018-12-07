@@ -109,7 +109,8 @@ pub unsafe extern "C" fn block_manager_put(
         .map(|b| {
             b.extract::<Block>(py)
                 .expect("Unable to extract Block in PyList, py_branch")
-        }).collect();
+        })
+        .collect();
 
     match (*(block_manager as *mut BlockManager)).put(branch) {
         Err(BlockManagerError::MissingPredecessor(_)) => ErrorCode::MissingPredecessor,
@@ -293,7 +294,8 @@ impl BlockStore for PyBlockStore {
                     py_iter,
                     Box::new(unwrap_block),
                 )) as Box<Iterator<Item = Block>>)
-            }).map_err(|py_err| {
+            })
+            .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
                 BlockStoreError::Error(format!("Unable to read blocks: {:?}", block_ids))
             })
@@ -304,7 +306,8 @@ impl BlockStore for PyBlockStore {
         let py = gil_guard.python();
         let mut deleted_blocks = Vec::new();
         for block_id in block_ids {
-            let block: Block = self.py_block_store
+            let block: Block = self
+                .py_block_store
                 .call_method(py, "get", (block_id,), None)
                 // Unwrap the block wrapper
                 .and_then(|blkw| blkw.getattr(py, "block"))
@@ -349,7 +352,8 @@ impl BlockStore for PyBlockStore {
                             .expect("Unable to wrap block."),
                     ),
                     None,
-                ).map_err(|py_err| {
+                )
+                .map_err(|py_err| {
                     pylogger::exception(py, "Unable to call block_store.get_blocks", py_err);
                     BlockStoreError::Error(format!("Unable to put blocks"))
                 })?;
@@ -369,7 +373,8 @@ impl BlockStore for PyBlockStore {
                     py_iter,
                     Box::new(unwrap_block),
                 )) as Box<Iterator<Item = Block>>)
-            }).map_err(|py_err| {
+            })
+            .map_err(|py_err| {
                 let py = unsafe { Python::assume_gil_acquired() };
                 pylogger::exception(py, "Unable to call iter(block_store)", py_err);
                 BlockStoreError::Error(format!("Unable to iterate block store"))
@@ -476,7 +481,8 @@ mod test {
                     TEST_DB_SIZE,
                 ),
                 None,
-            ).unwrap();
+            )
+            .unwrap();
 
         block_store.call(py, (db_instance,), None).unwrap()
     }

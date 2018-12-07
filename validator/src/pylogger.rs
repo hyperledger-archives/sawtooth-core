@@ -154,7 +154,8 @@ impl Log for PyLogger {
                 method,
                 PyTuple::new(py, &[record.to_py_object(py).into_object()]),
                 None,
-            ).unwrap();
+            )
+            .unwrap();
     }
 
     fn flush(&self) {

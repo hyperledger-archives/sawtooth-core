@@ -109,7 +109,8 @@ where
                 } else {
                     None
                 })
-            }).and_then(|setting_opt: Option<Setting>| {
+            })
+            .and_then(|setting_opt: Option<Setting>| {
                 if let Some(setting) = setting_opt {
                     for setting_entry in setting.get_entries() {
                         if setting_entry.get_key() == key {
@@ -211,7 +212,8 @@ mod tests {
                 .get_setting("my.setting.list", None, |value| value
                     .split(',')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
 
         assert_eq!(
@@ -220,7 +222,8 @@ mod tests {
                 .get_setting("my.other.list", None, |value| value
                     .split(';')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
 
         // Verify that we still return the default
@@ -230,7 +233,8 @@ mod tests {
                 .get_setting("some.nonexistent.setting", Some(vec![]), |value| value
                     .split(',')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
     }
 

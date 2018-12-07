@@ -73,7 +73,8 @@ fn main() {
                 .collect::<Vec<&str>>(),
             includes: &["src", PROTO_FILES_DIR],
             customize: Customize::default(),
-        }).expect("unable to run protoc");
+        })
+        .expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", PROTOBUF_TARGET_DIR);
         let mod_file_path = Path::new(&mod_file_name);
@@ -162,5 +163,6 @@ fn get_modified_time(file: fs::File) -> Duration {
             sys_time
                 .duration_since(UNIX_EPOCH)
                 .expect("System time should be after UNIX_EPOCH")
-        }).expect("File should have modified time")
+        })
+        .expect("File should have modified time")
 }
