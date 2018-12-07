@@ -53,6 +53,13 @@ services:
         echo 2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088 > test.priv && \
         sawadm keygen && \
         sawset genesis -k test.priv -o setting-genesis.batch && \
+        sawset proposal create \
+            -k test.priv \
+            sawtooth.consensus.algorithm.name=Devmode \
+            sawtooth.consensus.algorithm.version=0.1 \
+            -o config.batch && \
+        sawadm genesis \
+            config-genesis.batch config.batch && \
         sawadm genesis setting-genesis.batch  && \
         sawtooth-validator -v --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:40000 \

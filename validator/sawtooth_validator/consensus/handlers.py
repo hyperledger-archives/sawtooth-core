@@ -47,7 +47,7 @@ class ConsensusServiceHandler(Handler):
         request_class,
         request_type,
         response_class,
-        response_type,
+        response_type
     ):
         self._request_class = request_class
         self._request_type = request_type
@@ -78,6 +78,17 @@ class ConsensusServiceHandler(Handler):
         response = self._response_class()
         response.status = response.OK
 
+        if not (
+            self._request_type
+                == validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+                or self._proxy.is_active_engine_id(connection_id)
+        ):
+            response.status = response.NOT_ACTIVE_ENGINE
+            return HandlerResult(
+                status=HandlerStatus.RETURN,
+                message_out=response,
+                message_type=self._response_type)
+
         try:
             request.ParseFromString(message_content)
         except DecodeError:
@@ -104,36 +115,7 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response, connection_id):
-        startup_info = self._proxy.register(
-            request.name, request.version, connection_id)
-
-        if startup_info is None:
-            response.status = consensus_pb2.ConsensusRegisterResponse.NOT_READY
-            return HandlerStatus.RETURN
-
-        chain_head = startup_info.chain_head
-        peers = [bytes.fromhex(peer_id) for peer_id in startup_info.peers]
-        local_peer_info = startup_info.local_peer_info
-
-        block_header = BlockHeader()
-        block_header.ParseFromString(chain_head.header)
-
-        response.chain_head.block_id = bytes.fromhex(
-            chain_head.header_signature)
-
-        response.chain_head.previous_id =\
-            bytes.fromhex(block_header.previous_block_id)
-        response.chain_head.signer_id =\
-            bytes.fromhex(block_header.signer_public_key)
-        response.chain_head.block_num = block_header.block_num
-        response.chain_head.payload = block_header.consensus
-
-        response.peers.extend([
-            consensus_pb2.ConsensusPeerInfo(peer_id=peer_id)
-            for peer_id in peers
-        ])
-
-        response.local_peer_info.peer_id = local_peer_info
+        self._proxy.register(request.name, request.version, connection_id)
 
         LOGGER.info(
             "Consensus engine registered: %s %s",
@@ -143,14 +125,41 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         return HandlerStatus.RETURN_AND_PASS
 
 
+class ConsensusRegisterActivateHandler(Handler):
+    def __init__(self, proxy):
+        self._proxy = proxy
+        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+
+    @property
+    def request_type(self):
+        return self._request_type
+
+    def handle(self, connection_id, message_content):
+        # If this is the configured consensus engine, make it active. This is
+        # necessary for setting the active engine on genesis and when the
+        # configured engine is changed to an engine that is not registered yet
+        request = consensus_pb2.ConsensusRegisterRequest()
+
+        try:
+            request.ParseFromString(message_content)
+        except DecodeError:
+            LOGGER.exception("Unable to decode ConsensusRegisterRequest")
+            return HandlerResult(status=HandlerResult.DROP)
+
+        self._proxy.activate_if_configured(request.name, request.version)
+
+        return HandlerResult(status=HandlerStatus.PASS)
+
+
 class ConsensusRegisterBlockNewSyncHandler(Handler):
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
 
     @property
     def request_type(self):
-        return validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
+        return self._request_type
 
     def handle(self, connection_id, message_content):
         forks = self._proxy.forks()
@@ -343,13 +352,19 @@ class ConsensusCheckBlocksHandler(ConsensusServiceHandler):
 
 
 class ConsensusCheckBlocksNotifier(Handler):
-    request_type = validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
-
     def __init__(self, proxy, consensus_notifier):
         self._proxy = proxy
         self._consensus_notifier = consensus_notifier
+        self._request_type = \
+            validator_pb2.Message.CONSENSUS_CHECK_BLOCKS_REQUEST
+
+    @property
+    def request_type(self):
+        return self._request_type
 
     def handle(self, connection_id, message_content):
+        # No need to verify this is a valid consensus engine; previous handler
+        # ConsensusCheckBlocksHandler has already verifified
         request = consensus_pb2.ConsensusCheckBlocksRequest()
 
         try:

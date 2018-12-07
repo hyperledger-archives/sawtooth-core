@@ -17,29 +17,61 @@ from collections import namedtuple
 from threading import RLock
 
 
+class EngineNotRegistered(Exception):
+    """The engine is not registered."""
+
+
 EngineInfo = namedtuple('EngineInfo', ['connection_id', 'name', 'version'])
 
 
 class ConsensusRegistry:
     """A thread-safe construct that stores the connection_id, name, and version
-    of the currently registered consensus engine."""
+    of all registered consensus engines, and tracks which engine is currently
+    active."""
 
     def __init__(self):
-        self._info = None
+        self._registry = []
+        self._active = None
         self._lock = RLock()
 
     def __bool__(self):
         with self._lock:
-            return self._info is not None
+            return self._active is not None
 
     def register_engine(self, connection_id, name, version):
         with self._lock:
-            self._info = EngineInfo(connection_id, name, version)
+            self._registry.append(EngineInfo(connection_id, name, version))
 
-    def unregister_engine(self):
+    def activate_engine(self, name, version):
         with self._lock:
-            self._info = None
+            # If there is already an active engine, remove it
+            if self._active is not None:
+                self._active = None
+            try:
+                self._active = next(
+                    e for e in self._registry
+                    if e.name == name and e.version == version)
+            except StopIteration:
+                # If engine isn't registered, just leave _active as None
+                pass
 
-    def get_engine_info(self):
+    def deactivate_current_engine(self):
         with self._lock:
-            return self._info
+            self._active = None
+
+    def get_active_engine_info(self):
+        with self._lock:
+            return self._active
+
+    def is_active_engine_id(self, connection_id):
+        with self._lock:
+            return (
+                self._active is not None
+                and connection_id == self._active.connection_id)
+
+    def is_active_engine_name_version(self, name, version):
+        with self._lock:
+            return (
+                self._active is not None
+                and name == self._active.name
+                and version == self._active.version)

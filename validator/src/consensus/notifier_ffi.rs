@@ -19,7 +19,7 @@ use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use cpython::{ObjectProtocol, PyClone, PyObject, Python};
+use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 use protobuf::{self, Message, ProtobufEnum};
 use py_ffi;
 
@@ -63,6 +63,91 @@ impl NotifierService for PyNotifierService {
                 pylogger::exception(py, "Unable to notify consensus", py_err);
                 NotifierServiceError("FFI error notifying consensus".into())
             })
+    }
+
+    fn notify_id<T: Message>(
+        &self,
+        message_type: MessageType,
+        message: T,
+        connection_id: String,
+    ) -> Result<(), NotifierServiceError> {
+        let payload = message
+            .write_to_bytes()
+            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        self.py_notifier_service
+            .call_method(
+                py,
+                "notify_id",
+                (message_type.value(), payload, connection_id),
+                None,
+            ).map(|_| ())
+            .map_err(|py_err| {
+                pylogger::exception(py, "Unable to notify consensus", py_err);
+                NotifierServiceError("FFI error notifying consensus".into())
+            })
+    }
+
+    fn get_peers_public_keys(&self) -> Result<Vec<String>, NotifierServiceError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let res = self
+            .py_notifier_service
+            .call_method(py, "get_peers_public_keys", NoArgs, None)
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call py_notifier_service.get_peers_public_keys",
+                    py_err,
+                );
+                NotifierServiceError(
+                    "FFI error calling py_notifier_service.get_peers_public_keys".into(),
+                )
+            })?;
+
+        res.extract::<Vec<String>>(py).map_err(|py_err| {
+            pylogger::exception(
+                py,
+                "py_notifier_service.get_peers_public_keys did not return a valid string list",
+                py_err,
+            );
+            NotifierServiceError(
+                "py_notifier_service.get_peers_public_keys did not return a valid string list"
+                    .into(),
+            )
+        })
+    }
+
+    fn get_public_key(&self) -> Result<String, NotifierServiceError> {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+
+        let res = self
+            .py_notifier_service
+            .call_method(py, "get_public_key", NoArgs, None)
+            .map_err(|py_err| {
+                pylogger::exception(
+                    py,
+                    "Unable to call py_notifier_service.get_public_key",
+                    py_err,
+                );
+                NotifierServiceError("FFI error calling py_notifier_service.get_public_key".into())
+            })?;
+
+        res.extract::<String>(py).map_err(|py_err| {
+            pylogger::exception(
+                py,
+                "py_notifier_service.get_public_key did not return a valid string",
+                py_err,
+            );
+            NotifierServiceError(
+                "py_notifier_service.get_public_key did not return a valid string".into(),
+            )
+        })
     }
 }
 
@@ -225,6 +310,47 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
     match deref_cstr(block_id) {
         Ok(block_id) => {
             (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_invalid(block_id);
+            ErrorCode::Success
+        }
+        Err(err) => err,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
+    notifier: *mut c_void,
+    block_bytes: *const u8,
+    block_bytes_len: usize,
+) -> ErrorCode {
+    check_null!(notifier, block_bytes);
+
+    let block: Block = {
+        let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+            Ok(block) => block,
+            Err(err) => {
+                error!("Failed to parse block bytes: {:?}", err);
+                return ErrorCode::InvalidArgument;
+            }
+        };
+        proto_block.into()
+    };
+
+    (*(notifier as *mut BackgroundConsensusNotifier)).notify_engine_activated(&block);
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn consensus_notifier_notify_engine_deactivated(
+    notifier: *mut c_void,
+    connection_id: *const c_char,
+) -> ErrorCode {
+    check_null!(notifier, connection_id);
+
+    match deref_cstr(connection_id) {
+        Ok(connection_id) => {
+            (*(notifier as *mut BackgroundConsensusNotifier))
+                .notify_engine_deactivated(connection_id.to_string());
             ErrorCode::Success
         }
         Err(err) => err,

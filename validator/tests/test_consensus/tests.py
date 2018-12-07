@@ -4,7 +4,6 @@ from unittest.mock import Mock
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
-from sawtooth_validator.consensus.proxy import StartupInfo
 from sawtooth_validator.consensus.registry import EngineInfo
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
@@ -22,33 +21,16 @@ class TestHandlers(unittest.TestCase):
     def setUp(self):
         self.mock_proxy = Mock()
         self.mock_consensus_notifier = Mock()
+        self.mock_consensus_registry = MockConsensusRegistry()
 
     def test_consensus_register_handler(self):
-        header = BlockHeader(
-            previous_block_id="beef",
-            signer_public_key="abcd",
-            block_num=12,
-            consensus=b'deadbeef'
-        )
-        mock_chain_head = Mock(
-            header_signature="dead",
-            header=header.SerializeToString()
-        )
-        mock_startup_info = StartupInfo(
-            chain_head=mock_chain_head,
-            peers=['dead', 'beef'],
-            local_peer_info=b'abc')
-        self.mock_proxy.register.return_value = mock_startup_info
         handler = handlers.ConsensusRegisterHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
-        self.assertEqual(response.chain_head.block_id, bytes.fromhex("dead"))
-        self.assertEqual(response.peers[0].peer_id, bytes.fromhex("dead"))
-        self.assertEqual(response.local_peer_info.peer_id, b'abc')
-        self.mock_proxy.register.assert_called_with('', '', None)
+        self.mock_proxy.register.assert_called_with('', '', 'mock-id')
 
     def test_consensus_send_to_handler(self):
         handler = handlers.ConsensusSendToHandler(self.mock_proxy)
@@ -83,7 +65,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.previous_id = b"test"
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.initialize_block.assert_called_with(
@@ -94,7 +76,7 @@ class TestHandlers(unittest.TestCase):
         handler = handlers.ConsensusSummarizeBlockHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.summarize_block.assert_called_with()
@@ -105,7 +87,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.data = b"test"
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.finalize_block.assert_called_with(
@@ -115,7 +97,7 @@ class TestHandlers(unittest.TestCase):
         handler = handlers.ConsensusCancelBlockHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.cancel_block.assert_called_with()
@@ -125,7 +107,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.block_ids.extend([b"test"])
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.check_blocks.assert_called_with(
@@ -136,7 +118,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.block_id = b"test"
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.commit_block.assert_called_with(
@@ -147,7 +129,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.block_id = b"test"
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.ignore_block.assert_called_with(
@@ -158,7 +140,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.block_id = b"test"
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.fail_block.assert_called_with(
@@ -179,7 +161,7 @@ class TestHandlers(unittest.TestCase):
         request_class = handler.request_class
         request = request_class()
         request.block_ids.extend([b"test"])
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.blocks_get.assert_called_with(
@@ -198,7 +180,7 @@ class TestHandlers(unittest.TestCase):
         handler = handlers.ConsensusChainHeadGetHandler(self.mock_proxy)
         request_class = handler.request_class
         request = request_class()
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.chain_head_get.assert_called_with()
@@ -210,7 +192,7 @@ class TestHandlers(unittest.TestCase):
         request = request_class()
         request.block_id = b"test"
         request.keys.extend(["test"])
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.settings_get.assert_called_with(
@@ -223,7 +205,7 @@ class TestHandlers(unittest.TestCase):
         request = request_class()
         request.block_id = b"test"
         request.addresses.extend(["test"])
-        result = handler.handle(None, request.SerializeToString())
+        result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
         self.mock_proxy.state_get.assert_called_with(
@@ -241,6 +223,7 @@ class TestProxy(unittest.TestCase):
         self._mock_settings_view_factory = Mock()
         self._mock_state_view_factory = Mock()
         self._consensus_registry = MockConsensusRegistry()
+        self._consensus_notifier = Mock()
         self._proxy = ConsensusProxy(
             block_manager=self._mock_block_manager,
             chain_controller=self._mock_chain_controller,
@@ -249,7 +232,8 @@ class TestProxy(unittest.TestCase):
             identity_signer=self._mock_identity_signer,
             settings_view_factory=self._mock_settings_view_factory,
             state_view_factory=self._mock_state_view_factory,
-            consensus_registry=self._consensus_registry)
+            consensus_registry=self._consensus_registry,
+            consensus_notifier=self._consensus_notifier)
 
     def test_send_to(self):
         self._proxy.send_to(
@@ -428,8 +412,11 @@ class MockBlockManager:
 
 
 class MockConsensusRegistry(Mock):
-    def get_engine_info(self):
+    def get_active_engine_info(self):
         return EngineInfo('mock-id', 'mock-name', 'mock-version')
+
+    def is_active_engine_id(self, engine_id):
+        return True
 
 
 class MockGossip(Mock):

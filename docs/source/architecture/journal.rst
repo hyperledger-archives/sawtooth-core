@@ -246,7 +246,8 @@ a ``GenesisData`` list of batches for the genesis block.
         $ sawset proposal create \
           -k <signing-key-file> \
           -o sawset.batch \
-          sawtooth.consensus.algorithm=poet \
+          sawtooth.consensus.algorithm.name=PoET \
+          sawtooth.consensus.algorithm.version=0.1 \
           sawtooth.poet.initial_wait_timer={value} \
           sawtooth.poet.target_wait_time={value} \
           sawtooth.poet.population_estimate_sample_size={value}
@@ -310,8 +311,7 @@ If any transactions in the genesis block set or change settings, Sawtooth
 requires the `Sawtooth Settings transaction processor <../cli/settings-tp>`_
 or an equivalent implementation.
 For example, if the genesis block configures PoET consensus, this transaction
-processor is handles the transactions with PoET settings. (If no
-consensus is specified, Sawtooth uses dev mode consensus.)
+processor is handles the transactions with PoET settings.
 
 When the genesis block is committed, the consensus settings are stored in
 state. All subsequent blocks are processed with the configured consensus

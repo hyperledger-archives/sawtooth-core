@@ -334,6 +334,8 @@ class BatchSubmitter:
         self.imf = IntkeyMessageFactory()
         self.timeout = timeout
 
+        wait_for_rest_apis(['rest-api:8008'])
+
     def _post_batch(self, batch):
         headers = {'Content-Type': 'application/octet-stream'}
         response = self._query_rest_api(

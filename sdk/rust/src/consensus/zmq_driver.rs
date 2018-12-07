@@ -73,12 +73,14 @@ impl ZmqDriver {
         let validator_sender_clone = validator_sender.clone();
         let (update_sender, update_receiver) = channel();
 
-        let startup_state = register(
+        register(
             &mut validator_sender,
             Duration::from_secs(REGISTER_TIMEOUT),
             engine.name(),
             engine.version(),
         )?;
+
+        let startup_state = wait_until_active(&validator_sender, &validator_receiver)?;
 
         let driver_thread = thread::spawn(move || {
             driver_loop(
@@ -157,7 +159,7 @@ pub fn register(
     timeout: Duration,
     name: String,
     version: String,
-) -> Result<StartupState, Error> {
+) -> Result<(), Error> {
     let mut request = ConsensusRegisterRequest::new();
     request.set_name(name);
     request.set_version(version);
@@ -170,7 +172,7 @@ pub fn register(
             &request,
         )?.get_timeout(timeout)?;
 
-    let ret: Result<StartupState, Error>;
+    let ret: Result<(), Error>;
 
     // Keep trying to register until the response is something other
     // than NOT_READY.
@@ -184,15 +186,7 @@ pub fn register(
 
                 match response.get_status() {
                     ConsensusRegisterResponse_Status::OK => {
-                        ret = Ok(StartupState {
-                            chain_head: response.take_chain_head().into(),
-                            peers: response
-                                .take_peers()
-                                .into_iter()
-                                .map(|info| info.into())
-                                .collect(),
-                            local_peer_info: response.take_local_peer_info().into(),
-                        });
+                        ret = Ok(());
 
                         break;
                     }
@@ -230,6 +224,58 @@ pub fn register(
                 )));
 
                 break;
+            }
+        }
+    }
+
+    ret
+}
+
+fn wait_until_active(
+    validator_sender: &ZmqMessageSender,
+    validator_receiver: &Receiver<Result<Message, ReceiveError>>,
+) -> Result<StartupState, Error> {
+    use self::Message_MessageType::*;
+
+    let ret: Result<StartupState, Error>;
+
+    loop {
+        match validator_receiver.recv_timeout(Duration::from_millis(100)) {
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => {
+                ret = Err(Error::ReceiveError("Sender disconnected".into()));
+                break;
+            }
+            Ok(Err(err)) => {
+                ret = Err(Error::ReceiveError(format!(
+                    "Unexpected error while receiving: {}",
+                    err
+                )));
+                break;
+            }
+            Ok(Ok(msg)) => {
+                if let CONSENSUS_NOTIFY_ENGINE_ACTIVATED = msg.get_message_type() {
+                    let mut content: ConsensusNotifyEngineActivated =
+                        protobuf::parse_from_bytes(msg.get_content())?;
+
+                    ret = Ok(StartupState {
+                        chain_head: content.take_chain_head().into(),
+                        peers: content
+                            .take_peers()
+                            .into_iter()
+                            .map(|info| info.into())
+                            .collect(),
+                        local_peer_info: content.take_local_peer_info().into(),
+                    });
+
+                    validator_sender.reply(
+                        Message_MessageType::CONSENSUS_NOTIFY_ACK,
+                        msg.get_correlation_id(),
+                        &[],
+                    )?;
+
+                    break;
+                }
             }
         }
     }
@@ -286,6 +332,7 @@ fn handle_update(
                 protobuf::parse_from_bytes(msg.get_content())?;
             Update::BlockCommit(request.take_block_id().into())
         }
+        CONSENSUS_NOTIFY_ENGINE_DEACTIVATED => Update::Shutdown,
         unexpected => {
             return Err(Error::ReceiveError(format!(
                 "Received unexpected message type: {:?}",
@@ -456,6 +503,14 @@ mod tests {
         );
         assert!("mock" == request.get_name());
         assert!("0" == request.get_version());
+
+        let _: ConsensusNotifyAck = send_req_rep(
+            &connection_id,
+            &socket,
+            ConsensusNotifyEngineActivated::new(),
+            Message_MessageType::CONSENSUS_NOTIFY_ENGINE_ACTIVATED,
+            Message_MessageType::CONSENSUS_NOTIFY_ACK,
+        );
 
         let _: ConsensusNotifyAck = send_req_rep(
             &connection_id,

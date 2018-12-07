@@ -44,7 +44,9 @@ class ZmqDriver(Driver):
     def start(self, endpoint):
         self._stream = Stream(endpoint)
 
-        startup_state = self._register()
+        self._register()
+
+        startup_state = self._wait_until_active()
 
         self._updates = Queue()
 
@@ -112,13 +114,37 @@ class ZmqDriver(Driver):
                 continue
 
             if response.status == consensus_pb2.ConsensusRegisterResponse.OK:
-                return StartupState(
-                    response.chain_head,
-                    response.peers,
-                    response.local_peer_info)
+                break
 
             raise exceptions.ReceiveError(
                 'Registration failed with status {}'.format(response.status))
+
+    def _wait_until_active(self):
+        while True:
+            try:
+                future = self._stream.receive()
+                message = future.result(1)
+            except concurrent.futures.TimeoutError:
+                continue
+
+            if (
+                message.message_type
+                == Message.CONSENSUS_NOTIFY_ENGINE_ACTIVATED
+            ):
+                notification = \
+                    consensus_pb2.ConsensusNotifyEngineActivated()
+                notification.ParseFromString(message.content)
+
+                self._stream.send_back(
+                    message_type=Message.CONSENSUS_NOTIFY_ACK,
+                    correlation_id=message.correlation_id,
+                    content=consensus_pb2.ConsensusNotifyAck()
+                                         .SerializeToString())
+
+                return StartupState(
+                    notification.chain_head,
+                    notification.peers,
+                    notification.local_peer_info)
 
     def _process(self, message):
         type_tag = message.message_type
@@ -173,6 +199,10 @@ class ZmqDriver(Driver):
             notification.ParseFromString(message.content)
 
             data = notification.block_id
+
+        elif type_tag == Message.CONSENSUS_NOTIFY_ENGINE_DEACTIVATED:
+            self.stop()
+            data = None
 
         else:
             raise exceptions.ReceiveError(

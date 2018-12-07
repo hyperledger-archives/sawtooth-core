@@ -201,6 +201,13 @@ class Gossip:
         with self._lock:
             return self._network.connection_id_to_public_key(peer)
 
+    def get_peers_public_keys(self):
+        """Returns the list of public keys for all peers."""
+        with self._lock:
+            return [
+                self._network.connection_id_to_public_key(peer)
+                for peer in copy.copy(self._peers)]
+
     @property
     def endpoint(self):
         """Returns the validator's public endpoint.

@@ -23,11 +23,12 @@ use block::Block;
 
 use hashlib::sha256_digest_strs;
 use hex;
-use protobuf::Message;
+use protobuf::{Message, RepeatedField};
 
 use proto::consensus::{
     ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,
-    ConsensusNotifyBlockNew, ConsensusNotifyBlockValid, ConsensusNotifyPeerConnected,
+    ConsensusNotifyBlockNew, ConsensusNotifyBlockValid, ConsensusNotifyEngineActivated,
+    ConsensusNotifyEngineDeactivated, ConsensusNotifyPeerConnected,
     ConsensusNotifyPeerDisconnected, ConsensusNotifyPeerMessage, ConsensusPeerInfo,
     ConsensusPeerMessage,
 };
@@ -42,6 +43,8 @@ pub trait ConsensusNotifier: Send + Sync {
     fn notify_block_valid(&self, block_id: &str);
     fn notify_block_invalid(&self, block_id: &str);
     fn notify_block_commit(&self, block_id: &str);
+    fn notify_engine_activated(&self, block: &Block);
+    fn notify_engine_deactivated(&self, connection_id: String);
 }
 
 #[derive(Debug)]
@@ -53,6 +56,17 @@ pub trait NotifierService: Sync + Send {
         message_type: MessageType,
         message: T,
     ) -> Result<(), NotifierServiceError>;
+
+    fn notify_id<T: Message>(
+        &self,
+        message_type: MessageType,
+        message: T,
+        connection_id: String,
+    ) -> Result<(), NotifierServiceError>;
+
+    fn get_peers_public_keys(&self) -> Result<Vec<String>, NotifierServiceError>;
+
+    fn get_public_key(&self) -> Result<String, NotifierServiceError>;
 }
 
 impl<T: NotifierService> ConsensusNotifier for T {
@@ -87,21 +101,7 @@ impl<T: NotifierService> ConsensusNotifier for T {
     }
 
     fn notify_block_new(&self, block: &Block) {
-        let summary = summarize(block);
-
-        let mut consensus_block = ConsensusBlock::new();
-        consensus_block.set_block_id(from_hex(&block.header_signature, "block.header_signature"));
-        consensus_block.set_previous_id(from_hex(
-            &block.previous_block_id,
-            "block.previous_block_id",
-        ));
-        consensus_block.set_signer_id(from_hex(
-            &block.signer_public_key,
-            "block.signer_public_key",
-        ));
-        consensus_block.set_block_num(block.block_num);
-        consensus_block.set_payload(block.consensus.clone());
-        consensus_block.set_summary(summary);
+        let consensus_block = get_consensus_block(block);
 
         let mut notification = ConsensusNotifyBlockNew::new();
         notification.set_block(consensus_block);
@@ -133,16 +133,71 @@ impl<T: NotifierService> ConsensusNotifier for T {
         self.notify(MessageType::CONSENSUS_NOTIFY_BLOCK_COMMIT, notification)
             .expect("Failed to send block commit notification");
     }
+
+    fn notify_engine_activated(&self, block: &Block) {
+        let chain_head = get_consensus_block(block);
+
+        let peers = RepeatedField::from_vec(
+            self.get_peers_public_keys()
+                .expect("Failed to get list of peers")
+                .iter()
+                .map(|peer_id| {
+                    let mut peer_info = ConsensusPeerInfo::new();
+                    peer_info.set_peer_id(from_hex(peer_id, "peer_id"));
+                    peer_info
+                }).collect(),
+        );
+
+        let mut local_peer_info = ConsensusPeerInfo::new();
+        local_peer_info.set_peer_id(from_hex(
+            self.get_public_key().expect("Failed to get public key"),
+            "pub_key",
+        ));
+
+        let mut notification = ConsensusNotifyEngineActivated::new();
+        notification.set_chain_head(chain_head);
+        notification.set_peers(peers);
+        notification.set_local_peer_info(local_peer_info);
+
+        self.notify(MessageType::CONSENSUS_NOTIFY_ENGINE_ACTIVATED, notification)
+            .expect("Failed to send engine activation notification");
+    }
+
+    fn notify_engine_deactivated(&self, connection_id: String) {
+        let notification = ConsensusNotifyEngineDeactivated::new();
+
+        self.notify_id(
+            MessageType::CONSENSUS_NOTIFY_ENGINE_DEACTIVATED,
+            notification,
+            connection_id,
+        ).expect("Failed to send engine deactivation notification");
+    }
 }
 
-fn summarize(block: &Block) -> Vec<u8> {
+fn get_consensus_block(block: &Block) -> ConsensusBlock {
     let batch_ids: Vec<&str> = block
         .batches
         .iter()
         .map(|batch| batch.header_signature.as_str())
         .collect();
 
-    sha256_digest_strs(batch_ids.as_slice())
+    let summary = sha256_digest_strs(batch_ids.as_slice());
+
+    let mut consensus_block = ConsensusBlock::new();
+    consensus_block.set_block_id(from_hex(&block.header_signature, "block.header_signature"));
+    consensus_block.set_previous_id(from_hex(
+        &block.previous_block_id,
+        "block.previous_block_id",
+    ));
+    consensus_block.set_signer_id(from_hex(
+        &block.signer_public_key,
+        "block.signer_public_key",
+    ));
+    consensus_block.set_block_num(block.block_num);
+    consensus_block.set_payload(block.consensus.clone());
+    consensus_block.set_summary(summary);
+
+    consensus_block
 }
 
 fn from_hex<T: AsRef<str>>(hex_string: T, id_name: &str) -> Vec<u8> {
@@ -161,6 +216,8 @@ enum ConsensusNotification {
     BlockValid(String),
     BlockInvalid(String),
     BlockCommit(String),
+    EngineActivated(Block),
+    EngineDeactivated(String),
 }
 
 #[derive(Clone)]
@@ -225,6 +282,14 @@ impl ConsensusNotifier for BackgroundConsensusNotifier {
     fn notify_block_commit(&self, block_id: &str) {
         self.send_notification(ConsensusNotification::BlockCommit(block_id.into()))
     }
+
+    fn notify_engine_activated(&self, block: &Block) {
+        self.send_notification(ConsensusNotification::EngineActivated(block.clone()))
+    }
+
+    fn notify_engine_deactivated(&self, connection_id: String) {
+        self.send_notification(ConsensusNotification::EngineDeactivated(connection_id))
+    }
 }
 
 fn handle_notification<T: ConsensusNotifier>(notifier: &T, notification: ConsensusNotification) {
@@ -240,5 +305,9 @@ fn handle_notification<T: ConsensusNotifier>(notifier: &T, notification: Consens
         ConsensusNotification::BlockValid(block_id) => notifier.notify_block_valid(&block_id),
         ConsensusNotification::BlockInvalid(block_id) => notifier.notify_block_invalid(&block_id),
         ConsensusNotification::BlockCommit(block_id) => notifier.notify_block_commit(&block_id),
+        ConsensusNotification::EngineActivated(block) => notifier.notify_engine_activated(&block),
+        ConsensusNotification::EngineDeactivated(connection_id) => {
+            notifier.notify_engine_deactivated(connection_id)
+        }
     }
 }

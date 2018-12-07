@@ -19,6 +19,7 @@
 
 use block::Block;
 use consensus::notifier::BackgroundConsensusNotifier;
+use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
@@ -32,6 +33,7 @@ use journal::commit_store::CommitStore;
 use py_ffi;
 use pylogger;
 use state::state_pruning_manager::StatePruningManager;
+use state::state_view_factory::StateViewFactory;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -77,6 +79,7 @@ pub unsafe extern "C" fn chain_controller_new(
     fork_cache_keep_time: u32,
     data_directory: *const c_char,
     chain_controller_ptr: *mut *const c_void,
+    consensus_registry: *mut py_ffi::PyObject,
 ) -> ErrorCode {
     check_null!(
         commit_store,
@@ -85,6 +88,7 @@ pub unsafe extern "C" fn chain_controller_new(
         state_database,
         chain_head_lock,
         consensus_notifier_service,
+        consensus_registry,
         observers,
         data_directory
     );
@@ -103,6 +107,7 @@ pub unsafe extern "C" fn chain_controller_new(
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
     let consensus_notifier_service =
         Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
+    let py_consensus_registry = PyObject::from_borrowed_ptr(py, consensus_registry);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
@@ -119,6 +124,8 @@ pub unsafe extern "C" fn chain_controller_new(
     let results_cache =
         (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
 
+    let state_view_factory = StateViewFactory::new(state_database.clone());
+
     let state_pruning_manager = StatePruningManager::new(state_database);
 
     let commit_store = Box::from_raw(commit_store as *mut CommitStore);
@@ -130,6 +137,8 @@ pub unsafe extern "C" fn chain_controller_new(
         chain_head_lock_ref.clone(),
         results_cache,
         consensus_notifier_service.clone(),
+        Box::new(PyConsensusRegistry::new(py_consensus_registry)),
+        state_view_factory,
         data_dir.into(),
         state_pruning_block_depth,
         observer_wrappers,

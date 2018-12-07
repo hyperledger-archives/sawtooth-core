@@ -27,18 +27,40 @@ LOGGER = logging.getLogger(__name__)
 
 
 class _NotifierService:
-    def __init__(self, consensus_service, consensus_registry):
+    def __init__(self, consensus_service, consensus_registry, public_key):
         self._service = consensus_service
         self._consensus_registry = consensus_registry
+        self._public_key = public_key
+        self._gossip = None
 
     def notify(self, message_type, message):
-        if self._consensus_registry:
-            message_bytes = bytes(message)
-            futures = self._service.send_all(
+        active_engine = self._consensus_registry.get_active_engine_info()
+        if active_engine is not None:
+            self._service.send(
                 message_type,
-                message_bytes)
-            for future in futures:
-                future.result()
+                bytes(message),
+                active_engine.connection_id
+            ).result()
+
+    def notify_id(self, message_type, message, connection_id):
+        self._service.send(
+            message_type,
+            bytes(message),
+            connection_id
+        ).result()
+
+    def set_gossip(self, gossip):
+        self._gossip = gossip
+
+    def get_peers_public_keys(self):
+        return (
+            self._gossip.get_peers_public_keys()
+            if self._gossip is not None
+            else None
+        )
+
+    def get_public_key(self):
+        return self._public_key
 
 
 class ErrorCode(IntEnum):
@@ -51,12 +73,13 @@ class ConsensusNotifier(ffi.OwnedPointer):
     """Handles sending notifications to the consensus engine using the provided
     interconnect service."""
 
-    def __init__(self, consensus_service, consensus_registry):
+    def __init__(self, consensus_service, consensus_registry, public_key):
         super().__init__('consensus_notifier_drop')
 
         self._notifier_service = _NotifierService(
             consensus_service,
-            consensus_registry)
+            consensus_registry,
+            public_key)
 
         PY_LIBRARY.call(
             'consensus_notifier_new',
@@ -115,3 +138,19 @@ class ConsensusNotifier(ffi.OwnedPointer):
         self._notify(
             "consensus_notifier_notify_block_invalid",
             ctypes.c_char_p(block_id.encode()))
+
+    def notify_engine_activated(self, chain_head):
+        """The consensus engine has been activated."""
+        chain_head_bytes = chain_head.SerializeToString()
+        self._notify(
+            "consensus_notifier_notify_engine_activated",
+            chain_head_bytes,
+            len(chain_head_bytes))
+
+    def notify_engine_deactivated(self, connection_id):
+        """The consensus engine has been deactivated."""
+        self._notify(
+            "consensus_notifier_notify_engine_deactivated", connection_id)
+
+    def set_gossip(self, gossip):
+        self._notifier_service.set_gossip(gossip)

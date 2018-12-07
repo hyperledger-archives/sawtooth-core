@@ -38,6 +38,7 @@ use protobuf;
 use batch::Batch;
 use block::Block;
 use consensus::notifier::ConsensusNotifier;
+use consensus::registry::ConsensusRegistry;
 use execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;
 use journal;
@@ -50,7 +51,9 @@ use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
 use journal::fork_cache::ForkCache;
 use metrics;
+use state::settings_view::SettingsView;
 use state::state_pruning_manager::StatePruningManager;
+use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
 use scheduler::TxnExecutionResult;
@@ -73,6 +76,7 @@ pub enum ChainControllerError {
     ForkResolutionError(String),
     BlockValidationError(ValidationError),
     BrokenQueue,
+    ConsensusError(String),
 }
 
 impl From<RecvError> for ChainControllerError {
@@ -244,6 +248,8 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
     consensus_notifier: Arc<ConsensusNotifier>,
+    consensus_registry: Arc<ConsensusRegistry>,
+    state_view_factory: StateViewFactory,
     block_validator: BlockValidator<TEP, PV>,
     block_validation_results: BlockValidationResultStore,
 
@@ -267,6 +273,8 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
         consensus_notifier: Box<ConsensusNotifier>,
+        consensus_registry: Box<ConsensusRegistry>,
+        state_view_factory: StateViewFactory,
         data_dir: String,
         state_pruning_block_depth: u32,
         observers: Vec<Box<ChainObserver>>,
@@ -292,6 +300,8 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             state_pruning_block_depth,
             chain_head_lock,
             consensus_notifier: Arc::from(consensus_notifier),
+            consensus_registry: Arc::from(consensus_registry),
+            state_view_factory,
         };
 
         chain_controller.initialize_chain_head();
@@ -806,8 +816,72 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             }
         }
 
-        self.consensus_notifier
-            .notify_block_commit(&block.header_signature);
+        // Check if active consensus engine needs to be updated
+        let settings_view: SettingsView = self
+            .state_view_factory
+            .create_view(&block.state_root_hash)
+            .map_err(|db_err| {
+                let err_str = format!(
+                    "Failed to get state view for block {:?}: {:?}",
+                    block, db_err
+                );
+                warn!("{}", err_str);
+                ChainControllerError::ConsensusError(err_str)
+            })?;
+        let name = settings_view
+            .get_setting_str("sawtooth.consensus.algorithm.name", None)
+            .map_err(|settings_err| {
+                let err_str = format!(
+                    "Error getting sawtooth.consensus.algorithm.name from settings view: {:?}",
+                    settings_err
+                );
+                warn!("{}", err_str);
+                ChainControllerError::ConsensusError(err_str)
+            })?.unwrap_or_else(|| String::from(""));
+        let version = settings_view
+            .get_setting_str("sawtooth.consensus.algorithm.version", None)
+            .map_err(|settings_err| {
+                let err_str = format!(
+                    "Error getting sawtooth.consensus.algorithm.version from settings view: {:?}",
+                    settings_err
+                );
+                warn!("{}", err_str);
+                ChainControllerError::ConsensusError(err_str)
+            })?.unwrap_or_else(|| String::from(""));
+
+        let is_active_engine = self
+            .consensus_registry
+            .is_active_engine_name_version(&name, &version)
+            .map_err(|reg_err| {
+                let err_str = format!("Error verifying active engine: {:?}", reg_err);
+                warn!("{}", err_str);
+                ChainControllerError::ConsensusError(err_str)
+            })?;
+
+        if !is_active_engine {
+            match self.consensus_registry.get_active_engine_info() {
+                Ok(Some(engine_info)) => {
+                    self.consensus_notifier
+                        .notify_engine_deactivated(engine_info.connection_id);
+                }
+                Err(err) => {
+                    // Not a fatal error; just won't notify old engine that it's deactivated
+                    warn!("Error getting active engine info: {:?}", err);
+                }
+                _ => (),
+            }
+            self.consensus_registry
+                .activate_engine(&name, &version)
+                .map_err(|reg_err| {
+                    let err_str = format!("Error activating consensus engine: {:?}", reg_err);
+                    warn!("{}", err_str);
+                    ChainControllerError::ConsensusError(err_str)
+                })?;
+            self.consensus_notifier.notify_engine_activated(block);
+        } else {
+            self.consensus_notifier
+                .notify_block_commit(&block.header_signature);
+        }
 
         Ok(())
     }
@@ -828,6 +902,8 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             state_pruning_block_depth: self.state_pruning_block_depth,
             chain_head_lock: self.chain_head_lock.clone(),
             consensus_notifier: self.consensus_notifier.clone(),
+            consensus_registry: self.consensus_registry.clone(),
+            state_view_factory: self.state_view_factory.clone(),
         }
     }
 

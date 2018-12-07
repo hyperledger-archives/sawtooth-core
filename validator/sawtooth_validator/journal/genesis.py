@@ -19,6 +19,7 @@ from pathlib import Path
 
 from sawtooth_validator.exceptions import InvalidGenesisStateError
 from sawtooth_validator.exceptions import InvalidGenesisConsensusError
+from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.exceptions import UnknownConsensusModuleError
 
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
@@ -32,6 +33,7 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.protobuf import genesis_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
+from sawtooth_validator.state.settings_view import SettingsView
 
 
 LOGGER = logging.getLogger(__name__)
@@ -186,6 +188,17 @@ class GenesisController:
             txn_results = scheduler.get_transaction_execution_results(
                 batch.header_signature)
             txn_receipts += self._make_receipts(txn_results)
+
+        settings_view = SettingsView(
+            self._state_view_factory.create_view(state_hash))
+        name = settings_view.get_setting('sawtooth.consensus.algorithm.name')
+        version = settings_view.get_setting(
+            'sawtooth.consensus.algorithm.version')
+        if name is None or version is None:
+            raise LocalConfigurationError(
+                'Unable to start validator; sawtooth.consensus.algorithm.name '
+                'and sawtooth.consensus.algorithm.version must be set in the '
+                'genesis block.')
 
         LOGGER.debug('Produced state hash %s for genesis block.', state_hash)
 

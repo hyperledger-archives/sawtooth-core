@@ -15,7 +15,21 @@
  * ------------------------------------------------------------------------------
  */
 
-pub mod notifier;
-pub mod notifier_ffi;
-pub mod registry;
-pub mod registry_ffi;
+#[derive(Debug)]
+pub struct ConsensusRegistryError(pub String);
+
+pub struct EngineInfo {
+    pub connection_id: String,
+    pub name: String,
+    pub version: String,
+}
+
+pub trait ConsensusRegistry: Send + Sync {
+    fn activate_engine(&self, name: &str, version: &str) -> Result<(), ConsensusRegistryError>;
+    fn get_active_engine_info(&self) -> Result<Option<EngineInfo>, ConsensusRegistryError>;
+    fn is_active_engine_name_version(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<bool, ConsensusRegistryError>;
+}
