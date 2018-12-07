@@ -66,7 +66,8 @@ impl Block {
                     "Invalid BlockHeader {}: {}",
                     block.header_signature, err
                 ))
-            }).and_then(|block_header: messages::block::BlockHeader| {
+            })
+            .and_then(|block_header: messages::block::BlockHeader| {
                 block
                     .get_batches()
                     .iter()
@@ -99,7 +100,8 @@ impl Batch {
                     "Invalid BatchHeader {}: {}",
                     batch.header_signature, err
                 ))
-            }).and_then(|batch_header: messages::batch::BatchHeader| {
+            })
+            .and_then(|batch_header: messages::batch::BatchHeader| {
                 batch
                     .get_transactions()
                     .iter()
@@ -138,7 +140,8 @@ impl Transaction {
                     "Invalid TransactionHeader {}: {}",
                     transaction.header_signature, err
                 ))
-            }).map(
+            })
+            .map(
                 |transaction_header: messages::transaction::TransactionHeader| Transaction {
                     batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
                     dependencies: transaction_header.get_dependencies().to_vec(),
