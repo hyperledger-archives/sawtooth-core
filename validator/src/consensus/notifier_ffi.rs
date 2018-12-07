@@ -84,7 +84,8 @@ impl NotifierService for PyNotifierService {
                 "notify_id",
                 (message_type.value(), payload, connection_id),
                 None,
-            ).map(|_| ())
+            )
+            .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to notify consensus", py_err);
                 NotifierServiceError("FFI error notifying consensus".into())

@@ -97,7 +97,8 @@ impl CommitStore {
             .index_get(
                 "index_block_num",
                 &format!("0x{:0>16x}", block_num).as_bytes(),
-            ).and_then(|block_id| {
+            )
+            .and_then(|block_id| {
                 block_id.ok_or_else(|| {
                     DatabaseError::NotFoundError(format!("Block not found: {}", block_num))
                 })
@@ -333,7 +334,8 @@ impl CommitStore {
                             .transaction_ids
                             .iter()
                             .any(|txn_id| txn_id == transaction_id)
-                    }).next()
+                    })
+                    .next()
                     .ok_or_else(|| {
                         DatabaseError::CorruptionError("Transaction index corrupted".into())
                     })

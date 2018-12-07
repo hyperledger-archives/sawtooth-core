@@ -82,7 +82,8 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 .long("config-dir")
                 .takes_value(true)
                 .help("specify the configuration directory"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("bind")
                 .short("B")
                 .long("bind")
@@ -95,7 +96,8 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                      consensus:<endpoint>. Use multiple --bind options \
                      to specify all endpoints.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("peering")
                 .short("P")
                 .long("peering")
@@ -107,13 +109,15 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                      'dynamic' (processes any static peers first, \
                      then starts topology buildout).",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("endpoint")
                 .short("E")
                 .long("endpoint")
                 .takes_value(true)
                 .help("specifies the advertised network endpoint URL"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("seeds")
                 .short("s")
                 .long("seeds")
@@ -126,7 +130,8 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                      in a comma-separated list. Repeating the --seeds \
                      option is also accepted.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("peers")
                 .short("p")
                 .long("peers")
@@ -138,19 +143,22 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                      multiple peers in a comma-separated list. \
                      Repeating the --peers option is also accepted.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("verbose")
                 .short("v")
                 .long("verbose")
                 .multiple(true)
                 .help("enable more verbose output to stderr"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("scheduler")
                 .long("scheduler")
                 .takes_value(true)
                 .possible_values(&["serial", "parallel"])
                 .help("set scheduler type: serial or parallel"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("network_auth")
                 .long("network-auth")
                 .takes_value(true)
@@ -159,7 +167,8 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                     "identify type of authorization required to join validator \
                      network.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("opentsdb-url")
                 .long("opentsdb-url")
                 .takes_value(true)
@@ -167,12 +176,14 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                     "specify host and port for Open TSDB database used for \
                      metrics",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("opentsdb-db")
                 .long("opentsdb-db")
                 .takes_value(true)
                 .help("specify name of database used for storing metrics"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("minimum_peer_connectivity")
                 .long("minimum-peer-connectivity")
                 .takes_value(true)
@@ -181,13 +192,15 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                     "set the minimum number of peers required before stopping \
                      peer search",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("maximum_peer_connectivity")
                 .long("maximum-peer-connectivity")
                 .takes_value(true)
                 .validator(is_positive_integer)
                 .help("set the maximum number of peers to accept"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("state_pruning_block_depth")
                 .long("state-pruning-block-depth")
                 .takes_value(true)
@@ -196,7 +209,8 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                     "set the block depth below which state roots are \
                      pruned from the global state database.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("fork_cache_keep_time")
                 .long("fork-cache-keep-time")
                 .takes_value(true)

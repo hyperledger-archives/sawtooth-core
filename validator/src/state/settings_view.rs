@@ -243,7 +243,8 @@ mod tests {
                 .get_setting("my.setting.list", None, |value| value
                     .split(',')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
 
         assert_eq!(
@@ -252,7 +253,8 @@ mod tests {
                 .get_setting("my.other.list", None, |value| value
                     .split(';')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
 
         // Verify that we still return the default
@@ -262,7 +264,8 @@ mod tests {
                 .get_setting("some.nonexistent.setting", Some(vec![]), |value| value
                     .split(',')
                     .map(|s| s.parse().map_err(SettingsViewError::ParseIntError))
-                    .collect::<Result<Vec<u32>, SettingsViewError>>()).unwrap()
+                    .collect::<Result<Vec<u32>, SettingsViewError>>())
+                .unwrap()
         );
     }
 

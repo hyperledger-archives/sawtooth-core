@@ -55,7 +55,8 @@ pub fn validate_no_duplicate_batches(
         .contains_any_batches(branch_head_id, batch_ids)
         .map_err(|err| {
             ChainCommitStateError::Error(format!("During validate_no_duplicate_batches: {:?}", err))
-        })? {
+        })?
+    {
         return Err(ChainCommitStateError::DuplicateBatch(batch_id));
     }
     Ok(())
@@ -77,7 +78,8 @@ pub fn validate_no_duplicate_transactions(
                 "During validate_no_duplicate_transactions: {:?}",
                 err
             ))
-        })? {
+        })?
+    {
         return Err(ChainCommitStateError::DuplicateTransaction(transaction_id));
     }
 
@@ -113,7 +115,8 @@ pub fn validate_transaction_dependencies(
                     "During validate transaction dependencies: {:?}",
                     err
                 ))
-            })?.is_some();
+            })?
+            .is_some();
 
         if block_manager_contains_transaction {
             continue;
@@ -206,7 +209,8 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            }).collect();
+            })
+            .collect();
 
         let mut previous_block_id = "B1";
         let mut block_num = 2;
@@ -217,7 +221,8 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            }).collect();
+            })
+            .collect();
 
         let mut previous_block_id = "B3-1";
         let mut block_num = 4;
@@ -228,7 +233,8 @@ mod test {
                 previous_block_id = block_id;
                 block_num += 1;
                 block
-            }).collect();
+            })
+            .collect();
 
         let mut previous_block_id = "B2";
         let block_num = 3;
@@ -238,7 +244,8 @@ mod test {
                 let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
-            }).collect();
+            })
+            .collect();
 
         let mut previous_block_id = "B3-2";
         let block_num = 4;
@@ -248,7 +255,8 @@ mod test {
                 let block = create_block_w_batches_txns(block_id, previous_block_id, block_num);
                 previous_block_id = block_id;
                 block
-            }).collect();
+            })
+            .collect();
         vec![chain0, chain1, chain4, chain2, chain3]
     }
 
@@ -402,13 +410,12 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manage is able to persist all blocks known to it");
 
-        assert!(
-            validate_no_duplicate_batches(
-                &block_manager,
-                "B5-2",
-                &batches.iter().collect::<Vec<&String>>(),
-            ).is_err(),
-        );
+        assert!(validate_no_duplicate_batches(
+            &block_manager,
+            "B5-2",
+            &batches.iter().collect::<Vec<&String>>(),
+        )
+        .is_err(),);
     }
 
     #[test]
@@ -421,13 +428,12 @@ mod test {
             .persist("B5", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert!(
-            validate_no_duplicate_batches(
-                &block_manager,
-                "B5-2",
-                &batches.iter().collect::<Vec<&String>>(),
-            ).is_err(),
-        );
+        assert!(validate_no_duplicate_batches(
+            &block_manager,
+            "B5-2",
+            &batches.iter().collect::<Vec<&String>>(),
+        )
+        .is_err(),);
     }
 
     #[test]
@@ -487,13 +493,12 @@ mod test {
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert!(
-            validate_no_duplicate_transactions(
-                &block_manager,
-                "B5-2",
-                &transactions.iter().collect::<Vec<&String>>(),
-            ).is_err(),
+        assert!(validate_no_duplicate_transactions(
+            &block_manager,
+            "B5-2",
+            &transactions.iter().collect::<Vec<&String>>(),
         )
+        .is_err(),)
     }
 
     #[test]
@@ -506,13 +511,12 @@ mod test {
             .persist("B5-3", "commit")
             .expect("The block manager is able to persist all blocks known to it");
 
-        assert!(
-            validate_no_duplicate_transactions(
-                &block_manager,
-                "B5-4",
-                &transactions.iter().collect::<Vec<&String>>(),
-            ).is_err(),
-        );
+        assert!(validate_no_duplicate_transactions(
+            &block_manager,
+            "B5-4",
+            &transactions.iter().collect::<Vec<&String>>(),
+        )
+        .is_err(),);
     }
 
     #[test]
@@ -584,20 +588,18 @@ mod test {
         let transactions = ["B3b0t0".into(), "B3b0t1".into(), "B3b0t2".into()];
         let batches = ["B3b0".into(), "B3b1".into()];
 
-        assert!(
-            validate_no_duplicate_batches(
-                &block_manager,
-                "B3",
-                &batches.iter().collect::<Vec<&String>>(),
-            ).is_err(),
-        );
-        assert!(
-            validate_no_duplicate_transactions(
-                &block_manager,
-                "B3",
-                &transactions.iter().collect::<Vec<&String>>(),
-            ).is_err(),
-        );
+        assert!(validate_no_duplicate_batches(
+            &block_manager,
+            "B3",
+            &batches.iter().collect::<Vec<&String>>(),
+        )
+        .is_err(),);
+        assert!(validate_no_duplicate_transactions(
+            &block_manager,
+            "B3",
+            &transactions.iter().collect::<Vec<&String>>(),
+        )
+        .is_err(),);
     }
 
     fn create_block_w_batches_txns(
@@ -614,9 +616,11 @@ mod test {
                     .map(|t_id: &str| {
                         let txn_id = format!("{}{}", batch_header_signature, t_id);
                         create_transaction(txn_id, vec![])
-                    }).collect();
+                    })
+                    .collect();
                 create_batch(batch_header_signature, txns)
-            }).collect();
+            })
+            .collect();
 
         let block = create_block(block_id, previous_block_id, block_num, batches);
 
