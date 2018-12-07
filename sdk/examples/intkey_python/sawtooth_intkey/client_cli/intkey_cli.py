@@ -278,7 +278,7 @@ def add_show_parser(subparsers, parent_parser):
 
 def do_show(args):
     name = args.name
-    client = _get_client(args)
+    client = _get_client(args, False)
     value = client.show(name)
     print('{}: {}'.format(name, value))
 
@@ -299,17 +299,17 @@ def add_list_parser(subparsers, parent_parser):
 
 
 def do_list(args):
-    client = _get_client(args)
+    client = _get_client(args, False)
     results = client.list()
     for pair in results:
         for name, value in pair.items():
             print('{}: {}'.format(name, value))
 
 
-def _get_client(args):
+def _get_client(args, read_key_file=True):
     return IntkeyClient(
         url=DEFAULT_URL if args.url is None else args.url,
-        keyfile=_get_keyfile(args))
+        keyfile=_get_keyfile(args) if read_key_file else None)
 
 
 def _get_keyfile(args):
