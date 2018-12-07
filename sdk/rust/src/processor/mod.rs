@@ -177,7 +177,8 @@ impl<'a> TransactionProcessor<'a> {
         let r = unregister.clone();
         ctrlc::set_handler(move || {
             r.store(true, Ordering::SeqCst);
-        }).expect("Error setting Ctrl-C handler");
+        })
+        .expect("Error setting Ctrl-C handler");
 
         let mut first_time = true;
         let mut restart = true;
