@@ -49,7 +49,8 @@ fn main() {
                     .to_str()
                     .expect("Unable to extract filename")
             )
-        }).collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
         .join("\n");
     let mut mod_file = fs::File::create(dest_path.join("mod.rs")).unwrap();
     mod_file
@@ -68,7 +69,8 @@ fn main() {
         customize: Customize {
             ..Default::default()
         },
-    }).expect("Error generating rust files from settings protos");
+    })
+    .expect("Error generating rust files from settings protos");
 }
 
 fn glob_simple(pattern: &str) -> Vec<String> {
@@ -80,5 +82,6 @@ fn glob_simple(pattern: &str) -> Vec<String> {
                 .to_str()
                 .expect("utf-8")
                 .to_owned()
-        }).collect()
+        })
+        .collect()
 }
