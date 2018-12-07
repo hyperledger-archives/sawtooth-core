@@ -32,7 +32,8 @@ fn main() {
             .collect::<Vec<&str>>(),
         includes: &["../protos"],
         customize: Customize::default(),
-    }).expect("Error generating rust files from smallbank protos");
+    })
+    .expect("Error generating rust files from smallbank protos");
 }
 
 fn glob_simple(pattern: &str) -> Vec<String> {
@@ -44,5 +45,6 @@ fn glob_simple(pattern: &str) -> Vec<String> {
                 .to_str()
                 .expect("utf-8")
                 .to_owned()
-        }).collect()
+        })
+        .collect()
 }
