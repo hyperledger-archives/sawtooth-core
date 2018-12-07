@@ -202,7 +202,8 @@ impl Context for Secp256k1Context {
             bytes_to_hex_str(
                 &secp256k1::key::PublicKey::from_secret_key(&self.context, &sk)?
                     .serialize_vec(&self.context, true),
-            ).as_str(),
+            )
+            .as_str(),
         );
         match result {
             Err(err) => Err(err),
@@ -236,7 +237,8 @@ fn hex_str_to_bytes(s: &str) -> Result<Vec<u8>, Error> {
         .chunks(2)
         .map(|chunk| {
             ((chunk[0].to_digit(16).unwrap() << 4) | (chunk[1].to_digit(16).unwrap())) as u8
-        }).collect();
+        })
+        .collect();
 
     Ok(decoded)
 }

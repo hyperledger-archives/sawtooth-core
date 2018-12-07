@@ -291,7 +291,8 @@ pub unsafe extern "C" fn chain_controller_forks(
                     mem::forget(bytes);
 
                     payload
-                }).collect();
+                })
+                .collect();
 
             *forks_cap = payloads.capacity();
             *forks_len = payloads.len();
@@ -404,7 +405,8 @@ impl ChainObserver for PyChainObserver {
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
                 ()
-            }).unwrap_or(())
+            })
+            .unwrap_or(())
     }
 }
 
@@ -428,7 +430,8 @@ impl ToPyObject for TransactionReceipt {
                 "ParseFromString",
                 (cpython::PyBytes::new(py, &self.write_to_bytes().unwrap()).into_object(),),
                 None,
-            ).expect("Unable to ParseFromString");
+            )
+            .expect("Unable to ParseFromString");
 
         py_txn_receipt
     }

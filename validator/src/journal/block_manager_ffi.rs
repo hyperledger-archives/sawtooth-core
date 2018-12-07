@@ -132,7 +132,8 @@ pub unsafe extern "C" fn block_manager_persist(
         .map_err(|err| {
             error!("Unexpected error calling BlockManager.persist: {:?}", err);
             err
-        }).unwrap_or(ErrorCode::Error)
+        })
+        .unwrap_or(ErrorCode::Error)
 }
 
 #[repr(C)]
@@ -159,7 +160,8 @@ pub unsafe extern "C" fn block_manager_put(
                 protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
-        }).collect();
+        })
+        .collect();
 
     match branch_result {
         Ok(branch) => match (*(block_manager as *mut BlockManager)).put(branch) {

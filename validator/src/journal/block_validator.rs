@@ -288,7 +288,8 @@ where
                         }
                     }
                 }
-            }).expect("The background thread had an error");
+            })
+            .expect("The background thread had an error");
     }
 
     pub fn start(&mut self) {
@@ -389,7 +390,8 @@ impl<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> Clone
                 .map(|s| {
                     let (tx, _) = s;
                     (tx.clone(), None)
-                }).collect(),
+                })
+                .collect(),
             index,
             transaction_executor,
             validation_thread_exit,
@@ -533,7 +535,8 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     "During call to scheduler.complete: {:?}",
                     err
                 ))
-            })?.ok_or_else(|| {
+            })?
+            .ok_or_else(|| {
                 ValidationError::BlockValidationFailure(format!(
                     "Block {} failed validation: no execution results produced",
                     &block.header_signature

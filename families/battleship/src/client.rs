@@ -207,7 +207,8 @@ impl<'a> BattleshipClient<'a> {
                     from_slice(&decode(json["data"].as_str().unwrap()).unwrap()).unwrap();
                 let key = entry.keys().next().unwrap();
                 (key.clone(), entry[key].clone())
-            }).collect())
+            })
+            .collect())
     }
 
     /// Gets a particular game from the list

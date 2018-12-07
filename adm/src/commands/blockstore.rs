@@ -199,7 +199,8 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         } else {
             return Err(CliError::ArgumentError("No identifier specified".into()));
         }
-    }.map_err(|err| CliError::ArgumentError(format!("Error getting block: {}", err)))?;
+    }
+    .map_err(|err| CliError::ArgumentError(format!("Error getting block: {}", err)))?;
 
     let block_wrapper = BlockWrapper::try_from(block)
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
@@ -392,7 +393,8 @@ fn open_blockstore(ctx: &lmdb::LmdbContext) -> Result<Blockstore, CliError> {
     let blockstore_db = lmdb::LmdbDatabase::new(
         ctx,
         &["index_batch", "index_transaction", "index_block_num"],
-    ).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    )
+    .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     Ok(Blockstore::new(blockstore_db))
 }

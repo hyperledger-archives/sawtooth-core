@@ -44,7 +44,8 @@ fn main() {
         customize: Customize {
             ..Default::default()
         },
-    }).expect("Error generating rust files from identity protos");
+    })
+    .expect("Error generating rust files from identity protos");
 
     // Create mod.rs accordingly
     let mod_file_content = proto_src_files
@@ -59,7 +60,8 @@ fn main() {
                     .to_str()
                     .expect("Unable to extract filename")
             )
-        }).collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
         .join("\n");
 
     let mut mod_file = File::create(dest_path.join("mod.rs")).unwrap();

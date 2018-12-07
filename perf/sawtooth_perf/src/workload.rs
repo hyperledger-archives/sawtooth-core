@@ -269,11 +269,13 @@ fn handle_http_error(
                 StatusCode::Accepted => batch_map.borrow_mut().mark_submit_success(&batch_id),
                 StatusCode::TooManyRequests => counter.increment_queue_full(),
 
-                _ => if let Some(batchlist) =
-                    batch_map.borrow_mut().get_batchlist_to_submit(&batch_id)
-                {
-                    batches.borrow_mut().push(batchlist)
-                },
+                _ => {
+                    if let Some(batchlist) =
+                        batch_map.borrow_mut().get_batchlist_to_submit(&batch_id)
+                    {
+                        batches.borrow_mut().push(batchlist)
+                    }
+                }
             },
             Err(err) => {
                 if let Some(batchlist) = batch_map.borrow_mut().get_batchlist_to_submit(&batch_id) {
@@ -303,7 +305,8 @@ pub fn make_request(
                 .request(req)
                 .then(move |response: Result<Response, HyperError>| {
                     handle_http_error(response, batch_id, &batches, &batch_map, &counter)
-                }).map(|_| ())
+                })
+                .map(|_| ())
                 .map_err(|_| ());
 
             handle_clone.spawn(response_future);

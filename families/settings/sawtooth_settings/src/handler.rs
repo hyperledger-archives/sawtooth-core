@@ -348,7 +348,8 @@ fn set_state(
             "settings/update".to_string(),
             vec![("updated".to_string(), key.to_string())],
             &[],
-        ).map_err(|_| {
+        )
+        .map_err(|_| {
             warn!("Failed to add event {}", key);
             ApplyError::InternalError(format!("Failed to add event {}", key))
         })?;

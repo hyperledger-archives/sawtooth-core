@@ -88,7 +88,8 @@ impl<T: NotifierService> ConsensusNotifier for T {
         self.notify(
             MessageType::CONSENSUS_NOTIFY_PEER_DISCONNECTED,
             notification,
-        ).expect("Failed to send peer disconnected notification");
+        )
+        .expect("Failed to send peer disconnected notification");
     }
 
     fn notify_peer_message(&self, message: ConsensusPeerMessage, sender_id: &[u8]) {
@@ -145,7 +146,8 @@ impl<T: NotifierService> ConsensusNotifier for T {
                     let mut peer_info = ConsensusPeerInfo::new();
                     peer_info.set_peer_id(from_hex(peer_id, "peer_id"));
                     peer_info
-                }).collect(),
+                })
+                .collect(),
         );
 
         let mut local_peer_info = ConsensusPeerInfo::new();
@@ -170,7 +172,8 @@ impl<T: NotifierService> ConsensusNotifier for T {
             MessageType::CONSENSUS_NOTIFY_ENGINE_DEACTIVATED,
             notification,
             connection_id,
-        ).expect("Failed to send engine deactivation notification");
+        )
+        .expect("Failed to send engine deactivation notification");
     }
 }
 
@@ -236,7 +239,8 @@ impl BackgroundConsensusNotifier {
                 } else {
                     break;
                 }
-            }).expect("Failed to spawn BackgroundConsensusNotifier thread");
+            })
+            .expect("Failed to spawn BackgroundConsensusNotifier thread");
         BackgroundConsensusNotifier {
             tx: Arc::new(Mutex::new(tx)),
         }

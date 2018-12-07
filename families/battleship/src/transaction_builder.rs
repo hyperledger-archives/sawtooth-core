@@ -386,7 +386,8 @@ mod tests {
     fn get_key() -> Secp256k1PrivateKey {
         Secp256k1PrivateKey::from_hex(
             "64660c5faa745c24df472be178113a6441fa2fe53a59786289ba635d5dc085dc",
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -442,7 +443,8 @@ mod tests {
                     .addresses(vec!["000002", "000003"])
                     .payload(vec![4, 5, 6])
                     .signer(&signer),
-            ]).build_batch_list()
+            ])
+            .build_batch_list()
             .unwrap();
 
         assert_eq!(batch_list.batches.len(), 1);
@@ -474,23 +476,24 @@ mod tests {
 
         let batch_list = BatchListBuilder::new()
             .batches(vec![
-                BatchBuilder::new().signer(&signer).transactions(vec![
-                    TransactionBuilder::new()
+                BatchBuilder::new()
+                    .signer(&signer)
+                    .transactions(vec![TransactionBuilder::new()
                         .family_name("foo")
                         .family_version("1.0")
                         .addresses(vec!["000000"])
                         .payload(vec![1, 2, 3])
-                        .signer(&signer),
-                ]),
-                BatchBuilder::new().signer(&signer).transactions(vec![
-                    TransactionBuilder::new()
+                        .signer(&signer)]),
+                BatchBuilder::new()
+                    .signer(&signer)
+                    .transactions(vec![TransactionBuilder::new()
                         .family_name("foo")
                         .family_version("1.0")
                         .addresses(vec!["000000"])
                         .payload(vec![4, 5, 6])
-                        .signer(&signer),
-                ]),
-            ]).build()
+                        .signer(&signer)]),
+            ])
+            .build()
             .unwrap();
 
         assert_eq!(batch_list.batches.len(), 2);

@@ -414,7 +414,8 @@ pub unsafe extern "C" fn commit_store_put_blocks(
                 protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
-        }).collect();
+        })
+        .collect();
 
     match blocks_result {
         Ok(blocks) => match (*(commit_store as *mut CommitStore)).put_blocks(blocks) {

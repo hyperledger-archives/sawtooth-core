@@ -55,7 +55,8 @@ fn main() {
         (about: "Identity Transaction Processor (Rust)")
         (@arg connect: -C --connect +takes_value "connection endpoint for validator")
         (@arg verbose: -v --verbose +multiple "increase output verbosity")
-    ).get_matches();
+    )
+    .get_matches();
 
     let endpoint = matches
         .value_of("connect")
@@ -72,7 +73,8 @@ fn main() {
     let stdout = ConsoleAppender::builder()
         .encoder(Box::new(PatternEncoder::new(
             "{h({l:5.5})} | {({M}:{L}):20.20} | {m}{n}",
-        ))).build();
+        )))
+        .build();
 
     let config = match Config::builder()
         .appender(Appender::builder().build("stdout", Box::new(stdout)))

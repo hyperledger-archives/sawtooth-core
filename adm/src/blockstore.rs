@@ -253,7 +253,8 @@ mod tests {
         let database = LmdbDatabase::new(
             &ctx,
             &["index_batch", "index_transaction", "index_block_num"],
-        ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        )
+        .map_err(|err| DatabaseError::InitError(format!("{}", err)))
         .unwrap();
 
         let blockstore = Blockstore::new(database);
