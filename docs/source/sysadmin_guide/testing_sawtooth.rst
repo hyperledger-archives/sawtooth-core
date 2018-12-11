@@ -138,8 +138,8 @@ to test basic Sawtooth functionality.
 
 .. tip::
 
-   For more help with problems, see the `Unofficial Hyperledger Sawtooth FAQ
-   <https://github.com/danintel/sawtooth-faq/blob/master/installation.rst>`__
+   For help with problems, see the `Hyperledger Sawtooth FAQ
+   <https://sawtooth.hyperledger.org/faq/>`__
    or ask a question on the Hyperledger Chat `#sawtooth channel
    <https://chat.hyperledger.org/channel/sawtooth>`__.
 
