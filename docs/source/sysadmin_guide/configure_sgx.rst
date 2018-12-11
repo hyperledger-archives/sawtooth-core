@@ -14,7 +14,10 @@ Extensions (SGX).
 
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
-These instructions have been tested on Ubuntu 16.04 only.
+.. note::
+
+   These instructions have been tested on Ubuntu 16.04 only.
+
 
 Prerequisites
 =============

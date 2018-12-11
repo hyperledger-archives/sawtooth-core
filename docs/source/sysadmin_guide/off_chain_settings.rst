@@ -2,6 +2,10 @@
 Changing Off-chain Settings with Configuration Files
 ****************************************************
 
+.. note::
+
+    These instructions have been tested on Ubuntu 16.04 only.
+
 Each Sawtooth component, such as the validator or the REST API, can have an
 optional configuration file that controls the component's behavior. By default,
 Sawtooth does not install any configuration files.  However, Sawtooth provides

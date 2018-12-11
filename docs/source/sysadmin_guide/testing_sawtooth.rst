@@ -1,6 +1,10 @@
 Testing Sawtooth Functionality
 ==============================
 
+.. note::
+
+    These instructions have been tested on Ubuntu 16.04 only.
+
 After :doc:`starting Sawtooth services <systemd>`, you can use this procedure
 to test basic Sawtooth functionality.
 

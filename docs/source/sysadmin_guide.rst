@@ -12,11 +12,6 @@ It also includes optional procedures to change the user, client, and validator
 permissions; set up a proxy for the REST API; and configure Grafana to display
 Sawtooth metrics.
 
-.. note::
-
-   The instructions in this guide have been tested on Ubuntu 16.04 only.
-
-
 .. toctree::
    :maxdepth: 2
 

@@ -2,11 +2,10 @@
 Creating the Genesis Block
 **************************
 
-.. important::
+.. note::
 
-   Use this procedure **only** for the first validator node on a Sawtooth
-   network. Skip this procedure if you are creating a node that will join an
-   existing Sawtooth network.
+
+   These instructions have been tested on Ubuntu 16.04 only.
 
 The first node in a new Sawtooth network must create the genesis block to
 initialize the Settings transaction processor and specify the consensus

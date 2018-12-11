@@ -36,10 +36,6 @@ processors. If this node will join an existing Sawtooth network, make sure
 that you know the full list of required transaction processors, and that you
 install any custom transaction processors.
 
-.. note::
-
-    These instructions have been tested on Ubuntu 16.04 only.
-
 
 .. toctree::
    :maxdepth: 1

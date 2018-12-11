@@ -2,6 +2,10 @@
 Generating User and Validator Keys
 **********************************
 
+.. note::
+
+    These instructions have been tested on Ubuntu 16.04 only.
+
 1.  Generate your user key for Sawtooth.
 
     .. code-block:: console

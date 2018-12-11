@@ -2,6 +2,10 @@
 Setting the Allowed Transaction Types (Optional)
 ************************************************
 
+.. note::
+
+    These instructions have been tested on Ubuntu 16.04 only.
+
 By default, a validator accepts transactions from any transaction processor.
 However, Sawtooth allows you to limit the types of transactions that can be
 submitted.
