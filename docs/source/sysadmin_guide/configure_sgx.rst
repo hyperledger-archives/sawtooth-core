@@ -14,6 +14,9 @@ Extensions (SGX).
 
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
+For the procedure to configure a Sawtooth node with a different consensus
+algorithm, such as PoET, see :doc:`setting_up_sawtooth_poet-sim`.
+
 .. note::
 
    These instructions have been tested on Ubuntu 16.04 only.

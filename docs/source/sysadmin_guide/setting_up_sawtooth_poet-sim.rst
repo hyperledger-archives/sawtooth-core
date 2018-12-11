@@ -9,12 +9,13 @@ Use this set of procedures to create the first Sawtooth node in a network or to
 add a node to an existing network.  Note that certain steps are performed only
 on the first node.
 
-.. important::
+This procedure configures a node with PoET simulator consensus, which is
+designed for a system without a Trusted Execution Environment (TEE).
 
-   These procedures use PoET simulator consensus, which is recommended for a
-   system without a Trusted Execution Environment (TEE). To configure Sawtooth
-   with PoET SGX consensus on a system with |Intel (R)| Software Guard
-   Extensions (SGX), see :doc:`configure_sgx`.
+.. note::
+
+   For the procedure to configure Sawtooth with PoET SGX consensus on a system
+   with |Intel (R)| Software Guard Extensions (SGX), see :doc:`configure_sgx`.
 
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
