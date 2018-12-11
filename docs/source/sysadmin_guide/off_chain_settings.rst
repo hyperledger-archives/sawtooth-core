@@ -81,14 +81,14 @@ Additional steps specify the peers for this node, change the scheduler type
              "consensus:tcp://127.0.0.1:5050"
            ]
 
-      * ``network`` specifies where the validator listens for communication
+      - ``network`` specifies where the validator listens for communication
         from other nodes
 
-      * ``component`` specifies where the validator listens for communication
+      - ``component`` specifies where the validator listens for communication
         from this validator's components, such as the REST API and transaction
         processors
 
-      * ``consensus`` specifies where the validator listens for communication
+      - ``consensus`` specifies where the validator listens for communication
         from consensus engines
 
       .. tip::

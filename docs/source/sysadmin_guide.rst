@@ -13,12 +13,13 @@ on a Ubuntu system for proof-of-concept or production use in a Sawtooth network.
   with PoET consensus on a system with |Intel (R)| Software Guard Extensions
   (SGX).
 
-This guide also describes optional administration tasks:
-:doc:`restricting transaction types <sysadmin_guide/setting_allowed_txns>`,
-:doc:`settting up a REST API proxy <sysadmin_guide/rest_auth_proxy>`,
-and :doc:`configuring user, client, and validator permissions
+This guide also includes optional procedures to
+:doc:`restrict transaction types <sysadmin_guide/setting_allowed_txns>`,
+:doc:`set up a REST API proxy <sysadmin_guide/rest_auth_proxy>`,
+and :doc:`configure user, client, and validator permissions
 <sysadmin_guide/configuring_permissions>`.
-The last two sections explain how to
+
+The last two sections in this guide explain how to
 :doc:`display Sawtooth metrics with Grafana <sysadmin_guide/grafana_configuration>`
 and :doc:`use Sawtooth configuration files <sysadmin_guide/configuring_sawtooth>`.
 

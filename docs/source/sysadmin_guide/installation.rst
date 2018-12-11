@@ -9,7 +9,7 @@ Installing Hyperledger Sawtooth
 This procedure describes how to install Hyperledger Sawtooth on a Ubuntu system
 for proof-of-concept or production use in a Sawtooth network.
 
-1. Choose whether you want the stable version (recommended) or most recent
+1. Choose whether you want the stable version (recommended) or the most recent
    nightly build (for testing purposes only).
 
    * (Release 1.1 and later) To add the stable repository, run these commands in
@@ -37,11 +37,16 @@ for proof-of-concept or production use in a Sawtooth network.
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
         $ sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly xenial universe'
 
-#. Update your package lists, then install Sawtooth.
+#. Update your package lists.
 
    .. code-block:: console
 
       $ sudo apt-get update
+
+#. Install Sawtooth core and the PoET :term:`consensus engine`.
+
+   .. code-block:: console
+
       $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine
 
 

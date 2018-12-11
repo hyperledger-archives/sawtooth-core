@@ -4,13 +4,14 @@ Setting Up a Sawtooth Node
 
 This section describes how to install, configure, and run Hyperledger Sawtooth
 on a Ubuntu system for proof-of-concept or production use in a Sawtooth network.
-
 Use this set of procedures to create the first Sawtooth node in a network or to
 add a node to an existing network.  Note that certain steps are performed only
 on the first node.
 
-This procedure configures a node with PoET simulator consensus, which is
-designed for a system without a Trusted Execution Environment (TEE).
+This procedure configures a node with :term:`PoET simulator consensus <PoET>`,
+which is designed for a system without a Trusted Execution Environment (TEE).
+A network using the PoET consensus algorithm requires a minimum of three nodes,
+but works best with at least four or five nodes.
 
 .. note::
 
@@ -26,16 +27,18 @@ following transaction processors:
   (``settings-tp``)
 * :doc:`Identity <../transaction_family_specifications/identity_transaction_family>`
   (``identity-tp``)
-* :doc:`PoET Validator Registry <../transaction_family_specifications/validator_registry_transaction_family>`
-  (``poet-validator-registry-tp``)
 * :doc:`IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`
   (``intkey-tp-python``) -- optional, but used to test basic Sawtooth
   functionality
+* :doc:`PoET Validator Registry <../transaction_family_specifications/validator_registry_transaction_family>`
+  (``poet-validator-registry-tp``)
 
-Each node in a Sawtooth network must run the same set of transaction
-processors. If this node will join an existing Sawtooth network, make sure
-that you know the full list of required transaction processors, and that you
-install any custom transaction processors.
+.. important::
+
+   Each node in a Sawtooth network must run the same set of transaction
+   processors. If this node will join an existing Sawtooth network, make sure
+   that you know the full list of required transaction processors, and that you
+   install any custom transaction processors.
 
 
 .. toctree::

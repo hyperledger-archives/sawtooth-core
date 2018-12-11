@@ -30,60 +30,61 @@ Ocean systemctl guide`_.
 Start the Sawtooth Services
 ===========================
 
-Use these commands to start each Sawtooth component as a service:
+#. Start the basic Sawtooth components as services: REST API, validator, and
+   transaction processors.
 
-.. code-block:: console
+   .. code-block:: console
 
-    $ sudo systemctl start sawtooth-rest-api.service
-    $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
-    $ sudo systemctl start sawtooth-validator.service
-    $ sudo systemctl start sawtooth-settings-tp.service
-    $ sudo systemctl start sawtooth-intkey-tp-python.service
-    $ sudo systemctl start sawtooth-identity-tp.service
-    $ sudo systemctl start sawtooth-poet-engine.service
+       $ sudo systemctl start sawtooth-rest-api.service
+       $ sudo systemctl start sawtooth-validator.service
+       $ sudo systemctl start sawtooth-settings-tp.service
+       $ sudo systemctl start sawtooth-identity-tp.service
+       $ sudo systemctl start sawtooth-intkey-tp-python.service
 
-This command starts the required transaction processors:
-PoET Validator Registry (``sawtooth-poet-validator-registry-tp``),
-Settings (``sawtooth-settings-tp``), and
-Identity (``sawtooth-identity-tp``).  It also starts the IntegerKey
-transaction processor (``sawtooth-intkey-tp-python``), which is used in a
-later procedure to test basic Sawtooth functionality.
+   The transaction processors ``sawtooth-settings-tp`` (Settings) and
+   ``sawtooth-identity-tp`` (Identity) are required.
+   ``sawtooth-intkey-tp-python`` (IntegerKey) is used in a later procedure to
+   test basic Sawtooth functionality.
 
+#. Start the consensus-related components as services.
 
-Check Service Status
-====================
+   .. code-block:: console
 
-Run this command to verify that the Sawtooth services are running:
+       $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
+       $ sudo systemctl start sawtooth-poet-engine.service
 
-.. code-block:: console
+   These commands start the PoET Validator Registry transaction processor
+   (``sawtooth-poet-validator-registry-tp``) and the PoET consensus engine.
 
-    $ sudo systemctl status sawtooth-rest-api.service
-    $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
-    $ sudo systemctl status sawtooth-validator.service
-    $ sudo systemctl status sawtooth-settings-tp.service
-    $ sudo systemctl status sawtooth-intkey-tp-python.service
-    $ sudo systemctl status sawtooth-identity-tp.service
-    $ sudo systemctl status sawtooth-poet-engine.service
+#. Verify that all the Sawtooth services are running.
+
+   .. code-block:: console
+
+       $ sudo systemctl status sawtooth-rest-api.service
+       $ sudo systemctl status sawtooth-validator.service
+       $ sudo systemctl status sawtooth-settings-tp.service
+       $ sudo systemctl status sawtooth-identity-tp.service
+       $ sudo systemctl status sawtooth-intkey-tp-python.service
+       $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
+       $ sudo systemctl status sawtooth-poet-engine.service
 
 
 View Sawtooth Logs
 ==================
 
-Use the following command to view the log output.
+Use the following command to see the log output that would have been displayed
+on the console if you ran the components manually.
 
 .. code-block:: console
 
     $ sudo journalctl -f \
+    -u sawtooth-rest-api \
     -u sawtooth-validator \
     -u sawtooth-settings-tp \
-    -u sawtooth-poet-validator-registry-tp \
-    -u sawtooth-poet-engine \
-    -u sawtooth-rest-api \
+    -u sawtooth-identity-tp \
     -u sawtooth-intkey-tp-python \
-    -u sawtooth-identity-tp
-
-This command shows the output that would have been displayed on the console
-if you ran the components manually.
+    -u sawtooth-poet-validator-registry-tp \
+    -u sawtooth-poet-engine
 
 Additional logging output can be found in ``/var/log/sawtooth/``. For more
 information, see :doc:`log_configuration`.
@@ -95,29 +96,43 @@ Stop or Restart the Sawtooth Services
 If you need to stop or restart the Sawtooth services for any reason, use the
 following commands:
 
-* Stop Sawtooth services:
+* Stop the Sawtooth services with the following commands.
 
-  .. code-block:: console
+  * Basic services:
 
-     $ sudo systemctl stop sawtooth-rest-api.service
-     $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
-     $ sudo systemctl stop sawtooth-validator.service
-     $ sudo systemctl stop sawtooth-settings-tp.service
-     $ sudo systemctl stop sawtooth-intkey-tp-python.service
-     $ sudo systemctl stop sawtooth-identity-tp.service
-     $ sudo systemctl stop sawtooth-poet-engine.service
+    .. code-block:: console
 
-* Restart Sawtooth services:
+       $ sudo systemctl stop sawtooth-rest-api.service
+       $ sudo systemctl stop sawtooth-validator.service
+       $ sudo systemctl stop sawtooth-settings-tp.service
+       $ sudo systemctl stop sawtooth-identity-tp.service
+       $ sudo systemctl stop sawtooth-intkey-tp-python.service
 
-  .. code-block:: console
+  * Consensus-related services:
 
-     $ sudo systemctl restart sawtooth-rest-api.service
-     $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
-     $ sudo systemctl restart sawtooth-validator.service
-     $ sudo systemctl restart sawtooth-settings-tp.service
-     $ sudo systemctl restart sawtooth-intkey-tp-python.service
-     $ sudo systemctl restart sawtooth-identity-tp.service
-     $ sudo systemctl restart sawtooth-poet-engine.service
+    .. code-block:: console
+
+       $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
+       $ sudo systemctl stop sawtooth-poet-engine.service
+
+* Restart the Sawtooth services with these commands.
+
+  * Basic services:
+
+    .. code-block:: console
+
+       $ sudo systemctl restart sawtooth-rest-api.service
+       $ sudo systemctl restart sawtooth-validator.service
+       $ sudo systemctl restart sawtooth-settings-tp.service
+       $ sudo systemctl restart sawtooth-identity-tp.service
+       $ sudo systemctl restart sawtooth-intkey-tp-python.service
+
+  * Consensus-related services:
+
+    .. code-block:: console
+
+       $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
+       $ sudo systemctl restart sawtooth-poet-engine.service
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

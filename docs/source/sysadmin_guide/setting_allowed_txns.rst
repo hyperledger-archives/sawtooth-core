@@ -19,8 +19,8 @@ block with this transaction. Note that the
 is required to handle on-chain configuration settings.
 
 In this procedure, you will configure the validator network to limit the
-accepted transaction types to those from the Identity, IntegerKey, Settings, and
-PoET Validator Registry transaction processors.
+accepted transaction types to those from this network's transaction processors
+(as started in :doc:`systemd`).
 
 .. important::
 
@@ -41,9 +41,16 @@ PoET Validator Registry transaction processors.
       sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array
-   that specifies the family name and version of each allowed transaction
-   processor. For this information, see
-   :doc:`transaction family specification <../transaction_family_specifications>`).
+   that specifies the family name and version of the following transaction
+   processors:
+
+   * `sawtooth_identity` (Identity)
+   * `intkey` (IntegerKey)
+   * `sawtooth_settings` (Settings)
+   * `sawtooth_validator_registry` (PoET Validator Registry)
+
+   See :doc:`transaction family specification <../transaction_family_specifications>`
+   for the family names and versions of all Sawtooth transaction processors.
 
 #. Run the following command to check the setting change.
 
@@ -51,7 +58,7 @@ PoET Validator Registry transaction processors.
 
       $ sawtooth settings list
 
-   The output should be similar to this example:
+   For PoET simulator consensus, the output should be similar to this example:
 
    .. code-block:: console
 
@@ -71,7 +78,9 @@ PoET Validator Registry transaction processors.
 #. You can also check the log file for the Settings transaction processor,
    ``/var/log/sawtooth/logs/settings-{xxxxxxx}-debug.log`` for a
    ``TP_PROCESS_REQUEST`` message. (Note that the Settings log file has a unique
-   string in the file name.) The message will resemble this example:
+   string in the file name.)
+
+   For PoET simulator consensus, message will resemble this example:
 
    .. code-block:: none
 
