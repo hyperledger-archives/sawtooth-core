@@ -6,6 +6,12 @@ Generating User and Validator Keys
 
     These instructions have been tested on Ubuntu 16.04 only.
 
+.. important::
+
+   For PBFT, repeat this procedure on the other nodes in the initial network.
+   When you create the genesis block on the first node, you will need the
+   validator keys for at least three other nodes.
+
 1.  Generate your user key for Sawtooth.
 
     .. code-block:: console
@@ -27,9 +33,11 @@ Generating User and Validator Keys
    However, settings in the path configuration file could change this location;
    see :doc:`configuring_sawtooth/path_configuration_file`.
 
-Sawtooth also includes a network key pair that is used to encrypt communication
-between the validators in a Sawtooth network. The network keys are described in
-a later procedure.
+.. note::
+
+   Sawtooth also includes a network key pair that is used to encrypt
+   communication between the validators in a Sawtooth network. The network keys
+   are described in a later procedure.
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

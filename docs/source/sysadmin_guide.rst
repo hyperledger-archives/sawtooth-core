@@ -6,8 +6,8 @@ This guide explains how to install, configure, and run Hyperledger Sawtooth
 on a Ubuntu system for proof-of-concept or production use in a Sawtooth network.
 
 * See :doc:`sysadmin_guide/setting_up_sawtooth_poet-sim` to configure and run
-  a Sawtooth node with PoET simulator consensus, which is designed for a
-  system without a Trusted Execution Environment (TEE).
+  a Sawtooth node with either :term:`PBFT` or
+  :term:`PoET simulator consensus <PoET>`.
 
 * See :doc:`sysadmin_guide/configure_sgx` to configure and run a Sawtooth node
   with PoET consensus on a system with |Intel (R)| Software Guard Extensions

@@ -35,10 +35,18 @@ accepted transaction types to those from this network's transaction processors
 #. Use the ``sawset`` command to create and submit a batch of transactions that
    changes the allowed transaction types.
 
-   .. code-block:: console
+   * For PBFT:
 
-      $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
-      sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
+     .. code-block:: console
+
+        $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+   * For PoET:
+
+     .. code-block:: console
+
+        $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array
    that specifies the family name and version of the following transaction
@@ -47,7 +55,7 @@ accepted transaction types to those from this network's transaction processors
    * `sawtooth_identity` (Identity)
    * `intkey` (IntegerKey)
    * `sawtooth_settings` (Settings)
-   * `sawtooth_validator_registry` (PoET Validator Registry)
+   * (PoET only) `sawtooth_validator_registry` (PoET Validator Registry)
 
    See :doc:`transaction family specification <../transaction_family_specifications>`
    for the family names and versions of all Sawtooth transaction processors.
@@ -58,34 +66,61 @@ accepted transaction types to those from this network's transaction processors
 
       $ sawtooth settings list
 
-   For PoET simulator consensus, the output should be similar to this example:
+   The output should be similar to this example:
 
-   .. code-block:: console
+   * For PBFT:
 
-      sawtooth.consensus.algorithm.name: PoET
-      sawtooth.consensus.algorithm.version: 0.1
-      sawtooth.poet.initial_wait_time: 15
-      sawtooth.poet.key_block_claim_limit: 100000
-      sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
-      sawtooth.poet.target_wait_time: 15
-      sawtooth.poet.valid_enclave_basenames: b785c58b77152cb...
-      sawtooth.poet.valid_enclave_measurements: c99f21955e38dbb...
-      sawtooth.poet.ztest_minimum_win_count: 100000
-      sawtooth.publisher.max_batches_per_block: 200
-      sawtooth.settings.vote.authorized_keys: 03e27504580fa15...
-      sawtooth.validator.transaction_families: [{"family": "in...
+     .. code-block:: console
+
+        sawtooth.consensus.algorithm.name=sawtooth-pbft-engine
+        sawtooth.consensus.algorithm.version=0.1.2
+        sawtooth.consensus.pbft.peers=03e27504580fa15...
+        sawtooth.consensus.pbft.block_duration=200
+        sawtooth.consensus.pbft.checkpoint_period=100
+        sawtooth.consensus.pbft.view_change_timeout=4000
+        sawtooth.consensus.pbft.message_timeout=10
+        sawtooth.consensus.pbft.max_log_size=1000
+        sawtooth.publisher.max_batches_per_block: 200
+        sawtooth.settings.vote.authorized_keys: 03e27504580fa15...
+        sawtooth.validator.transaction_families: [{"family": "in...
+
+   * For PoET:
+
+     .. code-block:: console
+
+        sawtooth.consensus.algorithm.name: PoET
+        sawtooth.consensus.algorithm.version: 0.1
+        sawtooth.poet.initial_wait_time: 15
+        sawtooth.poet.key_block_claim_limit: 100000
+        sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
+        sawtooth.poet.target_wait_time: 15
+        sawtooth.poet.valid_enclave_basenames: b785c58b77152cb...
+        sawtooth.poet.valid_enclave_measurements: c99f21955e38dbb...
+        sawtooth.poet.ztest_minimum_win_count: 100000
+        sawtooth.publisher.max_batches_per_block: 200
+        sawtooth.settings.vote.authorized_keys: 03e27504580fa15...
+        sawtooth.validator.transaction_families: [{"family": "in...
 
 #. You can also check the log file for the Settings transaction processor,
    ``/var/log/sawtooth/logs/settings-{xxxxxxx}-debug.log`` for a
    ``TP_PROCESS_REQUEST`` message. (Note that the Settings log file has a unique
    string in the file name.)
 
-   For PoET simulator consensus, message will resemble this example:
+   The message will resemble this example:
 
-   .. code-block:: none
+   * For PBFT:
 
-      [20:07:58.039 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
-      [20:07:58.190 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
+     .. code-block:: none
+
+        [20:07:58.039 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
+        [20:07:58.190 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+
+   * For PoET:
+
+     .. code-block:: none
+
+        [20:07:58.039 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
+        [20:07:58.190 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

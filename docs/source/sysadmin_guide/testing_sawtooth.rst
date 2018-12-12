@@ -38,9 +38,45 @@ to test basic Sawtooth functionality.
 
 #. For the remaining steps, multiple nodes in the network must be running.
    If this node is the first one in the network, configure and start the
-   remaining nodes before continuing.
+   other nodes before continuing.
 
-   * PoET requires at least three nodes.
+      * PBFT requires at least four nodes.
+
+      * PoET requires at least three nodes.
+
+#. (PBFT only) Ensure that the on-chain setting
+   ``sawtooth.consensus.pbft.peers`` lists the validator public keys of all
+   peer nodes on the network.
+
+   a. Connect to the first validator node (the one that created the genesis
+      block).
+
+   #. Display the on-chain settings.
+
+      .. code-block:: console
+
+         [sawtooth@system]$ $ sawtooth settings list
+
+   #. Verify that the output includes the public key for each node (not
+   including the first node that created the genesis block).
+
+      .. code-block:: console
+
+         sawtooth.consensus.pbft.peers=03e27504580fa15...
+
+   #. To change the setting, run this command on the same node that created the
+      genesis block:
+
+      .. code-block:: console
+
+         [sawtooth@system]$ sawset proposal create \
+         --key /etc/sawtooth/keys/validator.priv \
+         sawtooth.consensus.pbft.peers=[VAL1KEY, VAL2KEY, VAL3KEY]
+
+      Replace ``VAL1KEY``, ``VAL2KEY``, and ``VAL3KEY``, with the
+      validator public keys of the other nodes on the network. This
+      information is available in ``/etc/sawtooth/keys/validator.pub`` on
+      each node.
 
 #. Use the following steps to confirm network functionality.
 
@@ -106,7 +142,8 @@ to test basic Sawtooth functionality.
       0    0fb3ebf6fdc5eef8af600eccc8d1aeb3d2488992e17c124b03083f3202e3e6b9182e78fef696f5a368844da2a81845df7c3ba4ad940cee5ca328e38a0f0e7aa0  3     11    034aad...
 
    Block 0 is the :term:`genesis block`. The other two blocks contain the
-   initial transactions for on-chain settings, such as setting PoET consensus.
+   initial transactions for on-chain settings, such as setting the consensus
+   algorithm.
 
 #. Make sure that new blocks of transactions are added to the blockchain.
 

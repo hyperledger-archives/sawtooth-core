@@ -9,6 +9,11 @@ Installing Hyperledger Sawtooth
 This procedure describes how to install Hyperledger Sawtooth on a Ubuntu system
 for proof-of-concept or production use in a Sawtooth network.
 
+.. important::
+
+   For PBFT, repeat this procedure on three other nodes. The initial network
+   must have at least four nodes.
+
 1. Choose whether you want the stable version (recommended) or the most recent
    nightly build (for testing purposes only).
 
@@ -43,11 +48,19 @@ for proof-of-concept or production use in a Sawtooth network.
 
       $ sudo apt-get update
 
-#. Install Sawtooth core and the PoET :term:`consensus engine`.
+#. Install Sawtooth core and the chosen :term:`consensus engine`.
 
-   .. code-block:: console
+   * For PBFT:
 
-      $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine
+     .. code-block:: console
+
+        $ sudo apt-get install -y sawtooth sawtooth-pbft-engine
+
+   * For PoET:
+
+     .. code-block:: console
+
+        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

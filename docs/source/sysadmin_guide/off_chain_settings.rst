@@ -300,7 +300,6 @@ option with each Sawtooth command.
 
 For more information, see :doc:`configuring_sawtooth/cli_configuration`.
 
-
 #. Create the CLI configuration file by copying the example file.
 
    .. code-block:: console

@@ -48,25 +48,43 @@ Start the Sawtooth Services
 
 #. Start the consensus-related components as services.
 
-   .. code-block:: console
+   * For PBFT:
 
-       $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
-       $ sudo systemctl start sawtooth-poet-engine.service
+     .. code-block:: console
 
-   These commands start the PoET Validator Registry transaction processor
-   (``sawtooth-poet-validator-registry-tp``) and the PoET consensus engine.
+         $ sudo systemctl start sawtooth-pbft-engine.service
+
+   * For PoET:
+
+     .. code-block:: console
+
+         $ sudo systemctl start sawtooth-poet-validator-registry-tp.service
+         $ sudo systemctl start sawtooth-poet-engine.service
 
 #. Verify that all the Sawtooth services are running.
 
-   .. code-block:: console
+   * Check the basic services:
 
-       $ sudo systemctl status sawtooth-rest-api.service
-       $ sudo systemctl status sawtooth-validator.service
-       $ sudo systemctl status sawtooth-settings-tp.service
-       $ sudo systemctl status sawtooth-identity-tp.service
-       $ sudo systemctl status sawtooth-intkey-tp-python.service
-       $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
-       $ sudo systemctl status sawtooth-poet-engine.service
+     .. code-block:: console
+
+         $ sudo systemctl status sawtooth-rest-api.service
+         $ sudo systemctl status sawtooth-validator.service
+         $ sudo systemctl status sawtooth-settings-tp.service
+         $ sudo systemctl status sawtooth-identity-tp.service
+         $ sudo systemctl status sawtooth-intkey-tp-python.service
+
+   * (PBFT only) Check the PBFT consensus service:
+
+     .. code-block:: console
+
+        $ sudo systemctl status sawtooth-pbft-engine.service
+
+   * (PoET only) Check the PoET consensus services:
+
+     .. code-block:: console
+
+        $ sudo systemctl status sawtooth-poet-validator-registry-tp.service
+        $ sudo systemctl status sawtooth-poet-engine.service
 
 
 View Sawtooth Logs
@@ -75,16 +93,30 @@ View Sawtooth Logs
 Use the following command to see the log output that would have been displayed
 on the console if you ran the components manually.
 
-.. code-block:: console
+* For PBFT:
 
-    $ sudo journalctl -f \
-    -u sawtooth-rest-api \
-    -u sawtooth-validator \
-    -u sawtooth-settings-tp \
-    -u sawtooth-identity-tp \
-    -u sawtooth-intkey-tp-python \
-    -u sawtooth-poet-validator-registry-tp \
-    -u sawtooth-poet-engine
+  .. code-block:: console
+
+      $ sudo journalctl -f \
+      -u sawtooth-rest-api \
+      -u sawtooth-validator \
+      -u sawtooth-settings-tp \
+      -u sawtooth-identity-tp \
+      -u sawtooth-intkey-tp-python \
+      -u sawtooth-pbft-engine
+
+* For PoET:
+
+  .. code-block:: console
+
+      $ sudo journalctl -f \
+      -u sawtooth-rest-api \
+      -u sawtooth-validator \
+      -u sawtooth-settings-tp \
+      -u sawtooth-identity-tp \
+      -u sawtooth-intkey-tp-python \
+      -u sawtooth-poet-validator-registry-tp \
+      -u sawtooth-poet-engine
 
 Additional logging output can be found in ``/var/log/sawtooth/``. For more
 information, see :doc:`log_configuration`.
@@ -94,45 +126,63 @@ Stop or Restart the Sawtooth Services
 =====================================
 
 If you need to stop or restart the Sawtooth services for any reason, use the
-following commands:
+following procedures.
 
-* Stop the Sawtooth services with the following commands.
+Stop Sawtooth Services
+----------------------
 
-  * Basic services:
+  1. Stop the basic services.
 
-    .. code-block:: console
+     .. code-block:: console
 
-       $ sudo systemctl stop sawtooth-rest-api.service
-       $ sudo systemctl stop sawtooth-validator.service
-       $ sudo systemctl stop sawtooth-settings-tp.service
-       $ sudo systemctl stop sawtooth-identity-tp.service
-       $ sudo systemctl stop sawtooth-intkey-tp-python.service
+        $ sudo systemctl stop sawtooth-rest-api.service
+        $ sudo systemctl stop sawtooth-validator.service
+        $ sudo systemctl stop sawtooth-settings-tp.service
+        $ sudo systemctl stop sawtooth-identity-tp.service
+        $ sudo systemctl stop sawtooth-intkey-tp-python.service
 
-  * Consensus-related services:
+  #. Stop the consensus services.
 
-    .. code-block:: console
+     * For PBFT:
 
-       $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
-       $ sudo systemctl stop sawtooth-poet-engine.service
+       .. code-block:: console
 
-* Restart the Sawtooth services with these commands.
+          $ sudo systemctl stop sawtooth-pbft-engine.service
 
-  * Basic services:
+     * For PoET:
 
-    .. code-block:: console
+       .. code-block:: console
 
-       $ sudo systemctl restart sawtooth-rest-api.service
-       $ sudo systemctl restart sawtooth-validator.service
-       $ sudo systemctl restart sawtooth-settings-tp.service
-       $ sudo systemctl restart sawtooth-identity-tp.service
-       $ sudo systemctl restart sawtooth-intkey-tp-python.service
+          $ sudo systemctl stop sawtooth-poet-validator-registry-tp.service
+          $ sudo systemctl stop sawtooth-poet-engine.service
 
-  * Consensus-related services:
+Restart Sawtooth Services
+-------------------------
 
-    .. code-block:: console
+  1. Restart the basic services.
 
-       $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
-       $ sudo systemctl restart sawtooth-poet-engine.service
+     .. code-block:: console
+
+        $ sudo systemctl restart sawtooth-rest-api.service
+        $ sudo systemctl restart sawtooth-validator.service
+        $ sudo systemctl restart sawtooth-settings-tp.service
+        $ sudo systemctl restart sawtooth-identity-tp.service
+        $ sudo systemctl restart sawtooth-intkey-tp-python.service
+
+  #. Restart the consensus services.
+
+     * For PBFT:
+
+       .. code-block:: console
+
+          $ sudo systemctl restart sawtooth-pbft-engine.service
+
+     * For PoET:
+
+       .. code-block:: console
+
+          $ sudo systemctl restart sawtooth-poet-validator-registry-tp.service
+          $ sudo systemctl restart sawtooth-poet-engine.service
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
