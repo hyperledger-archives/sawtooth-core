@@ -36,8 +36,13 @@ to test basic Sawtooth functionality.
    If not, check the status of the REST API service and restart it, if
    necessary; see :doc:`systemd`.
 
-#. If this node has joined an existing network, use the following steps to
-   confirm network functionality.
+#. For the remaining steps, multiple nodes in the network must be running.
+   If this node is the first one in the network, configure and start the
+   remaining nodes before continuing.
+
+   * PoET requires at least three nodes.
+
+#. Use the following steps to confirm network functionality.
 
    a. To check whether peering has occurred on the network, submit a peers query
       to the REST API on this node.
