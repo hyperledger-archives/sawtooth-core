@@ -219,15 +219,6 @@ Real-world Application Examples
     information, see the `sawtooth-marketplace repository on GitHub
     <https://github.com/hyperledger/sawtooth-marketplace>`_.
 
-  * Sawtooth Private UTXO:
-    Demonstrates how assets can be created and traded.
-    This example application shows how to use SGX to allow for assets to be
-    transferred off ledger and privately traded, where only the trading parties
-    know the details of the transaction. For more information, see the
-    `sawtooth-private-utxo repository on GitHub
-    <https://github.com/hyperledger/sawtooth-private-utxo>`_.
-
-
 Getting Started with Application Development
 ============================================
 
@@ -300,10 +291,6 @@ can get the code to start building your own distributed ledger.
 
   * `Sawtooth Supply Chain <https://github.com/hyperledger/sawtooth-supply-chain>`_:
     Trace the provenance and other contextual information of any asset
-
-  * `Sawtooth Private UTXO <https://github.com/hyperledger/sawtooth-private-utxo>`_:
-    Create and trade assets, using SGX to allow assets to be transferred
-    off-ledger and traded privately
 
 Join the Sawtooth Community
 ---------------------------
