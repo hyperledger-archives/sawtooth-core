@@ -44,9 +44,13 @@ class ZmqDriver(Driver):
     def start(self, endpoint):
         self._stream = Stream(endpoint)
 
-        self._register()
+        startup_state = self._register()
 
-        startup_state = self._wait_until_active()
+        # Validators version 1.1 send startup info with the registration
+        # response; newer versions will send an activation message with the
+        # startup info
+        if startup_state is None:
+            startup_state = self._wait_until_active()
 
         self._updates = Queue()
 
@@ -114,7 +118,16 @@ class ZmqDriver(Driver):
                 continue
 
             if response.status == consensus_pb2.ConsensusRegisterResponse.OK:
-                break
+                if (
+                    response.HasField('chain_head')
+                    and response.HasField('local_peer_info')
+                ):
+                    return StartupState(
+                        response.chain_head,
+                        response.peers,
+                        response.local_peer_info)
+
+                return None
 
             raise exceptions.ReceiveError(
                 'Registration failed with status {}'.format(response.status))

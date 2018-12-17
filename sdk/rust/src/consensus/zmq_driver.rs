@@ -73,14 +73,17 @@ impl ZmqDriver {
         let validator_sender_clone = validator_sender.clone();
         let (update_sender, update_receiver) = channel();
 
-        register(
+        // Validators version 1.1 send startup info with the registration response; newer versions
+        // will send an activation message with the startup info
+        let startup_state = match register(
             &mut validator_sender,
             Duration::from_secs(REGISTER_TIMEOUT),
             engine.name(),
             engine.version(),
-        )?;
-
-        let startup_state = wait_until_active(&validator_sender, &validator_receiver)?;
+        )? {
+            Some(state) => state,
+            None => wait_until_active(&validator_sender, &validator_receiver)?,
+        };
 
         let driver_thread = thread::spawn(move || {
             driver_loop(
@@ -159,7 +162,7 @@ pub fn register(
     timeout: Duration,
     name: String,
     version: String,
-) -> Result<(), Error> {
+) -> Result<Option<StartupState>, Error> {
     let mut request = ConsensusRegisterRequest::new();
     request.set_name(name);
     request.set_version(version);
@@ -173,7 +176,7 @@ pub fn register(
         )?
         .get_timeout(timeout)?;
 
-    let ret: Result<(), Error>;
+    let ret: Result<Option<StartupState>, Error>;
 
     // Keep trying to register until the response is something other
     // than NOT_READY.
@@ -187,7 +190,20 @@ pub fn register(
 
                 match response.get_status() {
                     ConsensusRegisterResponse_Status::OK => {
-                        ret = Ok(());
+                        ret = if response.chain_head.is_some() && response.local_peer_info.is_some()
+                        {
+                            Ok(Some(StartupState {
+                                chain_head: response.take_chain_head().into(),
+                                peers: response
+                                    .take_peers()
+                                    .into_iter()
+                                    .map(|info| info.into())
+                                    .collect(),
+                                local_peer_info: response.take_local_peer_info().into(),
+                            }))
+                        } else {
+                            Ok(None)
+                        };
 
                         break;
                     }
