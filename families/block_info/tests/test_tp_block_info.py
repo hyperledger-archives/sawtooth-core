@@ -19,17 +19,24 @@ from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 from sawtooth_processor_test.message_factory import MessageFactory
 
-from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfoTxn
-from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfo
-from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfoConfig
+from sawtooth_validator.protobuf.block_info_pb2 import BlockInfoTxn
+from sawtooth_validator.protobuf.block_info_pb2 import BlockInfo
+from sawtooth_validator.protobuf.block_info_pb2 import BlockInfoConfig
 
-from sawtooth_block_info_injector.common import FAMILY_NAME
-from sawtooth_block_info_injector.common import FAMILY_VERSION
-from sawtooth_block_info_injector.common import NAMESPACE
-from sawtooth_block_info_injector.common import CONFIG_ADDRESS
-from sawtooth_block_info_injector.common import DEFAULT_SYNC_TOLERANCE
-from sawtooth_block_info_injector.common import DEFAULT_TARGET_COUNT
-from sawtooth_block_info_injector.common import create_block_address
+from sawtooth_validator.journal.block_info_injector \
+    import FAMILY_NAME
+from sawtooth_validator.journal.block_info_injector \
+    import FAMILY_VERSION
+from sawtooth_validator.journal.block_info_injector \
+    import NAMESPACE
+from sawtooth_validator.journal.block_info_injector \
+    import CONFIG_ADDRESS
+from sawtooth_validator.journal.block_info_injector \
+    import DEFAULT_SYNC_TOLERANCE
+from sawtooth_validator.journal.block_info_injector \
+    import DEFAULT_TARGET_COUNT
+from sawtooth_validator.journal.block_info_injector \
+    import create_block_address
 
 
 def create_block_info(block_num,

@@ -199,6 +199,6 @@ services:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/sdk/examples/xo_python:\
-        /project/sawtooth-core/families/block_info:\
+        /project/sawtooth-core/validator:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"
