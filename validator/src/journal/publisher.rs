@@ -890,7 +890,7 @@ impl QueueLimit {
             // b. Drained the queue, but the queue was not bigger than the
             //    current running average
 
-            let remainder = queue_length - consumed;
+            let remainder = queue_length.checked_sub(consumed).unwrap_or(0);
 
             if remainder > self.avg.value() || consumed > self.avg.value() {
                 self.avg.update(consumed);
