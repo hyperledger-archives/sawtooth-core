@@ -15,7 +15,7 @@
 
 # docker build -f families/identity/Dockerfile -t sawtooth-identity-tp-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \
