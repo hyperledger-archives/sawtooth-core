@@ -38,7 +38,6 @@
 /families/block_info/sawtooth_block_info/src/block_info.rs
 /families/block_info/sawtooth_block_info/target
 /families/block_info/sawtooth_block_info/Cargo.lock
-/families/identity/sawtooth_identity/protobuf
 /families/settings/sawtooth_settings/target/
 /families/settings/sawtooth_settings/bin/
 /families/settings/sawtooth_settings/Cargo.lock
@@ -47,6 +46,7 @@
 /families/smallbank/smallbank_rust/Cargo.lock
 /families/smallbank/smallbank_rust/bin/
 /families/identity/python/sawtooth_identity/protobuf/
+/families/identity/sawtooth_identity/bin/
 /families/identity/sawtooth_identity/target/
 /families/identity/sawtooth_identity/Cargo.lock
 /families/identity/sawtooth_identity/protobuf/
