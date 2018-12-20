@@ -249,27 +249,27 @@ impl<'a> TransactionProcessor<'a> {
                                 let mut response = TpProcessResponse::new();
                                 match self.handlers[0].apply(&request, &mut context) {
                                     Ok(()) => {
-                                        response.set_status(TpProcessResponse_Status::OK);
                                         info!("TP_PROCESS_REQUEST sending TpProcessResponse: OK");
+                                        response.set_status(TpProcessResponse_Status::OK);
                                     }
                                     Err(ApplyError::InvalidTransaction(msg)) => {
+                                        info!(
+                                            "TP_PROCESS_REQUEST sending TpProcessResponse: {}",
+                                            &msg
+                                        );
                                         response.set_status(
                                             TpProcessResponse_Status::INVALID_TRANSACTION,
                                         );
-                                        response.set_message(msg.clone());
-                                        info!(
-                                            "TP_PROCESS_REQUEST sending TpProcessResponse: {}",
-                                            msg
-                                        );
+                                        response.set_message(msg);
                                     }
                                     Err(err) => {
-                                        response
-                                            .set_status(TpProcessResponse_Status::INTERNAL_ERROR);
-                                        response.set_message(String::from(err.description()));
                                         info!(
                                             "TP_PROCESS_REQUEST sending TpProcessResponse: {}",
                                             err.description()
                                         );
+                                        response
+                                            .set_status(TpProcessResponse_Status::INTERNAL_ERROR);
+                                        response.set_message(String::from(err.description()));
                                     }
                                 };
 
@@ -281,11 +281,10 @@ impl<'a> TransactionProcessor<'a> {
                                     }
                                 };
 
-                                let x: &[u8] = &serialized;
                                 match sender.reply(
                                     Message_MessageType::TP_PROCESS_RESPONSE,
                                     message.get_correlation_id(),
-                                    x,
+                                    &serialized,
                                 ) {
                                     Ok(_) => (),
                                     Err(SendError::DisconnectedError) => {
@@ -310,11 +309,10 @@ impl<'a> TransactionProcessor<'a> {
                                         continue;
                                     }
                                 };
-                                let x: &[u8] = &serialized;
                                 match sender.reply(
-                                    Message_MessageType::TP_PROCESS_RESPONSE,
+                                    Message_MessageType::PING_RESPONSE,
                                     message.get_correlation_id(),
-                                    x,
+                                    &serialized,
                                 ) {
                                     Ok(_) => (),
                                     Err(SendError::DisconnectedError) => {
