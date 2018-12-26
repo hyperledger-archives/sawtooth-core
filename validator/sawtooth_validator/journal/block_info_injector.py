@@ -23,13 +23,16 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
-from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfoTxn
-from sawtooth_block_info_injector.protobuf.block_info_pb2 import BlockInfo
+from sawtooth_validator.protobuf.block_info_pb2 import BlockInfoTxn
+from sawtooth_validator.protobuf.block_info_pb2 import BlockInfo
 
-from sawtooth_block_info_injector.common import FAMILY_NAME
-from sawtooth_block_info_injector.common import FAMILY_VERSION
-from sawtooth_block_info_injector.common import CONFIG_ADDRESS
-from sawtooth_block_info_injector.common import BLOCK_INFO_NAMESPACE
+FAMILY_NAME = 'block_info'
+FAMILY_VERSION = '1.0'
+NAMESPACE = '00b10c'
+BLOCK_INFO_NAMESPACE = NAMESPACE + '00'
+CONFIG_ADDRESS = NAMESPACE + '01' + '0' * 62
+DEFAULT_SYNC_TOLERANCE = 60 * 5
+DEFAULT_TARGET_COUNT = 256
 
 
 class BlockInfoInjector(BatchInjector):
@@ -106,3 +109,7 @@ class BlockInfoInjector(BatchInjector):
 
     def block_end(self, previous_block, batches):
         pass
+
+
+def create_block_address(block_num):
+    return BLOCK_INFO_NAMESPACE + hex(block_num)[2:].zfill(62)

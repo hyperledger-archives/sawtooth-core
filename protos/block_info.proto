@@ -1,0 +1,50 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.block_info.protobuf";
+option go_package = "block_info_pb2";
+
+message BlockInfoConfig {
+    uint64 latest_block = 1;
+    uint64 oldest_block = 2;
+    uint64 target_count = 3;
+    uint64 sync_tolerance = 4;
+}
+
+message BlockInfo {
+    // Block number in the chain
+    uint64 block_num = 1;
+    // The header_signature of the previous block that was added to the chain.
+    string previous_block_id = 2;
+    // Public key for the component internal to the validator that
+    // signed the BlockHeader
+    string signer_public_key = 3;
+    // The signature derived from signing the header
+    string header_signature = 4;
+    // Approximately when this block was committed, as a Unix UTC timestamp
+    uint64 timestamp = 5;
+}
+
+message BlockInfoTxn {
+    // The new block to add to state
+    BlockInfo block = 1;
+    // If this is set, the new target number of blocks to store in state
+    uint64 target_count = 2;
+    // If set, the new network time synchronization tolerance.
+    uint64 sync_tolerance = 3;
+}
