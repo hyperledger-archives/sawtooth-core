@@ -90,7 +90,7 @@ The following figure shows an example network with two validator nodes:
    :align: center
    :alt: Docker: Sawtooth network with five nodes
 
-Like the single-node environment, this environment uses serial transaction
+Like the single-node environment, this environment uses parallel transaction
 processing and static peering. However, it has the following differences:
 
 * PoET simulator consensus instead of dev mode, because dev mode's random-leader
@@ -363,7 +363,7 @@ The following figure shows an example network with two validator nodes:
    :align: center
    :alt: Ubuntu: Sawtooth network with two nodes
 
-Like the single-node environment, this environment uses serial transaction
+Like the single-node environment, this environment uses parallel transaction
 processing and static peering. However, it has the following differences:
 
 * PoET simulator consensus instead of dev mode, because dev mode's random-leader
@@ -944,7 +944,7 @@ This environment is a network of five Sawtooth node. Each node has a
 :term:`validator`, a :term:`REST API`, and four
 :term:`transaction processors<transaction processor>`. This environment uses
 :ref:`PoET mode consensus <dynamic-consensus-label>`,
-:doc:`serial transaction processing <../architecture/scheduling>`,
+:doc:`parallel transaction processing <../architecture/scheduling>`,
 and static peering (all-to-all)
 
 .. figure:: ../images/appdev-environment-multi-node-kube.*

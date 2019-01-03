@@ -25,7 +25,7 @@ About the Application Development Environment
 
 The Docker application development environment is a single validator node that
 is running a validator, a REST API, and three transaction processors. This
-environment uses Developer mode (dev mode) consensus and serial transaction
+environment uses Developer mode (dev mode) consensus and parallel transaction
 processing.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*

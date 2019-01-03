@@ -99,11 +99,11 @@ The ``validator.toml`` configuration file has the following options:
 - ``scheduler`` = '`type`'
 
   Determines the type of scheduler to use: serial or parallel. Default:
-  ``serial``. For example:
+  ``parallel``. For example:
 
   .. code-block:: none
 
-    scheduler = 'serial'
+    scheduler = 'parallel'
 
 - ``network_public_key`` and ``network_private_key``
 
