@@ -133,9 +133,9 @@ class ZmqDriver(Driver):
                 'Registration failed with status {}'.format(response.status))
 
     def _wait_until_active(self):
+        future = self._stream.receive()
         while True:
             try:
-                future = self._stream.receive()
                 message = future.result(1)
             except concurrent.futures.TimeoutError:
                 continue
@@ -148,16 +148,26 @@ class ZmqDriver(Driver):
                     consensus_pb2.ConsensusNotifyEngineActivated()
                 notification.ParseFromString(message.content)
 
+                startup_state = StartupState(
+                    notification.chain_head,
+                    notification.peers,
+                    notification.local_peer_info)
+
+                LOGGER.info(
+                    'Received activation message with startup state: %s',
+                    startup_state)
+
                 self._stream.send_back(
                     message_type=Message.CONSENSUS_NOTIFY_ACK,
                     correlation_id=message.correlation_id,
                     content=consensus_pb2.ConsensusNotifyAck()
                                          .SerializeToString())
 
-                return StartupState(
-                    notification.chain_head,
-                    notification.peers,
-                    notification.local_peer_info)
+                return startup_state
+
+            LOGGER.warning('Received message type %s while waiting for \
+                activation message', message.message_type)
+            future = self._stream.receive()
 
     def _process(self, message):
         type_tag = message.message_type
