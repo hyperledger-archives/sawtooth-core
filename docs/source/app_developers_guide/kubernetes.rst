@@ -47,7 +47,7 @@ This application development environment is a single validator node that is
 running a :term:`validator`, a :term:`REST API`, and three
 :term:`transaction processors<transaction processor>`. This environment uses
 :ref:`dev mode consensus <dynamic-consensus-label>` and
-:doc:`serial transaction processing <../architecture/scheduling>`.
+:doc:`parallel transaction processing <../architecture/scheduling>`.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs-kube.*
    :width: 100%

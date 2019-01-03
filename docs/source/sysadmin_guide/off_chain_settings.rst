@@ -152,8 +152,8 @@ Additional steps specify the peers for this node, change the scheduler type
          seeds = ["tcp://{address1}:{port}",
                   "tcp://{address2}:{port}"]
 
-#. (Optional) Set the scheduler type to either ``serial`` (the default) or
-   ``parallel``. For more information, see :ref:`arch-iterative-sched-label`
+#. (Optional) Set the scheduler type to either ``parallel`` (the default) or
+   ``serial``. For more information, see :ref:`arch-iterative-sched-label`
    in the Architecture Guide.
 
    .. code-block:: ini
