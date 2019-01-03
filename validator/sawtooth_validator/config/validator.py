@@ -34,7 +34,7 @@ def load_default_validator_config():
         bind_consensus='tcp://127.0.0.1:5050',
         endpoint=None,
         peering='static',
-        scheduler='serial',
+        scheduler='parallel',
         minimum_peer_connectivity=3,
         maximum_peer_connectivity=10,
         state_pruning_block_depth=100,
