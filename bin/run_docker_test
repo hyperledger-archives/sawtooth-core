@@ -77,14 +77,6 @@ def main():
         '--format={{.Names}},{{.Image}},{{.Label "install-type"}}',
     ]
 
-    inspect = [
-        'docker', 'inspect',
-        '-f', "{{.State.ExitCode}}",
-        "{}_{}_1".format(
-            isolation_id,
-            test_service)
-    ]
-
     compose_dict = load_compose_file(compose_file)
     _validate_compose_dict(compose_dict, test_service, compose_file)
 
@@ -101,11 +93,12 @@ def main():
         ]
 
     timer = Timer(args.timeout)
-
+    
     # Run tests
     try:
         if not args.clean:
             exit_status = 0
+            container_names = []
 
             if not _check_for_existing_image(test_service_image, isolation_id):
                 _build_test_service_image(test_service, compose)
@@ -120,10 +113,23 @@ def main():
 
             try:
                 # 1. Run the tests
-                subprocess.run(
+                info = subprocess.run(
                     compose_up,
                     check=True,
-                    timeout=timer.remaining())
+                    timeout=timer.remaining(),
+                    stdout=subprocess.PIPE)
+                container_names = _get_container_names(info, isolation_id)
+                if isolation_id in container_names[0]:
+                    test_results = info.stdout.decode().split('\n')
+                    for line in test_results:
+                        print(line)
+                else:
+                    LOGGER.error("Unable to determine container name(s) for docker inspect")
+                    LOGGER.error("STDOUT from docker-compose:")
+                    test_results = info.stdout.decode().split('\n')
+                    for line in test_results:
+                        LOGGER.error(line)
+                    exit(1)
 
             except FileNotFoundError as err:
                 LOGGER.error("Bad docker-compose up command")
@@ -141,13 +147,17 @@ def main():
                 exit_status = 1
 
             if exit_status == 0:
-                LOGGER.info("Getting result with: %s", str(inspect))
                 try:
-                    # 2. Get the exit code of the test container
-                    exit_status = int(subprocess.run(
-                        inspect, stdout=subprocess.PIPE,
-                        timeout=timer.remaining(), check=True
-                    ).stdout.decode().strip())
+                    # 2. Get the exit code of the test container(s)
+                    for container_name in container_names:
+                        inspect = _get_inspect(container_name)
+                        LOGGER.info("Getting container exit code with: %s", str(inspect))
+                        exit_status = int(subprocess.run(
+                            inspect, stdout=subprocess.PIPE,
+                            timeout=timer.remaining(), check=True
+                        ).stdout.decode().strip())
+                        if exit_status == 137:
+                            exit_status = 0
 
                 except FileNotFoundError as err:
                     LOGGER.error("Bad docker inspect or ps command")
@@ -469,6 +479,26 @@ def _get_compose_file(compose_file):
             "Docker compose file '{}' does not exist.".format(compose_file))
 
     return compose_file
+
+
+def _get_inspect(container_name):
+    inspect = [
+        'docker', 'inspect',
+        '-f', "{{.State.ExitCode}}",
+        container_name
+    ]
+    
+    return inspect
+    
+
+def _get_container_names(stdout_info, isolation_id):
+    container_names = []
+    info_elements = stdout_info.stdout.decode().split('\n')[0].split(isolation_id)
+    info_elements.pop(0)
+    for ele in info_elements:
+        container_names.append(''.join([isolation_id, ele.split(',')[0]]))
+
+    return container_names
 
 
 if __name__ == "__main__":
