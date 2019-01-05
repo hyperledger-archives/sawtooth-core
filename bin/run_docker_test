@@ -493,10 +493,13 @@ def _get_inspect(container_name):
 
 def _get_container_names(stdout_info, isolation_id):
     container_names = []
-    info_elements = stdout_info.stdout.decode().split('\n')[0].split(isolation_id)
-    info_elements.pop(0)
-    for ele in info_elements:
-        container_names.append(''.join([isolation_id, ele.split(',')[0]]))
+    info_elements = stdout_info.stdout.decode().split('\n')[0]
+    for element in info_elements:
+        if "Attaching to " + isolation_id in element:
+            container_data = element.split(isolation_id)
+            container_data.pop(0)
+            for data in container_data:
+                container_names.append(''.join([isolation_id, data.split(',')[0]]))
 
     return container_names
 
