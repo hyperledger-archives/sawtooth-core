@@ -119,7 +119,7 @@ def main():
                     timeout=timer.remaining(),
                     stdout=subprocess.PIPE)
                 container_names = _get_container_names(info, isolation_id)
-                if isolation_id in container_names[0]:
+                if len(container_names) > 0 and isolation_id in container_names[0]:
                     test_results = info.stdout.decode().split('\n')
                     for line in test_results:
                         print(line)
