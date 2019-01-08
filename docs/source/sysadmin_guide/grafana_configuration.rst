@@ -175,7 +175,7 @@ specify the validator settings for Grafana.
    .. code-block:: ini
 
       # The host and port for Open TSDB database used for metrics
-      opentsdb_url = "http://{host}:3000"
+      opentsdb_url = "http://{host}:8086"
 
       # The name of the database used for storing metrics
       opentsdb_db = "metrics"
@@ -225,7 +225,7 @@ the REST API settings for Grafana.
 
    .. code-block:: ini
 
-      opentsdb_url = "http://{host}:3000"
+      opentsdb_url = "http://{host}:8086"
 
       # The name of the database used for storing metrics
       opentsdb_db = "metrics"
