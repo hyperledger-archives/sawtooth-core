@@ -49,6 +49,14 @@ class ProcessorRegisterHandler(Handler):
         else:
             max_occupancy = request.max_occupancy
 
+        # If the request_header_style parameter is not set in the request,
+        # consider default behavior of sending EXPANDED (de-serialized) header.
+        # This is for backward compatibility.
+        if request.request_header_style == \
+                processor_pb2.TpRegisterRequest.HEADER_STYLE_UNSET:
+            header_style = processor_pb2.TpRegisterRequest.EXPANDED
+        else:
+            header_style = request.request_header_style
 
         # Reject the request if requested version cannot be handled,
         # validator does backward compatible support.
@@ -76,7 +84,8 @@ class ProcessorRegisterHandler(Handler):
         processor = processor_manager.Processor(
             connection_id,
             request.namespaces,
-            max_occupancy)
+            max_occupancy,
+            header_style)
 
         self._collection[processor_type] = processor
 
