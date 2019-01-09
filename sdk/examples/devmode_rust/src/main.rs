@@ -46,7 +46,7 @@ fn main() {
 
     let endpoint = matches
         .value_of("connect")
-        .unwrap_or("tcp://localhost:5050");
+        .unwrap_or("tcp://localhost:5005");
 
     let console_log_level;
     match matches.occurrences_of("verbose") {

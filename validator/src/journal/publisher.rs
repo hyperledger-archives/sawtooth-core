@@ -115,6 +115,16 @@ impl BlockPublisherState {
         let candidate_block = self.candidate_block.as_ref();
         candidate_block.map(|cb| cb.previous_block_id())
     }
+
+    pub fn purge_invalid_txns(&mut self) {
+        if let Some(ref cb) = self.candidate_block {
+            if !cb.has_invalid_batches() {
+                return;
+            }
+            // Removing invalid batches from pending_batches
+            self.pending_batches.remove_matching(cb.get_invalid_batch_ids().iter());
+        }
+    }
 }
 
 pub struct SyncBlockPublisher {
@@ -371,6 +381,8 @@ impl SyncBlockPublisher {
     }
 
     fn restart_block(&self, state: &mut BlockPublisherState) {
+        state.purge_invalid_txns();
+
         if let Some(previous_block) = state.candidate_block.as_ref().map(|candidate| {
             self.get_block(&candidate.previous_block_id())
                 .expect("Failed to get previous block, but we are building on it.")
@@ -479,6 +491,8 @@ impl SyncBlockPublisher {
     }
 
     fn cancel_block(&self, state: &mut BlockPublisherState, unref_block: bool) {
+        state.purge_invalid_txns();
+
         let mut candidate_block = None;
         mem::swap(&mut state.candidate_block, &mut candidate_block);
         if let Some(mut candidate_block) = candidate_block {
@@ -766,6 +780,14 @@ impl PendingBatchesPool {
             self.ids.insert(batch.header_signature.clone());
             self.batches.push(batch);
         }
+    }
+
+    /// Remove batches matching the provided header signatures
+    pub fn remove_matching<'a>(&mut self, mut ids: impl Iterator<Item=&'a String>) {
+        self.batches.retain(|b| ids
+            .find(|&header_sig| *header_sig == b.header_signature).is_none());
+        self.ids.retain(|id| ids
+            .find(|&header_sig| header_sig == id).is_none());
     }
 
     /// Recomputes the list of pending batches
