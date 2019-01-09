@@ -26,6 +26,11 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_MAX_OCCUPANCY = 10
+# This is the version used by the SDK to match if the validator supports
+# features it requested during registration. It should only be incremented
+# when there are changes in TpRegisterRequest.
+# Remember to sync this information in SDK if changed here.
+MAX_SDK_PROTOCOL_VERSION = 1
 
 
 class ProcessorRegisterHandler(Handler):
@@ -44,14 +49,25 @@ class ProcessorRegisterHandler(Handler):
         else:
             max_occupancy = request.max_occupancy
 
-        LOGGER.info(
-            'registered transaction processor: connection_id=%s, family=%s, '
-            'version=%s, namespaces=%s, max_occupancy=%s',
-            connection_id,
-            request.family,
-            request.version,
-            list(request.namespaces),
-            max_occupancy)
+
+        # Reject the request if requested version cannot be handled,
+        # validator does backward compatible support.
+        if request.protocol_version > MAX_SDK_PROTOCOL_VERSION:
+            ack = processor_pb2.TpRegisterResponse()
+            ack.status = ack.ERROR
+            # Send protocol_version of validator, so that the SDK can cross
+            # verify if it can get all services requested for.
+            ack.protocol_version = request.protocol_version
+            LOGGER.error(
+                'Validator version %s does not support the features requested'
+                ' by the %s version of transaction processor',
+                str(MAX_SDK_PROTOCOL_VERSION),
+                str(request.protocol_version))
+
+            return HandlerResult(
+                status=HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
 
         processor_type = processor_manager.ProcessorType(
             request.family,
@@ -66,6 +82,18 @@ class ProcessorRegisterHandler(Handler):
 
         ack = processor_pb2.TpRegisterResponse()
         ack.status = ack.OK
+        # Echo back the requested protocol_version, so that the SDK can
+        # cross verify that it can get all services requested
+        ack.protocol_version = request.protocol_version
+
+        LOGGER.info(
+            'registered transaction processor: connection_id=%s, family=%s, '
+            'version=%s, namespaces=%s, max_occupancy=%s',
+            connection_id,
+            request.family,
+            request.version,
+            list(request.namespaces),
+            max_occupancy)
 
         return HandlerResult(
             status=HandlerStatus.RETURN,

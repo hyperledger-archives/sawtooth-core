@@ -22,9 +22,11 @@ import "transaction.proto";
 
 
 // The registration request from the transaction processor to the
-// validator/executor
+// validator/executor.
+//
+// The protocol_version field is used to check if the validator supports
+// requested features by a transaction processor.
 message TpRegisterRequest {
-
     // A settled upon name for the capabilities of the transaction processor.
     // For example: intkey, xo
     string family = 1;
@@ -42,6 +44,11 @@ message TpRegisterRequest {
     // The maximum number of transactions that this transaction processor can
     // handle at once.
     uint32 max_occupancy = 5;
+
+    // Validator can make use of this field to check if the requested features
+    // are supported. Registration requests can be either accepted or rejected
+    // based on this field.
+    uint32 protocol_version = 6;
 }
 
 // A response sent from the validator to the transaction processor
@@ -54,6 +61,10 @@ message TpRegisterResponse {
     }
 
     Status status = 1;
+
+    // Respond back with protocol_version, the value that can be used by SDK to
+    // know if validator supports expected feature.
+    uint32 protocol_version = 2;
 }
 
 // The unregistration request from the transaction processor to the
