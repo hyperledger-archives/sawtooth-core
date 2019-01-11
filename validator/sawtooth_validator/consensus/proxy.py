@@ -164,7 +164,10 @@ class ConsensusProxy:
         if chain_head is None:
             return None
 
-        return self._chain_controller.forks(chain_head.header_signature)
+        try:
+            return self._chain_controller.forks(chain_head.header_signature)
+        except KeyError:
+            return None
 
     # Using blockstore and state database
     def blocks_get(self, block_ids):
@@ -189,8 +192,18 @@ class ConsensusProxy:
         block_header = BlockHeader()
         block_header.ParseFromString(block.header)
 
-        settings_view = self._settings_view_factory.create_settings_view(
-            block_header.state_root_hash)
+        try:
+            settings_view = self._settings_view_factory.create_settings_view(
+                block_header.state_root_hash)
+        except KeyError:
+            LOGGER.error(
+                'Settings from block %s requested, but root hash %s was '
+                'missing. Returning no setting values.',
+                block_id.hex(),
+                block_header.state_root_hash)
+            # The state root does not exist, which may indicate a pruned root
+            # from a dropped fork or an invalid state.
+            return []
 
         result = []
         for setting in settings:
@@ -210,8 +223,18 @@ class ConsensusProxy:
         block_header = BlockHeader()
         block_header.ParseFromString(block.header)
 
-        state_view = self._state_view_factory.create_view(
-            block_header.state_root_hash)
+        try:
+            state_view = self._state_view_factory.create_view(
+                block_header.state_root_hash)
+        except KeyError:
+            LOGGER.error(
+                'State from block %s requested, but root hash %s was missing. '
+                'Returning empty state.',
+                block_id.hex(),
+                block_header.state_root_hash)
+            # The state root does not exist, which may indicate a pruned root
+            # from a dropped fork or an invalid state.
+            return []
 
         result = []
 
