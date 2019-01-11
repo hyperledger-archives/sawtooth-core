@@ -19,7 +19,7 @@ build = "build.rs"
 authors = ["Intel Corporation"]
 
 [dependencies]
-sawtooth-sdk = { path = "../../sdk/rust" }
+sawtooth-sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust" }
 sawtooth_perf = { path = "../sawtooth_perf" }
 protobuf = "2.0"
 clap = "2.26.0"

@@ -41,8 +41,8 @@ The available SDKs are in the following repositories:
   <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/python>`_
 
 * Rust:
-  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/rust
-  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/rust>`_
+  `https://github.com/hyperledger/sawtooth-sdk-rust
+  <https://github.com/hyperledger/sawtooth-sdk-rust>`_
 
 * Go:
   `https://github.com/hyperledger/sawtooth-sdk-go

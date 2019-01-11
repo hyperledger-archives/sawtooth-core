@@ -76,16 +76,6 @@
 /sdk/examples/xo_java/dependency-reduced-pom.xml
 /sdk/examples/xo_java/target/
 /sdk/java/target/
-/sdk/examples/intkey_rust/target/
-/sdk/examples/intkey_rust/Cargo.lock
-/sdk/examples/intkey_rust/bin/
-/sdk/examples/xo_rust/target/
-/sdk/examples/xo_rust/Cargo.lock
-/sdk/examples/xo_rust/bin/
-/sdk/rust/target
-/sdk/rust/Cargo.lock
-/sdk/rust/src/messages/*.rs
-!/sdk/rust/src/messages/mod.rs
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

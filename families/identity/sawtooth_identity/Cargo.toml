@@ -38,7 +38,7 @@ log = "0.3"
 log4rs = "0.7"
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-sawtooth-sdk = { path = "../../../sdk/rust" }
+sawtooth-sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust" }
 
 [build-dependencies]
 cfg-if = "0.1"

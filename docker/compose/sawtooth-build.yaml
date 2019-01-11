@@ -76,30 +76,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  intkey-tp-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/intkey_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tp-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  xo-tp-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/xo_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-xo-tp-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
   signing:
     build:
       context: ../../

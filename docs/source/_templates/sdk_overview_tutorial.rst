@@ -64,7 +64,8 @@ to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
 {% if language == 'Rust' %}
 
    For a full Rust implementation of the XO transaction family, see
-   ``/{project}/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
+   `https://github.com/hyperledger/sawtooth-sdk-rust/tree/master/examples/xo_rust
+   <https://github.com/hyperledger/sawtooth-sdk-rust/tree/master/examples/xo_rust>`_.
 
 {% elif language == 'Go' %}
 

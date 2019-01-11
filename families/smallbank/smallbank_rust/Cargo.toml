@@ -21,7 +21,7 @@ authors = ["Intel Corporation"]
 build = "build.rs"
 
 [dependencies]
-sawtooth-sdk = { path = "../../../sdk/rust" }
+sawtooth-sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust" }
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
 clap = "2"
