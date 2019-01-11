@@ -79,9 +79,6 @@
 /sdk/examples/intkey_rust/target/
 /sdk/examples/intkey_rust/Cargo.lock
 /sdk/examples/intkey_rust/bin/
-/sdk/examples/devmode_rust/target/
-/sdk/examples/devmode_rust/Cargo.lock
-/sdk/examples/devmode_rust/bin/
 /sdk/examples/xo_rust/target/
 /sdk/examples/xo_rust/Cargo.lock
 /sdk/examples/xo_rust/bin/

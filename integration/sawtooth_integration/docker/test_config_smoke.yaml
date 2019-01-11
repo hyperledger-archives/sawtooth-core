@@ -67,17 +67,7 @@ services:
     stop_signal: SIGKILL
 
   devmode:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator:5005 -v
     stop_signal: SIGKILL
 

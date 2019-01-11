@@ -189,25 +189,10 @@ services:
 
 
   devmode-rust:
-    build:
-      context: .
-      dockerfile: sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode-engine-rust-local:${ISOLATION_ID}
-    volumes:
-      - ./:/project/sawtooth-core
-    container_name: sawtooth-devmode-engine-rust-local
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
+    container_name: sawtooth-devmode-engine-rust
     depends_on:
       - validator
     command: |
-      bash -c "
-        cd sdk/examples/devmode_rust
-        cargo build --release
-        mkdir -p bin
-        cp ./target/release/devmode-engine-rust bin/devmode-engine-rust
         devmode-engine-rust -v --connect tcp://validator:5050
-      "
     stop_signal: SIGKILL

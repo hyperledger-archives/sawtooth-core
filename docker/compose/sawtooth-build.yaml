@@ -148,18 +148,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  devmode-rust:
-    build:
-      context: ../../
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode-engine-rust-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
   block-info-tp:
     build:
       context: ../../
