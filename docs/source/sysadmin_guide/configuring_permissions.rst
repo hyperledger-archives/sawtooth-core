@@ -2,6 +2,10 @@
 Configuring Validator and Transactor Permissions
 ************************************************
 
+.. note::
+
+    These instructions have been tested on Ubuntu 16.04 only.
+
 This section describes the validator and transactor permissions in Hyperledger
 Sawtooth.
 
