@@ -534,9 +534,9 @@ impl BlockManager {
         }
     }
 
-    pub fn contains_any_transactions<'a>(
+    pub fn contains_any_transactions(
         &self,
-        block_id: &'a str,
+        block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
         let _lock = self
@@ -715,7 +715,7 @@ impl BlockManager {
         self.state.put(branch)
     }
 
-    pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Option<Block>>> {
+    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
