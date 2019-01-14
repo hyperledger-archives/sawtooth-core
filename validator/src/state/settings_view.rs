@@ -108,7 +108,6 @@ impl SettingsView {
         {
             let cache = self.cache.borrow();
             if cache.contains_key(key) {
-                eprintln!("{} in cache", key);
                 return if let Some(str_value) = cache.get(key).unwrap() {
                     Ok(Some(value_parser(&str_value)?))
                 } else {

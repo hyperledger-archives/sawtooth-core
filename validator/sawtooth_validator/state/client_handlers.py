@@ -835,6 +835,11 @@ class BlockListRequest(_ClientRequestHandler):
                     return self._status.INVALID_PAGING
 
                 return self._status.NO_ROOT
+            except KeyError:
+                if paging.start:
+                    return self._status.INVALID_PAGING
+
+                return self._status.NO_ROOT
 
             paging_response = client_list_control_pb2.ClientPagingResponse(
                 next=next_block_num,

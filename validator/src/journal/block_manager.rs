@@ -80,7 +80,10 @@ impl RefCount {
     fn decrease_internal_ref_count(&mut self) {
         match self.internal_ref_count.checked_sub(1) {
             Some(ref_count) => self.internal_ref_count = ref_count,
-            None => panic!("The internal ref-count fell below zero, its lowest possible value"),
+            None => panic!(
+                "The internal ref-count for {} fell below zero, its lowest possible value",
+                self.block_id
+            ),
         }
     }
 
@@ -91,7 +94,10 @@ impl RefCount {
     fn decrease_external_ref_count(&mut self) {
         match self.external_ref_count.checked_sub(1) {
             Some(ref_count) => self.external_ref_count = ref_count,
-            None => panic!("The external ref-count fell below zero, its lowest possible value"),
+            None => panic!(
+                "The external ref-count for {} fell below zero, its lowest possible value",
+                self.block_id
+            ),
         }
     }
 }
@@ -528,9 +534,9 @@ impl BlockManager {
         }
     }
 
-    pub fn contains_any_transactions<'a>(
+    pub fn contains_any_transactions(
         &self,
-        block_id: &'a str,
+        block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
         let _lock = self
@@ -709,7 +715,7 @@ impl BlockManager {
         self.state.put(branch)
     }
 
-    pub fn get<'a>(&self, block_ids: &'a [&'a str]) -> Box<Iterator<Item = Option<Block>>> {
+    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
