@@ -80,7 +80,10 @@ impl RefCount {
     fn decrease_internal_ref_count(&mut self) {
         match self.internal_ref_count.checked_sub(1) {
             Some(ref_count) => self.internal_ref_count = ref_count,
-            None => panic!("The internal ref-count fell below zero, its lowest possible value"),
+            None => panic!(
+                "The internal ref-count for {} fell below zero, its lowest possible value",
+                self.block_id
+            ),
         }
     }
 
@@ -91,7 +94,10 @@ impl RefCount {
     fn decrease_external_ref_count(&mut self) {
         match self.external_ref_count.checked_sub(1) {
             Some(ref_count) => self.external_ref_count = ref_count,
-            None => panic!("The external ref-count fell below zero, its lowest possible value"),
+            None => panic!(
+                "The external ref-count for {} fell below zero, its lowest possible value",
+                self.block_id
+            ),
         }
     }
 }
