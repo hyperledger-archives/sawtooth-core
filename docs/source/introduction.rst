@@ -131,7 +131,7 @@ Dynamic Consensus Algorithms
 ----------------------------
 
 In a blockchain, consensus is the process of building agreement among a group
-of mutually distrusting participants. Algorithms for achieving consensus with
+of participants in a network. Algorithms for achieving consensus with
 arbitrary faults generally require some form of voting among a known set of
 participants. General approaches include Nakamoto-style consensus, which
 elects a leader through some form of lottery, and variants of the traditional
@@ -140,24 +140,54 @@ elects a leader through some form of lottery, and variants of the traditional
 algorithms, which use multiple rounds of explicit votes to achieve consensus.
 
 Sawtooth abstracts the core concepts of consensus and isolates consensus from
-transaction semantics. The interface supports plugging in various consensus
-implementations. More importantly, Sawtooth allows different types of
-consensus on the same blockchain. The consensus is selected during the initial
-network setup and can be changed on a running blockchain with a transaction.
+transaction semantics. The Sawtooth consensus interface supports plugging in
+various consensus implementations as *consensus engines* that interact with the
+validator through the *consensus API*.
+More importantly, Sawtooth allows you to change the consensus after the
+blockchain network has been created. The consensus algorithm is selected during
+the initial network setup and can be changed on a running blockchain with a
+transaction or two.
 
-Sawtooth currently supports these consensus implementations:
+The Sawtooth consensus API supports a wide variety of consensus algorithms on a
+network. Sawtooth currently includes consensus engines for these algorithms:
 
-    * Proof of Elapsed Time (PoET), a Nakamoto-style consensus algorithm that is
+    * `Sawtooth PBFT <https://github.com/hyperledger/sawtooth-pbft>`__
+      (Practical Byzantine Fault Tolerance) is a voting-based consensus
+      algorithm that provides Byzantine fault tolerance with finality.
+      Sawtooth PBFT extends the
+      `original PBFT algorithm <https://www.usenix.org/legacy/events/osdi99/full_papers/castro/castro_html/castro.html>`__
+      with features such as dynamic network membership, regular view changes,
+      and a block catch-up procedure. A Sawtooth network with PBFT consensus
+      requires four or more nodes.
+
+    * `PoET <https://github.com/hyperledger/sawtooth-poet>`__
+      (Proof of Elapsed Time) is a Nakamoto-style consensus algorithm that is
       designed to be a production-grade protocol capable of supporting large
       network populations. PoET relies on secure instruction execution to
       achieve the scaling benefits of a Nakamoto-style consensus algorithm
       without the power consumption drawbacks of the Proof of Work algorithm.
+      A Sawtooth network with PoET consensus requires at least three nodes.
 
-    * PoET simulator, which provides PoET-style consensus on any type of
-      hardware, including a virtualized cloud environment.
+      Sawtooth includes two versions of PoET consensus:
 
-    * Dev mode, a simplified random-leader algorithm that is useful for
-      development and testing.
+      * PoET-SGX relies on a Trusted Execution Environment (TEE), such as
+        |Intel (R)| Software Guard Extensions (SGX), to implement a
+        leader-election lottery system. PoET-SGX is sometimes called "PoET/BFT"
+        because it is Byzantine fault tolerant.
+
+      * PoET simulator provides PoET-style consensus on any type of hardware,
+        including a virtualized cloud environment. PoET simulator is also called
+        "PoET/CFT" because it is crash fault tolerant, not Byzantine fault
+        tolerant.
+
+    * `Sawtooth Raft <https://github.com/hyperledger/sawtooth-raft>`__
+      is a leader-based consensus algorithm that provides crash fault tolerance
+      for a small network with restricted membership.
+
+    * `Dev mode <https://github.com/hyperledger/sawtooth-core/blob/master/validator/sawtooth_validator/journal/consensus/dev_mode/dev_mode_consensus.py>`__
+      is a simplified random-leader algorithm that is useful for developing and
+      testing a transaction processor. Dev mode is not recommended for
+      multi-node networks and should not be used for production.
 
 .. _sample-transaction-families-label:
 
@@ -310,6 +340,8 @@ OpenSSL Toolkit (http://www.openssl.org/).
 This project relies on other third-party components. For details, see the
 LICENSE and NOTICES files in the `sawtooth-core repository
 <https://github.com/hyperledger/sawtooth-core>`_.
+
+.. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
