@@ -224,7 +224,7 @@ fn apply_vote(
                 _ => {
                     return Err(ApplyError::InvalidTransaction(String::from(
                         "Transaction type unset",
-                    )))
+                    )));
                 }
             }
         }

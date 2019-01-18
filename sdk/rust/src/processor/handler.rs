@@ -214,7 +214,7 @@ impl TransactionContext {
                     None => {
                         return Err(ContextError::ResponseAttributeError(String::from(
                             "TpStateGetResponse is missing entries.",
-                        )))
+                        )));
                     }
                 };
                 match entry.get_data().len() {
