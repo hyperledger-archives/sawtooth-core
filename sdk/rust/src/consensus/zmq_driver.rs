@@ -355,7 +355,7 @@ fn handle_update(
             return Err(Error::ReceiveError(format!(
                 "Received unexpected message type: {:?}",
                 unexpected
-            )))
+            )));
         }
     };
 

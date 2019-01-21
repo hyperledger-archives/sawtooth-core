@@ -31,7 +31,7 @@ impl XoPayload {
             Err(_) => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Invalid payload serialization",
-                )))
+                )));
             }
         };
 
@@ -83,7 +83,7 @@ impl XoPayload {
                 Err(_) => {
                     return Err(ApplyError::InvalidTransaction(String::from(
                         "Space must be an integer",
-                    )))
+                    )));
                 }
             };
             if space_parsed < 1 || space_parsed > 9 {

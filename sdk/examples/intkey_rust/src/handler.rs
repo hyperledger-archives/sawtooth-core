@@ -86,7 +86,7 @@ impl IntkeyPayload {
             None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Verb must be 'set', 'inc', or 'dec'",
-                )))
+                )));
             }
             Some(verb_raw) => verb_raw.clone(),
         };
@@ -98,7 +98,7 @@ impl IntkeyPayload {
             _ => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Verb must be 'set', 'inc', or 'dec'",
-                )))
+                )));
             }
         };
 
@@ -108,7 +108,7 @@ impl IntkeyPayload {
             None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Must have a value",
-                )))
+                )));
             }
         };
 
@@ -119,7 +119,7 @@ impl IntkeyPayload {
             _ => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Value must be an integer",
-                )))
+                )));
             }
         };
 
@@ -127,7 +127,7 @@ impl IntkeyPayload {
             None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Name must be a string",
-                )))
+                )));
             }
             Some(name_raw) => name_raw.clone(),
         };
@@ -193,7 +193,7 @@ impl<'a> IntkeyState<'a> {
                     _ => {
                         return Err(ApplyError::InternalError(String::from(
                             "No map returned from state",
-                        )))
+                        )));
                     }
                 };
 
@@ -284,7 +284,7 @@ impl TransactionHandler for IntkeyTransactionHandler {
             None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Request must contain a payload",
-                )))
+                )));
             }
         };
 
@@ -306,7 +306,7 @@ impl TransactionHandler for IntkeyTransactionHandler {
                         return Err(ApplyError::InvalidTransaction(format!(
                             "{} already set",
                             payload.get_name()
-                        )))
+                        )));
                     }
                     Ok(None) => (),
                     Err(err) => return Err(err),
@@ -319,7 +319,7 @@ impl TransactionHandler for IntkeyTransactionHandler {
                     Ok(None) => {
                         return Err(ApplyError::InvalidTransaction(String::from(
                             "inc requires a set value",
-                        )))
+                        )));
                     }
                     Err(err) => return Err(err),
                 };
@@ -338,7 +338,7 @@ impl TransactionHandler for IntkeyTransactionHandler {
                     Ok(None) => {
                         return Err(ApplyError::InvalidTransaction(String::from(
                             "dec requires a set value",
-                        )))
+                        )));
                     }
                     Err(err) => return Err(err),
                 };

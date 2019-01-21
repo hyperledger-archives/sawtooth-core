@@ -65,7 +65,7 @@ impl TransactionHandler for XoTransactionHandler {
             None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Invalid header",
-                )))
+                )));
             }
         };
 
@@ -108,7 +108,7 @@ impl TransactionHandler for XoTransactionHandler {
                         "P1-WIN" | "P2-WIN" | "TIE" => {
                             return Err(ApplyError::InvalidTransaction(String::from(
                                 "Invalid action: Game has ended",
-                            )))
+                            )));
                         }
                         "P1-NEXT" => {
                             let p1 = g.get_player1();
@@ -129,7 +129,7 @@ impl TransactionHandler for XoTransactionHandler {
                         _ => {
                             return Err(ApplyError::InvalidTransaction(String::from(
                                 "Invalid state",
-                            )))
+                            )));
                         }
                     }
 
