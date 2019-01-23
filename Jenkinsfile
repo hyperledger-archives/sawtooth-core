@@ -18,7 +18,8 @@
 // Discard old builds after 31 days
 properties([[$class: 'BuildDiscarderProperty', strategy:
         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-        artifactNumToKeepStr: '', daysToKeepStr: '31', numToKeepStr: '']]]);
+        artifactNumToKeepStr: '', daysToKeepStr: '31', numToKeepStr: '']],
+        pipelineTriggers([cron('H 3 * * *')])]);
 
 node ('master') {
     // Create a unique workspace so Jenkins doesn't reuse an existing one
