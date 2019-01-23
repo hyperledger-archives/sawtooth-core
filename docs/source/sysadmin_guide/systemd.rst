@@ -4,7 +4,7 @@ Running Sawtooth as a Service
 
 When you installed Sawtooth with ``apt-get``, ``systemd`` units were added for
 the Sawtooth components (validator, REST API, transaction processors, and
-consensus engines). This procedure describes how to use the ``systemctl``
+consensus engine). This procedure describes how to use the ``systemctl``
 command to start, stop, and restart Sawtooth components as ``systemd`` services.
 
 To learn more about ``systemd`` and the ``systemctl`` command, see the `Digital
@@ -38,12 +38,13 @@ Use these commands to start each Sawtooth component as a service:
     $ sudo systemctl start sawtooth-identity-tp.service
     $ sudo systemctl start sawtooth-poet-engine.service
 
-This command starts the required transaction processors:
+These commands start the required transaction processors:
 PoET Validator Registry (``sawtooth-poet-validator-registry-tp``),
 Settings (``sawtooth-settings-tp``), and
-Identity (``sawtooth-identity-tp``).  It also starts the IntegerKey
+Identity (``sawtooth-identity-tp``). They also start the IntegerKey
 transaction processor (``sawtooth-intkey-tp-python``), which is used in a
 later procedure to test basic Sawtooth functionality.
+The last command starts the PoET consensus engine (``sawtooth-poet-engine``).
 
 
 Check Service Status

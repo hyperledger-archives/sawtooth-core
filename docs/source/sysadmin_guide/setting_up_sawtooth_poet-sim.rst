@@ -18,8 +18,8 @@ on the first node.
 
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
-Each node in this Sawtooth network runs a validator, a REST API, and the
-following transaction processors:
+Each node in this Sawtooth network runs a validator, a REST API, the PoET
+consensus engine, and the following transaction processors:
 
 * :doc:`Settings <../transaction_family_specifications/settings_transaction_family>`
   (``settings-tp``)

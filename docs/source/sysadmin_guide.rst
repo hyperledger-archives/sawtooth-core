@@ -5,7 +5,7 @@ System Administrator's Guide
 This guide explains how to install, configure, and run Hyperledger Sawtooth
 on a Ubuntu system for proof-of-concept or production use in a Sawtooth network.
 
-It includes steps to configure a consensus mechanism, using PoET simulator
+It includes steps to configure a consensus algorithm, using PoET simulator
 consensus as an example, and to start the Sawtooth components as services.
 
 It also includes optional procedures to change the user, client, and validator
