@@ -9,7 +9,7 @@ then walks you through the following tasks:
  * Generating a user key
  * Creating the genesis block
  * Generating a root key
- * Starting the components: validator, REST API, and
+ * Starting the components: validator, consensus engine, REST API, and
    transaction processors
  * Checking the status of the REST API
  * Using Sawtooth commands to submit transactions, display block data, and view
@@ -52,7 +52,7 @@ Settings is a reference implementation. In a production environment, you should
 always run a transaction processor that supports the Settings transaction
 family.
 
-In this procedure, you will open six terminal windows on your host system: one
+In this procedure, you will open seven terminal windows on your host system: one
 for each Sawtooth component and one to use for client commands.
 
 .. note::
@@ -113,6 +113,13 @@ stable or nightly.  We recommend using the stable repository.
    .. code-block:: console
 
       user@validator$ sudo apt-get install -y sawtooth
+
+#. Install the Sawtooth Devmode consensus engine package. Run the following
+   command:
+
+   .. code-block:: console
+
+       user@validator$ sudo apt-get install sawtooth-devmode-engine-rust
 
 #. Any time after installation, you can view the installed Sawtooth packages
    with the following command:
@@ -246,9 +253,36 @@ complete this procedure.
    window. For more information, see :ref:`stop-sawtooth-ubuntu-label`.
 
 
+.. _start-devmode-consensus-label:
+
+Step 6: Start the Devmode Consensus Engine
+==========================================
+
+#. Open a new terminal window (the consensus terminal window). In this procedure,
+   the prompt ``user@consensus$`` shows the commands that should be run in this
+   window.
+
+#. Run the following command to start the Devmode consensus engine that decides what block to add to a blockchain.
+
+   .. code-block:: console
+
+       user@consensus$ sudo -u sawtooth devmode-engine-rust -vv --connect tcp://localhost:5050
+
+   The consensus terminal window displays verbose log messages showing the
+   Devmode engine connecting to and registering with the validator.
+   The output will be similar to this example:
+
+   .. code-block:: console
+
+      [2019-01-09 11:45:07.807 INFO     handlers] Consensus engine registered: Devmode 0.1
+      DEBUG | devmode_rust::engine | Min: 0 -- Max: 0
+      INFO  | devmode_rust::engine | Wait time: 0
+      DEBUG | devmode_rust::engine | Initializing block
+
+
 .. _start-rest-api-label:
 
-Step 6: Start the REST API
+Step 7: Start the REST API
 ==========================
 
 The REST API allows you to configure a running validator, submit batches, and
@@ -286,7 +320,7 @@ procedure.
 
 .. _start-tps-label:
 
-Step 7: Start the Transaction Processors
+Step 8: Start the Transaction Processors
 ========================================
 
 In this step, you will open a new terminal window for each transaction
@@ -391,7 +425,7 @@ processor.
 
 .. _confirm-rest-api-ubuntu-label:
 
-Step 8: Confirm Connectivity to the REST API
+Step 9: Confirm Connectivity to the REST API
 ============================================
 
 #. Run the following command in the client terminal window:
@@ -405,8 +439,8 @@ Step 8: Confirm Connectivity to the REST API
 #. If necessary, restart the REST API (see :ref:`start-rest-api-label`).
 
 
-Step 9: Use Sawtooth Commands as a Client
-=========================================
+Step 10: Use Sawtooth Commands as a Client
+==========================================
 
 Sawtooth includes commands that act as a client application. This step describes
 how to use the ``intkey`` and ``sawtooth`` commands to create and submit
@@ -621,7 +655,7 @@ state data in a :term:`Merkle-Radix tree`; for more information, see
 
 .. _examine-logs-ubuntu-label:
 
-Step 10: Examine Sawtooth Logs
+Step 11: Examine Sawtooth Logs
 ==============================
 
 By default, Sawtooth logs are stored in the directory ``/var/log/sawtooth``.
@@ -658,7 +692,7 @@ For more information on log files, see
 
 .. _stop-sawtooth-ubuntu-label:
 
-Step 11: Stop Sawtooth Components
+Step 12: Stop Sawtooth Components
 =================================
 
 Use this procedure if you need to stop or reset the Sawtooth environment for any
@@ -678,6 +712,8 @@ To stop the Sawtooth components:
 
       A single CTRL-c does a graceful shutdown. If you prefer not to wait, you
       can enter multiple CTRL-c characters to force the shutdown.
+
+#. Stop the Devmode consensus engine by entering a single CTRL-c in consensus terminal window.
 
 #. Stop the REST API by entering a single CTRL-c in REST API terminal window.
 
