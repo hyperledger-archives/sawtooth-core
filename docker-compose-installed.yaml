@@ -243,17 +243,6 @@ services:
     image: sawtooth-intkey-workload:${ISOLATION_ID}
     container_name: sawtooth-intkey-workload
 
-  devmode-rust:
-    build:
-      context: .
-      dockerfile: sdk/examples/devmode_rust/Dockerfile-installed-${DISTRO}
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode-engine-rust:${ISOLATION_ID}
-    container_name: sawtooth-devmode-engine-rust
-
   sawtooth-meta:
     build:
       context: .

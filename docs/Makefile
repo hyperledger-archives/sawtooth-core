@@ -69,14 +69,7 @@ python:
 	$(PYTHONAPIDOC) ../sdk/python/sawtooth_sdk/processor
 	$(PYTHONAPIDOC) ../signing/sawtooth_signing
 
-RUSTSDKDIR := $(HTMLDIR)/rust_sdk
-rust:
-	mkdir -p $(RUSTSDKDIR)/
-	cd $(SAWTOOTH)/sdk/rust/; cargo doc --no-deps --lib;
-	rm -f $(SAWTOOTH)/sdk/rust/target/doc/.lock
-	cp -r $(SAWTOOTH)/sdk/rust/target/doc/ $(RUSTSDKDIR)/doc
-
-html: templates cli python rust
+html: templates cli python
 	@mkdir -p source/_static
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(HTMLDIR)
 	@echo

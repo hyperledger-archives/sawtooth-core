@@ -42,7 +42,7 @@ protobuf = "2.0"
 rand = "0.5"
 reqwest = "0.8"
 rust-crypto = "0.2"
-sawtooth-sdk = { path = "../../sdk/rust" }
+sawtooth-sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust" }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

@@ -18,8 +18,6 @@
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 dirs="
-    $top_dir/sdk/rust
-    $top_dir/sdk/examples/intkey_rust
     $top_dir/families/block_info/sawtooth_block_info
     $top_dir/families/battleship
     $top_dir/families/smallbank/smallbank_rust

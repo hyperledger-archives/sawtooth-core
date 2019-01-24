@@ -163,77 +163,27 @@ services:
     stop_signal: SIGKILL
 
   devmode-0:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator-0:5005 -v
     stop_signal: SIGKILL
 
   devmode-1:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator-1:5005 -v
     stop_signal: SIGKILL
 
   devmode-2:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator-2:5005 -v
     stop_signal: SIGKILL
 
   devmode-3:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator-3:5005 -v
     stop_signal: SIGKILL
 
   devmode-4:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/devmode_rust/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-devmode$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    working_dir: /project/sawtooth-core/sdk/examples/devmode_rust
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
     command: devmode-engine-rust --connect tcp://validator-4:5005 -v
     stop_signal: SIGKILL
 

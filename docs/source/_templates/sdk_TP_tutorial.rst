@@ -101,8 +101,8 @@ to connect with the validator and the handler class.
 .. note::
     If you're looking for a working implementation of an XO transaction
     processor in Rust, check out the `xo_rust example
-    <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples/xo_rust>`_
-    in the Sawtooth repository.
+    <https://github.com/hyperledger/sawtooth-sdk-rust/tree/master/examples/xo_rust>`_
+    in the Rust SDK repository.
 
 {% else %}
 
