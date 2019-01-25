@@ -33,7 +33,8 @@ for proof-of-concept or production use in a Sawtooth network.
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
         $ sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly xenial universe'
 
-#. Update your package lists, then install Sawtooth.
+#. Update your package lists, then install Sawtooth and the PoET consensus
+   engine.
 
    .. code-block:: console
 

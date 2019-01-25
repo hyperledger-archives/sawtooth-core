@@ -10,7 +10,7 @@ Creating the Genesis Block
 
 The first node in a new Sawtooth network must create the genesis block to
 initialize the Settings transaction processor and specify the consensus
-mechanism. The settings in the genesis block enable other nodes to join the
+algorithm. The settings in the genesis block enable other nodes to join the
 network and use these on-chain settings.
 
 Before you start the first Sawtooth node, use this procedure to create and
@@ -65,7 +65,8 @@ submit the genesis block.
 
       [sawtooth@system]$ sawset proposal create --key /etc/sawtooth/keys/validator.priv \
       -o config.batch \
-      sawtooth.consensus.algorithm=poet \
+      sawtooth.consensus.algorithm.name=PoET \
+      sawtooth.consensus.algorithm.version=0.1 \
       sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
@@ -80,8 +81,11 @@ submit the genesis block.
    ``-o config.batch``
     Wraps the proposal transaction in a batch named ``config.batch``.
 
-   ``sawtooth.consensus.algorithm=poet``
+   ``sawtooth.consensus.algorithm.name=PoET``
     Changes the consensus algorithm to PoET.
+
+   ``sawtooth.consensus.algorithm.version=0.1``
+    Specifies the version of the consensus algorithm.
 
    ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)"``
     Adds the public key for the PoET Validator Registry transaction
