@@ -32,6 +32,16 @@ bytes and getting the private key's associated public key.
     const privateKey = context.newRandomPrivateKey()
     const signer = CryptoFactory(context).newSigner(privateKey)
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import "github.com/hyperledger/sawtooth-sdk-go/signing"
+
+    context := signing.NewSecp256k1Context()
+    privateKey := context.NewRandomPrivateKey()
+    signer := signing.NewCryptoFactory(context).NewSigner(privateKey)
+
 {% else %}
 
 {# Python 3 code should be the default #}
@@ -105,6 +115,44 @@ SHA-512 hash of the payload bytes.
         payloadSha512: createHash('sha512').update(payloadBytes).digest('hex')
     }).finish()
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "crypto/sha512"
+        "encoding/hex"
+        "github.com/golang/protobuf/proto"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/transaction_pb2"
+        "strings"
+    )
+
+    hashHandler := sha512.New()
+    hashHandler.Write(payloadBytes)
+    payloadSha512 := strings.ToLower(hex.EncodeToString(hashHandler.Sum(nil)))
+
+    rawTransactionHeader := transaction_pb2.TransactionHeader{
+        SignerPublicKey:  signer.GetPublicKey().AsHex(),
+        FamilyName:       "intkey",
+        FamilyVersion:    "1.0",
+        // In this example, there are no dependencies.  This list should include
+        // an previous transaction header signatures that must be applied for
+        // this transaction to successfully commit.
+        // For example,
+        // dependencies:[]string{"540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a"}
+        Dependencies:     []string{},
+        // In this example, we're signing the batch with the same private key,
+        // but the batch can be signed by another party, in which case, the
+        // public key will need to be associated with that key.
+        BatcherPublicKey: signer.GetPublicKey().AsHex(),
+        Inputs:           []string{"1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7"},
+        Outputs:          []string{"1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7"},
+        PayloadSha512:    payloadSha512,
+    }
+
+    // Check if err is nil before continuing
+    transactionHeaderBytes, err := proto.Marshal(&rawTransactionHeader)
+
 {% else %}
 
 .. code-block::  python
@@ -177,6 +225,22 @@ construct the complete Transaction.
         payload: payloadBytes
     })
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "encoding/hex"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/transaction_pb2"
+    )
+
+    signature := hex.EncodeToString(signer.Sign(transactionHeaderBytes))
+    transaction := transaction_pb2.Transaction{
+        Header:          transactionHeaderBytes,
+        HeaderSignature: signature,
+        Payload:         payloadBytes,
+    }
+
 {% else %}
 
 .. code-block::  python
@@ -214,6 +278,27 @@ be serialized as a single Transaction.
     ]).finish()
 
     const txnBytes2 = transaction.finish()
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "github.com/golang/protobuf/proto"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/transaction_pb2"
+    )
+
+    rawTransactionList := transaction_pb2.TransactionList{
+        Transactions: []*transaction_pb2.Transaction{
+            &transaction1,
+            &transaction2,
+        },
+    }
+    // Check if err is nil before continuing
+    transactionListBytes, err := proto.Marshal(&rawTransactionList)
+
+    // Check if err is nil before continuing
+    transactionBytes, err := proto.Marshal(&transaction)
 
 {% else %}
 
@@ -261,6 +346,25 @@ are listed in the Batch.
         transactionIds: transactions.map((txn) => txn.headerSignature),
     }).finish()
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "github.com/golang/protobuf/proto"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/batch_pb2"
+    )
+
+    transactionSignatures := []string{transaction.HeaderSignature}
+
+    rawBatchHeader := batch_pb2.BatchHeader{
+        SignerPublicKey: signer.GetPublicKey().AsHex(),
+        TransactionIds:  transactionSignatures,
+    }
+
+    // Check if err is nil before continuing
+    batchHeaderBytes, err := proto.Marshal(&rawBatchHeader)
+
 {% else %}
 
 .. code-block:: python
@@ -297,6 +401,23 @@ transactions that make up the batch.
         transactions: transactions
     })
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "encoding/hex"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/batch_pb2"
+    )
+
+    signature := hex.EncodeToString(signer.Sign(batchHeader))
+
+    batch := batch_pb2.Batch{
+        Header:          batchHeaderBytes,
+        Transactions:    transactions,
+        HeaderSignature: signature,
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -330,6 +451,22 @@ interleaved with yours.
     const batchListBytes = protobuf.BatchList.encode({
         batches: [batch]
     }).finish()
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "github.com/golang/protobuf/proto"
+        "github.com/hyperledger/sawtooth-sdk-go/protobuf/batch_pb2"
+    )
+
+    rawBatchList := batch_pb2.BatchList{
+        Batches: []*batch_pb2.Batch{&batch},
+    }
+
+    // Check if err is nil before continuing
+    batchListBytes := proto.Marshal(&rawBatchList)
 
 {% else %}
 

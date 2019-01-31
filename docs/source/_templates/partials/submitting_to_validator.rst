@@ -27,6 +27,22 @@ prepared the BatchList:
         console.log(response.body)
     })
 
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "bytes"
+        "net/http"
+    )
+
+    // Check if err is nil before continuing
+    response, err := http.Post(
+        "http://rest.api.domain/batches",
+        "application/octet-stream",
+        bytes.NewBuffer(batchListBytes)
+    )
+
 {% else %}
 
 .. code-block:: python
@@ -60,6 +76,17 @@ sent it from the command line with ``curl``:
     const fileStream = fs.createWriteStream('intkey.batches')
     fileStream.write(batchListBytes)
     fileStream.end()
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    import (
+        "io/ioutil"
+    )
+
+    // Check if err is nil before continuing
+    err = ioutil.WriteFile("intkey.batches", batchListBytes, 0644)
 
 {% else %}
 
