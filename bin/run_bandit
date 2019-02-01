@@ -25,10 +25,6 @@ directories="
     integration
     rest_api/build
     rest_api/tests
-    sdk/python/build
-    sdk/python/sawtooth_processor_test
-    signing/build
-    signing/tests
     validator/build
     validator/tests
 "

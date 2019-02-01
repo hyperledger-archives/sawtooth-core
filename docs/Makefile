@@ -62,14 +62,7 @@ templates:
 cli:
 	$(SAWTOOTH)/bin/generate_cli_output
 
-PYTHONSDKDIR := source/sdks/python_sdk
-PYTHONAPIDOC := $(SPHINXAPIDOC) -f -o $(PYTHONSDKDIR)
-python:
-	mkdir -p $(PYTHONSDKDIR)
-	$(PYTHONAPIDOC) ../sdk/python/sawtooth_sdk/processor
-	$(PYTHONAPIDOC) ../signing/sawtooth_signing
-
-html: templates cli python
+html: templates cli
 	@mkdir -p source/_static
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(HTMLDIR)
 	@echo

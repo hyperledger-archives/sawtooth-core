@@ -37,8 +37,8 @@ The Maturity column shows the general maturity level of each feature:
 The available SDKs are in the following repositories:
 
 * Python:
-  `https://github.com/hyperledger/sawtooth-core/tree/master/sdk/python
-  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/python>`_
+  `https://github.com/hyperledger/sawtooth-sdk-python/
+  <https://github.com/hyperledger/sawtooth-sdk-python>`_
 
 * Rust:
   `https://github.com/hyperledger/sawtooth-sdk-rust

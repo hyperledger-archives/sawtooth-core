@@ -1,2 +1,0 @@
-recursive-include sawtooth_signing *.py
-include sawtooth_signing/ECDSA/*

@@ -26,12 +26,6 @@ build_str = "lib.{}-{}.{}".format(
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
     'rest_api'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'sdk', 'python'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'signing'))
 
 from sawtooth_rest_api.rest_api import main
 

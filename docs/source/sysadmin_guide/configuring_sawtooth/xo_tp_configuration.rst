@@ -15,8 +15,8 @@ file.
    By default, the config directory is ``/etc/sawtooth/``.
    See :doc:`path_configuration_file` for more information.
 
-An example configuration file is in the ``sawtooth-core`` repository at
-``/sawtooth-core/sdk/examples/xo_python/packaging/xo.toml.example``.
+An example configuration file is in the ``sawtooth-sdk-python`` repository at
+``https://github.com/hyperledger/sawtooth-sdk-python/blob/master/examples/xo_python/packaging/xo.toml.example``.
 To create a XO transaction processor configuration file, download this example
 file to the config directory and name it ``xo.toml``. Then edit the file
 to change the example configuration options as necessary for your system.

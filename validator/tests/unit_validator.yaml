@@ -33,7 +33,6 @@ services:
         -v
         -s /project/sawtooth-core/validator/tests
     environment:
-        PYTHONPATH: "/project/sawtooth-core/signing:\
-            /project/sawtooth-core/core:\
+        PYTHONPATH: "/project/sawtooth-core/core:\
             /project/sawtooth-core/validator"
         SAWTOOTH_LIB_HOME: "/project/sawtooth-core/validator/lib"

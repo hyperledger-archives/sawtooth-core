@@ -18,7 +18,6 @@
 # MODULE_LIST determines the order in which modules are run.
 # Quicker tests should run before slower ones.
 MODULE_LIST="
-    signing
     cli
     rest_api
     settings
@@ -26,7 +25,6 @@ MODULE_LIST="
     block_info
     battleship
     validator
-    python_sdk
     rust_sdk
     integration
 "
@@ -119,9 +117,6 @@ main() {
         else
             echo "[---Running $module tests---]"
             case $module in
-                signing)
-                    test_signing
-                    ;;
                 cli)
                     test_cli
                     ;;
@@ -143,9 +138,6 @@ main() {
                 validator)
                     test_validator
                     ;;
-                python_sdk)
-                    test_python_sdk
-                    ;;
                 rust_sdk)
                     test_rust_sdk
                     ;;
@@ -161,11 +153,6 @@ main() {
             esac
         fi
     done
-}
-
-test_signing() {
-    run_docker_test ./signing/tests/unit_signing.yaml
-    copy_coverage .coverage.signing
 }
 
 test_cli() {
@@ -211,25 +198,6 @@ test_validator() {
     copy_coverage .coverage.namespace_restriction
     run_docker_test test_state_verifier --timeout 30
     run_docker_test ./validator/tests/unit_rust_validator.yaml
-}
-
-test_python_sdk() {
-    run_docker_test ./sdk/python/tests/unit_python_sdk.yaml
-    copy_coverage .coverage.test_python_sdk
-    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_python.yaml
-    copy_coverage .coverage.test_tp_intkey_python
-    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_python.yaml
-    copy_coverage .coverage.test_tp_xo_python
-    run_docker_test test_intkey_smoke_python
-    copy_coverage .coverage.test_intkey_smoke_python
-    run_docker_test test_workload
-    copy_coverage .coverage.workload
-    run_docker_test test_xo_smoke_python
-    copy_coverage .coverage.test_xo_smoke_python
-    run_docker_test test_two_families
-    copy_coverage .coverage.two_families
-    run_docker_test test_intkey_cli
-    copy_coverage .coverage.intkey_cli
 }
 
 test_rust_sdk() {

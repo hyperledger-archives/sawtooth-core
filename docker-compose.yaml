@@ -40,55 +40,6 @@ services:
       "
     stop_signal: SIGKILL
 
-  intkey-tp-python:
-    build:
-      context: .
-      dockerfile: sdk/examples/intkey_python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: intkey-tp-python-local:${ISOLATION_ID}
-    volumes:
-      - ./:/project/sawtooth-core
-    container_name: intkey-tp-python-local
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        bin/protogen
-        cd sdk/examples/intkey_python
-        python3 setup.py clean --all
-        python3 setup.py build
-        intkey-tp-python -vv -C tcp://validator:4004
-      "
-    stop_signal: SIGKILL
-
-
-  xo-tp-python:
-    build:
-      context: .
-      dockerfile: sdk/examples/xo_python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: xo-tp-python-local:${ISOLATION_ID}
-    volumes:
-      - ./:/project/sawtooth-core
-    container_name: xo-tp-python-local
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        bin/protogen
-        cd sdk/examples/xo_python
-        python3 setup.py clean --all
-        python3 setup.py build
-        xo-tp-python -vv -C tcp://validator:4004
-      "
-    stop_signal: SIGKILL
-
 
   client:
     build:
@@ -195,4 +146,26 @@ services:
       - validator
     command: |
         devmode-engine-rust -v --connect tcp://validator:5050
+    stop_signal: SIGKILL
+
+  intkey-tp-python:
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
+    container_name: sawtooth-intkey-tp-python
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        intkey-tp-python -vv -C tcp://validator:4004
+      "
+    stop_signal: SIGKILL
+
+  xo-tp-python:
+    image: hyperledger/sawtooth-xo-tp-python:nightly
+    container_name: sawtooth-xo-tp-python
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        xo-tp-python -vv -C tcp://validator:4004
+      "
     stop_signal: SIGKILL

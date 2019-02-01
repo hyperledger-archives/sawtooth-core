@@ -94,19 +94,8 @@ services:
     command: settings-tp -vv -C tcp://validator:4004
 
   intkey-tp-python:
-    build:
-      context: ../..
-      dockerfile: docker/sawtooth-debug-python
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    volumes:
-      - ../../:/project/sawtooth-core
-    image: debug-sawtooth-python
-    container_name: debug-intkey-tp-python
-    cap_add:
-      - SYS_PTRACE
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
+    container_name: intkey-tp-python
     depends_on:
       - validator
     command: intkey-tp-python -vv -C tcp://validator:4004

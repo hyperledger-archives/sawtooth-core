@@ -56,6 +56,4 @@ services:
         TEST_BIND: "tcp://eth0:4004"
         PYTHONPATH: "/project/sawtooth-core/families/identity:\
             /project/sawtooth-core/families/identity/tests:\
-            /project/sawtooth-core/sdk/python:\
-            /project/sawtooth-core/integration:\
-            /project/sawtooth-core/signing"
+            /project/sawtooth-core/integration"

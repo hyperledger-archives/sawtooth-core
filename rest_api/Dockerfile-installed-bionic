@@ -14,75 +14,6 @@
 
 # docker build -f rest_api/Dockerfile-installed-bionic -t sawtooth-rest-api .
 
-# -------------=== signing build ===-------------
-FROM ubuntu:bionic as sawtooth-signing-builder
-
-RUN apt-get update \
- && apt-get install gnupg -y
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q \
-    git \
-    python3 \
-    python3-protobuf \
-    python3-secp256k1 \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio
-
-COPY . /project
-
-RUN /project/bin/protogen \
- && cd /project/signing \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
-# -------------=== python sdk build ===-------------
-
-FROM ubuntu:bionic as sawtooth-sdk-python-builder
-
-RUN apt-get update \
- && apt-get install gnupg -y
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q \
-    git \
-    python3 \
-    python3-colorlog \
-    python3-protobuf \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio \
-    python3-toml \
-    python3-yaml
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-
-COPY . /project
-
-RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
- && cd /project/sdk/python \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
 # -------------=== rest api build ===-------------
 
 FROM ubuntu:bionic as rest-api-builder
@@ -92,9 +23,9 @@ RUN apt-get update \
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && apt-get install -y -q \
     git \
@@ -106,10 +37,9 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sou
     python3-grpcio \
     python3-protobuf \
     python3-pyformance \
+    python3-sawtooth-sdk \
+    python3-sawtooth-signing \
     python3-stdeb
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 
 COPY . /project
 
@@ -131,13 +61,11 @@ RUN apt-get update \
  gnupg \
  systemd
 
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 COPY --from=rest-api-builder /project/python3-sawtooth-rest-api*.deb /tmp
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install \

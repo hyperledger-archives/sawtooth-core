@@ -56,30 +56,18 @@
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
 
-/sdk/python/build/
-/sdk/python/sawtooth_sdk/protobuf/
-/sdk/python/**/__pycache__/
 /sdk/javascript/node_modules
 /sdk/javascript/package-lock.json
 /sdk/javascript/protobuf/protobuf_bundle.json
-/sdk/examples/xo_python/build/
-/sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
 /sdk/examples/xo_javascript/package-lock.json
-/sdk/examples/intkey_python/build/
-/sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_javascript/package-lock.json
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
-/sdk/examples/noop_python/**/__pycache__/
 /sdk/examples/xo_java/dependency-reduced-pom.xml
 /sdk/examples/xo_java/target/
 /sdk/java/target/
-
-/signing/build/
-/signing/sawtooth_signing.egg-info/
-/signing/**/__pycache__/
 
 /validator/build/
 /validator/sawtooth_validator.egg-info/
