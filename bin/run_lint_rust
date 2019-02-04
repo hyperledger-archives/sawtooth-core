@@ -52,7 +52,7 @@ for dir in $dirs; do
         exitcode=1
         if [[ $rustfmt_exit == 1 ]]; then
           echo "Incorrect formatting: $dir (error code: $rustfmt_exit)"
-          echo -e $diff
+          echo "$diff"
         else
             echo "rustfmt encountered an operational error"
         fi
