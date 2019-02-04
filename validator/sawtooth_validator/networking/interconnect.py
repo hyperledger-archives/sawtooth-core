@@ -28,7 +28,9 @@ from enum import Enum
 
 import zmq
 import zmq.auth
+# pylint: disable=E0611,E0001
 from zmq.auth.asyncio import AsyncioAuthenticator
+# pylint: enable=E0611,E0001
 import zmq.asyncio
 
 from sawtooth_validator.concurrent.threadpool import \
