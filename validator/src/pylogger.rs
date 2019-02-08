@@ -40,6 +40,16 @@ pub fn set_up_logger(verbosity: u64, py: Python) {
     warn!("Started logger at level {}", verbosity_level);
 }
 
+#[no_mangle]
+#[allow(unused)]
+pub extern "C" fn pylogger_init(verbosity: usize) {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    if let Err(_) = PyLogger::init(determine_log_level(verbosity as u64), py) {
+        warn!("Attempted to initialize logger twice; ignoring");
+    }
+}
+
 pub fn exception(py: Python, msg: &str, err: PyErr) {
     let logger = PyLogger::new(py).expect("Failed to create new PyLogger");
     logger.exception(py, msg, err);
@@ -58,7 +68,8 @@ impl PyLogger {
     }
 
     fn init(verbosity: Level, py: Python) -> Result<(), SetLoggerError> {
-        let logger = PyLogger::new(py).unwrap();
+        let logger =
+            PyLogger::new(py).expect("Failed to instantiate Python logger; check library paths.");
 
         log::set_boxed_logger(Box::new(logger))?;
 
