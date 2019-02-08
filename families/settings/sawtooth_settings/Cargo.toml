@@ -13,7 +13,7 @@
 # limitations under the License.
 
 [package]
-name = "sawtooth-settings"
+name = "sawtooth-settings-tp"
 version = "0.1.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
