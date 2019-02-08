@@ -19,11 +19,11 @@
 #
 # Build:
 #   $ cd sawtooth-core/ci/nightly
-#   $ docker build . -f sawtooth-devmode-engine -t sawtooth-devmode-engine
+#   $ docker build . -f sawtooth-devmode-engine-rust -t sawtooth-devmode-engine-rust:bumper-nightly
 #
 # Run:
 #   $ cd sawtooth-ci
-#   $ docker run sawtooth-devmode-engine
+#   $ docker run sawtooth-devmode-engine-rust
 
 FROM ubuntu:xenial
 
@@ -34,9 +34,9 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/nightly xenial 
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && apt-get install -y -q \
-    sawtooth-devmode-rust \
+    sawtooth-devmode-engine-rust \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 
-CMD ["devmode-rust", "-C", "tcp://validator:5050"]
+CMD ["devmode-engine-rust", "-C", "tcp://validator:5050"]
