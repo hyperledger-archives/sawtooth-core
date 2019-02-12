@@ -36,7 +36,7 @@ use engine::DevmodeEngine;
 use sawtooth_sdk::consensus::zmq_driver::ZmqDriver;
 
 fn main() {
-    let matches = clap_app!(intkey =>
+    let matches = clap_app!(("devmode-engine-rust") =>
         (version: crate_version!())
         (about: "Devmode Consensus Engine (Rust)")
         (@arg connect: -C --connect +takes_value

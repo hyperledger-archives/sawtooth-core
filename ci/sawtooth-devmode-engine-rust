@@ -34,9 +34,9 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial u
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
  && apt-get install -y -q \
-    sawtooth-devmode-rust \
+    sawtooth-devmode-engine-rust \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 
-CMD ["devmode-rust", "-C", "tcp://validator:5050"]
+CMD ["devmode-engine-rust", "-C", "tcp://validator:5050"]
