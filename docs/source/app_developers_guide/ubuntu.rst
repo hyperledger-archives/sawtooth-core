@@ -7,8 +7,8 @@ development on Ubuntu 16.04. It shows you how to install Sawtooth on Ubuntu,
 then walks you through the following tasks:
 
  * Generating a user key
- * Creating the genesis block
  * Generating a root key
+ * Creating the genesis block
  * Starting the components: validator, consensus engine, REST API, and
    transaction processors
  * Checking the status of the REST API
@@ -144,9 +144,24 @@ previous step.
       writing file: /home/yourname/.sawtooth/keys/yourname.pub
 
 
+.. _generate-root-key-ubuntu:
+
+Step 3: Generate the Root Key for the Validator
+===============================================
+
+Generate the key for the validator, which runs as root. Use the same terminal
+window as the previous step.
+
+.. code-block:: console
+
+   user@validator$ sudo sawadm keygen
+   writing file: /etc/sawtooth/keys/validator.priv
+   writing file: /etc/sawtooth/keys/validator.pub
+
+
 .. _create-genesis-block-ubuntu-label:
 
-Step 3: Create the Genesis Block
+Step 4: Create the Genesis Block
 ================================
 
 Because this is a new network, you must create a genesis block (the first block
@@ -163,44 +178,40 @@ Use the same terminal window as the previous step.
 #. Create a settings proposal (as a batch of transactions) that authorizes you
    to set and change configuration settings. By default (if no options are
    specified), the ``sawset genesis`` command uses the key of the current user
-   (you).
+   (you). Execute these commands in a directory writable by user sawtooth (such as ``/tmp``).
 
    .. code-block:: console
 
-      user@validator$ sawset genesis
+      user@validator$ cd /tmp
+      user@validator$ sudo -u sawtooth sawset genesis -k /etc/sawtooth/keys/validator.priv
       Generated config-genesis.batch
 
     This settings proposal will change authorized keys in the setting
     ``sawtooth.settings.vote.authorized_keys``. The change will take effect
     after the validator and Settings transaction processor have started.
 
-#. Run the following command:
+#. Create a settings proposal to initialize the Devmode consensus engine settings. This command sets the consensus algorithm to Devmode.
 
    .. code-block:: console
 
-     user@validator$ sudo -u sawtooth sawadm genesis config-genesis.batch
+      user@validator$ sudo -u sawtooth sawset proposal create \
+         -k /etc/sawtooth/keys/validator.priv \
+         sawtooth.consensus.algorithm.name=Devmode \
+         sawtooth.consensus.algorithm.version=0.1 -o config.batch
+
+#. Combine the previously created batches into a single genesis batch that will be committed in the genesis block:
+
+   .. code-block:: console
+
+     user@validator$ sudo -u sawtooth sawadm genesis config-genesis.batch config.batch
      Processing config-genesis.batch...
+     Processing config.batch...
      Generating /var/lib/sawtooth/genesis.batch
 
    .. note::
 
       The ``-u sawtooth`` option refers to the sawtooth user,
       not the sawtooth command.
-
-
-.. _generate-root-key-ubuntu:
-
-Step 4: Generate the Root Key for the Validator
-===============================================
-
-Generate the key for the validator, which runs as root. Use the same terminal
-window as the previous step.
-
-.. code-block:: console
-
-   user@validator$ sudo sawadm keygen
-   writing file: /etc/sawtooth/keys/validator.priv
-   writing file: /etc/sawtooth/keys/validator.pub
 
 
 .. _start-validator-ubuntu-label:
@@ -362,7 +373,9 @@ processor.
       .. code-block:: console
 
          user@client$ sawtooth settings list
-         sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+         sawtooth.consensus.algorithm.name: Devmode
+         sawtooth.consensus.algorithm.version: 0.1
+         sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66...
 
    The ``settings-tp`` transaction processor continues to run and to display log
    messages in its terminal window.
