@@ -57,5 +57,5 @@ RUN apt-get update \
     libssl-dev \
     libzmq3-dev \
     systemd \
- && dpkg -i /tmp/sawtooth-settings_*.deb || true \
+ && dpkg -i /tmp/sawtooth-settings*.deb || true \
  && apt-get -f -y install

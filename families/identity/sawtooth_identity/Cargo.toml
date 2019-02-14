@@ -15,7 +15,7 @@
 # ------------------------------------------------------------------------------
 
 [package]
-name = "sawtooth_identity"
+name = "sawtooth-identity-tp"
 version = "0.1.0"
 authors = ["Bitwise IO"]
 build = "build.rs"

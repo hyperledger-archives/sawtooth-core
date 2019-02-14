@@ -37,7 +37,6 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable bionic u
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
  && apt-get install -y -q \
-    python3-sawtooth-block-info \
     python3-sawtooth-cli \
     python3-sawtooth-validator \
  && apt-get clean \
