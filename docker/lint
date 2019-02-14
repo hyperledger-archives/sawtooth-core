@@ -40,7 +40,7 @@ RUN apt-get install -y -q \
     python3-toml \
     python3-yaml \
     python3-zmq \
-    && pip3 install \
+ && pip3 install \
     pylint \
     pycodestyle \
     bandit \
