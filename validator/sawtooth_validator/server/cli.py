@@ -256,6 +256,9 @@ def main(args):
         'Starting validator with %s scheduler',
         validator_config.scheduler)
 
+    component_workers = validator_config.component_thread_pool_workers
+    network_workers = validator_config.network_thread_pool_workers
+    sig_workers = validator_config.signature_thread_pool_workers
     validator = Validator(
         bind_network,
         bind_component,
@@ -275,7 +278,10 @@ def main(args):
         validator_config.fork_cache_keep_time,
         validator_config.network_public_key,
         validator_config.network_private_key,
-        roles=validator_config.roles)
+        roles=validator_config.roles,
+        component_thread_pool_workers=component_workers,
+        network_thread_pool_workers=network_workers,
+        signature_thread_pool_workers=sig_workers)
 
     # pylint: disable=broad-except
     try:

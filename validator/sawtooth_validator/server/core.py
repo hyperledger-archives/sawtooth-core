@@ -90,7 +90,10 @@ class Validator:
                  fork_cache_keep_time,
                  network_public_key=None,
                  network_private_key=None,
-                 roles=None):
+                 roles=None,
+                 component_thread_pool_workers=10,
+                 network_thread_pool_workers=10,
+                 signature_thread_pool_workers=3):
         """Constructs a validator instance.
 
         Args:
@@ -115,6 +118,12 @@ class Validator:
             config_dir (str): path to the config directory
             identity_signer (str): cryptographic signer the validator uses for
                 signing
+            component_thread_pool_workers (int): number of workers in the
+                component thread pool; defaults to 10.
+            network_thread_pool_workers (int): number of workers in the network
+                thread pool; defaults to 10.
+            signature_thread_pool_workers (int): number of workers in the
+                signature thread pool; defaults to 3.
         """
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
@@ -153,16 +162,16 @@ class Validator:
 
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(
-            max_workers=10,
+            max_workers=component_thread_pool_workers,
             name='Component')
         network_thread_pool = InstrumentedThreadPoolExecutor(
-            max_workers=10,
+            max_workers=network_thread_pool_workers,
             name='Network')
         client_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=5,
             name='Client')
         sig_pool = InstrumentedThreadPoolExecutor(
-            max_workers=3,
+            max_workers=signature_thread_pool_workers,
             name='Signature')
 
         # -- Setup Dispatchers -- #

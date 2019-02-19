@@ -39,6 +39,9 @@ def load_default_validator_config():
         maximum_peer_connectivity=10,
         state_pruning_block_depth=100,
         fork_cache_keep_time=300,
+        component_thread_pool_workers=10,
+        network_thread_pool_workers=10,
+        signature_thread_pool_workers=3
     )
 
 
@@ -68,7 +71,9 @@ def load_toml_validator_config(filename):
          'opentsdb_url', 'opentsdb_db', 'opentsdb_username',
          'opentsdb_password', 'minimum_peer_connectivity',
          'maximum_peer_connectivity', 'state_pruning_block_depth',
-         'fork_cache_keep_time'])
+         'fork_cache_keep_time',
+         'component_thread_pool_workers', 'network_thread_pool_workers',
+         'signature_thread_pool_workers'])
     if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -118,6 +123,12 @@ def load_toml_validator_config(filename):
             "state_pruning_block_depth", None),
         fork_cache_keep_time=toml_config.get(
             "fork_cache_keep_time", None),
+        component_thread_pool_workers=toml_config.get(
+            "component_thread_pool_workers", None),
+        network_thread_pool_workers=toml_config.get(
+            "network_thread_pool_workers", None),
+        signature_thread_pool_workers=toml_config.get(
+            "signature_thread_pool_workers", None)
     )
 
     return config
@@ -149,6 +160,9 @@ def merge_validator_config(configs):
     maximum_peer_connectivity = None
     state_pruning_block_depth = None
     fork_cache_keep_time = None
+    component_thread_pool_workers = None
+    network_thread_pool_workers = None
+    signature_thread_pool_workers = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -191,6 +205,15 @@ def merge_validator_config(configs):
             state_pruning_block_depth = config.state_pruning_block_depth
         if config.fork_cache_keep_time is not None:
             fork_cache_keep_time = config.fork_cache_keep_time
+        if config.component_thread_pool_workers is not None:
+            component_thread_pool_workers = \
+                config.component_thread_pool_workers
+        if config.network_thread_pool_workers is not None:
+            network_thread_pool_workers = \
+                config.network_thread_pool_workers
+        if config.signature_thread_pool_workers is not None:
+            signature_thread_pool_workers = \
+                config.signature_thread_pool_workers
 
     return ValidatorConfig(
         bind_network=bind_network,
@@ -213,6 +236,9 @@ def merge_validator_config(configs):
         maximum_peer_connectivity=maximum_peer_connectivity,
         state_pruning_block_depth=state_pruning_block_depth,
         fork_cache_keep_time=fork_cache_keep_time,
+        component_thread_pool_workers=component_thread_pool_workers,
+        network_thread_pool_workers=network_thread_pool_workers,
+        signature_thread_pool_workers=signature_thread_pool_workers
     )
 
 
@@ -264,7 +290,10 @@ class ValidatorConfig:
                  minimum_peer_connectivity=None,
                  maximum_peer_connectivity=None,
                  state_pruning_block_depth=None,
-                 fork_cache_keep_time=None):
+                 fork_cache_keep_time=None,
+                 component_thread_pool_workers=None,
+                 network_thread_pool_workers=None,
+                 signature_thread_pool_workers=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -286,6 +315,9 @@ class ValidatorConfig:
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._state_pruning_block_depth = state_pruning_block_depth
         self._fork_cache_keep_time = fork_cache_keep_time
+        self._component_thread_pool_workers = component_thread_pool_workers
+        self._network_thread_pool_workers = network_thread_pool_workers
+        self._signature_thread_pool_workers = signature_thread_pool_workers
 
     @property
     def bind_network(self):
@@ -367,6 +399,18 @@ class ValidatorConfig:
     def fork_cache_keep_time(self):
         return self._fork_cache_keep_time
 
+    @property
+    def component_thread_pool_workers(self):
+        return self._component_thread_pool_workers
+
+    @property
+    def network_thread_pool_workers(self):
+        return self._network_thread_pool_workers
+
+    @property
+    def signature_thread_pool_workers(self):
+        return self._signature_thread_pool_workers
+
     def __repr__(self):
         # not including  password for opentsdb
         return (
@@ -378,6 +422,9 @@ class ValidatorConfig:
             "minimum_peer_connectivity={}, maximum_peer_connectivity={}, "
             "state_pruning_block_depth={}, "
             "fork_cache_keep_time={})"
+            "component_thread_pool_workers={}, "
+            "network_thread_pool_workers={}, "
+            "signature_thread_pool_workers={})"
         ).format(
             self.__class__.__name__,
             repr(self._bind_network),
@@ -399,6 +446,9 @@ class ValidatorConfig:
             repr(self._maximum_peer_connectivity),
             repr(self._state_pruning_block_depth),
             repr(self._fork_cache_keep_time),
+            repr(self._component_thread_pool_workers),
+            repr(self._network_thread_pool_workers),
+            repr(self._signature_thread_pool_workers)
         )
 
     def to_dict(self):
@@ -422,7 +472,12 @@ class ValidatorConfig:
             ('minimum_peer_connectivity', self._minimum_peer_connectivity),
             ('maximum_peer_connectivity', self._maximum_peer_connectivity),
             ('state_pruning_block_depth', self._state_pruning_block_depth),
-            ('fork_cache_keep_time', self._fork_cache_keep_time)
+            ('fork_cache_keep_time', self._fork_cache_keep_time),
+            ('component_thread_pool_workers',
+                self._component_thread_pool_workers),
+            ('network_thread_pool_workers', self._network_thread_pool_workers),
+            ('network_thread_pool_workers',
+                self._signature_thread_pool_workers)
         ])
 
     def to_toml_string(self):

@@ -67,6 +67,19 @@ minimum_peer_connectivity = 3
 # The maximum number of peers that will be accepted.
 maximum_peer_connectivity = 10
 
+# The following settings are for tuning the thread allocation in several of the
+# thread pools used by the validator.  These settings should be modified by
+# advanced users only.
+
+# The maximum number of threads in the component worker pool
+# component_thread_pool_workers = 10
+
+# The maximum number of threads in the network worker pool
+# network_thread_pool_workers = 10
+
+# The maximum number of threads in the signature verification worker pool
+# signature_thread_pool_workers = 3
+
 # The host and port for Open TSDB database used for metrics
 # opentsdb_url = ""
 
