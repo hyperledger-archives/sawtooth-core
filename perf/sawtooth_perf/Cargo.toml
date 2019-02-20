@@ -18,7 +18,7 @@ version = "0.1.0"
 authors = ["Intel Corporation"]
 
 [dependencies]
-sawtooth-sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust" }
+sawtooth-sdk = "0.2"
 chrono = "0.4"
 protobuf = "2.0"
 futures = "0.1"
