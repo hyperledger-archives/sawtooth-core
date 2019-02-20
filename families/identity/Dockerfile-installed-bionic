@@ -14,75 +14,6 @@
 
 # docker build -f families/identity/Dockerfile-installed-bionic -t sawtooth-identity-tp .
 
-# -------------=== signing build ===-------------
-FROM ubuntu:bionic as sawtooth-signing-builder
-
-RUN apt-get update \
- && apt-get install gnupg -y
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q \
-    git \
-    python3 \
-    python3-protobuf \
-    python3-secp256k1 \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio
-
-COPY . /project
-
-RUN /project/bin/protogen \
- && cd /project/signing \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
-# -------------=== python sdk build ===-------------
-
-FROM ubuntu:bionic as sawtooth-sdk-python-builder
-
-RUN apt-get update \
- && apt-get install gnupg -y
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q \
-    git \
-    python3 \
-    python3-colorlog \
-    python3-protobuf \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio \
-    python3-toml \
-    python3-yaml
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-
-COPY . /project
-
-RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
- && cd /project/sdk/python \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
 # -------------=== identity build ===-------------
 
 FROM ubuntu:bionic as identity-tp-builder
@@ -92,18 +23,12 @@ RUN apt-get update \
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
+RUN apt-get update \
  && apt-get install -y -q \
+    curl \
+    gcc \
     git \
     python3 \
-    python3-colorlog \
-    python3-protobuf \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio \
     libssl-dev \
     libzmq3-dev \
     pkg-config \
@@ -117,8 +42,6 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
 
 ENV PATH=$PATH:/protoc3/bin
 RUN /root/.cargo/bin/cargo install cargo-deb
-
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 
 COPY . /project
 
@@ -135,14 +58,9 @@ RUN apt-get update \
  gnupg \
  systemd
 
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth-sdk*.deb /tmp
 COPY --from=identity-tp-builder /project/families/identity/sawtooth_identity/target/debian/*.deb /tmp
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
+RUN apt-get update \
  && dpkg -i /tmp/*.deb || true \
  && apt-get -f -y install \
  && apt-get clean \
