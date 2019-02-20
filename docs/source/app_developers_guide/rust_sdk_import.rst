@@ -10,8 +10,10 @@ Importing the Rust SDK
 Once you've got a working version of Sawtooth, there are a few additional
 steps you'll need to take to get started developing for Sawtooth in Rust.
 
-1. Add Sawtooth to your ``Cargo.toml`` file. The Rust SDK is located in the Sawtooth SDK Rust repository
-   <http://github.com/hyperledger/sawtooth-sdk-rust>`_.
+1. Add Sawtooth to your ``Cargo.toml`` file. Add sawtooth-sdk with the
+   appropriate version to the dependencies section.  The Rust SDK is located in
+   the Sawtooth SDK Rust repository
+   `<http://github.com/hyperledger/sawtooth-sdk-rust>`_.
 
 .. code-block:: ini
     :caption: Sample ``Cargo.toml`` for a Sawtooth Rust project
@@ -22,7 +24,7 @@ steps you'll need to take to get started developing for Sawtooth in Rust.
     authors = ["..."]
 
     [dependencies]
-    sawtooth_sdk = { git = "https://github.com/hyperledger/sawtooth-sdk-rust.git" }
+    sawtooth-sdk = "0.2"
     // --snip--
 
 2. Import the SDK into your Rust files. At the top of your files, specify
