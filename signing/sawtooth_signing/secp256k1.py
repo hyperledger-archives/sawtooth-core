@@ -126,5 +126,11 @@ class Secp256k1Context(Context):
     def new_random_private_key(self):
         return Secp256k1PrivateKey.new_random()
 
+    def private_key_from_bytes(self, bytes):
+        return Secp256k1PrivateKey.from_bytes(bytes)
+
+    def private_key_from_hex(self, hex):
+        return Secp256k1PrivateKey.from_hex(hex)
+
     def get_public_key(self, private_key):
         return Secp256k1PublicKey(private_key.secp256k1_private_key.pubkey)

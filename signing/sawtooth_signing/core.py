@@ -129,6 +129,22 @@ class Context(metaclass=ABCMeta):
         """
 
     @abstractmethod
+    def private_key_from_bytes(self, bytes):
+        """Generates a private key from bytes using this context.
+
+        Returns:
+            (:obj:`PrivateKey`): a privatekey
+        """
+
+    @abstractmethod
+    def private_key_from_hex(self, hex):
+        """Generates a private key from hex using this context.
+
+        Returns:
+            (:obj:`PrivateKey`): a privatekey
+        """
+
+    @abstractmethod
     def get_public_key(self, private_key):
         """Produce a public key for the given private key.
 

@@ -32,6 +32,12 @@ KEY2_PRIV_HEX = \
 KEY2_PUB_HEX = \
     "039c20a66b4ec7995391dbec1d8bb0e2c6e6fd63cd259ed5b877cb4ea98858cf6d"
 
+KEY1_PRIV_BYTES = bytes.fromhex(KEY1_PRIV_HEX)
+KEY1_PUB_BYTES = bytes.fromhex(KEY1_PUB_HEX)
+
+KEY2_PRIV_BYTES = bytes.fromhex(KEY2_PRIV_HEX)
+KEY2_PUB_BYTES = bytes.fromhex(KEY2_PUB_HEX)
+
 MSG1 = "test"
 MSG1_KEY1_SIG = ("5195115d9be2547b720ee74c23dd841842875db6eae1f5da8605b050a49e"
                  "702b4aa83be72ab7e3cb20f17c657011b49f4c8632be2745ba4de79e6aa0"
@@ -70,6 +76,14 @@ class Secp256k1SigningTest(unittest.TestCase):
 
         public_key2 = context.get_public_key(priv_key2)
         self.assertEqual(public_key2.as_hex(), KEY2_PUB_HEX)
+
+    def test_creating_private_keys_from_hex_and_bytes_to_contexts(self):
+        context = create_context("secp256k1")
+        priv_key = context.private_key_from_hex(KEY1_PRIV_HEX)
+        self.assertEqual(priv_key.as_hex(), KEY1_PRIV_HEX)
+
+        priv_key = context.private_key_from_bytes(KEY1_PRIV_BYTES)
+        self.assertEqual(priv_key.as_bytes(), KEY1_PRIV_BYTES)
 
     def test_check_invalid_digit(self):
         priv_chars = list(KEY1_PRIV_HEX)
