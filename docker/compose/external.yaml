@@ -27,6 +27,17 @@ services:
     image: apache-basic-auth-proxy:${ISOLATION_ID}
     container_name: apache-basic-auth-proxy-default
 
+  apache-digest-auth-proxy:
+    build:
+      context: ../
+      dockerfile: ./apache-digest-auth-proxy
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: apache-digest-auth-proxy:${ISOLATION_ID}
+    container_name: apache-digest-auth-proxy-default
+
   sawtooth-stats-grafana:
     build:
       context: ../
