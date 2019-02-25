@@ -1222,33 +1222,36 @@ mod tests {
             merkle_db
                 .set_merkle_root(successor_root)
                 .expect("Unable to apply the new merkle root");
-            assert_eq!(
-                parent_change_log
+            {
+                let deletions = parent_change_log
+                    .mut_successors()
+                    .first_mut()
+                    .unwrap()
+                    .mut_deletions();
+                deletions.push(parent_root_bytes.clone());
+                assert_eq!(
+                    deletions.len(),
+                    MerkleDatabase::prune(&db, &parent_root)
+                        .expect("Prune should have no errors")
+                        .len()
+                );
+            }
+            {
+                let reader = db.reader().unwrap();
+                for addition in parent_change_log
                     .get_successors()
                     .first()
                     .unwrap()
                     .get_deletions()
-                    .len(),
-                MerkleDatabase::prune(&db, &parent_root)
-                    .expect("Prune should have no errors")
-                    .len()
-            );
+                {
+                    assert!(reader.get(addition).is_none());
+                }
 
-            let reader = db.reader().unwrap();
-            for addition in parent_change_log
-                .get_successors()
-                .first()
-                .unwrap()
-                .get_deletions()
-            {
-                assert!(reader.get(addition).is_none());
+                assert!(reader
+                    .index_get(CHANGE_LOG_INDEX, &parent_root_bytes)
+                    .expect("DB query should succeed")
+                    .is_none());
             }
-
-            assert!(reader
-                .index_get(CHANGE_LOG_INDEX, &parent_root_bytes)
-                .expect("DB query should succeed")
-                .is_none());
-
             assert!(merkle_db.set_merkle_root(parent_root).is_err());
         })
     }
@@ -1370,8 +1373,7 @@ mod tests {
                     .first()
                     .unwrap()
                     .get_deletions()
-                    .len()
-                    - 1,
+                    .len(),
                 MerkleDatabase::prune(&db, &parent_root)
                     .expect("Prune should have no errors")
                     .len()
