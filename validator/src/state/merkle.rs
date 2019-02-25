@@ -132,11 +132,11 @@ impl MerkleDatabase {
             // deleting a parent
             let mut successor = change_log.take_successors().pop().unwrap();
 
+            let mut deletions = successor.take_deletions();
+            deletions.push(root_bytes.clone());
+
             let (deletion_candidates, duplicates): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
-                MerkleDatabase::remove_duplicate_hashes(
-                    &mut db_writer,
-                    successor.take_deletions(),
-                )?;
+                MerkleDatabase::remove_duplicate_hashes(&mut db_writer, deletions)?;
 
             for hash in &deletion_candidates {
                 let hash_hex = ::hex::encode(hash);
