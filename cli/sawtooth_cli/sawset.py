@@ -29,6 +29,11 @@ import yaml
 import pkg_resources
 from colorlog import ColoredFormatter
 
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 
@@ -42,11 +47,6 @@ from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
-
-from sawtooth_signing import create_context
-from sawtooth_signing import CryptoFactory
-from sawtooth_signing import ParseError
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'sawset'
 

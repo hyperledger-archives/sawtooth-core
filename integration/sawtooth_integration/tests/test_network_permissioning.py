@@ -26,14 +26,14 @@ from uuid import uuid4
 import cbor
 import toml
 
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+
 from sawtooth_processor_test.message_factory import MessageFactory
 
 from sawtooth_integration.tests.integration_tools import SetSawtoothHome
 from sawtooth_integration.tests import node_controller as NodeController
 from sawtooth_integration.tests.integration_tools import RestClient
-
-from sawtooth_signing import create_context
-from sawtooth_signing import CryptoFactory
 
 LOGGER = logging.getLogger(__name__)
 

@@ -19,8 +19,9 @@ import getpass
 import os
 import sys
 
-from sawtooth_cli.exceptions import CliException
 from sawtooth_signing import create_context
+
+from sawtooth_cli.exceptions import CliException
 
 
 def add_keygen_parser(subparsers, parent_parser):

@@ -21,20 +21,20 @@ import urllib.error
 
 import cbor
 
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-
-from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_intkey.processor.handler import INTKEY_ADDRESS_PREFIX
 from sawtooth_intkey.processor.handler import make_intkey_address
 from sawtooth_sdk.messaging.stream import Stream
 
-from sawtooth_sdk.protobuf import events_pb2
-from sawtooth_sdk.protobuf import client_event_pb2
-from sawtooth_sdk.protobuf import validator_pb2
-from sawtooth_sdk.protobuf import batch_pb2
-from sawtooth_sdk.protobuf import client_receipt_pb2
-from sawtooth_sdk.protobuf import transaction_receipt_pb2
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
+
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.protobuf import events_pb2
+from sawtooth_validator.protobuf import client_event_pb2
+from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import client_receipt_pb2
+from sawtooth_validator.protobuf import transaction_receipt_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
