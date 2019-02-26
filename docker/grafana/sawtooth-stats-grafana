@@ -17,7 +17,13 @@ FROM grafana/grafana:4.6.3
 
 RUN apt-get update && \
     apt-get install -y \
-        curl && \
+	curl=7.38.0-4+deb8u14 \
+	apt=1.0.9.8.5 \
+	libidn11=1.29-1+deb8u3 \
+	libidn2-0=0.10-2+deb8u1 \
+	systemd=215-17+deb8u10 \
+	udev=215-17+deb8u10 \
+	perl-base=5.20.2-3+deb8u12 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY grafana/dashboards /etc/grafana/dashboards
