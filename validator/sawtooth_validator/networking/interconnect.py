@@ -25,6 +25,10 @@ import time
 import uuid
 from collections import namedtuple
 from enum import Enum
+from urllib.parse import urlparse
+from ipaddress import IPv6Address, AddressValueError
+import socket
+import netifaces
 
 import zmq
 import zmq.auth
@@ -475,6 +479,45 @@ class _SendReceive:
             # the eventloop is closed. This occurs on shutdown.
             pass
 
+    # Test to see if we need to enable ZMQ support for IPv6.
+    # We cannot simply do this all the time, because enabling this sometimes
+    # breaks binding to an interface name in Docker containers, and breaks a
+    # lot of tests. The goal here is to decide if we should enable IPv6 for a
+    # particular socket.
+    def _need_enable_ipv6(self, socket_type):
+        # Parse the URL
+        parsed_url = urlparse(self._address)
+
+        # Get the hostname portion
+        hostname = parsed_url.hostname
+
+        # See if the hostname is actually an interface name.
+        # In this case, return False.
+        if hostname in netifaces.interfaces():
+            return False
+
+        # Next, try to directly parse the hostname to determine if we have a
+        # literal IPv6 address.
+        try:
+            IPv6Address(hostname)
+            return True
+        except AddressValueError:
+            pass
+
+        # Finally, if we are setting up a zmq.DEALER docker (client), see if
+        # the hostname resolves to an IPv6 address.
+        if socket_type == zmq.DEALER:
+            try:
+                socket.getaddrinfo(parsed_url.hostname, 0,
+                                   socket.AddressFamily.AF_INET6,
+                                   socket.SocketKind.SOCK_STREAM)
+                return True
+            except socket.gaierror:
+                pass
+
+        # If none of the previous cases returns true, return false.
+        return False
+
     def setup(self, socket_type, complete_or_error_queue):
         """Setup the asyncio event loop.
 
@@ -503,6 +546,12 @@ class _SendReceive:
             self._socket.set(zmq.TCP_KEEPALIVE, 1)
             self._socket.set(zmq.TCP_KEEPALIVE_IDLE, self._connection_timeout)
             self._socket.set(zmq.TCP_KEEPALIVE_INTVL, self._heartbeat_interval)
+
+            # Enable IPv6 if necessary
+            if self._need_enable_ipv6(socket_type):
+                LOGGER.info("Enabled IPv6 on ZMQ socket for URL %s",
+                            self._address)
+                self._socket.setsockopt(zmq.IPV6, 1)
 
             if socket_type == zmq.DEALER:
                 self._socket.identity = "{}-{}".format(

@@ -37,6 +37,7 @@ RUN apt-get install -y -q \
     python3-pip \
     python3-protobuf \
     python3-pyformance \
+    python3-netifaces \
     python3-requests \
     python3-sawtooth-intkey \
     python3-sawtooth-xo \
