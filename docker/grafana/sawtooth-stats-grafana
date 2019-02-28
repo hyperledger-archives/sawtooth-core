@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM grafana/grafana:4.6.3
+FROM grafana/grafana:6.0.0
 
 RUN apt-get update && \
     apt-get install -y \
