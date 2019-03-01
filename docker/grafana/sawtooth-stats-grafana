@@ -15,11 +15,6 @@
 
 FROM grafana/grafana:4.6.3
 
-RUN apt-get update && \
-    apt-get install -y \
-        curl && \
-    rm -rf /var/lib/apt/lists/*
-
 COPY grafana/dashboards /etc/grafana/dashboards
 COPY grafana/datasources /etc/grafana/datasources
 COPY grafana/grafana.ini /etc/grafana
