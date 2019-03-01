@@ -23,7 +23,7 @@ RUN apt-get update && \
 	libidn2-0 \
 	systemd \
 	udev \
-	perl-base \
+	perl-base && \
     rm -rf /var/lib/apt/lists/*
 
 COPY grafana/dashboards /etc/grafana/dashboards
