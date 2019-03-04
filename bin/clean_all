@@ -20,7 +20,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 set -x
 set -e
 
-for pkg in signing cli sdk sdk/python validator docs families rest_api \
+for pkg in cli validator docs families rest_api \
     consensus/poet/cli consensus/poet/core consensus/poet/common consensus/poet/families consensus/poet/simulator
 do
     cd $top_dir/$pkg
@@ -43,7 +43,6 @@ rm -rf build/
 rm -rf cli/sawtooth_cli/protobuf/
 rm -rf consensus/poet/commont/sawtooth_poet_common/protobuf/
 rm -rf rest_api/sawtooth_rest_api/protobuf/
-rm -rf sdk/python/sawtooth_sdk/protobuf/
 rm -rf validator/sawtooth_validator/protobuf/
 rm -rf tools/ubuntu-xenial-16.04-cloudimg-console.log
 rm -rf tools/cache/

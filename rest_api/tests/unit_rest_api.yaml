@@ -29,5 +29,4 @@ services:
         -v
         -s /project/sawtooth-core/rest_api/tests/unit
     environment:
-        PYTHONPATH: "/project/sawtooth-core/rest_api:\
-            /project/sawtooth-core/sdk/python"
+        PYTHONPATH: "/project/sawtooth-core/rest_api"

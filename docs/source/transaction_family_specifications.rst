@@ -64,10 +64,8 @@ your own transaction family. These transaction families are available in the
   :doc:`/app_developers_guide/intro_xo_transaction_family`).
   The :doc:`xo command </cli/xo>` provides an example CLI client.
 
-  XO is available in several languages. The Rust and Python implementations are
-  in `sawtooth-core/sdk/examples
-  <https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples>`__.
-  The others are in separate ``sawtooth-sdk-{language}`` repositories under
+  XO is available in several languages. The various implementations
+  can be found in the ``sawtooth-sdk-{language}`` repositories under
   ``examples``.
 
   The family name is ``xo``.

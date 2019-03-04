@@ -68,19 +68,6 @@
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
 
-/sdk/python/build/
-/sdk/python/sawtooth_sdk/protobuf/
-/sdk/python/**/__pycache__/
-/sdk/examples/xo_python/build/
-/sdk/examples/xo_python/**/__pycache__/
-/sdk/examples/intkey_python/build/
-/sdk/examples/intkey_python/**/__pycache__/
-/sdk/examples/noop_python/**/__pycache__/
-
-/signing/build/
-/signing/sawtooth_signing.egg-info/
-/signing/**/__pycache__/
-
 /validator/build/
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/

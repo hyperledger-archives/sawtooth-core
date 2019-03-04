@@ -40,7 +40,6 @@ def main(args=None):
     # Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
 
-    protoc(proto_dir, "sdk/python", "sawtooth_sdk/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
     protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")

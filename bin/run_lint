@@ -141,7 +141,7 @@ echo "pycodestyle $(pycodestyle --version)"
 echo "$(pylint --version)"
 
 if [ "$DRY_RUN" = "1" ]; then
-    for dir in signing validator sdk/python sdk/examples/intkey_python
+    for dir in validator
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
@@ -160,49 +160,31 @@ retval=0
 # organizing these.
 
 # validator
-PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint validator "$SINCE" || retval=1
 
 # integration
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 PYTHONPATH=$PYTHONPATH:$top_dir/integration
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
 PYTHONPATH=$PYTHONPATH:$top_dir/families/block_info
 export PYTHONPATH
 lint integration "$SINCE" || retval=1
 
 # cli
 PYTHONPATH=$top_dir/cli
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
 export PYTHONPATH
 lint cli "$SINCE" || retval=1
 
-# signing
-PYTHONPATH=$top_dir/signing
-export PYTHONPATH
-lint signing "$SINCE" || retval=1
 
-# sdk, rest api, xo, intkey
-PYTHONPATH=$top_dir/sdk/python
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/xo_python
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
+# rest api
 PYTHONPATH=$PYTHONPATH:$top_dir/cli
 export PYTHONPATH
-lint sdk/python "$SINCE" || retval=1
-lint sdk/examples/intkey_python "$SINCE" || retval=1
-lint sdk/examples/xo_python "$SINCE" || retval=1
 lint rest_api "$SINCE" || retval=1
 
 # settings
 PYTHONPATH=$top_dir/families/settings/tests
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
 export PYTHONPATH
 lint families/settings "$SINCE" || retval=1
 

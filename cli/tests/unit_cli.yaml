@@ -33,5 +33,4 @@ services:
         -v
         -s /project/sawtooth-core/cli/tests
     environment:
-        PYTHONPATH: "/project/sawtooth-core/signing:\
-            /project/sawtooth-core/cli"
+        PYTHONPATH: "/project/sawtooth-core/cli"

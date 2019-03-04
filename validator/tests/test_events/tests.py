@@ -22,6 +22,9 @@ from unittest.mock import Mock
 from unittest.mock import MagicMock
 from uuid import uuid4
 
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_store import BlockStore
@@ -52,9 +55,6 @@ from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import state_context_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
-
-from sawtooth_signing import create_context
-from sawtooth_signing import CryptoFactory
 
 from test_scheduler.yaml_scheduler_tester import create_batch
 from test_scheduler.yaml_scheduler_tester import create_transaction

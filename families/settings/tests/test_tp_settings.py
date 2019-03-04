@@ -16,6 +16,9 @@
 import hashlib
 import base64
 
+from sawtooth_processor_test.transaction_processor_test_case \
+    import TransactionProcessorTestCase
+
 from sawtooth_settings_test.protobuf.settings_pb2 import SettingCandidates
 from sawtooth_settings_test.protobuf.settings_pb2 import SettingCandidate
 from sawtooth_settings_test.protobuf.settings_pb2 import SettingVote
@@ -23,9 +26,6 @@ from sawtooth_settings_test.protobuf.settings_pb2 import SettingProposal
 
 from sawtooth_settings_test.settings_message_factory \
     import SettingsMessageFactory
-
-from sawtooth_processor_test.transaction_processor_test_case \
-    import TransactionProcessorTestCase
 
 
 def _to_hash(value):

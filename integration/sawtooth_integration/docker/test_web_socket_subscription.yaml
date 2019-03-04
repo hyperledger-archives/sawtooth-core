@@ -51,10 +51,7 @@ services:
       \""
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/sdk/examples/intkey_python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
+      PYTHONPATH: "/project/sawtooth-core/integration:\
         /project/sawtooth-core/cli"
 
   validator:

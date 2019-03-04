@@ -20,10 +20,11 @@ from uuid import uuid4
 
 import cbor
 
+from sawtooth_processor_test.message_factory import MessageFactory
+
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
-from sawtooth_processor_test.message_factory import MessageFactory
 
 from sawtooth_integration.tests.integration_tools import RestClient
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis

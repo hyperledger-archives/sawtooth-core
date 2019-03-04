@@ -18,11 +18,11 @@ import time
 
 from urllib.parse import urlparse
 
-import netifaces
-
 from sawtooth_signing import create_context
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PublicKey
+
+import netifaces
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult

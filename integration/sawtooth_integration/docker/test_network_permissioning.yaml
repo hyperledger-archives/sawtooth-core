@@ -35,11 +35,8 @@ services:
         test_network_permissioning.TestNetworkPermissioning
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/cli:\
-        /project/sawtooth-core/sdk/examples/intkey_python:\
+      PYTHONPATH: "/project/sawtooth-core/cli:\
         /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
         /project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
         /project/sawtooth-core/consensus/poet/core"

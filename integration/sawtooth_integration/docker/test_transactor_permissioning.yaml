@@ -53,16 +53,7 @@ services:
     stop_signal: SIGKILL
 
   intkey-tp-python:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/intkey_python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tp-python$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
     expose:
       - 4004
     depends_on:
@@ -71,16 +62,7 @@ services:
     stop_signal: SIGKILL
 
   xo-tp-python:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/xo_python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-xo-tp-python$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+    image: hyperledger/sawtooth-xo-tp-python:nightly
     expose:
       - 4004
     depends_on:
@@ -173,8 +155,5 @@ services:
         test_transactor_permissioning.TestTransactorPermissioning
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/cli:\
-        /project/sawtooth-core/sdk/examples/intkey_python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing"
+      PYTHONPATH: "/project/sawtooth-core/cli:\
+        /project/sawtooth-core/integration"

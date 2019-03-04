@@ -14,42 +14,14 @@
 
 # docker build -f validator/Dockerfile-installed-xenial -t sawtooth-validator .
 
-# -------------=== signing build ===-------------
-FROM ubuntu:xenial as sawtooth-signing-builder
-
-ENV VERSION=AUTO_STRICT
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q --allow-downgrades \
-    git \
-    python3 \
-    python3-protobuf \
-    python3-secp256k1 \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio
-
-COPY . /project
-
-RUN /project/bin/protogen \
- && cd /project/signing \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
 # -------------=== validator build ===-------------
 FROM ubuntu:xenial as sawtooth-validator-builder
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/bumper/nightly xenial universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     git \
@@ -62,6 +34,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-grpcio-tools \
     python3-protobuf \
     python3-pyformance \
+    python3-sawtooth-signing \
     python3-secp256k1 \
     python3-stdeb \
     python3-toml \
@@ -80,13 +53,9 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/project/sawtooth-core/bi
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-
 COPY . /project
 
-RUN dpkg -i /tmp/python3-sawtooth-signing*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
+RUN /project/bin/protogen \
  && cd /project/validator \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \
@@ -108,9 +77,9 @@ FROM ubuntu:xenial as sawtooth-cli-builder
 
 ENV VERSION=AUTO_STRICT
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/bumper/nightly xenial universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     git \
@@ -120,10 +89,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-toml \
     python3-grpcio-tools \
     python3-grpcio \
- && dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
+    python3-sawtooth-signing
 
 COPY . /project
 
@@ -135,54 +101,16 @@ RUN /project/bin/protogen \
  && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
  && dpkg-buildpackage -b -rfakeroot -us -uc
 
-# -------------=== python sdk build ===-------------
-
-FROM ubuntu:xenial as sawtooth-sdk-python-builder
-
-ENV VERSION=AUTO_STRICT
-
-
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
- && apt-get update \
- && apt-get install -y -q --allow-downgrades \
-    git \
-    python3 \
-    python3-colorlog \
-    python3-protobuf \
-    python3-stdeb \
-    python3-grpcio-tools \
-    python3-grpcio \
-    python3-toml \
-    python3-yaml
-
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
-
-COPY . /project
-
-RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
- && cd /project/sdk/python \
- && if [ -d "debian" ]; then rm -rf debian; fi \
- && python3 setup.py clean --all \
- && python3 setup.py --command-packages=stdeb.command debianize \
- && if [ -d "packaging/ubuntu" ]; then cp -R packaging/ubuntu/* debian/; fi \
- && dpkg-buildpackage -b -rfakeroot -us -uc
-
 # -------------=== sawtooth-validator docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=sawtooth-signing-builder /project/python3-sawtooth-signing*.deb /tmp
 COPY --from=sawtooth-cli-builder /project/python3-sawtooth-cli*.deb /tmp
-COPY --from=sawtooth-sdk-python-builder /project/sdk/python3-sawtooth*.deb /tmp
 
 COPY --from=sawtooth-validator-builder /project/python3-sawtooth-validator*.deb /tmp
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/bumper/nightly xenial universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
  && apt-get update \
  && dpkg -i /tmp/python3-sawtooth-*.deb || true \
  && apt-get -f -y install

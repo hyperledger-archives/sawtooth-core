@@ -30,34 +30,6 @@ services:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
 
-  intkey-tp-python:
-    build:
-      context: .
-      dockerfile: sdk/examples/intkey_python/Dockerfile-installed-${DISTRO}
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tp-python:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tp-python-default
-    depends_on:
-      - validator
-    entrypoint: intkey-tp-python -vv -C tcp://validator:4004
-
-  xo-tp-python:
-    build:
-      context: .
-      dockerfile: sdk/examples/xo_python/Dockerfile-installed-${DISTRO}
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-xo-tp-python:${ISOLATION_ID}
-    container_name: sawtooth-xo-tp-python-default
-    depends_on:
-      - validator
-    entrypoint: xo-tp-python -vv -C tcp://validator:4004
-
   validator:
     build:
       context: .
@@ -122,6 +94,24 @@ services:
         tail -f /dev/null \
         \""
 
+# ---== Intkey and XO TPs are in a separate repo ==---
+
+  intkey-tp-python:
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
+    container_name: sawtooth-intkey-tp-python-default
+    depends_on:
+      - validator
+    entrypoint: intkey-tp-python -vv -C tcp://validator:4004
+
+  xo-tp-python:
+    image: hyperledger/sawtooth-xo-tp-python:nightly
+    container_name: sawtooth-xo-tp-python-default
+    depends_on:
+      - validator
+    entrypoint: xo-tp-python -vv -C tcp://validator:4004
+
+# ---== Back to repo stuff ==----
+
   admin-tools:
     build:
       context: .
@@ -165,50 +155,6 @@ services:
         - no_proxy
     image: sawtooth-identity-tp:${ISOLATION_ID}
     container_name: sawtooth-identity-tp-default
-
-  python-sdk:
-    build:
-      context: .
-      dockerfile: sdk/python/Dockerfile-installed-${DISTRO}
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-sdk-python:${ISOLATION_ID}
-    container_name: sawtooth-sdk-python-default
-
-  signing:
-    build:
-      context: .
-      dockerfile: signing/Dockerfile-installed-${DISTRO}
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-signing:${ISOLATION_ID}
-    container_name: sawtooth-signing-default
-
-  intkey-tests:
-    build:
-      context: .
-      dockerfile: sdk/examples/intkey_python/Dockerfile-tests-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tests:${ISOLATION_ID}
-    container_name: sawtooth-intkey-tests-default
-
-  xo-tests:
-    build:
-      context: .
-      dockerfile: sdk/examples/xo_python/Dockerfile-tests-installed
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-xo-tests:${ISOLATION_ID}
-    container_name: sawtooth-xo-tests-default
 
   integration:
     build:

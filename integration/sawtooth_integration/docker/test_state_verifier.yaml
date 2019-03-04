@@ -38,24 +38,11 @@ services:
       - 4004
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
-        /project/sawtooth-core/validator:\
-        /project/sawtooth-core/sdk/examples/intkey_python"
+      PYTHONPATH: "/project/sawtooth-core/validator"
       SAWTOOTH_LIB_HOME: "/project/sawtooth-core/validator/lib"
 
   intkey-tp:
-    build:
-      context: ../../..
-      dockerfile: ./sdk/examples/intkey_python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-intkey-tp-python$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
     expose:
       - 4004
     command: intkey-tp-python -C tcp://test-state-verifier:4004

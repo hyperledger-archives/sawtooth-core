@@ -25,24 +25,6 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  intkey-tp-python:
-    image: sawtooth-intkey-tp-python:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  xo-tp-python:
-    image: sawtooth-xo-tp-python:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   validator:
     image: sawtooth-validator:${ISOLATION_ID}
     volumes:
@@ -99,42 +81,6 @@ services:
 
   identity-tp:
     image: sawtooth-identity-tp:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  python-sdk:
-    image: sawtooth-sdk-python:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  signing:
-    image: sawtooth-signing:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  intkey-tests:
-    image: sawtooth-intkey-tests:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  xo-tests:
-    image: sawtooth-xo-tests:${ISOLATION_ID}
     volumes:
       - ../../build/debs:/build/debs
     command: |

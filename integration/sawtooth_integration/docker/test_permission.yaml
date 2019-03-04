@@ -115,8 +115,6 @@ services:
         test_permission.TestPermission
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing:\
+      PYTHONPATH: "/project/sawtooth-core/integration:\
         /project/sawtooth-core/cli:\
         /project/sawtooth-core/manage"

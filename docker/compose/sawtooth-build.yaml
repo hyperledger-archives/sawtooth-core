@@ -76,18 +76,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
 
-  signing:
-    build:
-      context: ../../
-      dockerfile: ./signing/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-signing-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
   cli:
     build:
       context: ../../
@@ -97,18 +85,6 @@ services:
         - https_proxy
         - no_proxy
     image: sawtooth-cli-local:${ISOLATION_ID}
-    volumes:
-      - ../../:/project/sawtooth-core
-
-  python-sdk:
-    build:
-      context: ../../
-      dockerfile: ./sdk/python/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-python-sdk-local:${ISOLATION_ID}
     volumes:
       - ../../:/project/sawtooth-core
 

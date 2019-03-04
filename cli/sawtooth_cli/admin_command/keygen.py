@@ -16,9 +16,10 @@
 import os
 import sys
 
+from sawtooth_signing import create_context
+
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.admin_command.config import get_key_dir
-from sawtooth_signing import create_context
 
 
 def add_keygen_parser(subparsers, parent_parser):

@@ -122,8 +122,6 @@ services:
     \""
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/track_and_trade/processor:\
+      PYTHONPATH: /project/sawtooth-core/families/track_and_trade/processor:\
         /project/sawtooth-core/families/track_and_trade/tests:\
-        /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing"
+        /project/sawtooth-core/integration"
