@@ -84,7 +84,8 @@ disable=
     unused-argument,
     locally-disabled,
     no-self-use,
-    too-many-lines
+    too-many-lines,
+    no-else-raise
 
 [REPORTS]
 
