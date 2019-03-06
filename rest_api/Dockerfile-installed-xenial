@@ -34,7 +34,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/bumper/nightly xenial universe" >> 
     python3-grpcio \
     python3-protobuf \
     python3-pyformance \
-    python3-sawtooth-signing \
     python3-sawtooth-sdk \
     python3-stdeb
 
