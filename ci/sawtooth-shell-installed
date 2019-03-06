@@ -37,7 +37,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
     python3-grpcio-tools \
     python3-protobuf \
     python3-pyformance \
-    python3-sawtooth-signing \
+    python3-sawtooth-sdk \
     python3-secp256k1 \
     python3-stdeb \
     python3-toml \
@@ -94,7 +94,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
     python3-toml \
     python3-grpcio-tools \
     python3-grpcio \
-    python3-sawtooth-signing
+    python3-sawtooth-sdk
 
 COPY . /project
 
@@ -122,7 +122,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
  && apt-get update \
  && apt-get install -q -y \
     curl \
-    python3-sawtooth-signing \
     python3-sawtooth-sdk \
     python3-sawtooth-intkey \
     python3-sawtooth-xo \

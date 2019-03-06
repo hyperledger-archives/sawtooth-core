@@ -33,7 +33,7 @@ RUN apt-get install -y -q \
     python3-protobuf
 
 RUN apt-get install -y -q \
-    python3-sawtooth-signing
+    python3-sawtooth-sdk
 
 RUN apt-get install -y -q \
     libssl-dev \

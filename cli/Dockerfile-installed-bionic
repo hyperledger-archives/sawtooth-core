@@ -34,7 +34,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
     python3-toml \
     python3-grpcio-tools \
     python3-grpcio \
-    python3-sawtooth-signing
+    python3-sawtooth-sdk
 
 COPY . /project
 
