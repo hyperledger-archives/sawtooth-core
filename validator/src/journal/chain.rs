@@ -264,6 +264,12 @@ impl<BC: BlockCache, BV: BlockValidator> ChainControllerState<BC, BV> {
         result.committed_batches = commit;
         result.uncommitted_batches = uncommit;
 
+        if result.new_chain.is_empty() {
+            return Err(ChainControllerError::ForkResolutionError(
+                "On fork comparison, new chain is empty".into(),
+            ));
+        }
+
         if result.new_chain[0].previous_block_id() != chain_head.header_signature() {
             let mut moved_to_fork_count =
                 COLLECTOR.counter("ChainController.chain_head_moved_to_fork_count", None, None);
