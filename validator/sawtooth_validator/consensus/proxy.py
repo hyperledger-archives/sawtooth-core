@@ -62,6 +62,7 @@ class ConsensusProxy:
             peers=[
                 self._gossip.peer_to_public_key(peer)
                 for peer in self._gossip.get_peers()
+                if peer is not None
             ],
             local_peer_info=self._public_key)
 
