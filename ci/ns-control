@@ -25,7 +25,7 @@ Package: sawtooth
 Version: @VERSION@
 Maintainer: Hyperledger Sawtooth <distributedledger@intel.com>
 # Pre-Depends: <comma-separated list of packages>
-Depends: python3-sawtooth-cli, python3-sawtooth-intkey, python3-sawtooth-poet-cli, python3-sawtooth-poet-common, python3-sawtooth-poet-core, python3-sawtooth-poet-families, python3-sawtooth-poet-simulator, python3-sawtooth-rest-api, python3-sawtooth-sdk, python3-sawtooth-settings, python3-sawtooth-signing, python3-sawtooth-validator, python3-sawtooth-xo
+Depends: python3-sawtooth-cli, python3-sawtooth-intkey, python3-sawtooth-rest-api, python3-sawtooth-sdk, python3-sawtooth-settings, python3-sawtooth-signing, python3-sawtooth-validator, python3-sawtooth-xo
 # Recommends: <comma-separated list of packages>
 # Suggests: <comma-separated list of packages>
 # Provides: <comma-separated list of packages>
