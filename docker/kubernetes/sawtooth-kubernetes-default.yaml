@@ -22,7 +22,7 @@ items:
               - bash
             args:
               - -c
-              - "devmode-engine-rust -C tcp://$HOSTNAME:5050"
+              - "devmode-engine-rust -C tcp://sawtooth-0:5050"
 
           - name: sawtooth-settings-tp
             image: hyperledger/sawtooth-settings-tp:1.1
@@ -30,7 +30,7 @@ items:
               - bash
             args:
               - -c
-              - "settings-tp -vv -C tcp://$HOSTNAME:4004"
+              - "settings-tp -vv -C tcp://sawtooth-0:4004"
 
           - name: sawtooth-intkey-tp-python
             image: hyperledger/sawtooth-intkey-tp-python:1.1
@@ -38,7 +38,7 @@ items:
               - bash
             args:
               - -c
-              - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
+              - "intkey-tp-python -vv -C tcp://sawtooth-0:4004"
 
           - name: sawtooth-xo-tp-python
             image: hyperledger/sawtooth-xo-tp-python:1.1
@@ -46,7 +46,7 @@ items:
               - bash
             args:
               - -c
-              - "xo-tp-python -vv -C tcp://$HOSTNAME:4004"
+              - "xo-tp-python -vv -C tcp://sawtooth-0:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:1.1
@@ -71,7 +71,7 @@ items:
                 -o config.batch \
               && sawadm genesis config-genesis.batch config.batch \
               && sawtooth-validator -vv \
-                  --endpoint tcp://$SAWTOOTH_0_SERVICE_HOST:8800 \
+                  --endpoint tcp://sawtooth-0:8800 \
                   --bind component:tcp://eth0:4004 \
                   --bind consensus:tcp://eth0:5050 \
                   --bind network:tcp://eth0:8800"
@@ -85,7 +85,7 @@ items:
               - bash
             args:
               - -c
-              - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
+              - "sawtooth-rest-api -C tcp://sawtooth-0:4004 -B 0.0.0.0:8008"
 
           - name: sawtooth-shell
             image: hyperledger/sawtooth-shell:1.1
