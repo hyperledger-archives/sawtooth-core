@@ -220,11 +220,26 @@ class GossipBatchResponseHandler(Handler):
         return self._responder.get_request(batch_id)
 
 
+class GossipConsensusHandler(Handler):
+    def __init__(self, gossip, notifier):
+        self._gossip = gossip
+        self._notifier = notifier
+
+    def handle(self, connection_id, message_content):
+        obj, tag, _ = message_content
+
+        if tag == GossipMessage.CONSENSUS:
+            self._notifier.notify_peer_message(
+                message=obj,
+                sender_id=bytes.fromhex(
+                    self._gossip.peer_to_public_key(connection_id)))
+        return HandlerResult(status=HandlerStatus.PASS)
+
+
 class GossipBroadcastHandler(Handler):
-    def __init__(self, gossip, completer, notifier):
+    def __init__(self, gossip, completer):
         self._gossip = gossip
         self._completer = completer
-        self._notifier = notifier
 
     def handle(self, connection_id, message_content):
         obj, tag, ttl = message_content
@@ -246,10 +261,8 @@ class GossipBroadcastHandler(Handler):
             if not self._completer.get_block(obj.header_signature):
                 self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.CONSENSUS:
-            self._notifier.notify_peer_message(
-                message=obj,
-                sender_id=bytes.fromhex(
-                    self._gossip.peer_to_public_key(connection_id)))
+            # We do not want to forward consensus messages
+            pass
         else:
             LOGGER.info("received %s, not BATCH or BLOCK or CONSENSUS", tag)
         return HandlerResult(status=HandlerStatus.PASS)

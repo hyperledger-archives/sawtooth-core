@@ -37,6 +37,7 @@ from sawtooth_validator.gossip.permission_verifier import \
 from sawtooth_validator.gossip.permission_verifier import \
     NetworkConsensusPermissionHandler
 
+from sawtooth_validator.gossip.gossip_handlers import GossipConsensusHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipMessageDuplicateHandler
@@ -242,6 +243,13 @@ def add(
         ),
         thread_pool)
 
+    # GOSSIP_MESSAGE ) Determines if this is a consensus message and notifies
+    # the consensus engine if it is
+    dispatcher.add_handler(
+        validator_pb2.Message.GOSSIP_MESSAGE,
+        GossipConsensusHandler(gossip=gossip, notifier=consensus_notifier),
+        thread_pool)
+
     # GOSSIP_MESSAGE ) Determines if we should broadcast the
     # message to our peers. It is important that this occur prior
     # to the sending of the message to the completer, as this step
@@ -250,10 +258,7 @@ def add(
     # should occur
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipBroadcastHandler(
-            gossip=gossip,
-            completer=completer,
-            notifier=consensus_notifier),
+        GossipBroadcastHandler(gossip=gossip, completer=completer),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Send message to completer
