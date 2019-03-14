@@ -38,7 +38,7 @@ RUN apt-get install -y -q \
     python3-secp256k1
 
 RUN apt-get install -y -q \
-    python3-sawtooth-signing
+    python3-sawtooth-sdk
 
 RUN apt-get install -y -q \
     python3-cov-core \
