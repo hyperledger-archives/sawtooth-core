@@ -5,7 +5,7 @@ Hyperledger Sawtooth Core Developer's Setup Guide
 =============
 
 If you are planning to contribute code to the Sawtooth project, please review
-the contributing guide: [CONTRIBUTING.md]
+the [contributing guide](CONTRIBUTING.md)
 
 Supported operating systems: Ubuntu 16.04 and macOS
 
@@ -70,7 +70,7 @@ Run the following commands to set the environment variables `http_proxy`, `https
 ```bash
   $ export http_proxy=http://proxy-server.example:3128
   $ export https_proxy=http://proxy-server.example:3129
-  $ export no_proxy=example.com,another-example.com,127.0.0.0
+  $ export no_proxy=hostname1.com,.domainname1.com,*.domainname2.com,127.0.0.1
 ```
 
 **Note:** Add these commands to either your `.profile` or `.bashrc` file
@@ -111,7 +111,7 @@ $ systemctl show --property=Environment docker
 Environment=HTTP_PROXY=http://proxy-server.example:80/
 ```
 
-**Docker DNS (Optional)**
+#### Docker DNS (Optional)
 
 Docker build uses `/etc/resolv.conf` for setting up DNS servers for docker image
 builds. If you receive `Host not found` errors during docker build steps,
@@ -178,8 +178,8 @@ This will build docker images suitable for running a validator, rest api,
 settings transaction processor, intkey and xo python transaction processors,
 and a client to interact with the network.
 
-**Tip:** If you see `Host not found` errors in the output, see
-"Docker DNS (Optional)", above.
+**Tip:** If you see `Host not found` errors in the output, see the
+[Docker DNS(Optional)](#Docker-DNS-(Optional)) section above.
 
 **Note:** This build environment uses Docker to virtualize the build and
 to execute the code in the development directory. This allows you to
