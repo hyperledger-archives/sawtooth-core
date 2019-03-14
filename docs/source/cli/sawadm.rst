@@ -40,7 +40,6 @@ The optional argument `input_file` specifies one or more files containing
 serialized ``BatchList`` protobuf messages to add to the genesis data. (Use a
 space to separate multiple files.) If no input file is specified,
 this command produces an empty genesis block.
-
 The output is a file containing a serialized ``GenesisData`` protobuf message.
 This file, when placed at `sawtooth_data`/``genesis.batch``, will trigger
 the genesis process.
@@ -76,7 +75,7 @@ configuration.
 
 Validator keys are stored in the directory ``/etc/sawtooth/keys/``. By
 default, the public-private key files are named ``validator.priv`` and
-validator.pub. Use the <key-name> argument to specify a different file
+``validator.pub``. Use the <key-name> argument to specify a different file
 name.
 
 .. literalinclude:: output/sawadm_keygen_usage.out
