@@ -38,14 +38,11 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
     python3-protobuf \
     python3-pyformance \
     python3-sawtooth-sdk \
-    python3-sawtooth-signing \
     python3-stdeb
 
 COPY . /project
 
-RUN dpkg -i /tmp/python3-sawtooth-*.deb || true \
- && apt-get -f -y install \
- && /project/bin/protogen \
+RUN /project/bin/protogen \
  && cd /project/rest_api/ \
  && if [ -d "debian" ]; then rm -rf debian; fi \
  && python3 setup.py clean --all \

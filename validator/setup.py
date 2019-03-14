@@ -58,7 +58,7 @@ setup(
         "protobuf",
         "lmdb",
         "requests",
-        "sawtooth-signing",
+        "sawtooth-sdk",
         "toml",
         "PyYAML",
         "pyzmq",
