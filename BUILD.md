@@ -168,6 +168,8 @@ To build all the dependencies for running the full test-suite, run:
     $ docker-compose -f docker/compose/sawtooth-build.yaml up
   ```
 
+**Note:** the `sawtooth-build` step above is a dependency for the automated test suite defined below.
+
 To build the requirements to run a validator network, run this command:
 
   ```bash
