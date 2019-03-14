@@ -202,12 +202,12 @@ with Sawtooth installed, and only the run-time dependencies installed.
 These installed images also generate .deb artifacts during build. They can be found
 in the `/tmp` dir in any of the images.
 
-> Internet connection speeds vary. This build step may take some time. 
+**Note:** Internet connection speeds vary. This build step may take some time. 
 
->There are also possible errors during Docker builds, like transient issues
- for downloads. An example is the protobuf download from Github step. If the 
- download results in an incomplete/corrupt archive, the build process will exit 
- `non-zero code: 9`
+**Tip:** There are also possible errors during Docker builds, like transient
+ issues for downloads. An example is the protobuf download from Github step.
+ If the download results in an incomplete/corrupt archive, the build process 
+ will exit `non-zero code: 9`.
 
 Step Five: Start a Validator Node
 -------------
