@@ -68,8 +68,8 @@ multiple keys to create the genesis block is outside the scope of this guide.
     .. code-block:: none
 
        [package]
-       name = "sawtooth-pbft-engine"
-       version = "0.1.0"
+       name = "pbft"
+       version = "0.1"
        ...
 
 #. Create batches for the required and optional consensus settings.
@@ -83,7 +83,7 @@ multiple keys to create the genesis block is outside the scope of this guide.
            [sawtooth@system]$ sawset proposal create \
            --key /etc/sawtooth/keys/validator.priv \
            -o config-consensus.batch \
-           sawtooth.consensus.algorithm.name=sawtooth-pbft-engine \
+           sawtooth.consensus.algorithm.name=pbft \
            sawtooth.consensus.algorithm.version=VERSION \
            sawtooth.consensus.pbft.peers=[VAL1KEY, VAL2KEY, VAL3KEY]
 
