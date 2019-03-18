@@ -89,5 +89,12 @@ class DefaultBatchInjectorFactory:
 
             return block_info_injector.BlockInfoInjector(
                 self._state_view_factory, self._signer)
+        elif injector == "obligatory_payment":
+            block_info_injector = importlib.import_module(
+                "sawtooth_validator.journal.obligatory_payment_injector")
+
+            return block_info_injector.BlockInfoInjector(
+                self._state_view_factory, self._signer)
 
         raise UnknownBatchInjectorError(injector)
+

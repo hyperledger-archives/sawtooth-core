@@ -1,0 +1,3 @@
+[submodule "remme-protobuf"]
+	path = remme-protobuf
+	url = https://github.com/Remmeauth/remme-protobuf.git
