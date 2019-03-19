@@ -72,8 +72,8 @@ accepted transaction types to those from this network's transaction processors
 
      .. code-block:: console
 
-        sawtooth.consensus.algorithm.name=sawtooth-pbft-engine
-        sawtooth.consensus.algorithm.version=0.1.2
+        sawtooth.consensus.algorithm.name=pbft
+        sawtooth.consensus.algorithm.version=0.1
         sawtooth.consensus.pbft.peers=03e27504580fa15...
         sawtooth.consensus.pbft.block_duration=200
         sawtooth.consensus.pbft.checkpoint_period=100
