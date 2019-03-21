@@ -359,7 +359,6 @@ class Validator:
         genesis_controller = GenesisController(
             context_manager=context_manager,
             transaction_executor=transaction_executor,
-            completer=completer,
             block_manager=block_manager,
             block_store=block_store,
             state_view_factory=state_view_factory,
