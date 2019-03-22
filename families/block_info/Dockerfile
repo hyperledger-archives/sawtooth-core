@@ -14,7 +14,7 @@
 
 # docker build -f families/block_info/Dockerfile -t sawtooth-block-info-tp-local .
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN apt-get update \
  && apt-get install -y \
