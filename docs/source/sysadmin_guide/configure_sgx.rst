@@ -239,7 +239,8 @@ Create and submit a proposal:
 .. code-block:: console
 
     [sawtooth@system]$ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
-    sawtooth.consensus.algorithm=poet \
+    sawtooth.consensus.algorithm.name=PoET \
+    sawtooth.consensus.algorithm.version=0.1 \
     sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)" \
     sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement) \
     sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename) \
@@ -259,8 +260,11 @@ lines of output showing that the SGX enclave has been initialized:
     There’s quite a bit going on in the previous ``sawset proposal`` command, so
     let’s take a closer look at what it accomplishes:
 
-    ``sawtooth.consensus.algorithm=poet``
+    ``sawtooth.consensus.algorithm.name=PoET``
       Changes the consensus algorithm to PoET.
+
+    ``sawtooth.consensus.algorithm.version=0.1``
+      Changes the version of the consensus algorithm to 0.1.
 
     ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)"``
       Adds the public key that the validator registry transaction processor uses

@@ -60,8 +60,8 @@ A Sawtooth network has the following requirements:
   ``trust`` authorization.
 
 * The genesis block is created for the first validator node only. It includes
-  on-chain configuration settings, such as the consensus type, that will be
-  available to the new validator nodes once they join the network.
+  on-chain configuration settings that will be available to the new validator
+  nodes once they join the network.
 
 .. note::
 
@@ -519,7 +519,8 @@ in :doc:`ubuntu`.
 
       $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
       -o config.batch \
-      sawtooth.consensus.algorithm=poet \
+      sawtooth.consensus.algorithm.name=PoET \
+      sawtooth.consensus.algorithm.version=0.1 \
       sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)" \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
@@ -885,7 +886,8 @@ setting.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+      sawtooth.consensus.algorithm.name: PoET
+      sawtooth.consensus.algorithm.version: 0.1
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
@@ -1371,7 +1373,8 @@ Use the following steps to create and submit a batch containing the new setting.
 
    .. code-block:: console
 
-      sawtooth.consensus.algorithm: poet
+      sawtooth.consensus.algorithm.name: PoET
+      sawtooth.consensus.algorithm.version: 0.1
       sawtooth.poet.initial_wait_time: 15
       sawtooth.poet.key_block_claim_limit: 100000
       sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
