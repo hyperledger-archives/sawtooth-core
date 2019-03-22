@@ -53,7 +53,7 @@ bytes and getting the private key's associated public key.
 
     context = create_context('secp256k1')
     private_key = context.new_random_private_key()
-    signer = new CryptoFactory(context).new_signer(private_key)
+    signer = CryptoFactory(context).new_signer(private_key)
 
 
 {% endif %}
@@ -164,7 +164,7 @@ SHA-512 hash of the payload bytes.
         family_name='intkey',
         family_version='1.0',
         inputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
-        outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7']
+        outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         signer_public_key=signer.get_public_key().as_hex(),
         # In this example, we're signing the batch with the same private key,
         # but the batch can be signed by another party, in which case, the
@@ -304,7 +304,7 @@ be serialized as a single Transaction.
 
 .. code-block:: python
 
-    from sawtooth_sdk.protobuf import TransactionList
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionList
 
     txn_list_bytes = TransactionList(
         transactions=[txn1, txn2]
