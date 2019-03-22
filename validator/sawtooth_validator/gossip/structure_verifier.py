@@ -84,11 +84,11 @@ def is_valid_batch(batch):
     return True
 
 
-def _deserialize_txn_header(header):
+def _deserialize_txn_header(header_bytes):
     """Deserialize the header bytes into a `TransactionHeader`
 
     Args:
-        header: The serialized TransactionHeader
+        header_bytes: The serialized TransactionHeader
 
     Returns:
         TransactionHeader
@@ -96,7 +96,7 @@ def _deserialize_txn_header(header):
     """
 
     header = transaction_pb2.TransactionHeader()
-    header.ParseFromString(header)
+    header.ParseFromString(header_bytes)
     return header
 
 
