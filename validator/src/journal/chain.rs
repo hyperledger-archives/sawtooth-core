@@ -154,7 +154,7 @@ struct ChainControllerState {
     block_manager: BlockManager,
     block_references: HashMap<String, BlockRef>,
     chain_reader: Box<ChainReader>,
-    chain_head: Option<Block>,
+    chain_head: Option<BlockRef>,
     chain_id_manager: ChainIdManager,
     observers: Vec<Box<ChainObserver>>,
     state_pruning_manager: StatePruningManager,
@@ -318,7 +318,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        state.chain_head.clone()
+        state
+            .chain_reader
+            .chain_head()
+            .expect("Invalid block store. Head of the block chain cannot be determined")
     }
 
     pub fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
@@ -376,7 +379,15 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 state
                     .block_manager
                     .persist(&block.header_signature, COMMIT_STORE)?;
-                state.chain_head = Some(block.clone());
+
+                // Create Ref-C: External reference for the chain head will be held until it is
+                // superceded by a new chain head.
+                state.chain_head = Some(
+                    state
+                        .block_manager
+                        .ref_block(block.header_signature.as_str())?,
+                );
+
                 let mut guard = lock.acquire();
                 guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
             }
@@ -498,44 +509,38 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     }
 
     pub fn ignore_block(&self, block: &Block) {
-        info!("Ignoring block {}", block);
         let mut state = self
             .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
         // Drop Ref-C: Consensus is not interested in this block anymore
-        if state
-            .block_references
-            .remove(&block.header_signature)
-            .is_none()
-        {
-            error!(
-                "Reference not found for ignored block {}",
+        match state.block_references.remove(&block.header_signature) {
+            Some(_) => info!("Ignored block {}", block),
+            None => warn!(
+                "Could not ignore block {}; consensus has already decided on it",
                 &block.header_signature
-            );
+            ),
         }
     }
 
     pub fn fail_block(&self, block: &Block) {
-        self.block_validation_results
-            .fail_block(&block.header_signature);
-
         let mut state = self
             .state
             .write()
             .expect("No lock holder should have poisoned the lock");
 
         // Drop Ref-C: Consensus is not interested in this block anymore
-        if state
-            .block_references
-            .remove(&block.header_signature)
-            .is_none()
-        {
-            error!(
-                "Reference not found for failed block {}",
+        match state.block_references.remove(&block.header_signature) {
+            Some(_) => {
+                self.block_validation_results
+                    .fail_block(&block.header_signature);
+                info!("Failed block {}", block);
+            }
+            None => warn!(
+                "Could not fail block {}; consensus has already decided on it",
                 &block.header_signature
-            );
+            ),
         }
     }
 
@@ -618,7 +623,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // Keep Ref-C: The block has been validated so ownership of the ext. ref. is
                 // maintained. The consensus engine is responsible for rendering an opinion of
                 // either commit, fail, or ignore, at which time the ext. ref. will be accounted
-                // for.
+                // for (moved into chain head in case of commit, dropped otherwise)
                 self.consensus_notifier.notify_block_new(block);
             }
             BlockStatus::Invalid => {
@@ -694,10 +699,21 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     continue;
                 }
 
-                // Ref-C: Consensus has decided this block should become the new chain head, so the
-                // ChainController will maintain ownership of this ext. ref until a new chain head
-                // replaces it.
-                state.chain_head = Some(block.clone());
+                // Move Ref-C: Consensus has decided this block should become the new chain
+                // head, so the ChainController will maintain ownership of this ext. ref until a
+                // new chain head replaces it.
+                // Drop Ref-C: The ext. ref. of the old chain head is dropped here since it's
+                // superceded by the new chain head.
+                state.chain_head = Some(
+                    state
+                        .block_references
+                        .remove(&block.header_signature)
+                        .ok_or_else(|| {
+                            ChainControllerError::ConsensusError(
+                                "Consensus has already decided on this block".into(),
+                            )
+                        })?,
+                );
 
                 let new_roots: Vec<String> = result
                     .new_chain
@@ -724,31 +740,13 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 state
                     .block_manager
-                    .persist(
-                        &state.chain_head.as_ref().unwrap().header_signature,
-                        COMMIT_STORE,
-                    )
+                    .persist(&block.header_signature, COMMIT_STORE)
                     .map_err(|err| {
                         error!("Error persisting new chain head: {:?}", err);
                         err
                     })?;
 
-                // Drop Ref-C: The old chain head has been superceded, so its ext. ref. is dropped.
-                if state
-                    .block_references
-                    .remove(&chain_head.header_signature)
-                    .is_none()
-                {
-                    error!(
-                        "Reference not found for previous chain head {}",
-                        &chain_head.header_signature
-                    );
-                }
-
-                info!(
-                    "Chain head updated to {}",
-                    state.chain_head.as_ref().unwrap()
-                );
+                info!("Chain head updated to {}", &block);
 
                 let mut chain_head_gauge =
                     COLLECTOR.gauge("ChainController.chain_head", None, None);
@@ -761,23 +759,20 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
                 block_num_guage.set_value(block.block_num);
 
-                let chain_head = state.chain_head.clone().unwrap();
                 chain_head_guard.notify_on_chain_updated(
-                    chain_head,
+                    block.clone(),
                     result.committed_batches,
                     result.uncommitted_batches,
                 );
 
-                if let Some(chain_head) = state.chain_head.as_ref() {
-                    chain_head.batches.iter().for_each(|batch| {
-                        if batch.trace {
-                            debug!(
-                                "TRACE: {}: ChainController.on_block_validated",
-                                batch.header_signature
-                            )
-                        }
-                    });
-                }
+                block.batches.iter().for_each(|batch| {
+                    if batch.trace {
+                        debug!(
+                            "TRACE: {}: ChainController.on_block_validated",
+                            batch.header_signature
+                        )
+                    }
+                });
 
                 for blk in result.new_chain.iter().rev() {
                     match self.block_validation_results.get(&blk.header_signature) {
@@ -815,7 +810,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
                 committed_transactions_gauge.set_value(total_committed_txns);
 
-                let chain_head_block_num = state.chain_head.as_ref().unwrap().block_num;
+                let chain_head_block_num = block.block_num;
                 if chain_head_block_num + 1 > u64::from(self.state_pruning_block_depth) {
                     let prune_at =
                         chain_head_block_num - (u64::from(self.state_pruning_block_depth));
@@ -971,21 +966,29 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .chain_head()
             .expect("Invalid block store. Head of the block chain cannot be determined");
 
-        if chain_head.is_some() {
+        if let Some(chain_head) = chain_head {
             info!(
                 "Chain controller initialized with chain head: {}",
-                chain_head.as_ref().unwrap()
+                &chain_head
             );
-            let notify_block = chain_head.clone().unwrap();
-            state.chain_head = chain_head;
+
+            // Create Ref-C: External reference for the chain head will be held until it is
+            // superceded by a new chain head.
+            state.chain_head = Some(
+                state
+                    .block_manager
+                    .ref_block(chain_head.header_signature.as_str())
+                    .expect("Failed to reference chain head"),
+            );
+
             let mut gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
-            gauge.set_value(&notify_block.header_signature[0..8]);
+            gauge.set_value(&chain_head.header_signature[0..8]);
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(&notify_block.block_num);
+            block_num_guage.set_value(&chain_head.block_num);
             let mut guard = self.chain_head_lock.acquire();
 
-            guard.notify_on_chain_updated(notify_block, vec![], vec![]);
+            guard.notify_on_chain_updated(chain_head, vec![], vec![]);
         }
     }
 
