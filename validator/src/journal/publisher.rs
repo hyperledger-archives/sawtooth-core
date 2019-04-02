@@ -21,7 +21,7 @@ use batch::Batch;
 use block::Block;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::mem;
 use std::slice::Iter;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -32,7 +32,7 @@ use std::time::Duration;
 
 use execution::execution_platform::ExecutionPlatform;
 use ffi::py_import_class;
-use journal::block_manager::BlockManager;
+use journal::block_manager::{BlockManager, BlockRef};
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
@@ -92,6 +92,7 @@ pub struct BlockPublisherState {
     pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
+    block_references: HashMap<String, BlockRef>,
 }
 
 impl BlockPublisherState {
@@ -108,6 +109,7 @@ impl BlockPublisherState {
             chain_head,
             candidate_block,
             pending_batches,
+            block_references: HashMap::new(),
         }
     }
 
@@ -232,12 +234,20 @@ impl SyncBlockPublisher {
             // Create Ref-D: Hold the predecessor until we are done building the new block. This ext.
             // ref. must be dropped either 1) after the block is finalized but before sending the block
             // to the completer or 2) after the block is cancelled.
-            self.block_manager
+            match self
+                .block_manager
                 .ref_block(&previous_block.header_signature)
-                .map_err(|err| {
+            {
+                Ok(block_ref) => {
+                    state
+                        .block_references
+                        .insert(block_ref.block_id().to_owned(), block_ref);
+                }
+                Err(err) => {
                     error!("Unable to ref block! {}: {:?}", &previous_block, err);
-                    InitializeBlockError::MissingPredecessor
-                })?;
+                    return Err(InitializeBlockError::MissingPredecessor);
+                }
+            }
         }
         let mut candidate_block = {
             let settings_view: SettingsView = self
@@ -339,9 +349,12 @@ impl SyncBlockPublisher {
                             // Drop Ref-D: We have finished creating this block and are about to
                             // send it to the completer, so we can drop the ext. ref. to its
                             // predecessor.
-                            self.block_manager.unref_block(previous_block_id).expect(
-                                "Unable to unref block that was ref'ed during initialize block",
-                            );
+                            if state.block_references.remove(previous_block_id).is_none() {
+                                error!(
+                                    "Reference not found for finalized block {}",
+                                    previous_block_id
+                                );
+                            }
 
                             Some(Ok(
                                 self.publish_block(&block, finalize_result.injected_batch_ids)
@@ -484,9 +497,16 @@ impl SyncBlockPublisher {
         if let Some(mut candidate_block) = candidate_block {
             if unref_block {
                 // Drop Ref-D: We cancelled the block, so we can drop the ext. ref. to its predecessor.
-                self.block_manager
-                    .unref_block(&candidate_block.previous_block_id())
-                    .expect("Unable to unref block that was ref'ed during initialize block");
+                if state
+                    .block_references
+                    .remove(&candidate_block.previous_block_id())
+                    .is_none()
+                {
+                    error!(
+                        "Reference not found for canceled block {}",
+                        &candidate_block.previous_block_id()
+                    );
+                }
             }
             candidate_block.cancel();
         }

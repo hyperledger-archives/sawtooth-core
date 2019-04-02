@@ -47,6 +47,42 @@ impl From<BlockStoreError> for BlockManagerError {
     }
 }
 
+/// An external block reference that is owned by and can be passed between validator components.
+/// Implements the `Drop` trait to allow for automatically decrementing the external reference
+/// count for the block ID in the block manager.
+pub struct BlockRef {
+    block_id: String,
+    block_manager: BlockManager,
+}
+
+impl BlockRef {
+    fn new(block_id: String, block_manager: BlockManager) -> Self {
+        BlockRef {
+            block_id,
+            block_manager,
+        }
+    }
+
+    pub fn block_id(&self) -> &str {
+        &self.block_id
+    }
+}
+
+impl Drop for BlockRef {
+    fn drop(&mut self) {
+        // This will be the only place unref_block is called
+        self.block_manager
+            .unref_block(self.block_id.as_str())
+            .unwrap_or_else(|err| {
+                error!(
+                    "Failed to unref block {} on drop due to error: {:?}",
+                    self.block_id, err
+                );
+                false
+            });
+    }
+}
+
 struct RefCount {
     pub block_id: String,
     pub previous_block_id: String,
@@ -746,12 +782,14 @@ impl BlockManager {
         )?))
     }
 
-    pub fn ref_block(&self, tip: &str) -> Result<(), BlockManagerError> {
-        self.state.ref_block(tip)
+    pub fn ref_block(&self, tip: &str) -> Result<BlockRef, BlockManagerError> {
+        self.state.ref_block(tip)?;
+        Ok(BlockRef::new(tip.into(), self.clone()))
     }
 
     /// Starting at a tip block, if the tip block's ref-count drops to 0,
     /// remove all blocks until a ref-count of 1 is found.
+    /// NOTE: this method will be made private; it will only be called when a `BlockRef` is dropped
     pub fn unref_block(&self, tip: &str) -> Result<bool, BlockManagerError> {
         self.state.unref_block(tip)
     }
@@ -1328,16 +1366,17 @@ mod tests {
         block_manager.persist("C", "commit").unwrap();
         block_manager.persist("B", "commit").unwrap();
 
-        block_manager.ref_block("D").unwrap();
+        {
+            let d_ref = block_manager.ref_block("D").unwrap();
 
-        block_manager.persist("C", "commit").unwrap();
-        block_manager.unref_block("B").unwrap();
+            block_manager.persist("C", "commit").unwrap();
+            block_manager.unref_block("B").unwrap();
 
-        block_manager.persist("F", "commit").unwrap();
-        block_manager.persist("E", "commit").unwrap();
+            block_manager.persist("F", "commit").unwrap();
+            block_manager.persist("E", "commit").unwrap();
 
-        block_manager.unref_block("F").unwrap();
-        block_manager.unref_block("D").unwrap();
+            block_manager.unref_block("F").unwrap();
+        } // Drop d_ref
 
         block_manager.persist("A", "commit").unwrap();
 
@@ -1372,16 +1411,16 @@ mod tests {
             .unwrap();
         // Ext. Ref. = 1
 
-        blockman.ref_block("D").unwrap();
-        // Ext. Ref. = 2
+        {
+            let d_ref = blockman.ref_block("D").unwrap();
+            // Ext. Ref. = 2
 
-        blockman
-            .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
-            .unwrap();
-        // Ext. Ref. = 2
-
-        assert!(!blockman.unref_block("D").unwrap());
-        // Ext. Ref. = 1
+            blockman
+                .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
+                .unwrap();
+            // Ext. Ref. = 2
+        }
+        // Ext. Ref. = 1 (dropped d_ref)
 
         assert!(blockman.unref_block("D").unwrap());
         // Ext. Ref. = 0, dropped

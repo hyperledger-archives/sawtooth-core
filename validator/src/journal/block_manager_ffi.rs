@@ -171,6 +171,7 @@ pub unsafe extern "C" fn block_manager_put(
                 ErrorCode::MissingPredecessorInBranch
             }
             Err(_) => ErrorCode::Error,
+            // Cannot pass block reference across FFI boundary
             Ok(_) => ErrorCode::Success,
         },
         Err(err) => {
@@ -193,7 +194,8 @@ pub unsafe extern "C" fn block_manager_ref_block(
     };
 
     match (*(block_manager as *mut BlockManager)).ref_block(block_id) {
-        Ok(()) => ErrorCode::Success,
+        // Cannot pass block reference across FFI boundary
+        Ok(_) => ErrorCode::Success,
         Err(BlockManagerError::UnknownBlock) => ErrorCode::UnknownBlock,
         Err(err) => {
             error!("Unexpected error while ref'ing block: {:?}", err);

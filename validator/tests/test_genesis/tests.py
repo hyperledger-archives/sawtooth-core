@@ -74,7 +74,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,  # Empty block store
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
@@ -96,7 +95,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
@@ -119,7 +117,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
@@ -147,7 +144,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
@@ -178,7 +174,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
@@ -210,7 +205,6 @@ class TestGenesisController(unittest.TestCase):
         genesis_ctrl = GenesisController(
             context_manager=Mock('context_manager'),
             transaction_executor=Mock('txn_executor'),
-            completer=Mock('completer'),
             block_store=block_store,
             state_view_factory=Mock('StateViewFactory'),
             identity_signer=self._signer,
