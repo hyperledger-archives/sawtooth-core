@@ -129,6 +129,8 @@ blocks in the current blockchain.
 .. literalinclude:: output/sawtooth_block_usage.out
    :language: console
 
+.. _sawtooth-block-list-label:
+
 sawtooth block list
 ===================
 

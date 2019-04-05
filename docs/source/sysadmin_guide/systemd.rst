@@ -121,6 +121,7 @@ on the console if you ran the components manually.
 Additional logging output can be found in ``/var/log/sawtooth/``. For more
 information, see :doc:`log_configuration`.
 
+.. _stop-restart-sawtooth-services-label:
 
 Stop or Restart the Sawtooth Services
 =====================================
