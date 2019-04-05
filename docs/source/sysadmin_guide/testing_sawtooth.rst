@@ -45,7 +45,7 @@ to test basic Sawtooth functionality.
       * PoET requires at least three nodes.
 
 #. (PBFT only) Ensure that the on-chain setting
-   ``sawtooth.consensus.pbft.peers`` lists the validator public keys of all
+   ``sawtooth.consensus.pbft.members`` lists the validator public keys of all
    PBFT member nodes on the network.
 
    a. Connect to the first validator node (the one that created the genesis
@@ -62,7 +62,7 @@ to test basic Sawtooth functionality.
 
       .. code-block:: console
 
-         sawtooth.consensus.pbft.peers=03e27504580fa15...
+         sawtooth.consensus.pbft.members=03e27504580fa15...
 
    #. To change the setting, run this command on the same node that created the
       genesis block:
@@ -71,7 +71,7 @@ to test basic Sawtooth functionality.
 
          [sawtooth@system]$ sawset proposal create \
          --key /etc/sawtooth/keys/validator.priv \
-         sawtooth.consensus.pbft.peers=[VAL1KEY, VAL2KEY, VAL3KEY]
+         sawtooth.consensus.pbft.members=[VAL1KEY, VAL2KEY, VAL3KEY]
 
       Replace ``VAL1KEY``, ``VAL2KEY``, and ``VAL3KEY``, with the
       validator public keys of the other nodes on the network. This
