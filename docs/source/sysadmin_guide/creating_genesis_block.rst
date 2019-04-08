@@ -128,8 +128,8 @@ multiple keys to create the genesis block is outside the scope of this guide.
           Specifies the version of the consensus algorithm.
 
          (PBFT only) ``sawtooth.consensus.pbft.peers``
-          Lists the peer nodes on the initial network as a JSON-formatted string
-          of the validators' public keys, using the following format:
+          Lists the member nodes on the initial network as a JSON-formatted
+          string of the validators' public keys, using the following format:
 
           ``[<public-key-1>, <public-key-2>, ..., <public-key-n>]``
 

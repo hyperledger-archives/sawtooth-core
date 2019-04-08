@@ -46,7 +46,7 @@ to test basic Sawtooth functionality.
 
 #. (PBFT only) Ensure that the on-chain setting
    ``sawtooth.consensus.pbft.peers`` lists the validator public keys of all
-   peer nodes on the network.
+   PBFT member nodes on the network.
 
    a. Connect to the first validator node (the one that created the genesis
       block).
