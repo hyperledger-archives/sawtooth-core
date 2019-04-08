@@ -85,7 +85,7 @@ multiple keys to create the genesis block is outside the scope of this guide.
            -o config-consensus.batch \
            sawtooth.consensus.algorithm.name=pbft \
            sawtooth.consensus.algorithm.version=VERSION \
-           sawtooth.consensus.pbft.peers=[VAL1KEY, VAL2KEY, VAL3KEY]
+           sawtooth.consensus.pbft.members=[VAL1KEY, VAL2KEY, VAL3KEY]
 
         Replace ``VERSION`` with the version number from
         ``sawtooth-pbft/Cargo.toml``.
@@ -127,7 +127,7 @@ multiple keys to create the genesis block is outside the scope of this guide.
          ``sawtooth.consensus.algorithm.version``
           Specifies the version of the consensus algorithm.
 
-         (PBFT only) ``sawtooth.consensus.pbft.peers``
+         (PBFT only) ``sawtooth.consensus.pbft.members``
           Lists the member nodes on the initial network as a JSON-formatted
           string of the validators' public keys, using the following format:
 
