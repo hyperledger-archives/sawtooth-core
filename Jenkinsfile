@@ -151,6 +151,7 @@ pipeline {
     post {
         always {
             sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
+            sh 'docker-compose -f docker/compose/run-lint.yaml down'
             sh 'docker-compose -f docker/compose/copy-debs.yaml down'
         }
         success {
