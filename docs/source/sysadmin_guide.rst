@@ -31,6 +31,7 @@ and :doc:`use Sawtooth configuration files <sysadmin_guide/configuring_sawtooth>
    sysadmin_guide/setting_allowed_txns
    sysadmin_guide/rest_auth_proxy
    sysadmin_guide/configuring_permissions
+   sysadmin_guide/pbft_adding_removing_node.rst
    sysadmin_guide/grafana_configuration
    sysadmin_guide/configuring_sawtooth
 

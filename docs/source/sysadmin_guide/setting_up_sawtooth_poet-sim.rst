@@ -20,9 +20,9 @@ Sawtooth PBFT consensus or PoET simulator consensus:
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
 
 Use this set of procedures to create the first Sawtooth node in a network or to
-add a node to an existing network.  Note that some procedures are performed only
-on the first node. Other procedures are required on the minimum set of nodes in
-the initial network.
+add a new node to an existing network.  Note that some procedures are performed
+only on the first node. Other procedures are required on the minimum set of
+nodes in the initial network.
 
 Each node in this Sawtooth network runs a validator, a REST API, and the
 following transaction processors:
@@ -54,6 +54,7 @@ following transaction processors:
    off_chain_settings.rst
    systemd.rst
    testing_sawtooth.rst
+   pbft_updating_member_list.rst
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

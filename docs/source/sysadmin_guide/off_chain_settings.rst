@@ -36,6 +36,7 @@ each configuration file.
    path in the commands below. For more information, see
    :doc:`configuring_sawtooth/path_configuration_file`.
 
+.. _sysadm-configure-validator-label:
 
 Configure the Validator
 =======================
@@ -124,6 +125,11 @@ Additional steps specify the peers for this node, change the scheduler type
       should use dynamic peering, while a consortium network or network using a
       fixed-membership consensus algorithm should use static peering. For more
       information, see :doc:`configuring_sawtooth/validator_configuration_file`.
+
+      .. note::
+
+         Static peering is recommended for PBFT consensus, because a PBFT
+         network must be fully peered.
 
    #. Find the ``peers`` setting and enter the URLs for other validators on the
       network.
