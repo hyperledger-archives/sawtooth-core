@@ -38,7 +38,7 @@ pub struct PyTxnExecutionResult {
     pub state_hash: Option<String>,
     pub state_changes: Vec<StateChange>,
     pub events: Vec<Event>,
-    pub data: Vec<(String, Vec<u8>)>,
+    pub data: Vec<Vec<u8>>,
     pub error_message: String,
     pub error_data: Vec<u8>,
 }
