@@ -35,6 +35,9 @@ class ConsensusRegistry:
         self._lock = RLock()
 
     def __bool__(self):
+        return self.has_active_engine()
+
+    def has_active_engine(self):
         with self._lock:
             return self._active is not None
 
