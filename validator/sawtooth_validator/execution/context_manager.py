@@ -425,7 +425,6 @@ class ContextManager:
 
         Args:
             context_id (str): the context id returned by create_context
-            data_type (str): type of data to append
             data (bytes): data to append
 
         Returns:
