@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from collections import deque
 import ctypes
 from enum import IntEnum
 import logging
@@ -22,6 +23,7 @@ from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
+from sawtooth_validator.protobuf.validator_pb2 import Message
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,15 +34,18 @@ class _NotifierService:
         self._consensus_registry = consensus_registry
         self._public_key = public_key
         self._gossip = None
+        self._message_backlog = deque()
 
     def notify(self, message_type, message):
+        self._queue_backlog(message_type, message)
         active_engine = self._consensus_registry.get_active_engine_info()
         if active_engine is not None:
-            self._service.send(
-                message_type,
-                bytes(message),
-                active_engine.connection_id
-            ).result()
+            for (queued_type, queued_msg) in self._drain_backlog():
+                self._service.send(
+                    queued_type,
+                    bytes(queued_msg),
+                    active_engine.connection_id
+                ).result()
 
     def notify_id(self, message_type, message, connection_id):
         self._service.send(
@@ -61,6 +66,19 @@ class _NotifierService:
 
     def get_public_key(self):
         return self._public_key
+
+    def _queue_backlog(self, message_type, message):
+        if message_type == Message.CONSENSUS_NOTIFY_ENGINE_ACTIVATED:
+            self._message_backlog.appendleft((message_type, message))
+        else:
+            self._message_backlog.append((message_type, message))
+
+    def _drain_backlog(self):
+        while True:
+            try:
+                yield self._message_backlog.popleft()
+            except IndexError:
+                break
 
 
 class ErrorCode(IntEnum):
