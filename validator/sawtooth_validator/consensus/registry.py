@@ -40,6 +40,10 @@ class ConsensusRegistry:
 
     def register_engine(self, connection_id, name, version):
         with self._lock:
+            # If this engine is already registered, remove the old connection
+            self._registry = list(filter(
+                lambda e: e.name != name and e.version != version,
+                self._registry))
             self._registry.append(EngineInfo(connection_id, name, version))
 
     def activate_engine(self, name, version):
