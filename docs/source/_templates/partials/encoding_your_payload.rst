@@ -39,6 +39,31 @@ Transaction Processor uses a payload of three key/value pairs encoded as
     // check if err is nil before continuing
     payloadBytes, err := cbor.Dumps(payloadData)
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    extern crate serde;
+    extern crate serde_cbor;
+
+    use serde::{Serialize, Deserialize};
+
+    // Using serde to create a serializable struct
+    #[derive(Debug, Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct Payload {
+        verb: String,
+        name: String,
+        value: u32,
+    }
+
+    // --snip--
+    let payload = Payload{  verb : String::from("set"),
+                            name : String::from("foo"),
+                            value : 42 };
+
+    let payload_bytes = serde_cbor::to_vec(&payload).expect("upsi");
+
 {% else %}
 
 .. code-block:: python
