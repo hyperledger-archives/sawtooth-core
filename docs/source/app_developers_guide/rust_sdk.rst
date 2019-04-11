@@ -12,6 +12,7 @@ transaction family, XO, using the Sawtooth Rust SDK.
     sdk_prerequisites
     ./rust_sdk_import.rst
     ../_autogen/sdk_TP_tutorial_rust
+    ../_autogen/sdk_submit_tutorial_rust
     ../sdk_rust
 
 .. Licensed under Creative Commons Attribution 4.0 International License
