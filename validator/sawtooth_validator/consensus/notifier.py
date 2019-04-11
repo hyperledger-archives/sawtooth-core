@@ -23,9 +23,13 @@ from sawtooth_validator import ffi
 from sawtooth_validator.ffi import PY_LIBRARY
 from sawtooth_validator.ffi import LIBRARY
 from sawtooth_validator.ffi import CommonErrorCode
+from sawtooth_validator.networking.future import FutureTimeoutError
+from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf.validator_pb2 import Message
 
 LOGGER = logging.getLogger(__name__)
+
+NOTIFICATION_TIMEOUT = 10
 
 
 class _NotifierService:
@@ -41,11 +45,16 @@ class _NotifierService:
         active_engine = self._consensus_registry.get_active_engine_info()
         if active_engine is not None:
             for (queued_type, queued_msg) in self._drain_backlog():
-                self._service.send(
-                    queued_type,
-                    bytes(queued_msg),
-                    active_engine.connection_id
-                ).result()
+                try:
+                    self._service.send(
+                        queued_type,
+                        bytes(queued_msg),
+                        active_engine.connection_id
+                    ).result(timeout=NOTIFICATION_TIMEOUT)
+                except FutureTimeoutError:
+                    LOGGER.warning(
+                        "Consensus notification %s timed out",
+                        get_enum_name(queued_type))
 
     def notify_id(self, message_type, message, connection_id):
         self._service.send(
