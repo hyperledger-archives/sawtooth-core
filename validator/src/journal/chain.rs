@@ -388,6 +388,25 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                         .ref_block(block.header_signature.as_str())?,
                 );
 
+                match self.block_validation_results.get(&block.header_signature) {
+                    Some(validation_results) => {
+                        let receipts: Vec<TransactionReceipt> = validation_results
+                            .execution_results
+                            .iter()
+                            .map(TransactionReceipt::from)
+                            .collect();
+                        for observer in &mut state.observers {
+                            observer.chain_update(&block, receipts.as_slice());
+                        }
+                    }
+                    None => {
+                        error!(
+                            "While committing {}, found block missing execution results",
+                            &block,
+                        );
+                    }
+                }
+
                 let mut guard = lock.acquire();
                 guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
             }
