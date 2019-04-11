@@ -766,6 +766,9 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 info!("Chain head updated to {}", &block);
 
+                self.consensus_notifier
+                    .notify_block_commit(&block.header_signature);
+
                 let mut chain_head_gauge =
                     COLLECTOR.gauge("ChainController.chain_head", None, None);
                 chain_head_gauge.set_value(&block.header_signature[0..8]);
@@ -850,9 +853,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 break;
             }
         }
-
-        self.consensus_notifier
-            .notify_block_commit(&block.header_signature);
 
         Ok(())
     }
