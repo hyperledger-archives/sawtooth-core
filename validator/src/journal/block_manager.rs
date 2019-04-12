@@ -979,7 +979,9 @@ impl BranchIterator {
         let next_block_id = {
             match state.ref_block(&first_block_id) {
                 Ok(_) => first_block_id,
-                Err(BlockManagerError::UnknownBlock) => return Err(BlockManagerError::UnknownBlock),
+                Err(BlockManagerError::UnknownBlock) => {
+                    return Err(BlockManagerError::UnknownBlock)
+                }
                 Err(err) => {
                     warn!("During constructing branch iterator: {:?}", err);
                     return Err(BlockManagerError::UnknownBlock);
