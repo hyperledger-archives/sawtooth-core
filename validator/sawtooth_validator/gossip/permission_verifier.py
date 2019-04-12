@@ -34,12 +34,18 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
+class _LogGuard:
+    def __init__(self):
+        self.chain_head_not_yet_set = False
+
+
 class PermissionVerifier:
     def __init__(self, permissions, current_root_func, identity_cache):
         # Off-chain permissions to be enforced
         self._permissions = permissions
         self._current_root_func = current_root_func
         self._cache = identity_cache
+        self._log_guard = _LogGuard()
 
     def is_batch_signer_authorized(self, batch, state_root=None,
                                    from_state=False):
@@ -67,7 +73,9 @@ class PermissionVerifier:
         if state_root is None:
             state_root = self._current_root_func()
             if state_root == INIT_ROOT_KEY:
-                LOGGER.debug("Chain head is not set yet. Permit all.")
+                if not self._log_guard.chain_head_not_yet_set:
+                    LOGGER.debug("Chain head is not set yet. Permit all.")
+                    self._log_guard.chain_head_not_yet_set = True
                 return True
 
         self._cache.update_view(state_root)
@@ -277,7 +285,9 @@ class PermissionVerifier:
         """
         state_root = self._current_root_func()
         if state_root == INIT_ROOT_KEY:
-            LOGGER.debug("Chain head is not set yet. Permit all.")
+            if not self._log_guard.chain_head_not_yet_set:
+                LOGGER.debug("Chain head is not set yet. Permit all.")
+                self._log_guard.chain_head_not_yet_set = True
             return True
 
         self._cache.update_view(state_root)
