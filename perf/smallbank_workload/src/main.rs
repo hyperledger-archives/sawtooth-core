@@ -183,7 +183,9 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
                 .map(|s| std::string::String::from_str(s).unwrap())
                 .collect()
         }
-        Err(_) => return arg_error("The target is the Sawtooth REST api endpoint with the scheme."),
+        Err(_) => {
+            return arg_error("The target is the Sawtooth REST api endpoint with the scheme.")
+        }
     };
     let update: u32 = match args.value_of("update").unwrap_or("30").parse() {
         Ok(n) => n,
