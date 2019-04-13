@@ -43,7 +43,7 @@ InfluxDB is used to store Sawtooth metrics data.
 
    .. code-block:: console
 
-      $ docker pull influxdb
+      $ docker pull influxdb:1.5-alpine
 
 #. Create an InfluxDB data directory to provide persistent storage on the local
    file system.
