@@ -41,6 +41,12 @@ InfluxDB is used to store Sawtooth metrics data.
 
 #. Pull the InfluxDB Docker image from Docker Hub.
 
+   .. note::
+
+      The version of InfluxDB noted below has been validated in multi-node
+      environments. Newer versions of InfluxDB may result in `HTTP 500` errors
+      in the Docker container.
+
    .. code-block:: console
 
       $ docker pull influxdb:1.5-alpine
