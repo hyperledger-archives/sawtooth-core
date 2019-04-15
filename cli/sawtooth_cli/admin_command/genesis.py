@@ -19,6 +19,8 @@ from sawtooth_cli.exceptions import CliException
 
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 from sawtooth_cli.protobuf.genesis_pb2 import GenesisData
+from sawtooth_cli.protobuf.settings_pb2 import SettingProposal
+from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 
 
@@ -79,6 +81,8 @@ def do_genesis(args, data_dir=None):
         genesis_batches += input_data.batches
 
     _validate_depedencies(genesis_batches)
+    _check_required_settings(genesis_batches)
+
     if args.output:
         genesis_file = args.output
     else:
@@ -113,3 +117,28 @@ def _validate_depedencies(batches):
                         ' {}'.format(unsatisfied_deps))
 
             transaction_ids.add(txn.header_signature)
+
+
+def _check_required_settings(batches):
+    """Ensure that all settings required at genesis are set."""
+    required_settings = [
+        'sawtooth.consensus.algorithm.name',
+        'sawtooth.consensus.algorithm.version']
+
+    for batch in batches:
+        for txn in batch.transactions:
+            txn_header = TransactionHeader()
+            txn_header.ParseFromString(txn.header)
+            if txn_header.family_name == 'sawtooth_settings':
+                settings_payload = SettingsPayload()
+                settings_payload.ParseFromString(txn.payload)
+                if settings_payload.action == SettingsPayload.PROPOSE:
+                    proposal = SettingProposal()
+                    proposal.ParseFromString(settings_payload.data)
+                    if proposal.setting in required_settings:
+                        required_settings.remove(proposal.setting)
+
+    if required_settings:
+        raise CliException(
+            'The following setting(s) are required at genesis, but were not '
+            'included in the genesis batches: {}'.format(required_settings))

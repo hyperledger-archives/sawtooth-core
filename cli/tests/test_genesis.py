@@ -23,6 +23,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 from sawtooth_cli.protobuf.genesis_pb2 import GenesisData
+from sawtooth_cli.protobuf.settings_pb2 import SettingProposal, SettingsPayload
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 
@@ -36,6 +37,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         self._temp_dir = None
         self._temp_data_dir = None
         self._parser = None
+        self._required_settings_batch = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -49,6 +51,33 @@ class TestGenesisDependencyValidation(unittest.TestCase):
                                                  dest='command')
 
         genesis.add_genesis_parser(subparsers, parent_parser)
+
+        required_settings = ['sawtooth.consensus.algorithm.name',
+                             'sawtooth.consensus.algorithm.version']
+
+        setting_proposals = []
+        for setting in required_settings:
+            proposal = SettingProposal()
+            proposal.setting = setting
+            setting_proposals.append(proposal)
+
+        setting_payloads = []
+        for proposal in setting_proposals:
+            payload = SettingsPayload()
+            payload.action = SettingsPayload.PROPOSE
+            payload.data = proposal.SerializeToString()
+            setting_payloads.append(payload)
+
+        setting_transactions = [
+            transaction(
+                'setting{}'.format(idx),
+                [],
+                family_name='sawtooth_settings',
+                payload=payload.SerializeToString())
+            for idx, payload in enumerate(setting_payloads)]
+
+        self._required_settings_batch = self.make_batch(
+            'required_settings', *setting_transactions)
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
@@ -71,26 +100,21 @@ class TestGenesisDependencyValidation(unittest.TestCase):
             output.ParseFromString(f.read())
             return output
 
-    def test_validate_with_no_input_batches(self):
-        args = self._parse_command([])
-        genesis.do_genesis(args, self._temp_data_dir)
-
-        output = self._result_data()
-        self.assertEqual(0, len(output.batches))
-
     def test_validate_with_default_output(self):
         """Tests that the genesis batch is created and placed in the data dir,
         which is the default location, when no output file is specified in the
         command args..
         """
-        args = self._parse_command([], with_default_output=True)
+        args = self._parse_command(
+            [self._required_settings_batch], with_default_output=True)
         genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data(target_dir=self._temp_data_dir)
-        self.assertEqual(0, len(output.batches))
+        self.assertEqual(1, len(output.batches))
 
     def test_validate_with_no_deps(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', []),
                                    transaction('id3', [])),
@@ -101,10 +125,11 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
-        self.assertEqual(2, len(output.batches))
+        self.assertEqual(3, len(output.batches))
 
     def test_validate_with_deps_in_same_batch(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', ['id1'])),
                    self.make_batch('batch2',
@@ -116,10 +141,11 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
-        self.assertEqual(3, len(output.batches))
+        self.assertEqual(4, len(output.batches))
 
     def test_validate_with_deps_in_across_batches(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', []),
                                    transaction('id3', [])),
@@ -130,10 +156,16 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         genesis.do_genesis(args, self._temp_data_dir)
 
         output = self._result_data()
-        self.assertEqual(2, len(output.batches))
+        self.assertEqual(3, len(output.batches))
+
+    def test_validation_fails_with_no_input_batches(self):
+        args = self._parse_command([])
+        with self.assertRaises(CliException):
+            genesis.do_genesis(args, self._temp_data_dir)
 
     def test_validation_fails_missing_dep(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', []),
                                    transaction('id3', [])),
@@ -145,7 +177,8 @@ class TestGenesisDependencyValidation(unittest.TestCase):
             genesis.do_genesis(args, self._temp_data_dir)
 
     def test_validation_fails_self_dep(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', ['id2']),
                                    transaction('id3', [])),
@@ -157,7 +190,8 @@ class TestGenesisDependencyValidation(unittest.TestCase):
             genesis.do_genesis(args, self._temp_data_dir)
 
     def test_validation_fails_out_of_order(self):
-        batches = [self.make_batch('batch1',
+        batches = [self._required_settings_batch,
+                   self.make_batch('batch1',
                                    transaction('id1', []),
                                    transaction('id2', ['id4']),
                                    transaction('id3', [])),
@@ -188,10 +222,10 @@ class TestGenesisDependencyValidation(unittest.TestCase):
         return filename
 
 
-def transaction(txn_sig, dependencies):
+def transaction(txn_sig, dependencies, family_name='test_family', payload=b''):
     header = TransactionHeader(
         signer_public_key='test_public_key',
-        family_name='test_family',
+        family_name=family_name,
         family_version='1.0',
         inputs=[],
         outputs=[],
@@ -203,4 +237,4 @@ def transaction(txn_sig, dependencies):
     return Transaction(
         header=header,
         header_signature=txn_sig,
-        payload=b'')
+        payload=payload)

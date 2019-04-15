@@ -199,6 +199,12 @@ Use the same terminal window as the previous step.
          sawtooth.consensus.algorithm.name=Devmode \
          sawtooth.consensus.algorithm.version=0.1 -o config.batch
 
+   .. note::
+
+      The ``sawtooth.consensus.algorithm.name`` and
+      ``sawtooth.consensus.algorithm.version`` settings are required; ``sawadm
+      genesis`` will fail if they are not present in one of the batches.
+
 #. Combine the previously created batches into a single genesis batch that will be committed in the genesis block:
 
    .. code-block:: console

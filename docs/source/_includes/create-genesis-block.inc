@@ -116,10 +116,12 @@ genesis block also includes the keys for the other nodes in the initial network.
        ``config-consensus.batch``.
 
       ``sawtooth.consensus.algorithm.name``
-       Specifies the consensus algorithm for this network.
+       Specifies the consensus algorithm for this network; this setting is
+       required.
 
       ``sawtooth.consensus.algorithm.version``
-       Specifies the version of the consensus algorithm.
+       Specifies the version of the consensus algorithm; this setting is
+       required.
 
       (PBFT only) ``sawtooth.consensus.pbft.members``
        Lists the member nodes on the initial network as a JSON-formatted
@@ -208,6 +210,12 @@ genesis block also includes the keys for the other nodes in the initial network.
        Processing config-consensus.batch...
        ...
        Generating /var/lib/sawtooth/genesis.batch
+
+   .. note::
+
+      The ``sawtooth.consensus.algorithm.name`` and
+      ``sawtooth.consensus.algorithm.version`` settings are required; ``sawadm
+      genesis`` will fail if they are not present in one of the batches.
 
 #. When this command finishes, the genesis block is complete. Log out of the
    ``sawtooth`` account.
