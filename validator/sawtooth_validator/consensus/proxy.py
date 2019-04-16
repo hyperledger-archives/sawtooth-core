@@ -16,6 +16,7 @@
 import hashlib
 import logging
 
+from sawtooth_validator.consensus.registry import EngineAlreadyActive
 from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.journal.event_extractors import \
     ReceiptEventExtractor
@@ -70,26 +71,26 @@ class ConsensusActivationObserver(ChainObserver):
         conf_version = settings_view.get_setting(
             'sawtooth.consensus.algorithm.version')
 
-        if not self._registry.is_active_engine_name_version(
-                conf_name, conf_version):
+        # Deactivate the old engine, if necessary
+        old_engine_info = None
+        if self._registry.has_active_engine():
+            old_engine_info = self._registry.get_active_engine_info()
 
-            # Deactivate the old engine, if necessary
-            old_engine_info = None
-            if self._registry.has_active_engine():
-                old_engine_info = self._registry.get_active_engine_info()
-
+        try:
             self._registry.activate_engine(conf_name, conf_version)
+        except EngineAlreadyActive:
+            return
 
-            if old_engine_info is not None:
-                self._notifier.notify_engine_deactivated(
-                    old_engine_info.connection_id)
-            self._notifier.notify_engine_activated(block)
+        if old_engine_info is not None:
+            self._notifier.notify_engine_deactivated(
+                old_engine_info.connection_id)
+        self._notifier.notify_engine_activated(block)
 
-            LOGGER.info(
-                "Consensus engine %s %s activated as of block %s",
-                conf_name,
-                conf_version,
-                block.header_signature)
+        LOGGER.info(
+            "Consensus engine %s %s activated as of block %s",
+            conf_name,
+            conf_version,
+            block.header_signature)
 
     def _is_consensus_algorithm_setting(self, event):
         if event.event_type != 'setting/update':
@@ -146,8 +147,11 @@ class ConsensusProxy:
             'sawtooth.consensus.algorithm.version')
 
         if engine_name == conf_name and engine_version == conf_version:
-            self._consensus_registry.activate_engine(
-                engine_name, engine_version)
+            try:
+                self._consensus_registry.activate_engine(
+                    engine_name, engine_version)
+            except EngineAlreadyActive:
+                return
             self._consensus_notifier.notify_engine_activated(chain_head)
 
             LOGGER.info(

@@ -21,6 +21,10 @@ class EngineNotRegistered(Exception):
     """The engine is not registered."""
 
 
+class EngineAlreadyActive(Exception):
+    """The engine is already active."""
+
+
 EngineInfo = namedtuple('EngineInfo', ['connection_id', 'name', 'version'])
 
 
@@ -51,9 +55,13 @@ class ConsensusRegistry:
 
     def activate_engine(self, name, version):
         with self._lock:
-            # If there is already an active engine, remove it
             if self._active is not None:
-                self._active = None
+                if (self._active.name == name
+                        and self._active.version == version):
+                    raise EngineAlreadyActive()
+                else:
+                    # A different engine is active; remove it
+                    self._active = None
             try:
                 self._active = next(
                     e for e in self._registry
