@@ -94,6 +94,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD44FC67F19B2466EA) \
  && apt-get update \
  && apt-get install -y -q \
-    python3-sawtooth-signing \
+    python3-sawtooth-sdk \
  && dpkg -i /tmp/*sawtooth*.deb || true \
  && apt-get -f -y install
