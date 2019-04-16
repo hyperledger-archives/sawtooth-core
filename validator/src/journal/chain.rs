@@ -317,10 +317,11 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        state
-            .chain_reader
-            .chain_head()
-            .expect("Invalid block store. Head of the block chain cannot be determined")
+        if let Some(head) = &state.chain_head {
+            self.get_block(head.block_id())
+        } else {
+            None
+        }
     }
 
     pub fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
