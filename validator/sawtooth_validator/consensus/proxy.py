@@ -16,6 +16,11 @@
 import hashlib
 import logging
 
+from sawtooth_validator.consensus.registry import EngineAlreadyActive
+from sawtooth_validator.journal.chain import ChainObserver
+from sawtooth_validator.journal.event_extractors import \
+    ReceiptEventExtractor
+from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusPeerMessage
 from sawtooth_validator.protobuf.consensus_pb2 import \
@@ -27,6 +32,73 @@ LOGGER = logging.getLogger(__name__)
 
 class UnknownBlock(Exception):
     """The given block could not be found."""
+
+
+class ConsensusActivationObserver(ChainObserver):
+    """Observes chain updates and activates new engines, when the settings
+    have been updated in state, as of the commit."""
+
+    def __init__(self, consensus_registry, consensus_notifier,
+                 settings_view_factory):
+        self._registry = consensus_registry
+        self._notifier = consensus_notifier
+        self._settings_view_factory = settings_view_factory
+
+    def chain_update(self, block, receipts):
+        # Check to see if there is an active engine at all:
+        if not self._registry.has_active_engine():
+            self._update_active_engine(block)
+            return
+
+        # Otherwise, check to see if the settings changed, before updating
+        # the active engine.
+        receipt_events = ReceiptEventExtractor(receipts).extract([
+            EventSubscription(event_type="setting/update")])
+
+        for event in receipt_events:
+            if self._is_consensus_algorithm_setting(event):
+                self._update_active_engine(block)
+                break
+
+    def _update_active_engine(self, block):
+        header = BlockHeader()
+        header.ParseFromString(block.header)
+        settings_view = self._settings_view_factory.create_settings_view(
+            header.state_root_hash)
+
+        conf_name = settings_view.get_setting(
+            'sawtooth.consensus.algorithm.name')
+        conf_version = settings_view.get_setting(
+            'sawtooth.consensus.algorithm.version')
+
+        # Deactivate the old engine, if necessary
+        old_engine_info = None
+        if self._registry.has_active_engine():
+            old_engine_info = self._registry.get_active_engine_info()
+
+        try:
+            self._registry.activate_engine(conf_name, conf_version)
+        except EngineAlreadyActive:
+            return
+
+        if old_engine_info is not None:
+            self._notifier.notify_engine_deactivated(
+                old_engine_info.connection_id)
+        self._notifier.notify_engine_activated(block)
+
+        LOGGER.info(
+            "Consensus engine %s %s activated as of block %s",
+            conf_name,
+            conf_version,
+            block.header_signature)
+
+    def _is_consensus_algorithm_setting(self, event):
+        if event.event_type != 'setting/update':
+            return False
+
+        key = event.attributes[0].value
+        return key in ('sawtooth.consensus.algorithm.name',
+                       'sawtooth.consensus.algorithm.version')
 
 
 class ConsensusProxy:
@@ -54,12 +126,15 @@ class ConsensusProxy:
 
     def activate_if_configured(self, engine_name, engine_version):
         # Wait until chain head is committed
-        chain_head = None
-        while chain_head is None:
-            try:
-                chain_head = self.chain_head_get()
-            except UnknownBlock:
-                pass
+        try:
+            chain_head = self.chain_head_get()
+        except UnknownBlock:
+            LOGGER.debug(
+                "Unable to determine if engine %s %s is configured until "
+                "chain head received",
+                engine_name,
+                engine_version)
+            return
 
         header = BlockHeader()
         header.ParseFromString(chain_head.header)
@@ -72,8 +147,11 @@ class ConsensusProxy:
             'sawtooth.consensus.algorithm.version')
 
         if engine_name == conf_name and engine_version == conf_version:
-            self._consensus_registry.activate_engine(
-                engine_name, engine_version)
+            try:
+                self._consensus_registry.activate_engine(
+                    engine_name, engine_version)
+            except EngineAlreadyActive:
+                return
             self._consensus_notifier.notify_engine_activated(chain_head)
 
             LOGGER.info(

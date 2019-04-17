@@ -29,10 +29,6 @@ def add(
     handler = handlers.ConsensusRegisterActivateHandler(consensus_proxy)
     dispatcher.add_handler(handler.request_type, handler, thread_pool)
 
-    handler = handlers.ConsensusRegisterBlockNewSyncHandler(
-        consensus_proxy, consensus_notifier)
-    dispatcher.add_handler(handler.request_type, handler, thread_pool)
-
     handler = handlers.ConsensusSendToHandler(consensus_proxy)
     dispatcher.add_handler(handler.request_type, handler, thread_pool)
 

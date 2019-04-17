@@ -151,28 +151,6 @@ class ConsensusRegisterActivateHandler(Handler):
         return HandlerResult(status=HandlerStatus.PASS)
 
 
-class ConsensusRegisterBlockNewSyncHandler(Handler):
-    def __init__(self, proxy, consensus_notifier):
-        self._proxy = proxy
-        self._consensus_notifier = consensus_notifier
-        self._request_type = validator_pb2.Message.CONSENSUS_REGISTER_REQUEST
-
-    @property
-    def request_type(self):
-        return self._request_type
-
-    def handle(self, connection_id, message_content):
-        forks = self._proxy.forks()
-
-        if not forks:
-            return HandlerResult(status=HandlerStatus.PASS)
-
-        for block in forks:
-            self._consensus_notifier.notify_block_new(block)
-
-        return HandlerResult(status=HandlerStatus.PASS)
-
-
 class ConsensusSendToHandler(ConsensusServiceHandler):
     def __init__(self, proxy):
         super().__init__(

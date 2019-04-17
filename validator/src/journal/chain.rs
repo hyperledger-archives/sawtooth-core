@@ -52,7 +52,6 @@ use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
 use journal::fork_cache::ForkCache;
 use metrics;
-use state::settings_view::SettingsView;
 use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 
@@ -318,10 +317,11 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        state
-            .chain_reader
-            .chain_head()
-            .expect("Invalid block store. Head of the block chain cannot be determined")
+        if let Some(head) = &state.chain_head {
+            self.get_block(head.block_id())
+        } else {
+            None
+        }
     }
 
     pub fn block_validation_result(&self, block_id: &str) -> Option<BlockValidationResult> {
@@ -387,6 +387,25 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                         .block_manager
                         .ref_block(block.header_signature.as_str())?,
                 );
+
+                match self.block_validation_results.get(&block.header_signature) {
+                    Some(validation_results) => {
+                        let receipts: Vec<TransactionReceipt> = validation_results
+                            .execution_results
+                            .iter()
+                            .map(TransactionReceipt::from)
+                            .collect();
+                        for observer in &mut state.observers {
+                            observer.chain_update(&block, receipts.as_slice());
+                        }
+                    }
+                    None => {
+                        error!(
+                            "While committing {}, found block missing execution results",
+                            &block,
+                        );
+                    }
+                }
 
                 let mut guard = lock.acquire();
                 guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
@@ -748,6 +767,9 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 info!("Chain head updated to {}", &block);
 
+                self.consensus_notifier
+                    .notify_block_commit(&block.header_signature);
+
                 let mut chain_head_gauge =
                     COLLECTOR.gauge("ChainController.chain_head", None, None);
                 chain_head_gauge.set_value(&block.header_signature[0..8]);
@@ -831,75 +853,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // Updated the block, so we're done
                 break;
             }
-        }
-
-        // Check if active consensus engine needs to be updated
-        let settings_view: SettingsView = self
-            .state_view_factory
-            .create_view(&block.state_root_hash)
-            .map_err(|db_err| {
-                let err_str = format!(
-                    "Failed to get state view for block {:?}: {:?}",
-                    block, db_err
-                );
-                warn!("{}", err_str);
-                ChainControllerError::ConsensusError(err_str)
-            })?;
-        let name = settings_view
-            .get_setting_str("sawtooth.consensus.algorithm.name", None)
-            .map_err(|settings_err| {
-                let err_str = format!(
-                    "Error getting sawtooth.consensus.algorithm.name from settings view: {:?}",
-                    settings_err
-                );
-                warn!("{}", err_str);
-                ChainControllerError::ConsensusError(err_str)
-            })?
-            .unwrap_or_else(|| String::from(""));
-        let version = settings_view
-            .get_setting_str("sawtooth.consensus.algorithm.version", None)
-            .map_err(|settings_err| {
-                let err_str = format!(
-                    "Error getting sawtooth.consensus.algorithm.version from settings view: {:?}",
-                    settings_err
-                );
-                warn!("{}", err_str);
-                ChainControllerError::ConsensusError(err_str)
-            })?
-            .unwrap_or_else(|| String::from(""));
-
-        let is_active_engine = self
-            .consensus_registry
-            .is_active_engine_name_version(&name, &version)
-            .map_err(|reg_err| {
-                let err_str = format!("Error verifying active engine: {:?}", reg_err);
-                warn!("{}", err_str);
-                ChainControllerError::ConsensusError(err_str)
-            })?;
-
-        if !is_active_engine {
-            match self.consensus_registry.get_active_engine_info() {
-                Ok(Some(engine_info)) => {
-                    self.consensus_notifier
-                        .notify_engine_deactivated(engine_info.connection_id);
-                }
-                Err(err) => {
-                    // Not a fatal error; just won't notify old engine that it's deactivated
-                    warn!("Error getting active engine info: {:?}", err);
-                }
-                _ => (),
-            }
-            self.consensus_registry
-                .activate_engine(&name, &version)
-                .map_err(|reg_err| {
-                    let err_str = format!("Error activating consensus engine: {:?}", reg_err);
-                    warn!("{}", err_str);
-                    ChainControllerError::ConsensusError(err_str)
-                })?;
-            self.consensus_notifier.notify_engine_activated(block);
-        } else {
-            self.consensus_notifier
-                .notify_block_commit(&block.header_signature);
         }
 
         Ok(())
