@@ -76,8 +76,6 @@ accepted transaction types to those from this network's transaction processors
         sawtooth.consensus.algorithm.version=0.1
         sawtooth.consensus.pbft.members=03e27504580fa15...
         sawtooth.consensus.pbft.block_duration=200
-        sawtooth.consensus.pbft.checkpoint_period=100
-        sawtooth.consensus.pbft.view_change_timeout=4000
         sawtooth.consensus.pbft.message_timeout=10
         sawtooth.consensus.pbft.max_log_size=1000
         sawtooth.publisher.max_batches_per_block: 200
