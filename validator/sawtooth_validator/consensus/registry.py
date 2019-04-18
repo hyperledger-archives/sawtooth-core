@@ -67,8 +67,7 @@ class ConsensusRegistry:
                     e for e in self._registry
                     if e.name == name and e.version == version)
             except StopIteration:
-                # If engine isn't registered, just leave _active as None
-                pass
+                raise EngineNotRegistered()
 
     def deactivate_current_engine(self):
         with self._lock:
