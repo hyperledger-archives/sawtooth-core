@@ -1,6 +1,6 @@
-**************************
-Setting Up a Sawtooth Node
-**************************
+*****************************
+Setting Up a Sawtooth Network
+*****************************
 
 In this section, you will configure a Sawtooth node (or nodes) with either
 Sawtooth PBFT consensus or PoET simulator consensus:

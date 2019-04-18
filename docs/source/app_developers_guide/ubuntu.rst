@@ -1,5 +1,5 @@
 *********************************************
-Using Ubuntu for Your Development Environment
+Using Ubuntu for a Single Sawtooth Node
 *********************************************
 
 This procedure explains how to set up Hyperledger Sawtooth for application

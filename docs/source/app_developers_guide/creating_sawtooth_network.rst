@@ -1,6 +1,6 @@
-***************************
-Creating a Sawtooth Network
-***************************
+********************************
+Creating a Sawtooth Test Network
+********************************
 
 This procedure describes how to create a Sawtooth network with multiple
 validator nodes. It creates an application development environment that is

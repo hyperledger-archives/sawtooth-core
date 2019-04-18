@@ -1,5 +1,5 @@
 *********************************************
-Using Docker for your Development Environment
+Using Docker for a Single Sawtooth Node
 *********************************************
 
 This procedure explains how to set up Hyperledger Sawtooth for application

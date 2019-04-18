@@ -1,6 +1,6 @@
-*********************************************************
-Setting Up a Sawtooth Application Development Environment
-*********************************************************
+**************************************
+Setting Up a Sawtooth Node for Testing
+**************************************
 
 Before you can start developing for the *Hyperledger Sawtooth* platform, you'll
 need to set up and run a local validator to test your application against. Once
@@ -34,9 +34,9 @@ To get started, choose the guide for the platform of your choice.
 	:maxdepth: 1
 
 	docker.rst
-	ubuntu.rst
-	aws.rst
 	kubernetes.rst
+	aws.rst
+	ubuntu.rst
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
