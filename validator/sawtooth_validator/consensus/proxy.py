@@ -17,6 +17,7 @@ import hashlib
 import logging
 
 from sawtooth_validator.consensus.registry import EngineAlreadyActive
+from sawtooth_validator.consensus.registry import EngineNotRegistered
 from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.journal.event_extractors import \
     ReceiptEventExtractor
@@ -79,6 +80,10 @@ class ConsensusActivationObserver(ChainObserver):
         try:
             self._registry.activate_engine(conf_name, conf_version)
         except EngineAlreadyActive:
+            return
+        except EngineNotRegistered:
+            # We can ignore this, as the registration process will attempt
+            # to activate the engine
             return
 
         if old_engine_info is not None:
@@ -152,6 +157,16 @@ class ConsensusProxy:
                     engine_name, engine_version)
             except EngineAlreadyActive:
                 return
+            except EngineNotRegistered:
+                # The expectation is that this engine should have been
+                # registered before calling this function
+                LOGGER.error(
+                    "Attempting to activate engine %s %s before it has been "
+                    "registered with the validator",
+                    engine_name,
+                    engine_version)
+                return
+
             self._consensus_notifier.notify_engine_activated(chain_head)
 
             LOGGER.info(
