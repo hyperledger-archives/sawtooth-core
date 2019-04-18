@@ -15,10 +15,13 @@ Python
 Go
 --
 
-- `Transaction Processor
-  <go_sdk/processor.html#http://>`__
-- `Signing
-  <go_sdk/signing.html#http://>`__
+The Go SDK Reference is available only in the
+`sawtooth-sdk-go source code <https://github.com/hyperledger/sawtooth-sdk-go>`__.
+
+  .. tip::
+
+     Use `godoc <https://godoc.org/golang.org/x/tools/cmd/godoc>`_  to extract
+     and build the Go SDK reference.
 
 Javascript
 ----------
