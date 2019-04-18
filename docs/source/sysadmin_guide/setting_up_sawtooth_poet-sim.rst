@@ -2,15 +2,16 @@
 Setting Up a Sawtooth Network
 *****************************
 
-In this section, you will configure a Sawtooth node (or nodes) with either
-Sawtooth PBFT consensus or PoET simulator consensus:
+In this section, you will configure a network of Sawtooth nodes with either
+Sawtooth PBFT consensus or PoET simulator consensus.
 
-* :term:`Sawtooth PBFT consensus <PBFT>` provides Byzantine fault tolerance for
-  a network with restricted membership. PBFT requires at least four nodes.
+* :term:`Sawtooth PBFT consensus <PBFT consensus>` provides Byzantine fault
+  tolerance for a network with restricted membership. PBFT requires at least
+  four nodes.
 
-* :term:`PoET simulator consensus <PoET>` is designed for a system without a
-  Trusted Execution Environment (TEE). Sawtooth PoET requires a minimum of three
-  nodes, but works best with at least four or five nodes.
+* :term:`PoET simulator consensus <PoET consensus>` is designed for a system
+  without a Trusted Execution Environment (TEE). Sawtooth PoET requires a
+  minimum of three nodes, but works best with at least four or five nodes.
 
 .. note::
 
