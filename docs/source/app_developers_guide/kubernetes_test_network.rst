@@ -487,7 +487,7 @@ Use the following steps to create and submit a batch containing the new setting.
 
 .. _stop-sawtooth-kube2-label:
 
-Step 6: Stop the Sawtooth Kubernetes Cluster
+Step 7: Stop the Sawtooth Kubernetes Cluster
 --------------------------------------------
 
 Use the following commands to stop and reset the Sawtooth network.
