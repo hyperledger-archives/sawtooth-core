@@ -1,6 +1,6 @@
-**************
-API References
-**************
+**********************
+SDK and API References
+**********************
 
 .. toctree::
    :maxdepth: 2
