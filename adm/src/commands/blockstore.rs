@@ -24,8 +24,8 @@ use protobuf;
 use protobuf::Message;
 use serde_yaml;
 
-use sawtooth_sdk::messages::block::{Block, BlockHeader};
-use sawtooth_sdk::messages::transaction::TransactionHeader;
+use proto::block::{Block, BlockHeader};
+use proto::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use config;

@@ -24,9 +24,9 @@ use clap::ArgMatches;
 use protobuf;
 use protobuf::Message;
 
-use sawtooth_sdk::messages::batch::{Batch, BatchList};
-use sawtooth_sdk::messages::genesis::GenesisData;
-use sawtooth_sdk::messages::transaction::TransactionHeader;
+use proto::batch::{Batch, BatchList};
+use proto::genesis::GenesisData;
+use proto::transaction::TransactionHeader;
 
 use config;
 use err::CliError;

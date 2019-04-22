@@ -15,9 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
+use proto::block::{Block, BlockHeader};
 use protobuf;
 use protobuf::Message;
-use sawtooth_sdk::messages::block::{Block, BlockHeader};
 
 use database::error::DatabaseError;
 use database::lmdb::LmdbDatabase;
@@ -217,8 +217,8 @@ mod tests {
     use super::*;
     use config;
     use database::lmdb::LmdbContext;
-    use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
-    use sawtooth_sdk::messages::transaction::Transaction;
+    use proto::batch::{Batch, BatchHeader};
+    use proto::transaction::Transaction;
 
     /// Asserts that BLOCKSTORE has a current height of COUNT.
     fn assert_current_height(count: usize, blockstore: &Blockstore) {
