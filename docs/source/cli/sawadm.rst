@@ -45,7 +45,7 @@ The output is a file containing a serialized ``GenesisData`` protobuf message.
 This file, when placed at `sawtooth_data`/``genesis.batch``, will trigger
 the genesis process.
 
-.. Note::
+.. note::
 
   The location of `sawtooth_data` depends on whether the
   environment variable ``SAWTOOTH_HOME`` is set. If it is, then

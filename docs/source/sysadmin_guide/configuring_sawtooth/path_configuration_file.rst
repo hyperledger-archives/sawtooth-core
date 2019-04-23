@@ -2,7 +2,7 @@
 Path Configuration File
 -----------------------
 
-.. Important::
+.. important::
 
   Changing the path settings in this file is usually unnecessary.
   For non-standard directory paths, use the ``SAWTOOTH_HOME`` environment
