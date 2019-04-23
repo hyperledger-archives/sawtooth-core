@@ -24,8 +24,8 @@ use protobuf;
 use protobuf::Message;
 use serde_yaml;
 
-use sawtooth_sdk::messages::block::{Block, BlockHeader};
-use sawtooth_sdk::messages::transaction::TransactionHeader;
+use proto::block::{Block, BlockHeader};
+use proto::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use config;
@@ -413,7 +413,7 @@ fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block
         return Ok(None);
     }
 
-    let block = protobuf::parse_length_delimited_from(source)
+    let block = protobuf::parse_from_reader(source)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
 
     Ok(Some(block))

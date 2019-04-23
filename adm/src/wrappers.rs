@@ -18,7 +18,7 @@ use std;
 
 use protobuf;
 
-use sawtooth_sdk::messages;
+use proto;
 
 #[derive(Debug)]
 pub enum Error {
@@ -59,7 +59,7 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn try_from(block: messages::block::Block) -> Result<Self, Error> {
+    pub fn try_from(block: proto::block::Block) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&block.header)
             .map_err(|err| {
                 Error::ParseError(format!(
@@ -67,7 +67,7 @@ impl Block {
                     block.header_signature, err
                 ))
             })
-            .and_then(|block_header: messages::block::BlockHeader| {
+            .and_then(|block_header: proto::block::BlockHeader| {
                 block
                     .get_batches()
                     .iter()
@@ -93,7 +93,7 @@ pub struct Batch {
 }
 
 impl Batch {
-    pub fn try_from(batch: messages::batch::Batch) -> Result<Self, Error> {
+    pub fn try_from(batch: proto::batch::Batch) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&batch.header)
             .map_err(|err| {
                 Error::ParseError(format!(
@@ -101,7 +101,7 @@ impl Batch {
                     batch.header_signature, err
                 ))
             })
-            .and_then(|batch_header: messages::batch::BatchHeader| {
+            .and_then(|batch_header: proto::batch::BatchHeader| {
                 batch
                     .get_transactions()
                     .iter()
@@ -133,7 +133,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn try_from(transaction: &messages::transaction::Transaction) -> Result<Self, Error> {
+    pub fn try_from(transaction: &proto::transaction::Transaction) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&transaction.header)
             .map_err(|err| {
                 Error::ParseError(format!(
@@ -142,7 +142,7 @@ impl Transaction {
                 ))
             })
             .map(
-                |transaction_header: messages::transaction::TransactionHeader| Transaction {
+                |transaction_header: proto::transaction::TransactionHeader| Transaction {
                     batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
                     dependencies: transaction_header.get_dependencies().to_vec(),
                     family_name: String::from(transaction_header.get_family_name()),

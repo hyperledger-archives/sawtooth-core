@@ -31,6 +31,7 @@ mod commands;
 mod config;
 mod database;
 mod err;
+mod proto;
 mod wrappers;
 
 use clap::ArgMatches;
