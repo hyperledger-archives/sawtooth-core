@@ -69,9 +69,10 @@ submits to the validator via the REST API.
 Prerequisites
 -------------
 
-* A working Sawtooth development environment, as described in
-  :doc:`/app_developers_guide/installing_sawtooth`. This environment must be
-  running a validator, a REST API, and the Settings transaction processor.
+* A working Sawtooth node, as described in
+  :doc:`/app_developers_guide/installing_sawtooth`. This node must be
+  running a validator, a REST API, a consensus engine, and the Settings
+  transaction processor.
   (The IntegerKey transaction processor is not used in this procedure.)
 
 * This procedure also requires the XO transaction processor. The Docker and AWS
@@ -82,16 +83,16 @@ Prerequisites
 Step 1: Confirm Connectivity to the REST API
 --------------------------------------------
 
-#. Connect to your development environment, as described in the procedure for
+#. Connect to your Sawtooth node, as described in the procedure for
    your platform in :doc:`installing_sawtooth`.
 
 #. Verify that you can connect to the REST API.
 
    * Docker: See :ref:`confirming-connectivity-docker-label`
 
-   * Ubuntu: See :doc:`/app_developers_guide/installing_sawtooth`
-
    * AWS: See :ref:`confirming-connectivity-aws-label`
+
+   * Ubuntu: See :ref:`confirm-rest-api-ubuntu-label`
 
    .. Important::
 
@@ -101,8 +102,8 @@ Step 1: Confirm Connectivity to the REST API
       If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
       ``--url`` argument to each ``xo`` command in this procedure.
 
-      For example, the following command specifies the URL for the Docker demo
-      application environment when creating a new game:
+      This example shows the format of this argument, using the default URL
+      for a Docker environment:
 
       .. code-block:: console
 
@@ -112,8 +113,8 @@ Step 1: Confirm Connectivity to the REST API
 Step 2. Ubuntu only: Start the XO Transaction Processor
 -------------------------------------------------------
 
-If you did not start the XO transaction processor on your Ubuntu application
-development environment, start it now.
+For Ubuntu: If the XO transaction processor is not running on your Sawtooth
+node, start it now.
 
 #. Open a new terminal window (the xo window).
 
@@ -132,7 +133,7 @@ development environment, start it now.
 
       user@xo$ sudo -u sawtooth xo-tp-python -v
 
-For more information, see Step 5.3 in :doc:`ubuntu`.
+For more information, see :ref:`start-tps-label`.
 
 
 Step 3. Create Players
