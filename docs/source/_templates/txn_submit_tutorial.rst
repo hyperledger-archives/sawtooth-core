@@ -41,8 +41,8 @@ In addition to a private key, you will need a shareable public key. It will be
 generated from your private key, and can be used to confirm the private key was
 used to sign a Transaction without exposing the private key itself. Your
 secp256k1 library should be able to generate a public key, and Sawtooth will
-expect it to be formatted as a hexadecimal string for distribution with a
-Transaction.
+expect it to be formatted as a lower-case hexadecimal string for distribution
+with a Transaction.
 
 .. code-block:: python
 
@@ -72,7 +72,7 @@ TransactionHeaders.
 However the payload was originally encoded, in order to confirm it has not been
 tampered with, a hash of it must be included within the Transaction's header.
 This hash should be created using the SHA-512 function, and then formatted as a
-hexadecimal string.
+lower-case hexadecimal string.
 
 .. code-block:: python
 
@@ -147,7 +147,7 @@ signature the Sawtooth validator will accept, you must:
     * use the *secp256k1* elliptic curve
     * sign a *SHA-256* hash of the TransactionHeader binary
     * use a compact 64-byte signature
-    * format the signature as a hexadecimal string
+    * format the signature as a lower-case hexadecimal string
 
 This is a fairly typical way to sign data, so depending on the language and
 library you are using, some of these steps may be handled automatically.
@@ -254,8 +254,8 @@ the same order as the Transactions themselves.
 The process for signing a BatchHeader is identical to signing the
 TransactionHeader. Create a SHA-256 hash of the header binary, use your
 private key to create a 64-byte secp256k1 signature, and format that signature
-as a hexadecimal string. As with signing a TransactionHeader, some of these
-steps may be handled automatically by the library you are using.
+as a lower-case hexadecimal string. As with signing a TransactionHeader, some of
+these steps may be handled automatically by the library you are using.
 
 .. code-block:: python
 
