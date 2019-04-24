@@ -47,12 +47,29 @@ verified against the signature upon receipt of the Transaction.
 * The resulting serialized document is signed with the transactor's private
   ECDSA key using the secp256k1 curve.
 
-The validator expects a 64 byte "compact" signature. This is a concatenation
-of the R and S fields of the signature. Some libraries will include an
-additional header byte, recovery ID field, or provide DER encoded signatures.
-Sawtooth will reject the signature if it is anything other than 64 bytes.
+The validator expects a normalized 64-byte "compact" signature. This is a
+concatenation of the `R` and `S` fields of the signature. Some libraries will
+include an additional header byte, recovery ID field, or provide DER encoded
+signatures.  Sawtooth will reject the signature if it is anything other than
+64 bytes.
 
 .. note::
+
+   The ECDSA signature must be normalized to a "low S" form, which is also
+   called a `low-S signature`. (See `Bitcoin Transaction
+   Malleability <https://eklitzke.org/bitcoin-transaction-malleability>`__ for
+   the rationale for this type of normalization.) This implies that the ECDSA
+   must compute `(R,S)` and `(R, N-S)`, where `N` is the order of the secp256k1
+   curve, and the effective signature is the one with the smallest of `S` and
+   `N-S` values (that is, `min(S, N-S)`). Otherwise, Sawtooth will reject the
+   transaction signature.
+
+   If you are using the Python3 Sawtooth SDK or other libraries for ECDSA on
+   secp256k1 that derive from the Bitcoin secp256k1 library, you don't have to
+   worry about this normalization. However, some libraries do not normalize the
+   signature this way (for example, mbed TLS and openSSL).
+
+.. tip::
 
    The original header bytes as constructed from the sender are used
    for verification of the signature.  It is not considered good practice to
@@ -145,10 +162,27 @@ Batch.
 The resulting serialized document is signed with the transactor's private
 ECDSA key using the secp256k1 curve.
 
-The validator expects a 64 byte "compact" signature. This is a concatenation
-of the R and S fields of the signature. Some libraries will include an
-additional header byte, recovery ID field, or provide DER encoded signatures.
-Sawtooth will reject the signature if it is anything other than 64 bytes.
+The validator expects a normalized 64-byte "compact" signature. This is a
+concatenation of the `R` and `S` fields of the signature. Some libraries will
+include an additional header byte, recovery ID field, or provide DER encoded
+signatures.  Sawtooth will reject the signature if it is anything other than
+64 bytes.
+
+.. note::
+
+   The ECDSA signature must be normalized to a "low S" form, which is also
+   called a `low-S signature`. (See `Bitcoin Transaction
+   Malleability <https://eklitzke.org/bitcoin-transaction-malleability>`__ for
+   the rationale for this type of normalization.) This implies that the ECDSA
+   must compute `(R,S)` and `(R, N-S)`, where `N` is the order of the secp256k1
+   curve, and the effective signature is the one with the smallest of `S` and
+   `N-S` values (that is, `min(S, N-S)`). Otherwise, Sawtooth will reject the
+   transaction signature.
+
+   If you are using the Python3 Sawtooth SDK or other libraries for ECDSA on
+   secp256k1 that derive from the Bitcoin secp256k1 library, you don't have to
+   worry about this normalization. However, some libraries do not normalize the
+   signature this way (for example, mbed TLS and openSSL).
 
 Transactions
 ------------
