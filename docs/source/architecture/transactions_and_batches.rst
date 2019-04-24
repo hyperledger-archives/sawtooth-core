@@ -29,8 +29,8 @@ message types:
    :caption: File: protos/transaction.proto
    :linenos:
 
-Header, Signature, and Public Keys
-----------------------------------
+Transaction Header, Signature, and Public Keys
+----------------------------------------------
 
 The Transaction header field is a serialized version of a TransactionHeader.
 The header is signed by the signer's private key (not sent with the
@@ -38,14 +38,14 @@ transaction) and the resulting signature is stored in header_signature.  The
 header is present in the serialized form so that the exact bytes can be
 verified against the signature upon receipt of the Transaction.
 
-The verification process verifies that the key in signer_public_key signed the
-header bytes resulting in header_signature.
+* The verification process verifies that the key in signer_public_key signed the
+  header bytes resulting in header_signature.
 
-The batcher_public_key field must match the public key used to sign the batch in
-which this transaction is contained.
+* The batcher_public_key field must match the public key used to sign the batch
+  in which this transaction is contained.
 
-The resulting serialized document is signed with the transactor's private
-ECDSA key using the secp256k1 curve.
+* The resulting serialized document is signed with the transactor's private
+  ECDSA key using the secp256k1 curve.
 
 The validator expects a 64 byte "compact" signature. This is a concatenation
 of the R and S fields of the signature. Some libraries will include an
@@ -132,14 +132,15 @@ message types:
    :caption: File: protos/batch.proto
    :linenos:
 
-Header, Signature, and Public Keys
-----------------------------------
+Batch Header, Signature, and Public Keys
+----------------------------------------
 
-Following the pattern presented in Transaction, the Batch header field is a
-serialized version of a BatchHeader.  The header is signed by the signer's
-private key (not sent with the batch) and the resulting signature is stored in
-header_signature.  The header is present in the serialized form so that the
-exact bytes can be verified against the signature upon receipt of the Batch.
+Following the pattern presented in the Transaction data structure, the Batch
+header field is a serialized version of a BatchHeader.  The header is signed by
+the signer's private key (not sent with the batch) and the resulting signature
+is stored in header_signature.  The header is present in the serialized form so
+that the exact bytes can be verified against the signature upon receipt of the
+Batch.
 
 The resulting serialized document is signed with the transactor's private
 ECDSA key using the secp256k1 curve.
