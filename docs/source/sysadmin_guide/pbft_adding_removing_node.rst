@@ -93,7 +93,7 @@ You can add several nodes at the same time.
 
          $ sawset proposal create \
            --key /etc/sawtooth/keys/validator.priv \
-           sawtooth.consensus.pbft.members=[previous-list, NEW-KEY]
+           sawtooth.consensus.pbft.members=[previous-list,NEW-KEY]
 
       If there are no errors, this change will be committed to the blockchain.
 

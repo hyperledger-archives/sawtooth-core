@@ -1,6 +1,6 @@
-***********************
-Using AWS with Sawtooth
-***********************
+***************************************
+Using AWS for a Single Sawtooth Node
+***************************************
 
 This tutorial explains how to set up Hyperledger Sawtooth for application
 development using the Amazon Elastic Compute Cloud (Amazon EC2) service.

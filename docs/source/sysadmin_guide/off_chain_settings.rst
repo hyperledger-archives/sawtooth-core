@@ -6,11 +6,6 @@ Changing Off-chain Settings with Configuration Files
 
     These instructions have been tested on Ubuntu 16.04 only.
 
-Each Sawtooth component, such as the validator or the REST API, can have an
-optional configuration file that controls the component's behavior. By default,
-Sawtooth does not install any configuration files.  However, Sawtooth provides
-example configuration files that can be customized for your system.
-
 This procedure explains how to create and use Sawtooth configuration files to
 change the following Sawtooth settings:
 
@@ -19,6 +14,11 @@ change the following Sawtooth settings:
 
 * Peering type and peer nodes on the network
 
+  .. important::
+
+     For PBFT, all peer nodes must be specified with the ``peers`` setting in
+     the validator configuration file.
+
 * Network keys for secured communication between nodes (optional)
 
 * Scheduler type (optional)
@@ -26,8 +26,8 @@ change the following Sawtooth settings:
 It also explains how to configure a non-default REST API URL for the Sawtooth
 commands.
 
-See :doc:`configuring_sawtooth` for detailed information on all the settings in
-each configuration file.
+See :doc:`configuring_sawtooth` for detailed information on
+the settings in each configuration file.
 
 .. note::
 
@@ -35,6 +35,7 @@ each configuration file.
    ``/etc/sawtooth/``. If your system uses a different location, change this
    path in the commands below. For more information, see
    :doc:`configuring_sawtooth/path_configuration_file`.
+
 
 .. _sysadm-configure-validator-label:
 
@@ -57,7 +58,6 @@ Additional steps specify the peers for this node, change the scheduler type
    .. code-block:: console
 
       $ sudo vi /etc/sawtooth/validator.toml
-
 
 #. Change the network settings for the validator.
 
@@ -124,7 +124,8 @@ Additional steps specify the peers for this node, change the scheduler type
       example, a public network using an open-membership consensus algorithm
       should use dynamic peering, while a consortium network or network using a
       fixed-membership consensus algorithm should use static peering. For more
-      information, see :doc:`configuring_sawtooth/validator_configuration_file`.
+      information, see
+      :doc:`configuring_sawtooth/validator_configuration_file`.
 
       .. note::
 
@@ -250,7 +251,7 @@ Additional steps specify the peers for this node, change the scheduler type
 .. _rest-api-bind-address-label:
 
 Configure the REST API
-=======================
+======================
 
 Use these steps to change the network settings for the REST API.
 
@@ -297,6 +298,8 @@ Use these steps to change the network settings for the REST API.
    see :doc:`rest_auth_proxy`.
 
 
+.. _config-sawtooth-cmds-label:
+
 Configure the Sawtooth Commands (Optional)
 ==========================================
 
@@ -304,7 +307,8 @@ If the REST API on this node is not at the default location, you can set the URL
 in the CLI configuration file. Otherwise, you would have to use the ``--url``
 option with each Sawtooth command.
 
-For more information, see :doc:`configuring_sawtooth/cli_configuration`.
+For more information, see
+:doc:`configuring_sawtooth/cli_configuration`.
 
 #. Create the CLI configuration file by copying the example file.
 
@@ -319,8 +323,7 @@ For more information, see :doc:`configuring_sawtooth/cli_configuration`.
       $ sudo vi /etc/sawtooth/cli.toml
 
 #. Change the ``url`` setting to the host and port for the REST API. This
-   setting must match the ``bind`` value in the REST API configuration file
-   (see :ref:`rest-api-bind-address-label`).
+   setting must match the ``bind`` value in the REST API configuration file.
 
    Be sure to remove the ``#`` comment character to activate this setting.
 

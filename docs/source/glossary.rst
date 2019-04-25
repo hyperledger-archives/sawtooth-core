@@ -104,7 +104,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
     "in state") so that all participants on the network can access that
     information.
 
-  PBFT
+  PBFT consensus
     Practical Byzantine Fault Tolerance, a voting-based consensus algorithm with
     `Byzantine fault tolerance (BFT) <https://en.wikipedia.org/wiki/Byzantine_fault_tolerance>`__
     that has finality (does not fork). Sawtooth PBFT extends the
@@ -123,7 +123,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
     and identities, so that all participants in the network can access this
     information.
 
-  PoET
+  PoET consensus
     Proof of Elapsed Time, a Nakamoto-style consensus algorithm that is designed
     to support large networks. PoET does not have finality (can fork).
 
