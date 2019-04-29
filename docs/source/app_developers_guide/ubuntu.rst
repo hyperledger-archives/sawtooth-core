@@ -25,13 +25,14 @@ to use an SDK to create a transaction family that implements your application's
 business logic.
 
 
-About the Application Development Environment
-=============================================
+About the Ubuntu Test Node Environment
+======================================
 
-The Ubuntu application development environment is a single validator node that
-is running a validator, a REST API, and three transaction processors. This
-environment uses Developer mode (dev mode) consensus and parallel transaction
-processing.
+This Ubuntu environment is a single Sawtooth node that is running a
+validator, a REST API, the Devmode consensus engine, and three transaction
+processors. The environment uses
+:ref:`Devmode consensus <dynamic-consensus-label>` and
+:doc:`parallel transaction processing <../architecture/scheduling>`.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
