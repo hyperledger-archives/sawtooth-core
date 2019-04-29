@@ -54,6 +54,13 @@ def add_genesis_parser(subparsers, parent_parser):
         help='file or files containing batches to add to the resulting '
         'GenesisData')
 
+    parser.add_argument(
+        '--ignore-required-settings',
+        action='store_true',
+        help='skip the check for settings that are required at genesis '
+        '(necessary if using a settings transaction family other than '
+        'sawtooth_settings)')
+
 
 def do_genesis(args, data_dir=None):
     """Given the command args, take an series of input files containing
@@ -81,7 +88,8 @@ def do_genesis(args, data_dir=None):
         genesis_batches += input_data.batches
 
     _validate_depedencies(genesis_batches)
-    _check_required_settings(genesis_batches)
+    if not args.ignore_required_settings:
+        _check_required_settings(genesis_batches)
 
     if args.output:
         genesis_file = args.output

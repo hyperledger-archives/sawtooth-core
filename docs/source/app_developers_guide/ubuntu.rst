@@ -204,7 +204,8 @@ Use the same terminal window as the previous step.
 
       The ``sawtooth.consensus.algorithm.name`` and
       ``sawtooth.consensus.algorithm.version`` settings are required; ``sawadm
-      genesis`` will fail if they are not present in one of the batches.
+      genesis`` will fail if they are not present in one of the batches unless
+      the ``--ignore-required-settings`` flag is used.
 
 #. Combine the previously created batches into a single genesis batch that will be committed in the genesis block:
 

@@ -109,7 +109,10 @@ fn parse_args<'a>() -> ArgMatches<'a> {
             (about: "creates the genesis.batch file for initializing the validator")
             (@arg input_file:
              +takes_value ... "file or files containing batches to add to the resulting")
-            (@arg output: -o --output "choose the output file for GenesisData"))
+            (@arg output: -o --output "choose the output file for GenesisData")
+            (@arg ignore_required_settings: --ignore-required-settings
+             "skip the check for settings that are required at genesis (necessary if using a
+              settings transaction family other than sawtooth_settings)"))
         (@arg verbose: -v... "increase the logging level.")
     );
     app.get_matches()

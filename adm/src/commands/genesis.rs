@@ -76,7 +76,9 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         });
 
     validate_depedencies(&batches)?;
-    check_required_settings(&batches)?;
+    if !args.is_present("ignore_required_settings") {
+        check_required_settings(&batches)?;
+    }
 
     let mut genesis_data = GenesisData::new();
     genesis_data.set_batches(protobuf::RepeatedField::from_vec(batches));
