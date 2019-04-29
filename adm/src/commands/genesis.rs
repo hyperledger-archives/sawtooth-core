@@ -26,6 +26,7 @@ use protobuf::Message;
 
 use proto::batch::{Batch, BatchList};
 use proto::genesis::GenesisData;
+use proto::settings::{SettingProposal, SettingsPayload, SettingsPayload_Action};
 use proto::transaction::TransactionHeader;
 
 use config;
@@ -75,6 +76,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         });
 
     validate_depedencies(&batches)?;
+    check_required_settings(&batches)?;
 
     let mut genesis_data = GenesisData::new();
     genesis_data.set_batches(protobuf::RepeatedField::from_vec(batches));
@@ -123,4 +125,120 @@ fn validate_depedencies(batches: &[Batch]) -> Result<(), CliError> {
         }
     }
     Ok(())
+}
+
+fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
+    let mut required_settings = vec![
+        "sawtooth.consensus.algorithm.name",
+        "sawtooth.consensus.algorithm.version",
+    ];
+
+    for batch in batches.iter() {
+        for txn in batch.transactions.iter() {
+            let txn_header: TransactionHeader =
+                protobuf::parse_from_bytes(&txn.header).map_err(|err| {
+                    CliError::ArgumentError(format!(
+                        "Invalid transaction header for txn {}: {}",
+                        &txn.header_signature, err
+                    ))
+                })?;
+            if txn_header.family_name == "sawtooth_settings" {
+                let settings_payload: SettingsPayload = protobuf::parse_from_bytes(&txn.payload)
+                    .map_err(|err| {
+                        CliError::ArgumentError(format!(
+                            "Invalid payload for settings txn {}: {}",
+                            &txn.header_signature, err
+                        ))
+                    })?;
+                if let SettingsPayload_Action::PROPOSE = settings_payload.action {
+                    let proposal: SettingProposal =
+                        protobuf::parse_from_bytes(&settings_payload.data).map_err(|err| {
+                            CliError::ArgumentError(format!(
+                                "Invalid proposal for settings payload: {}",
+                                err
+                            ))
+                        })?;
+                    required_settings.retain(|setting| setting != &proposal.setting);
+                }
+            }
+        }
+    }
+
+    if !required_settings.is_empty() {
+        Err(CliError::ArgumentError(format!(
+            "The following setting(s) are required at genesis, but were not included in the \
+             genesis batches: {:?}",
+            required_settings
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use protobuf::RepeatedField;
+
+    use proto::batch::BatchHeader;
+    use proto::transaction::Transaction;
+
+    fn get_required_settings_batch() -> Batch {
+        let required_settings = vec![
+            "sawtooth.consensus.algorithm.name".into(),
+            "sawtooth.consensus.algorithm.version".into(),
+        ];
+
+        let (txn_ids, txns) = required_settings
+            .iter()
+            .enumerate()
+            .map(|(idx, setting): (_, &String)| {
+                let txn_id = format!("setting{}", idx);
+
+                let mut proposal = SettingProposal::new();
+                proposal.set_setting(setting.clone());
+                let proposal_bytes = proposal
+                    .write_to_bytes()
+                    .expect("Failed to serialize proposal");
+
+                let mut payload = SettingsPayload::new();
+                payload.set_action(SettingsPayload_Action::PROPOSE);
+                payload.set_data(proposal_bytes);
+                let payload_bytes = payload
+                    .write_to_bytes()
+                    .expect("Failed to serialize payload");
+
+                let mut header = TransactionHeader::new();
+                header.set_family_name("sawtooth_settings".into());
+                header.set_family_version("1.0".into());
+                let header_bytes = header.write_to_bytes().expect("Failed to serialize header");
+
+                let mut txn = Transaction::new();
+                txn.set_header(header_bytes);
+                txn.set_header_signature(txn_id.clone());
+                txn.set_payload(payload_bytes);
+
+                (txn_id, txn)
+            })
+            .unzip();
+
+        let mut batch_header = BatchHeader::new();
+        batch_header.set_transaction_ids(RepeatedField::from_vec(txn_ids));
+        let batch_header_bytes = batch_header
+            .write_to_bytes()
+            .expect("Failed to serialize batch_header");
+
+        let mut batch = Batch::new();
+        batch.set_header(batch_header_bytes);
+        batch.set_transactions(RepeatedField::from_vec(txns));
+
+        batch
+    }
+
+    #[test]
+    fn test_check_required_settings() {
+        assert!(check_required_settings(&[get_required_settings_batch()]).is_ok());
+        assert!(check_required_settings(&[]).is_err());
+    }
 }

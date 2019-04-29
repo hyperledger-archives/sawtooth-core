@@ -62,15 +62,8 @@ class ConsensusActivationObserver(ChainObserver):
                 break
 
     def _update_active_engine(self, block):
-        header = BlockHeader()
-        header.ParseFromString(block.header)
-        settings_view = self._settings_view_factory.create_settings_view(
-            header.state_root_hash)
-
-        conf_name = settings_view.get_setting(
-            'sawtooth.consensus.algorithm.name')
-        conf_version = settings_view.get_setting(
-            'sawtooth.consensus.algorithm.version')
+        conf_name, conf_version = get_configured_engine(
+            block, self._settings_view_factory)
 
         # Deactivate the old engine, if necessary
         old_engine_info = None
@@ -141,15 +134,8 @@ class ConsensusProxy:
                 engine_version)
             return
 
-        header = BlockHeader()
-        header.ParseFromString(chain_head.header)
-        settings_view = self._settings_view_factory.create_settings_view(
-            header.state_root_hash)
-
-        conf_name = settings_view.get_setting(
-            'sawtooth.consensus.algorithm.name')
-        conf_version = settings_view.get_setting(
-            'sawtooth.consensus.algorithm.version')
+        conf_name, conf_version = get_configured_engine(
+            chain_head, self._settings_view_factory)
 
         if engine_name == conf_name and engine_version == conf_version:
             try:
@@ -376,3 +362,30 @@ class ConsensusProxy:
             header_signature=signature)
 
         return message
+
+
+def get_configured_engine(block, settings_view_factory):
+    header = BlockHeader()
+    header.ParseFromString(block.header)
+    settings_view = settings_view_factory.create_settings_view(
+        header.state_root_hash)
+
+    conf_name = settings_view.get_setting('sawtooth.consensus.algorithm.name')
+    conf_version = settings_view.get_setting(
+        'sawtooth.consensus.algorithm.version')
+
+    # Fallback to devmode if nothing else is set
+    name = "Devmode"
+    version = "0.1"
+
+    # If name and version settings aren't set, check for PoET
+    if conf_name is None or conf_version is None:
+        algorithm = settings_view.get_setting('sawtooth.consensus.algorithm')
+        if algorithm and (algorithm.lower() == 'poet'):
+            name = "PoET"
+    # Otherwise use name and version settings
+    else:
+        name = conf_name
+        version = conf_version
+
+    return name, version
