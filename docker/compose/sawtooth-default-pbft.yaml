@@ -222,10 +222,6 @@ services:
             sawtooth.consensus.algorithm.name=pbft \
             sawtooth.consensus.algorithm.version=0.1 \
             sawtooth.consensus.pbft.peers=\\['\"'$$(cat /pbft-shared/validators/validator-0.pub)'\"','\"'$$(cat /pbft-shared/validators/validator-1.pub)'\"','\"'$$(cat /pbft-shared/validators/validator-2.pub)'\"','\"'$$(cat /pbft-shared/validators/validator-3.pub)'\"'\\] \
-            sawtooth.consensus.pbft.block_duration=2000 \
-            sawtooth.consensus.pbft.view_change_timeout=4000 \
-            sawtooth.consensus.pbft.message_timeout=10 \
-            sawtooth.consensus.pbft.max_log_size=1000 \
             sawtooth.publisher.max_batches_per_block=1200 \
             -o config.batch
         fi &&

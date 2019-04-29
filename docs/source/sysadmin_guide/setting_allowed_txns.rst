@@ -75,9 +75,6 @@ accepted transaction types to those from this network's transaction processors
         sawtooth.consensus.algorithm.name=pbft
         sawtooth.consensus.algorithm.version=0.1
         sawtooth.consensus.pbft.members=03e27504580fa15...
-        sawtooth.consensus.pbft.block_duration=200
-        sawtooth.consensus.pbft.message_timeout=10
-        sawtooth.consensus.pbft.max_log_size=1000
         sawtooth.publisher.max_batches_per_block: 200
         sawtooth.settings.vote.authorized_keys: 03e27504580fa15...
         sawtooth.validator.transaction_families: [{"family": "in...
