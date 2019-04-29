@@ -107,8 +107,8 @@ fn parse_args<'a>() -> ArgMatches<'a> {
             (@arg quiet: -q --quiet "do not display output"))
         (@subcommand genesis =>
             (about: "creates the genesis.batch file for initializing the validator")
-         (@arg input_file:
-          +takes_value ... "file or files containing batches to add to the resulting")
+            (@arg input_file:
+             +takes_value ... "file or files containing batches to add to the resulting")
             (@arg output: -o --output "choose the output file for GenesisData"))
         (@arg verbose: -v... "increase the logging level.")
     );
