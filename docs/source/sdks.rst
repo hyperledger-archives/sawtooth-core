@@ -1,11 +1,10 @@
-=================
-SDK API Reference
-=================
+=======================
+Sawtooth SDK References
+=======================
 
 
 Python
 ------
-
 
 - `Transaction Processor
   <https://sawtooth.hyperledger.org/docs/sdk-python/nightly/master/sdks/python_sdk/processor.html>`__
@@ -16,27 +15,31 @@ Python
 Go
 --
 
-- `Transaction Processor
-  <go_sdk/processor.html#http://>`__
-- `Signing
-  <go_sdk/signing.html#http://>`__
+The Go SDK Reference is available only in the
+`sawtooth-sdk-go source code <https://github.com/hyperledger/sawtooth-sdk-go>`__.
+
+  .. tip::
+
+     Use `godoc <https://godoc.org/golang.org/x/tools/cmd/godoc>`_  to extract
+     and build the Go SDK reference.
 
 Javascript
 ----------
 
 - `Transaction Processor
-  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/module-processor.html>`__
+  <https://sawtooth.hyperledger.org/docs/sdk-javascript/nightly/master/module-processor.html>`__
 
 - `Signing
-  <https://sawtooth.hyperledger.org/docs/js-sdk/releases/latest/module-signing.html>`__
+  <https://sawtooth.hyperledger.org/docs/sdk-javascript/nightly/master/module-signing.html>`__
 
 Rust
 ----
 
 - `Transaction Processor
-  <rust_sdk/doc/sawtooth_sdk/processor/index.html#http://>`__
+  <https://sawtooth.hyperledger.org/docs/sdk-rust/nightly/master/sawtooth_sdk/processor/index.html>`__
+
 - `Signing
-  <rust_sdk/doc/sawtooth_sdk/signing/index.html#http://>`__
+  <https://sawtooth.hyperledger.org/docs/sdk-rust/nightly/master/sawtooth_sdk/signing/index.html>`__
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
