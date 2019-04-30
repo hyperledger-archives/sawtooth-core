@@ -20,7 +20,7 @@ To create a PoET SGX enclave configuration file, download this example file to
 the config directory and name it ``poet_enclave_sgx.toml``. Then edit the file
 to change the example configuration options as necessary for your system.
 
-.. Note::
+.. note::
 
   See :doc:`../configure_sgx` for an example of changing settings in
   ``poet_enclave_sgx.toml`` when configuring Sawtooth with the SGX

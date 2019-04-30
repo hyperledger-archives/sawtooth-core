@@ -30,7 +30,7 @@ Prerequisites
 BIOS Update
 -----------
 
-.. Important::
+.. important::
 
     You may need to update your BIOS with a security fix before running
     Hyperledger Sawtooth with PoET. Affected versions and instructions for

@@ -7,7 +7,7 @@ logging output.  This is done by creating a log config file in
 `TOML <https://github.com/toml-lang/toml>`_ or `YAML <http://yaml.org>`_
 format and passing it to the built-in Python logging module.
 
-.. Note::
+.. note::
 
   You must use YAML to configure a remote syslog service. Due to a limitation in
   the TOML spec, you cannot configure a remote syslog service using TOML.
