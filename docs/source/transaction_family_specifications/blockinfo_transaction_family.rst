@@ -53,7 +53,7 @@ as follows:
 
   1. Convert block_num to a hex string and remove the leading “0x”
   2. Left pad the string with 0s until it is 62 characters long
-  3. Concatenate the block info namespace and the string from step 3
+  3. Concatenate the block info namespace and the string from step 2
 
 For example, in Python the address could be constructed with:
 
