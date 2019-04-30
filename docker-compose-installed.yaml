@@ -59,6 +59,7 @@ services:
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 \
         \""
 
   rest-api:
