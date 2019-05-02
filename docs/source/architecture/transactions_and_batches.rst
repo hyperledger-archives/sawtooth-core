@@ -29,8 +29,8 @@ message types:
    :caption: File: protos/transaction.proto
    :linenos:
 
-Header, Signature, and Public Keys
-----------------------------------
+Transaction Header, Signature, and Public Keys
+----------------------------------------------
 
 The Transaction header field is a serialized version of a TransactionHeader.
 The header is signed by the signer's private key (not sent with the
@@ -38,21 +38,38 @@ transaction) and the resulting signature is stored in header_signature.  The
 header is present in the serialized form so that the exact bytes can be
 verified against the signature upon receipt of the Transaction.
 
-The verification process verifies that the key in signer_public_key signed the
-header bytes resulting in header_signature.
+* The verification process verifies that the key in signer_public_key signed the
+  header bytes resulting in header_signature.
 
-The batcher_public_key field must match the public key used to sign the batch in
-which this transaction is contained.
+* The batcher_public_key field must match the public key used to sign the batch
+  in which this transaction is contained.
 
-The resulting serialized document is signed with the transactor's private
-ECDSA key using the secp256k1 curve.
+* The resulting serialized document is signed with the transactor's private
+  ECDSA key using the secp256k1 curve.
 
-The validator expects a 64 byte "compact" signature. This is a concatenation
-of the R and S fields of the signature. Some libraries will include an
-additional header byte, recovery ID field, or provide DER encoded signatures.
-Sawtooth will reject the signature if it is anything other than 64 bytes.
+The validator expects a normalized 64-byte "compact" signature. This is a
+concatenation of the `R` and `S` fields of the signature. Some libraries will
+include an additional header byte, recovery ID field, or provide DER encoded
+signatures.  Sawtooth will reject the signature if it is anything other than
+64 bytes.
 
 .. note::
+
+   The ECDSA signature must be normalized to a "low S" form, which is also
+   called a `low-S signature`. (See `Bitcoin Transaction
+   Malleability <https://eklitzke.org/bitcoin-transaction-malleability>`__ for
+   the rationale for this type of normalization.) This implies that the ECDSA
+   must compute `(R,S)` and `(R, N-S)`, where `N` is the order of the secp256k1
+   curve, and the effective signature is the one with the smallest of `S` and
+   `N-S` values (that is, `min(S, N-S)`). Otherwise, Sawtooth will reject the
+   transaction signature.
+
+   If you are using the Python3 Sawtooth SDK or other libraries for ECDSA on
+   secp256k1 that derive from the Bitcoin secp256k1 library, you don't have to
+   worry about this normalization. However, some libraries do not normalize the
+   signature this way (for example, mbed TLS and openSSL).
+
+.. tip::
 
    The original header bytes as constructed from the sender are used
    for verification of the signature.  It is not considered good practice to
@@ -132,22 +149,40 @@ message types:
    :caption: File: protos/batch.proto
    :linenos:
 
-Header, Signature, and Public Keys
-----------------------------------
+Batch Header, Signature, and Public Keys
+----------------------------------------
 
-Following the pattern presented in Transaction, the Batch header field is a
-serialized version of a BatchHeader.  The header is signed by the signer's
-private key (not sent with the batch) and the resulting signature is stored in
-header_signature.  The header is present in the serialized form so that the
-exact bytes can be verified against the signature upon receipt of the Batch.
+Following the pattern presented in the Transaction data structure, the Batch
+header field is a serialized version of a BatchHeader.  The header is signed by
+the signer's private key (not sent with the batch) and the resulting signature
+is stored in header_signature.  The header is present in the serialized form so
+that the exact bytes can be verified against the signature upon receipt of the
+Batch.
 
 The resulting serialized document is signed with the transactor's private
 ECDSA key using the secp256k1 curve.
 
-The validator expects a 64 byte "compact" signature. This is a concatenation
-of the R and S fields of the signature. Some libraries will include an
-additional header byte, recovery ID field, or provide DER encoded signatures.
-Sawtooth will reject the signature if it is anything other than 64 bytes.
+The validator expects a normalized 64-byte "compact" signature. This is a
+concatenation of the `R` and `S` fields of the signature. Some libraries will
+include an additional header byte, recovery ID field, or provide DER encoded
+signatures.  Sawtooth will reject the signature if it is anything other than
+64 bytes.
+
+.. note::
+
+   The ECDSA signature must be normalized to a "low S" form, which is also
+   called a `low-S signature`. (See `Bitcoin Transaction
+   Malleability <https://eklitzke.org/bitcoin-transaction-malleability>`__ for
+   the rationale for this type of normalization.) This implies that the ECDSA
+   must compute `(R,S)` and `(R, N-S)`, where `N` is the order of the secp256k1
+   curve, and the effective signature is the one with the smallest of `S` and
+   `N-S` values (that is, `min(S, N-S)`). Otherwise, Sawtooth will reject the
+   transaction signature.
+
+   If you are using the Python3 Sawtooth SDK or other libraries for ECDSA on
+   secp256k1 that derive from the Bitcoin secp256k1 library, you don't have to
+   worry about this normalization. However, some libraries do not normalize the
+   signature this way (for example, mbed TLS and openSSL).
 
 Transactions
 ------------
