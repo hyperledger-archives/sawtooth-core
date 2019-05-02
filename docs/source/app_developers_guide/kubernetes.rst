@@ -40,13 +40,13 @@ and
 hypervisor, such as VirtualBox.
 
 
-About the Application Development Environment
-=============================================
+About the Kubernetes Test Node Environment
+==========================================
 
-This application development environment is a single validator node that is
-running a :term:`validator`, a :term:`REST API`, and three
-:term:`transaction processors<transaction processor>`. This environment uses
-:ref:`dev mode consensus <dynamic-consensus-label>` and
+This Kubernetes environment is a single Sawtooth node that is running a
+validator, a REST API, the Devmode consensus engine, and three transaction
+processors. The environment uses
+:ref:`Devmode consensus <dynamic-consensus-label>` and
 :doc:`parallel transaction processing <../architecture/scheduling>`.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs-kube.*

@@ -20,13 +20,14 @@ commands to play a game of tic-tac-toe. The final set of tutorials describe how
 to use an SDK to create a transaction family that implements your application's
 business logic.
 
-About the Application Development Environment
-=============================================
+About the Docker Test Node Environment
+======================================
 
-The Docker application development environment is a single validator node that
-is running a validator, a REST API, and three transaction processors. This
-environment uses Developer mode (dev mode) consensus and parallel transaction
-processing.
+This Docker environment is a single Sawtooth node that is running a
+validator, a REST API, the Devmode consensus engine, and three transaction
+processors. The environment uses
+:ref:`Devmode consensus <dynamic-consensus-label>` and
+:doc:`parallel transaction processing <../architecture/scheduling>`.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%

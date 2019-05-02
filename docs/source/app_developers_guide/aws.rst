@@ -28,13 +28,14 @@ to use an SDK to create a transaction family that implements your application's
 business logic.
 
 
-About the Application Development Environment
-=============================================
+About the AWS Test Node Environment
+===================================
 
-The AWS application development environment is a single validator node that is
-running a validator, a REST API, and three transaction processors. This
-environment uses Developer mode (dev mode) consensus and serial transaction
-processing.
+This AWS environment is a single Sawtooth node that is running a
+validator, a REST API, the Devmode consensus engine, and three transaction
+processors. The environment uses
+:ref:`Devmode consensus <dynamic-consensus-label>` and
+:doc:`serial transaction processing <../architecture/scheduling>`.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
