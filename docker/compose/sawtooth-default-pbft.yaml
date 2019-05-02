@@ -238,11 +238,7 @@ services:
           --bind network:tcp://eth0:8800 \
           --scheduler parallel \
           --peering static \
-          --maximum-peer-connectivity 10000 \
-          --peers tcp://validator-1:8800 \
-          --peers tcp://validator-2:8800 \
-          --peers tcp://validator-3:8800 \
-          --peers tcp://validator-4:8800
+          --maximum-peer-connectivity 10000
       "
 
   validator-1:
@@ -275,10 +271,7 @@ services:
           --scheduler parallel \
           --peering static \
           --maximum-peer-connectivity 10000 \
-          --peers tcp://validator-0:8800 \
-          --peers tcp://validator-2:8800 \
-          --peers tcp://validator-3:8800 \
-          --peers tcp://validator-4:8800
+          --peers tcp://validator-0:8800
       "
 
   validator-2:
@@ -312,9 +305,7 @@ services:
           --peering static \
           --maximum-peer-connectivity 10000 \
           --peers tcp://validator-0:8800 \
-          --peers tcp://validator-1:8800 \
-          --peers tcp://validator-3:8800 \
-          --peers tcp://validator-4:8800
+          --peers tcp://validator-1:8800
       "
 
   validator-3:
@@ -349,8 +340,7 @@ services:
           --maximum-peer-connectivity 10000 \
           --peers tcp://validator-0:8800 \
           --peers tcp://validator-1:8800 \
-          --peers tcp://validator-2:8800 \
-          --peers tcp://validator-4:8800
+          --peers tcp://validator-2:8800
       "
 
   validator-4:
