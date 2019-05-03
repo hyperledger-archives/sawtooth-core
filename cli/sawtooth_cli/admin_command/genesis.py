@@ -24,6 +24,11 @@ from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 
 
+REQUIRED_SETTINGS = [
+    'sawtooth.consensus.algorithm.name',
+    'sawtooth.consensus.algorithm.version']
+
+
 def add_genesis_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the genesis command.
     """
@@ -129,10 +134,7 @@ def _validate_depedencies(batches):
 
 def _check_required_settings(batches):
     """Ensure that all settings required at genesis are set."""
-    required_settings = [
-        'sawtooth.consensus.algorithm.name',
-        'sawtooth.consensus.algorithm.version']
-
+    required_settings = REQUIRED_SETTINGS.copy()
     for batch in batches:
         for txn in batch.transactions:
             txn_header = TransactionHeader()
