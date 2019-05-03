@@ -36,10 +36,12 @@ initialization of a validator. A network requires an initial block (known as the
 block is produced from a list of batches, which will be applied at
 genesis time.
 
-The optional argument `input_file` specifies one or more files containing
-serialized ``BatchList`` protobuf messages to add to the genesis data. (Use a
-space to separate multiple files.) If no input file is specified,
-this command produces an empty genesis block.
+The `input_file` argument specifies one or more files containing serialized
+``BatchList`` protobuf messages to add to the genesis data. (Use a
+space to separate multiple files.) At least one input file must be specified
+and it must contain the required settings, unless the
+``--ignore-required-settings`` argument is used (run ``sawadm genesis --help``
+for more info).
 
 The output is a file containing a serialized ``GenesisData`` protobuf message.
 This file, when placed at `sawtooth_data`/``genesis.batch``, will trigger

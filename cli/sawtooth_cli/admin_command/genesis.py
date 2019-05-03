@@ -39,12 +39,13 @@ def add_genesis_parser(subparsers, parent_parser):
         'initializing the validator.',
         epilog='This command generates a serialized GenesisData protobuf '
         'message and stores it in the genesis.batch file. One or more input '
-        'files (optional) can contain serialized BatchList protobuf messages '
-        'to add to the GenesisData. The output shows the location of this '
-        'file. By default, the genesis.batch file is stored in '
-        '/var/lib/sawtooth. If $SAWTOOTH_HOME is set, the location is '
+        'files contain serialized BatchList protobuf messages to add to the '
+        'GenesisData. The output shows the location of this file. By default, '
+        'the genesis.batch file is stored in /var/lib/sawtooth. If '
+        '$SAWTOOTH_HOME is set, the location is '
         '$SAWTOOTH_HOME/data/genesis.batch. Use the --output option to change '
-        'the name of the file.',
+        'the name of the file. The following settings must be present in the '
+        'input batches:\n{}\n'.format(REQUIRED_SETTINGS),
         parents=[parent_parser])
 
     parser.add_argument(
