@@ -215,7 +215,8 @@ genesis block also includes the keys for the other nodes in the initial network.
 
       The ``sawtooth.consensus.algorithm.name`` and
       ``sawtooth.consensus.algorithm.version`` settings are required; ``sawadm
-      genesis`` will fail if they are not present in one of the batches.
+      genesis`` will fail if they are not present in one of the batches unless
+      the ``--ignore-required-settings`` flag is used.
 
 #. When this command finishes, the genesis block is complete. Log out of the
    ``sawtooth`` account.

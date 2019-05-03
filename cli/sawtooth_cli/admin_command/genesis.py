@@ -24,6 +24,11 @@ from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 
 
+REQUIRED_SETTINGS = [
+    'sawtooth.consensus.algorithm.name',
+    'sawtooth.consensus.algorithm.version']
+
+
 def add_genesis_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the genesis command.
     """
@@ -34,12 +39,13 @@ def add_genesis_parser(subparsers, parent_parser):
         'initializing the validator.',
         epilog='This command generates a serialized GenesisData protobuf '
         'message and stores it in the genesis.batch file. One or more input '
-        'files (optional) can contain serialized BatchList protobuf messages '
-        'to add to the GenesisData. The output shows the location of this '
-        'file. By default, the genesis.batch file is stored in '
-        '/var/lib/sawtooth. If $SAWTOOTH_HOME is set, the location is '
+        'files contain serialized BatchList protobuf messages to add to the '
+        'GenesisData. The output shows the location of this file. By default, '
+        'the genesis.batch file is stored in /var/lib/sawtooth. If '
+        '$SAWTOOTH_HOME is set, the location is '
         '$SAWTOOTH_HOME/data/genesis.batch. Use the --output option to change '
-        'the name of the file.',
+        'the name of the file. The following settings must be present in the '
+        'input batches:\n{}\n'.format(REQUIRED_SETTINGS),
         parents=[parent_parser])
 
     parser.add_argument(
@@ -53,6 +59,13 @@ def add_genesis_parser(subparsers, parent_parser):
         type=str,
         help='file or files containing batches to add to the resulting '
         'GenesisData')
+
+    parser.add_argument(
+        '--ignore-required-settings',
+        action='store_true',
+        help='skip the check for settings that are required at genesis '
+        '(necessary if using a settings transaction family other than '
+        'sawtooth_settings)')
 
 
 def do_genesis(args, data_dir=None):
@@ -81,7 +94,8 @@ def do_genesis(args, data_dir=None):
         genesis_batches += input_data.batches
 
     _validate_depedencies(genesis_batches)
-    _check_required_settings(genesis_batches)
+    if not args.ignore_required_settings:
+        _check_required_settings(genesis_batches)
 
     if args.output:
         genesis_file = args.output
@@ -121,10 +135,7 @@ def _validate_depedencies(batches):
 
 def _check_required_settings(batches):
     """Ensure that all settings required at genesis are set."""
-    required_settings = [
-        'sawtooth.consensus.algorithm.name',
-        'sawtooth.consensus.algorithm.version']
-
+    required_settings = REQUIRED_SETTINGS.copy()
     for batch in batches:
         for txn in batch.transactions:
             txn_header = TransactionHeader()
