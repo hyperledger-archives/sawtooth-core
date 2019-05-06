@@ -80,37 +80,51 @@ Prerequisites
   start the XO transaction processor if necessary.
 
 
-Step 1: Confirm Connectivity to the REST API
+Step 1: Connect to the Sawtooth Node
+------------------------------------
+
+To connect to the Sawtooth node, use the steps for your platform:
+
+* Docker: See :ref:`log-into-client-container-docker`
+
+* Kubernetes: See :ref:`connect-to-shell-container-k8s`
+
+* AWS: See :ref:`connect-to-instance-aws`
+
+* Ubuntu: Open a client terminal window on the host system running Sawtooth
+
+
+Step 2: Confirm Connectivity to the REST API
 --------------------------------------------
 
-#. Connect to your Sawtooth node, as described in the procedure for
-   your platform in :doc:`installing_sawtooth`.
+Verify that you can connect to the REST API. The step will help determine if
+The REST API is at the default location (``http://localhost:8008``).
 
-#. Verify that you can connect to the REST API.
+The ``xo`` client sends requests to update and query the blockchain to the
+URL of the REST API (by default, ``http://127.0.0.1:8008``).
+If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
+``--url`` argument to each ``xo`` command in this procedure.
 
-   * Docker: See :ref:`confirming-connectivity-docker-label`
+* Docker: See :ref:`confirming-connectivity-docker-label`
 
-   * AWS: See :ref:`confirming-connectivity-aws-label`
+  .. important::
 
-   * Ubuntu: See :ref:`confirm-rest-api-ubuntu-label`
+     In the Docker environment, the REST API is at ``http://rest-api:8008``.
+     You must add ``--url http://rest-api:8008`` to all ``xo`` commands in this
+     procedure. For example:
 
-   .. Important::
+        .. code-block:: console
 
-      The ``xo`` client sends requests to update and query the blockchain to the
-      URL of the REST API (by default, ``http://127.0.0.1:8008``).
+           $ xo create my-game --username jack --url http://rest-api:8008
 
-      If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
-      ``--url`` argument to each ``xo`` command in this procedure.
+* Kubernetes: See :ref:`confirming-connectivity-k8s-label`
 
-      This example shows the format of this argument, using the default URL
-      for a Docker environment:
+* AWS: See :ref:`confirming-connectivity-aws-label`
 
-      .. code-block:: console
-
-         $ xo create my-game --username jack --url http://rest-api:8008
+* Ubuntu: See :ref:`confirming-rest-api-ubuntu-label`
 
 
-Step 2. Ubuntu only: Start the XO Transaction Processor
+Step 3. Ubuntu only: Start the XO Transaction Processor
 -------------------------------------------------------
 
 For Ubuntu: If the XO transaction processor is not running on your Sawtooth
@@ -136,7 +150,7 @@ node, start it now.
 For more information, see :ref:`start-tps-label`.
 
 
-Step 3. Create Players
+Step 4. Create Players
 ----------------------
 
 Create keys for two players to play the game:
@@ -157,7 +171,7 @@ Create keys for two players to play the game:
    The output may differ slightly from this example.
 
 
-Step 4. Create a Game
+Step 5. Create a Game
 ---------------------
 
 Create a game named ``my-game`` with the following command:
@@ -187,7 +201,7 @@ existing games:
    state rather than using ``curl`` with the REST API's URL to request state.
 
 
-Step 5. Take a Space as Player 1
+Step 6. Take a Space as Player 1
 --------------------------------
 
 .. note::
@@ -239,7 +253,7 @@ win or tie. If either condition occurs, no more ``take`` actions are allowed
 on the finished game.
 
 
-Step 6. Take a Space as Player 2
+Step 7. Take a Space as Player 2
 --------------------------------
 
 Next, take a space on the board as player 2, Jill.  In this example,
@@ -250,7 +264,7 @@ Jill takes space 1:
     $ xo take my-game 1 --username jill
 
 
-Step 7. Show the Current Game Board
+Step 8. Show the Current Game Board
 -----------------------------------
 
 Whenever you want to see the current state of the game board, enter the
@@ -286,7 +300,7 @@ than the state returned to the transaction processor:
    my-game,O---X----,P1-NEXT,02403a...,03729b...
 
 
-Step 8. Continue the Game
+Step 9. Continue the Game
 -------------------------
 
 Players take turns using ``xo take my-game <space>`` to mark spaces on the grid.
@@ -309,8 +323,8 @@ tie, as in this example:
       X | O | X
 
 
-Step 9. Delete the Game
------------------------
+Step 10. Delete the Game
+------------------------
 
 Either player can use the ``xo delete`` command to remove the game data from
 global state.

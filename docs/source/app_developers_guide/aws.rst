@@ -63,15 +63,16 @@ family.
    genesis block. To learn how the typical startup process works, see
    :doc:`ubuntu`.
 
+.. _launch-sawtooth-instance-aws:
 
-Step 1: Launch a Sawtooth Instance
-==================================
+Step 1: Launch a Sawtooth Instance with AWS
+===========================================
 
-#. Launch a Sawtooth instance from the `Hyperledger Sawtooth product page
-   on the AWS Marketplace <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_.
-   For more information, see the Amazon guide
-   `Launching an AWS Marketplace Instance
-   <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/launch-marketplace-console.html>`_.
+Launch a Sawtooth instance from the `Hyperledger Sawtooth product page
+on the AWS Marketplace <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_.
+For more information, see the Amazon guide
+`Launching an AWS Marketplace Instance
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/launch-marketplace-console.html>`_.
 
    .. note::
 
@@ -91,20 +92,22 @@ Step 1: Launch a Sawtooth Instance
       Security Groups documentation,
       `Adding, Removing, and Updating Rules <http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html#AddRemoveRules>`_.
 
-#. Log into this Sawtooth instance. Use the user name ``ubuntu`` when
-   connecting.
-
-   For more information, see the Amazon guide
-   `Connect to Your Linux Instance <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstances.html>`_.
-
 Once launched, the Sawtooth instance continues to run until you stop it.
 If you're uncertain about the state or would like to start over, see
 :ref:`reset-aws-ubuntu-label`.
 
+.. _connect-to-instance-aws:
 
-.. _confirming-connectivity-aws-label:
+Step 2: Connect to the AWS Sawtooth Instance
+============================================
 
-Step 2: Check the Status of Sawtooth Components
+Connect to your Sawtooth instance. Use the user name ``ubuntu`` when
+connecting.
+
+For more information, see the Amazon guide
+`Connect to Your Linux Instance <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstances.html>`_.
+
+Step 3: Check the Status of Sawtooth Components
 ===============================================
 
 #. You can use ``ps`` to check that each Sawtooth component is running:
@@ -131,8 +134,10 @@ Step 2: Check the Status of Sawtooth Components
       sawtooth-validator.service
            loaded active running   Sawtooth Validator Server
 
-Step 3: Confirm Connectivity to the REST API
-============================================
+.. _confirming-connectivity-aws-label:
+
+Step 4: Confirm Connectivity to the REST API (for AWS)
+======================================================
 
 Confirm that you can connect to the REST API from your host system. Enter
 the following ``curl`` command from a terminal window:
@@ -141,10 +146,41 @@ the following ``curl`` command from a terminal window:
 
    $ curl http://localhost:8008/blocks
 
+If the REST API is running and reachable, the output should be similar to this
+example:
+
+  .. code-block:: console
+
+     {
+       "data": [
+         {
+           "batches": [],
+           "header": {
+             "batch_ids": [],
+             "block_num": 0,
+             "mconsensus": "R2VuZXNpcw==",
+             "previous_block_id": "0000000000000000",
+             "signer_public_key": "03061436bef428626d11c17782f9e9bd8bea55ce767eb7349f633d4bfea4dd4ae9",
+             "state_root_hash": "708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6"
+           },
+           "header_signature": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b"
+         }
+       ],
+       "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "link": "http://localhost:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "paging": {
+         "start_index": 0,
+         "total_count": 1
+       }
+     }
+
+If the REST API process or container is not running, the
+``curl`` command will time out or return nothing.
+
 
 .. _configure-tf-settings-aws-label:
 
-Step 4: Use Sawtooth Commands as a Client
+Step 5: Use Sawtooth Commands as a Client
 =========================================
 
 Sawtooth includes commands that act as a client application. This step describes
@@ -356,7 +392,7 @@ state data in a :term:`Merkle-Radix tree`; for more information, see
 
 .. _examine-logs-aws-label:
 
-Step 5: Examine Sawtooth Logs
+Step 6: Examine Sawtooth Logs
 =============================
 
 By default, Sawtooth logs are stored in the directory ``/var/log/sawtooth``.
@@ -393,7 +429,7 @@ For more information on log files, see
 
 .. _reset-aws-ubuntu-label:
 
-Step 6: Reset the AWS Environment (Optional)
+Step 7: Reset the AWS Environment (Optional)
 ============================================
 
 When you are done with the AWS environment (or if you want to reset it), you can

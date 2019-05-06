@@ -370,13 +370,15 @@ processor.
 
          [2018-03-14 16:00:17.223 INFO     processor_handlers] registered transaction processor: connection_id=eca3a9ad0ff1cdbc29e449cc61af4936bfcaf0e064952dd56615bc00bb9df64c4b01209d39ae062c555d3ddc5e3a9903f1a9e2d0fd2cdd47a9559ae3a78936ed, family=sawtooth_settings, version=1.0, namespaces=['000000']
 
-   #. Open a new terminal window (the client terminal window). In this
-      procedure, the prompt ``user@client$`` shows the commands that should be
-      run in this window.
+   The ``settings-tp`` transaction processor continues to run and to display log
+   messages in its terminal window.
 
-   #. At this point, you can see the authorized keys setting that was proposed
-      in :ref:`create-genesis-block-ubuntu-label`.
-      Run the following command in the client terminal window:
+   .. tip::
+
+      At this point, you can see the authorized keys setting that was proposed
+      in :ref:`create-genesis-block-ubuntu-label`. To see this setting, open a
+      new terminal window (the client terminal window) and run the following
+      command:
 
       .. code-block:: console
 
@@ -384,9 +386,6 @@ processor.
          sawtooth.consensus.algorithm.name: Devmode
          sawtooth.consensus.algorithm.version: 0.1
          sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66...
-
-   The ``settings-tp`` transaction processor continues to run and to display log
-   messages in its terminal window.
 
 #. Start the IntegerKey transaction processor, ``intkey-tp-python``.
 
@@ -443,13 +442,21 @@ processor.
    The ``xo-tp-python`` transaction processor continues to run and to display
    log messages in its terminal window.
 
+.. _open-client-window-ubuntu-label:
 
-.. _confirm-rest-api-ubuntu-label:
+Step 9: Open a Client Terminal Window
+=====================================
 
-Step 9: Confirm Connectivity to the REST API
-============================================
+Open a new terminal window to use as the client terminal window.
 
-#. Run the following command in the client terminal window:
+In the following steps, the prompt ``user@client$`` shows the commands that
+should be run in this window.
+
+
+Step 10: Check the REST API Process
+===================================
+
+1. Run the following command in the client terminal window:
 
    .. code-block:: console
 
@@ -460,7 +467,53 @@ Step 9: Confirm Connectivity to the REST API
 #. If necessary, restart the REST API (see :ref:`start-rest-api-label`).
 
 
-Step 10: Use Sawtooth Commands as a Client
+.. _confirming-rest-api-ubuntu-label:
+
+Step 11: Confirm Connectivity to the REST API (for Ubuntu)
+==========================================================
+
+If the ``curl`` command is installed on your host system, you can use this
+step to verify that you can connect to the REST API.
+
+#. Open a new terminal window on your host system and run this ``curl`` command:
+
+   .. code-block:: console
+
+      user@host$ curl http://localhost:8008/blocks
+
+   If the validator and REST API are running and reachable, the output for each
+   command should be similar to this example:
+
+   .. code-block:: console
+
+     {
+       "data": [
+         {
+           "batches": [],
+           "header": {
+             "batch_ids": [],
+             "block_num": 0,
+             "mconsensus": "R2VuZXNpcw==",
+             "previous_block_id": "0000000000000000",
+             "signer_public_key": "03061436bef428626d11c17782f9e9bd8bea55ce767eb7349f633d4bfea4dd4ae9",
+             "state_root_hash": "708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6"
+           },
+           "header_signature": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b"
+         }
+       ],
+       "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "link": "http://localhost:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "paging": {
+         "start_index": 0,
+         "total_count": 1
+       }
+     }
+
+   If the validator process or the validator container is not running, the
+   ``curl`` command will time out or return nothing.
+
+
+Step 12: Use Sawtooth Commands as a Client
 ==========================================
 
 Sawtooth includes commands that act as a client application. This step describes
@@ -676,7 +729,7 @@ state data in a :term:`Merkle-Radix tree`; for more information, see
 
 .. _examine-logs-ubuntu-label:
 
-Step 11: Examine Sawtooth Logs
+Step 13: Examine Sawtooth Logs
 ==============================
 
 By default, Sawtooth logs are stored in the directory ``/var/log/sawtooth``.
@@ -713,7 +766,7 @@ For more information on log files, see
 
 .. _stop-sawtooth-ubuntu-label:
 
-Step 12: Stop Sawtooth Components
+Step 14: Stop Sawtooth Components
 =================================
 
 Use this procedure if you need to stop or reset the Sawtooth environment for any
