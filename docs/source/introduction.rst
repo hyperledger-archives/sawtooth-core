@@ -151,7 +151,7 @@ transaction or two.
 The Sawtooth consensus API supports a wide variety of consensus algorithms on a
 network. Sawtooth currently includes consensus engines for these algorithms:
 
-    * `Sawtooth PBFT <https://github.com/hyperledger/sawtooth-pbft>`__
+    * `Sawtooth PBFT <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/>`__
       (Practical Byzantine Fault Tolerance) is a voting-based consensus
       algorithm that provides Byzantine fault tolerance with finality.
       Sawtooth PBFT extends the
@@ -217,6 +217,16 @@ Additional transaction families provide models for specific areas\:
 
     * BlockInfo - Provides a methodology for storing information
       about a configurable number of historic blocks.
+
+The following projects provide smart-contract functionality for the Sawtooth
+platform\:
+
+    * `Sawtooth Sabre <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>`__ -
+      Implements on-chain smart contracts that are executed in a WebAssembly
+      (WASM) virtual machine
+
+    * `Sawtooth Seth <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>`__ -
+      Supports running Ethereum Virtual Machine (EVM) smart contracts on Sawtooth
 
 For more information, see :doc:`transaction_family_specifications`.
 
@@ -313,7 +323,13 @@ can get the code to start building your own distributed ledger.
     * Dockerfiles to support development or launching a network of validators
     * Source files for this documentation
 
-  * `Seth <https://github.com/hyperledger/sawtooth-seth>`_:
+  * `Sawtooth PBFT <https://github.com/hyperledger/sawtooth-pbft>`_:
+    Use PBFT consensus with Sawtooth
+
+  * `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_:
+    Run on-chain smart contracts executed in a WebAssembly virtual machine
+
+  * `Sawtooth Seth <https://github.com/hyperledger/sawtooth-seth>`_:
     Deploy Ethereum Virtual Machine (EVM) smart contracts to Sawtooth
 
   * `Sawtooth Marketplace <https://github.com/hyperledger/sawtooth-marketplace>`_:

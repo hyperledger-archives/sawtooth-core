@@ -71,9 +71,22 @@ your own transaction family. These transaction families are available in the
   The family name is ``xo``.
   The transaction processor is ``xo-tp-{language}``.
 
+The following transaction families run on top of the Sawtooth platform:
+
+* `Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>`__:
+  Implements on-chain smart contracts that are executed in a WebAssembly (WASM)
+  virtual machine.
+  This transaction family is in the
+  `sawtooth-sabre <https://github.com/hyperledger/sawtooth-sabre>`__ repository.
+
+* `Sawtooth Seth Transaction Family <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>`__:
+  Supports running Ethereum Virtual Machine (EVM) smart contracts on Sawtooth.
+  This transaction family is in the
+  `sawtooth-seth <https://github.com/hyperledger/sawtooth-seth>`__ repository.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
+   :caption: Contents
 
    transaction_family_specifications/settings_transaction_family.rst
    transaction_family_specifications/identity_transaction_family.rst
@@ -82,6 +95,8 @@ your own transaction family. These transaction families are available in the
    transaction_family_specifications/xo_transaction_family.rst
    transaction_family_specifications/validator_registry_transaction_family.rst
    transaction_family_specifications/smallbank_transaction_family.rst
+   Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>
+   Sawtooth Seth Transaction Family <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
