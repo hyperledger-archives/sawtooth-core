@@ -3,88 +3,124 @@
 Using Docker for a Sawtooth Test Network
 ========================================
 
-In this procedure, you will use a Docker Compose file that creates a new
-application development environment with five validator nodes and four
-transaction processors (Settings, IntegerKey, XO, and PoET Validator Registry).
+This procedure describes how to use Docker to create a network of five Sawtooth
+nodes for an application development environment, using either PBFT or PoET
+consensus. (Devmode consensus is not recommended for a network.)
+
+.. include:: ../_includes/pbft-vs-poet-cfg.inc
+
+
+.. _about-sawtooth-nw-env-docker-label:
 
 About the Sawtooth Network Environment
 --------------------------------------
 
-The following figure shows an example network with two validator nodes:
+Each Sawtooth node runs a validator and related Sawtooth components. The first
+node creates the genesis block, which specifies the on-chain network
+configuration settings. The other nodes access those settings when they join the
+network.
 
 .. figure:: ../images/appdev-environment-multi-node.*
    :width: 100%
    :align: center
    :alt: Docker: Sawtooth network with five nodes
 
-Like the single-node environment, this environment uses parallel transaction
-processing and static peering. However, it has the following differences:
+.. include:: ../_includes/about-nw-each-node-runs.inc
 
-* PoET simulator consensus instead of dev mode, because dev mode's random-leader
-  consensus is not recommended for multi-node or production networks. Sawtooth
-  offers two versions of :term:`PoET consensus`. PoET-SGX relies on Intel
-  Software Guard Extensions (SGX) to implement a leader-election lottery system.
-  PoET simulator provides the same consensus algorithm on an SGX simulator.
+Like the :doc:`single-node test environment <docker>`, this environment uses
+parallel transaction processing and static peering.
 
-* An additional transaction processor, PoET Validator Registry, handles PoET
-  settings for a multiple-node network.
+
+.. _prereqs-multi-docker-label:
 
 Prerequisites
 -------------
 
-This procedure assumes that you have already created a single-node environment,
-as described in :doc:`docker`. Refer to the previous procedure for more
-information on each step.
+* This application development environment requires Docker Engine and Docker
+  Compose.
 
-If the single-node environment is still running, shut it down. Enter CTRL-c from
-the window where you originally ran ``docker-compose up``, then run the
-following command from your host system:
+  * Windows: Install the latest version of
+    `Docker Engine for Windows <https://docs.docker.com/docker-for-windows/install/>`_
+    (also installs Docker Compose).
 
-.. code-block:: console
+  * macOS: Install the latest version of
+    `Docker Engine for macOS <https://docs.docker.com/docker-for-mac/install/>`_
+    (also installs Docker Compose).
 
-   $ docker-compose -f sawtooth-default.yaml down
+  * Linux: Install the latest versions of
+    `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_
+    and
+    `Docker Compose <https://docs.docker.com/compose/install/#install-compose>`_.
+    Then follow
+    `Post-Install steps
+    <https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user>`_.
 
-For more information, see :ref:`stop-sawtooth-docker-label`.
+* If you created a :doc:`single-node Docker environment <docker>` that is
+  still running, shut it down and delete the existing blockchain data and logs.
+  For more information, see :ref:`stop-sawtooth-docker-label`.
 
 
 Step 1: Download the Docker Compose File
 ----------------------------------------
 
-Download the Docker Compose file for a multiple-node network,
-`sawtooth-default-poet.yaml <./sawtooth-default-poet.yaml>`_.
-Save this file in the same directory as the single-node compose file
-(``sawtooth-default.yaml``).
+Download the Docker Compose file for a multiple-node network.
 
+* For PBFT: Download
+  `sawtooth-default-pbft.yaml <./sawtooth-default-pbft.yaml>`_
+
+* For PoET: Download
+  `sawtooth-default-poet.yaml <./sawtooth-default-poet.yaml>`_
 
 Step 2: Start the Sawtooth Network
 ----------------------------------
 
-#. Use the following command to start the multiple-node Sawtooth network:
+.. note::
 
-   .. code-block:: console
+   The Docker Compose file for Sawtooth handles environment setup steps such as
+   generating keys and creating a genesis block. To learn how the typical
+   network startup process works, see :doc:`ubuntu_test_network`.
 
-      user@host$ docker-compose -f sawtooth-default-poet.yaml up
+1. Open a terminal window.
 
-#. This Compose file creates five validator nodes, numbered from 0 to 4.
-   Note the container names for the Sawtooth components on each node:
+#. Change to the directory where you saved the Docker Compose file.
+
+#. Start the Sawtooth network.
+
+   * For PBFT:
+
+     .. code-block:: console
+
+        user@host$ docker-compose -f sawtooth-default-pbft.yaml up
+
+   * For PoET:
+
+     .. code-block:: console
+
+        user@host$ docker-compose -f sawtooth-default-poet.yaml up
+
+#. This Compose file creates five Sawtooth nodes named ``validator-#``
+   (numbered from 0 to 4). Note the container names for the Sawtooth components
+   on each node:
 
    ``validator-0``:
 
     * ``sawtooth-validator-default-0``
     * ``sawtooth-rest-api-default-0``
+    * ``sawtooth-pbft-engine-default-0`` or ``sawtooth-poet-engine-0``
     * ``sawtooth-settings-tp-default-0``
     * ``sawtooth-intkey-tp-python-default-0``
     * ``sawtooth-xo-tp-python-default-0``
-    * ``sawtooth-poet-validator-registry-tp-0``
+    * (PoET only) ``sawtooth-poet-validator-registry-tp-0``
 
    ``validator-1``:
 
     * ``sawtooth-validator-default-1``
     * ``sawtooth-rest-api-default-1``
+    * ``sawtooth-pbft-engine-default-1`` or ``sawtooth-poet-engine-1``
     * ``sawtooth-settings-tp-default-1``
     * ``sawtooth-intkey-tp-python-default-1``
     * ``sawtooth-xo-tp-python-default-1``
-    * ``sawtooth-poet-validator-registry-tp-1``
+    * (PoET only) ``sawtooth-poet-validator-registry-tp-1``
 
    ... and so on.
 
@@ -92,35 +128,49 @@ Step 2: Start the Sawtooth Network
 
     * ``sawtooth-shell-default``
 
-Step 3: Verify Connectivity
----------------------------
+Step 3: Check the REST API Process
+----------------------------------
 
-You can connect to a Docker container, such as
-``sawtooth-poet-validator-registry-tp-0``, then use the following ``ps``
-command to verify that the component is running.
+Use these commands on one or more nodes to confirm that the REST API is
+running.
 
-.. code-block:: console
+1. Connect to the REST API container on a node, such as
+   ``sawtooth-poet-rest-api-default-0``.
 
-   # ps --pid 1 fw
-   PID TTY      STAT   TIME COMMAND
-   1 ?        Ssl    0:04 python3 /project/sawtooth-core/bin/poet-validator-registry-tp -C tcp://validator-0:4004
+   .. code-block:: console
 
+      user@host$ docker exec -it sawtooth-rest-api-default-0 bash
+      root@b1adcfe0#
+
+#. Use the following command to verify that this component is running.
+
+   .. code-block:: console
+
+      root@b1adcfe0# ps --pid 1 fw
+      PID TTY      STAT   TIME COMMAND
+        1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/sawtooth-rest-api
+        --connect tcp://validator-0:4004 --bind rest-api-0:8008
 
 .. _confirm-nw-funct-docker-label:
 
 Step 4: Confirm Network Functionality
 -------------------------------------
 
+1. Connect to the shell container.
+
+    .. code-block:: console
+
+       user@host$ docker exec -it sawtooth-shell-default bash
+       root@0e0fdc1ab#
+
+
 #. To check whether peering has occurred on the network, submit a peers query
-   to the REST API on the first validator node.
+   to the REST API on the first node. This command specifies the container name
+   and port for the first node's REST API.
 
-   Run the following command from the shell container,
-   ``sawtooth-shell-default``.  This command specifies the container name and
-   port for the first node's REST API.
+      .. code-block:: console
 
-     .. code-block:: console
-
-        $ curl http://sawtooth-rest-api-default-0:8008/peers
+         root@0e0fdc1ab# curl http://sawtooth-rest-api-default-0:8008/peers
 
    If this query returns a 503 error, the nodes have not yet peered with the
    Sawtooth network. Repeat the query until you see output that resembles the
@@ -129,39 +179,71 @@ Step 4: Confirm Network Functionality
      .. code-block:: console
 
         {
-            "data": [
-            "tcp://validator-1:8800",
+          "data": [
+            "tcp://validator-4:8800",
+            "tcp://validator-3:8800",
+            ...
+            "tcp://validator-2:8800",
+            "tcp://validator-1:8800"
           ],
-          "link": "http://rest-api:8008/peers"
-        }
+          "link": "http://sawtooth-rest-api-default-0:8008/peers"
 
-#. (Optional) You can also connect to a validator container, such as
-   ``sawtooth-validator-default-0``, and run the following Sawtooth commands to
-   show the other nodes on the network.
+#. (Optional) You can run the following Sawtooth commands to show the other
+   nodes on the network.
 
-   a. Run ``sawtooth peer list`` to show the peers of a particular node.
+   a. Run ``sawtooth peer list`` to show the peers of a particular node. For
+      example, the following command specifies the REST API on the first node,
+      so it displays the first node's peers.
 
-   b. Run ``sawnet peers list`` to display a complete graph of peers on the
+      .. code-block:: console
+
+         root@0e0fdc1ab# sawtooth peer list --url http://sawtooth-rest-api-default-0:8008
+         tcp://validator-1:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800
+
+   #. Run ``sawnet peers list`` to display a complete graph of peers on the
       network (available in Sawtooth release 1.1 and later).
 
-#. Submit a transaction to the REST API on the first validator node. This
+      .. code-block:: console
+
+         root@0e0fdc1ab# sawnet peers list http://sawtooth-rest-api-default-0:8008
+         {
+         "tcp://validator-0:8800": [
+         "tcp://validator-1:8800",
+         "tcp://validator-1:8800",
+         "tcp://validator-2:8800",
+         "tcp://validator-3:8800"
+         ]
+         }
+
+#. Submit a transaction to the REST API on the first node. This
    example sets a key named ``MyKey`` to the value 999.
 
-   Use the shell container to run the following command.
+     .. code-block:: console
+
+        root@0e0fdc1ab# intkey set --url http://sawtooth-rest-api-default-0:8008 MyKey 999
+
+     The output should resemble this example:
 
      .. code-block:: console
 
-        # intkey set --url http://sawtooth-rest-api-default-0:8008 MyKey 999
+        {
+          "link": "http://sawtooth-rest-api-default-0:8008/batch_statuses?id=dacefc7c9fe2c8510803f8340...
+        }
 
-#. Watch for this transaction to appear on the second validator node. The
-   following command requests the value of ``MyKey`` from the REST API on the
-   second validator node.
+#. Watch for this transaction to appear on a different node. The following
+   command requests the value of ``MyKey`` from the REST API on the second node.
 
-   Use the shell container to run the following command.
+   You can run this command from the first node's shell container by specifying
+   the URL of the other node's REST API, as in this example.
 
      .. code-block:: console
 
-        # intkey show --url http://sawtooth-rest-api-default-1:8008 MyKey
+        root@0e0fdc1ab# intkey show --url http://sawtooth-rest-api-default-1:8008 MyKey
+
+     The output should show the key name and current value:
+
+     .. code-block:: console
+
         MyKey: 999
 
 
@@ -175,10 +257,9 @@ However, Sawtooth allows you to limit the types of transactions that can be
 submitted.
 
 In this step, you will configure the validator network to accept transactions
-only from the four transaction processors in the example environment:
-IntegerKey, Settings, XO, and Validator Registry. Transaction-type restrictions
-are an on-chain setting, so this configuration change is applied to all
-validators.
+only from the transaction processors running in the example environment.
+Transaction-type restrictions are an on-chain setting, so this configuration
+change is made on one node, then applied to all other nodes.
 
 The :doc:`Settings transaction processor
 <../transaction_family_specifications/settings_transaction_family>`
@@ -194,15 +275,25 @@ setting.
 
    .. code-block:: console
 
-     % docker exec -it sawtooth-validator-default-0 bash
+     user@host$ docker exec -it sawtooth-validator-default-0 bash
+     root@c0c0ab33#
 
-#. Run the following command from the validator container to check the setting
-   change.
+#. Run the following command from the validator container to specify the
+   allowed transaction families.
 
-   .. code-block:: console
+   * For PBFT:
 
-      # sawset proposal create --url http://sawtooth-rest-api-default-0:8008 --key /etc/sawtooth/keys/validator.priv \
-      sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
+     .. code-block:: console
+
+        root@c0c0ab33# sawset proposal create --url http://sawtooth-rest-api-default-0:8008 --key /etc/sawtooth/keys/validator.priv \
+        sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}]'
+
+   * For PoET:
+
+     .. code-block:: console
+
+        root@c0c0ab33# sawset proposal create --url http://sawtooth-rest-api-default-0:8008 --key /etc/sawtooth/keys/validator.priv \
+        sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array
    that specifies the family name and version of each allowed transaction
@@ -212,59 +303,85 @@ setting.
 #. After this command runs, a ``TP_PROCESS_REQUEST`` message appears in the
    Settings transaction processor log.
 
-   You can view this log file by connecting to the ``sawtooth-settings-tp``
-   container on any node, then examining
+   You can view this log file by connecting to the Sawtooth Settings container
+   on any node, then examining
    ``/var/log/sawtooth/logs/settings-{xxxxxxx}-debug.log``. (Each Settings log
-   file has a unique string in the name.) This example connects to the Settings
-   transaction processor on the first node (``sawtooth-settings-tp-default-0``).
+   file has a unique string in the name.)
 
+   For example, connect to the Sawtooth Settings container on the first node
+   (``sawtooth-settings-tp-default-0``), then display the end of the log file.
 
    .. code-block:: console
 
-     % docker exec -it sawtooth-settings-tp-default-0 bash
-     # tail /var/log/sawtooth/settings-*-debug.log
+      user@host$ docker exec -it sawtooth-settings-tp-default-0 bash
+      root@1bee7c8d9# tail /var/log/sawtooth/settings-*-debug.log
       .
       .
       .
       [22:18:33.137 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
-      [22:18:33.219 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]
+      [22:18:33.219 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, ...
 
-#. Run the following command to check the setting change. You can use any
-   container for this step. Also, you can specify any REST API on the network;
-   this example uses the REST API on the first validator node.
+#. Run the following command to check the setting change on the shell container
+   or any validator container. You can specify any REST API on the network;
+   this example uses the REST API on the first node.
 
    .. code-block:: console
 
-      # sawtooth settings list --url http://sawtooth-rest-api-default-0:8008
+      root@0e0fdc1ab# sawtooth settings list --url http://sawtooth-rest-api-default-0:8008
 
    The output should be similar to this example:
 
-   .. code-block:: console
+   * For PBFT:
 
-      sawtooth.consensus.algorithm.name: PoET
-      sawtooth.consensus.algorithm.version: 0.1
-      sawtooth.poet.initial_wait_time: 15
-      sawtooth.poet.key_block_claim_limit: 100000
-      sawtooth.poet.report_public_key_pem: -----BEGIN PUBL...
-      sawtooth.poet.target_wait_time: 15
-      sawtooth.poet.valid_enclave_basenames: b785c58b77152cb...
-      sawtooth.poet.valid_enclave_measurements: c99f21955e38dbb...
-      sawtooth.poet.ztest_minimum_win_count: 100000
-      sawtooth.publisher.max_batches_per_block: 200
-      sawtooth.settings.vote.authorized_keys: 03e27504580fa15...
-      sawtooth.validator.transaction_families: [{"family": "in...
+     .. code-block:: console
 
+        sawtooth.consensus.algorithm.name: pbft
+        sawtooth.consensus.algorithm.version: 0.1
+        sawtooth.consensus.pbft.members=["0242fcde86373d0aa376055fc6...
+        sawtooth.publisher.max_batches_per_block=1200
+        sawtooth.settings.vote.authorized_keys: 0242fcde86373d0aa376...
+        sawtooth.validator.transaction_families: [{"family": "intkey...
+
+   * For PoET:
+
+     .. code-block:: console
+
+        sawtooth.consensus.algorithm.name: PoET
+        sawtooth.consensus.algorithm.version: 0.1
+        sawtooth.poet.initial_wait_time: 15
+        sawtooth.poet.report_public_key_pem: -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhki...
+        sawtooth.poet.target_wait_time: 5
+        sawtooth.poet.valid_enclave_basenames: b785c58b77152cbe7fd55ee3...
+        sawtooth.poet.valid_enclave_measurements: c99f21955e38dbb03d2ca...
+        sawtooth.publisher.max_batches_per_block: 100
+        sawtooth.settings.vote.authorized_keys: 036631291bbe87c3c9dde22...
+        sawtooth.validator.transaction_families: [{"family": "intkey", ...
 
 Step 6: Stop the Sawtooth Network (Optional)
 --------------------------------------------
 
-If you need to stop or reset the multiple-node Sawtooth environment, enter
-CTRL-c in the window where you ran ``docker-compose up``, then run the following
-command from your host system:
+Use this procedure to stop or reset the multiple-node Sawtooth environment.
 
-.. code-block:: console
+1. Exit from all open containers (such as the shell, REST-API, validator, and
+   settings containers used in this procedure).
 
-   user@host$ docker-compose -f sawtooth-default-poet.yaml down
+#. Enter CTRL-c in the window where you ran ``docker-compose up``.
+
+#. After all containers have shut down, you can reset the environment (remove
+   all containers and data) with the following command:
+
+   * For PBFT:
+
+     .. code-block:: console
+
+        user@host$ docker-compose -f sawtooth-default-pbft.yaml down
+
+   * For PoET:
+
+     .. code-block:: console
+
+        user@host$ docker-compose -f sawtooth-default-poet.yaml down
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
