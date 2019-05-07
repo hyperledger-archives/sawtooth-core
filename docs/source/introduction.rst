@@ -160,7 +160,7 @@ network. Sawtooth currently includes consensus engines for these algorithms:
       and a block catch-up procedure. A Sawtooth network with PBFT consensus
       requires four or more nodes.
 
-    * `PoET <https://github.com/hyperledger/sawtooth-poet>`__
+    * :doc:`PoET <architecture/poet>`
       (Proof of Elapsed Time) is a Nakamoto-style consensus algorithm that is
       designed to be a production-grade protocol capable of supporting large
       network populations. PoET relies on secure instruction execution to
@@ -184,7 +184,7 @@ network. Sawtooth currently includes consensus engines for these algorithms:
       is a leader-based consensus algorithm that provides crash fault tolerance
       for a small network with restricted membership.
 
-    * `Dev mode <https://github.com/hyperledger/sawtooth-core/blob/master/validator/sawtooth_validator/journal/consensus/dev_mode/dev_mode_consensus.py>`__
+    * Dev mode (short for "developer mode")
       is a simplified random-leader algorithm that is useful for developing and
       testing a transaction processor. Dev mode is not recommended for
       multi-node networks and should not be used for production.
@@ -333,7 +333,7 @@ can get the code to start building your own distributed ledger.
     Deploy Ethereum Virtual Machine (EVM) smart contracts to Sawtooth
 
   * `Sawtooth Marketplace <https://github.com/hyperledger/sawtooth-marketplace>`_:
-    Exchange customized "Assets" with other users on the blockchain
+    Exchange customized "assets" with other users on the blockchain
 
   * `Sawtooth Supply Chain <https://github.com/hyperledger/sawtooth-supply-chain>`_:
     Trace the provenance and other contextual information of any asset
