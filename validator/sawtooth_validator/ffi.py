@@ -149,22 +149,6 @@ class OwnedPointer(metaclass=ABCMeta):
         """
         return self._ptr
 
-    def as_ref(self):
-        return RefPointer(self.pointer)
-
-
-class RefPointer:
-    """A reference to a pointer.
-
-    This pointer does not manage any deallocation of the underlying memory.
-    """
-    def __init__(self, ptr):
-        self._ptr = ptr
-
-    @property
-    def pointer(self):
-        return self._ptr
-
 
 class CommonErrorCode(IntEnum):
     Success = 0
