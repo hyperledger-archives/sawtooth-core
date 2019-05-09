@@ -23,14 +23,16 @@ directories="
     cli/tests
     families/settings/tests
     integration
+    integration/sawtooth_integration/tests/*
     rest_api/build
     rest_api/tests
-    sdk/python/build
-    sdk/python/sawtooth_processor_test
+    sdk/python/build/lib/sawtooth_processor_test/*
+    sdk/python/sawtooth_processor_test/*
     signing/build
     signing/tests
     validator/build
     validator/tests
+    validator/tests/test_config/*
 "
 
 if [ ! -d "$top_dir/build" ]; then
