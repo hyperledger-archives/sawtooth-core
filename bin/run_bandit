@@ -23,10 +23,12 @@ directories="
     cli/tests
     families/settings/tests
     integration
+    integration/sawtooth_integration/tests/*
     rest_api/build
     rest_api/tests
     validator/build
     validator/tests
+    validator/tests/test_config/*
 "
 
 if [ ! -d "$top_dir/build" ]; then
