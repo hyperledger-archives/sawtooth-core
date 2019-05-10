@@ -40,6 +40,7 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable bionic u
     curl \
     python3-sawtooth-cli \
     python3-sawtooth-intkey \
+    python3-sawtooth-poet-cli \
     python3-sawtooth-sdk \
     python3-sawtooth-xo \
  && apt-get clean \
