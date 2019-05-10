@@ -341,10 +341,6 @@ class _SendReceive:
                     self._dispatcher.dispatch(self._connection,
                                               message,
                                               connection_id)
-                else:
-                    my_future = self._futures.get(message.correlation_id)
-                    my_future.timer_stop()
-                    self._futures.remove(message.correlation_id)
 
             except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
