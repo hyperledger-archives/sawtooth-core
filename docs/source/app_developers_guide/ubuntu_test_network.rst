@@ -292,7 +292,7 @@ to start each component.
 
      .. code-block:: console
 
-        $ sudo -u sawtooth sawtooth-pbft-engine -vv --connect tcp://localhost:5050
+        $ sudo -u sawtooth pbft-engine -vv --connect tcp://localhost:5050
 
    * For PoET:
 
