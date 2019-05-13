@@ -59,6 +59,7 @@ services:
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 \
         \""
 
   rest-api:
@@ -195,3 +196,12 @@ services:
       dockerfile: ci/sawtooth-meta-${DISTRO}
     image: sawtooth-meta:${ISOLATION_ID}
     container_name: sawtooth-meta
+
+  devmode-rust:
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
+    container_name: sawtooth-devmode-engine-rust
+    depends_on:
+      - validator
+    command: |
+        devmode-engine-rust -v --connect tcp://validator:5050
+    stop_signal: SIGKILL
