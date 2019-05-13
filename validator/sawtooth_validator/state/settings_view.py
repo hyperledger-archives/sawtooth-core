@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
-from functools import lru_cache
+import weakref
+
+from functools import lru_cache, wraps
 
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 
@@ -29,6 +31,25 @@ def _short_hash(byte_str):
 
 
 _EMPTY_PART = _short_hash(b'')
+
+
+# Wrapper of lru_cache that works for instance methods
+def lru_cached_method(*lru_args, **lru_kwargs):
+    def decorator(wrapped_fn):
+        @wraps(wrapped_fn)
+        def wrapped(self, *args, **kwargs):
+            # Use a weak reference to self; this prevents a self-reference
+            # cycle that fools the garbage collector into thinking the instance
+            # shouldn't be dropped when all external references are dropped.
+            weak_ref_to_self = weakref.ref(self)
+            @wraps(wrapped_fn)
+            @lru_cache(*lru_args, **lru_kwargs)
+            def cached(*args, **kwargs):
+                return wrapped_fn(weak_ref_to_self(), *args, **kwargs)
+            setattr(self, wrapped_fn.__name__, cached)
+            return cached(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 class SettingsView:
@@ -47,13 +68,8 @@ class SettingsView:
         """
         self._state_view = state_view
 
-        # The public method for get_settings should have its results memoized
-        # via an lru_cache.  Typical use of the decorator results in the
-        # cache being global, which can cause views to return incorrect
-        # values across state root hash boundaries.
-        self.get_setting = lru_cache(maxsize=128)(self._get_setting)
-
-    def _get_setting(self, key, default_value=None, value_type=str):
+    @lru_cached_method(maxsize=128)
+    def get_setting(self, key, default_value=None, value_type=str):
         """Get the setting stored at the given key.
 
         Args:
