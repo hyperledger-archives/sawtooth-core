@@ -194,12 +194,13 @@ class ProcessorManager:
 
 
 class Processor:
-    def __init__(self, connection_id, namespaces, max_occupancy):
+    def __init__(self, connection_id, namespaces, max_occupancy, header_style):
         self._lock = RLock()
         self.connection_id = connection_id
         self.namespaces = namespaces
         self._max_occupancy = max_occupancy
         self._current_occupancy = 0
+        self._header_style = header_style
 
     def __repr__(self):
         return "{}: {}".format(self.connection_id,
@@ -219,6 +220,9 @@ class Processor:
     def has_vacancy(self):
         with self._lock:
             return self._current_occupancy < self._max_occupancy
+
+    def request_header_style(self):
+        return self._header_style
 
 
 class ProcessorType:
