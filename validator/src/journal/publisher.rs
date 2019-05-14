@@ -449,17 +449,30 @@ impl SyncBlockPublisher {
                 .call_method(py, "notify_batch_pending", (batch.clone(),), None)
                 .expect("BatchObserver has no method notify_batch_pending");
         }
-        let permission_check = {
+
+        // Batch can be added if the signer is authorized and the batch isn't already committed
+        let can_add_batch = {
             let gil = Python::acquire_gil();
             let py = gil.python();
-            self.permission_verifier
+
+            let permission_check = self
+                .permission_verifier
                 .call_method(py, "is_batch_signer_authorized", (batch.clone(),), None)
                 .expect("PermissionVerifier has no method is_batch_signer_authorized")
                 .extract(py)
-                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
+                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool");
+
+            let batch_already_committed: bool = self
+                .batch_committed
+                .call(py, (batch.header_signature.clone(),), None)
+                .expect("batch_committed could not be called")
+                .extract(py)
+                .expect("batch_committed did not return bool");
+
+            permission_check && !batch_already_committed
         };
 
-        if permission_check {
+        if can_add_batch {
             // If the batch is already in the pending queue, don't do anything further
             if state.pending_batches.append(batch.clone()) {
                 if let Some(ref mut candidate_block) = state.candidate_block {
