@@ -460,10 +460,12 @@ impl SyncBlockPublisher {
         };
 
         if permission_check {
-            state.pending_batches.append(batch.clone());
-            if let Some(ref mut candidate_block) = state.candidate_block {
-                if candidate_block.can_add_batch() {
-                    candidate_block.add_batch(batch);
+            // If the batch is already in the pending queue, don't do anything further
+            if state.pending_batches.append(batch.clone()) {
+                if let Some(ref mut candidate_block) = state.candidate_block {
+                    if candidate_block.can_add_batch() {
+                        candidate_block.add_batch(batch);
+                    }
                 }
             }
         }
@@ -754,10 +756,12 @@ impl PendingBatchesPool {
         self.ids = HashSet::new();
     }
 
-    pub fn append(&mut self, batch: Batch) {
-        if !self.contains(&batch.header_signature) {
-            self.ids.insert(batch.header_signature.clone());
+    pub fn append(&mut self, batch: Batch) -> bool {
+        if self.ids.insert(batch.header_signature.clone()) {
             self.batches.push(batch);
+            true
+        } else {
+            false
         }
     }
 
