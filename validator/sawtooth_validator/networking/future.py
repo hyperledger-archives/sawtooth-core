@@ -111,12 +111,13 @@ class FutureCollection:
 
     def set_result(self, correlation_id, result):
         with self._lock:
-            future = self.get(correlation_id)
+            future = self.remove(correlation_id)
             future.set_result(result)
             if self._resolving_threadpool is not None:
                 self._resolving_threadpool.submit(future.run_callback)
             else:
                 future.run_callback()
+            future.timer_stop()
 
     def get(self, correlation_id):
         try:
@@ -127,24 +128,26 @@ class FutureCollection:
 
     def remove(self, correlation_id):
         try:
-            del self._futures[correlation_id]
+            return self._futures.pop(correlation_id)
         except KeyError:
             raise FutureCollectionKeyError(
                 "no such correlation id: {}".format(correlation_id))
 
     def remove_expired(self):
-        correlation_ids = [
-            correlation_id
-            for correlation_id, future
-            in self._futures.items()
-            if future.is_expired()
-        ]
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
+        with self._lock:
+            correlation_ids = [
+                correlation_id
+                for correlation_id, future
+                in self._futures.items()
+                if future.is_expired()
+            ]
+            for correlation_id in correlation_ids:
+                self._futures[correlation_id].timer_stop()
+                del self._futures[correlation_id]
 
     def clean(self):
-        correlation_ids = list(self._futures.keys())
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
+        with self._lock:
+            correlation_ids = list(self._futures.keys())
+            for correlation_id in correlation_ids:
+                self._futures[correlation_id].timer_stop()
+                del self._futures[correlation_id]
