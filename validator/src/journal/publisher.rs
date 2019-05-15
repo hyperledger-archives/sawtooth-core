@@ -468,24 +468,41 @@ impl SyncBlockPublisher {
 
     pub fn on_batch_received(&self, batch: Batch) {
         let mut state = self.state.write().expect("Lock should not be poisoned");
-        for observer in &state.batch_observers {
-            observer.notify_batch_pending(&batch);
-        }
-        let permission_check = {
+
+        // Batch can be added if the signer is authorized and the batch isn't already committed
+        let can_add_batch = {
             let gil = Python::acquire_gil();
             let py = gil.python();
-            self.permission_verifier
+
+            let permission_check = self
+                .permission_verifier
                 .call_method(py, "is_batch_signer_authorized", (batch.clone(),), None)
                 .expect("PermissionVerifier has no method is_batch_signer_authorized")
                 .extract(py)
-                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
+                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool");
+
+            let batch_already_committed: bool = self
+                .batch_committed
+                .call(py, (batch.header_signature.clone(),), None)
+                .expect("batch_committed could not be called")
+                .extract(py)
+                .expect("batch_committed did not return bool");
+
+            permission_check && !batch_already_committed
         };
 
-        if permission_check {
-            state.pending_batches.append(batch.clone());
-            if let Some(ref mut candidate_block) = state.candidate_block {
-                if candidate_block.can_add_batch() {
-                    candidate_block.add_batch(batch);
+        if can_add_batch {
+            // If the batch is already in the pending queue, don't do anything further
+            if state.pending_batches.append(batch.clone()) {
+                // Notify observers
+                for observer in &state.batch_observers {
+                    observer.notify_batch_pending(&batch);
+                }
+                // If currently building a block, add the batch to it
+                if let Some(ref mut candidate_block) = state.candidate_block {
+                    if candidate_block.can_add_batch() {
+                        candidate_block.add_batch(batch);
+                    }
                 }
             }
         }
@@ -781,10 +798,12 @@ impl PendingBatchesPool {
         self.ids = HashSet::new();
     }
 
-    pub fn append(&mut self, batch: Batch) {
-        if !self.contains(&batch.header_signature) {
-            self.ids.insert(batch.header_signature.clone());
+    pub fn append(&mut self, batch: Batch) -> bool {
+        if self.ids.insert(batch.header_signature.clone()) {
             self.batches.push(batch);
+            true
+        } else {
+            false
         }
     }
 
