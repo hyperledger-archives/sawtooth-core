@@ -133,18 +133,20 @@ class FutureCollection:
                 "no such correlation id: {}".format(correlation_id))
 
     def remove_expired(self):
-        correlation_ids = [
-            correlation_id
-            for correlation_id, future
-            in self._futures.items()
-            if future.is_expired()
-        ]
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
+        with self._lock:
+            correlation_ids = [
+                correlation_id
+                for correlation_id, future
+                in self._futures.items()
+                if future.is_expired()
+            ]
+            for correlation_id in correlation_ids:
+                self._futures[correlation_id].timer_stop()
+                del self._futures[correlation_id]
 
     def clean(self):
-        correlation_ids = list(self._futures.keys())
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
+        with self._lock:
+            correlation_ids = list(self._futures.keys())
+            for correlation_id in correlation_ids:
+                self._futures[correlation_id].timer_stop()
+                del self._futures[correlation_id]
