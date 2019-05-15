@@ -442,13 +442,6 @@ impl SyncBlockPublisher {
 
     pub fn on_batch_received(&self, batch: Batch) {
         let mut state = self.state.write().expect("Lock should not be poisoned");
-        for observer in &self.batch_observers {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            observer
-                .call_method(py, "notify_batch_pending", (batch.clone(),), None)
-                .expect("BatchObserver has no method notify_batch_pending");
-        }
 
         // Batch can be added if the signer is authorized and the batch isn't already committed
         let can_add_batch = {
@@ -475,6 +468,15 @@ impl SyncBlockPublisher {
         if can_add_batch {
             // If the batch is already in the pending queue, don't do anything further
             if state.pending_batches.append(batch.clone()) {
+                // Notify observers
+                for observer in &self.batch_observers {
+                    let gil = Python::acquire_gil();
+                    let py = gil.python();
+                    observer
+                        .call_method(py, "notify_batch_pending", (batch.clone(),), None)
+                        .expect("BatchObserver has no method notify_batch_pending");
+                }
+                // If currently building a block, add the batch to it
                 if let Some(ref mut candidate_block) = state.candidate_block {
                     if candidate_block.can_add_batch() {
                         candidate_block.add_batch(batch);
