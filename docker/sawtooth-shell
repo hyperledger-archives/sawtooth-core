@@ -39,6 +39,7 @@ RUN apt-get install -y -q \
 RUN apt-get install -y -q \
     python3-cbor \
     python3-colorlog \
+    python3-sawtooth-intkey \
     python3-sawtooth-sdk \
     python3-secp256k1 \
     python3-toml \
