@@ -204,7 +204,7 @@ class GossipBlockResponseSignatureVerifier(Handler):
                          block.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 
-        self._seen_cache = TimedCache()
+        self._seen_cache[block.header_signature] = None
         return HandlerResult(status=HandlerStatus.PASS)
 
 
