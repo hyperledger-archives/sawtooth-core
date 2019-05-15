@@ -172,7 +172,7 @@ services:
 
 # -------------=== shell ===-------------
 
-  sawtooth-shell:
+  shell:
     image: hyperledger/sawtooth-shell:1.1
     container_name: sawtooth-shell-default
     volumes:
