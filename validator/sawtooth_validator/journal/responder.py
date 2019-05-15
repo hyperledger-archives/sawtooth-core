@@ -28,6 +28,11 @@ LOGGER = logging.getLogger(__name__)
 CACHE_KEEP_TIME = 300
 
 
+class _LogGuard:
+    def __init__(self):
+        self.chain_head_not_yet_set = False
+
+
 class Responder:
     def __init__(self,
                  completer,
@@ -84,6 +89,7 @@ class BlockResponderHandler(Handler):
         self._responder = responder
         self._gossip = gossip
         self._seen_requests = TimedCache(CACHE_KEEP_TIME)
+        self._log_guard = _LogGuard()
 
     def handle(self, connection_id, message_content):
         block_request_message = network_pb2.GossipBlockRequest()
@@ -100,8 +106,10 @@ class BlockResponderHandler(Handler):
             # No block found, broadcast original message to other peers
             # and add to pending requests
             if block_id == "HEAD":
-                LOGGER.debug("No chain head available. Cannot respond to block"
-                             " requests.")
+                if not self._log_guard.chain_head_not_yet_set:
+                    LOGGER.debug("No chain head available; cannot respond to "
+                                 "block requests")
+                    self._log_guard.chain_head_not_yet_set = True
             else:
                 if not self._responder.already_requested(block_id):
                     if block_request_message.time_to_live > 0:
