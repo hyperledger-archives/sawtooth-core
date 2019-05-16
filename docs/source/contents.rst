@@ -11,6 +11,9 @@ Table of Contents
    sysadmin_guide.rst
    api_references.rst
    cli.rst
+   Sawtooth PBFT Consensus <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/>
+   Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>
+   Sawtooth Seth Transaction Family <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>
    community.rst
    glossary.rst
 
