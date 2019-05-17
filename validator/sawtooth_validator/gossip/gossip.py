@@ -228,14 +228,7 @@ class Gossip:
                 peer
         """
         with self._lock:
-            # If an endpoint is already peered with different connection id
-            # do not allow another peering request.
             if len(self._peers) < self._maximum_peer_connectivity:
-                if endpoint in self._peers.values():
-                    raise PeeringException(
-                        "The requested endpoint is registered already as "
-                        "a peer.")
-
                 self._peers[connection_id] = endpoint
                 self._topology.set_connection_status(connection_id,
                                                      PeerStatus.PEER)
