@@ -319,14 +319,12 @@ class Validator:
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
+            block_store=block_store,
             block_manager=block_manager,
             transaction_executor=transaction_executor,
-            transaction_committed=block_store.has_transaction,
-            batch_committed=block_store.has_batch,
             state_view_factory=native_state_view_factory,
             block_sender=block_sender,
             batch_sender=batch_sender,
-            chain_head=block_store.chain_head,
             identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
