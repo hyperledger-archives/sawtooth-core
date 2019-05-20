@@ -139,14 +139,12 @@ class BlockPublisher(OwnedPointer):
     """
 
     def __init__(self,
+                 block_store,
                  block_manager,
                  transaction_executor,
-                 batch_committed,
-                 transaction_committed,
                  state_view_factory,
                  block_sender,
                  batch_sender,
-                 chain_head,
                  identity_signer,
                  data_dir,
                  config_dir,
@@ -157,18 +155,14 @@ class BlockPublisher(OwnedPointer):
         Initialize the BlockPublisher object
 
         Args:
+            block_store (:obj: `BlockStore`): A BlockStore instance
             block_manager (:obj:`BlockManager`): A BlockManager instance
             transaction_executor (:obj:`TransactionExecutor`): A
                 TransactionExecutor instance.
-            batch_committed (fn(batch_id) -> bool): A function for checking if
-                a batch is committed.
-            transaction_committed (fn(transaction_id) -> bool): A function for
-                checking if a transaction is committed.
             state_view_factory (:obj:`NativeStateViewFactory`):
                 NativeStateViewFactory for read-only state views.
             block_sender (:obj:`BlockSender`): The BlockSender instance.
             batch_sender (:obj:`BatchSender`): The BatchSender instance.
-            chain_head (:obj:`BlockWrapper`): The initial chain head.
             chain_head_lock (:obj:`RLock`): The chain head lock.
             identity_signer (:obj:`Signer`): Cryptographic signer for signing
                 blocks
@@ -181,18 +175,17 @@ class BlockPublisher(OwnedPointer):
         """
         super(BlockPublisher, self).__init__('block_publisher_drop')
 
-        if chain_head is not None:
-            chain_head = BlockWrapper.wrap(chain_head)
+        if block_store.chain_head is not None:
+            chain_head = BlockWrapper.wrap(block_store.chain_head)
             chain_head_block = chain_head.block
         else:
             chain_head_block = None
 
         self._to_exception(PY_LIBRARY.call(
             'block_publisher_new',
+            block_store.pointer,
             block_manager.pointer,
             ctypes.py_object(transaction_executor),
-            ctypes.py_object(batch_committed),
-            ctypes.py_object(transaction_committed),
             state_view_factory.pointer,
             ctypes.py_object(block_sender),
             ctypes.py_object(batch_sender),

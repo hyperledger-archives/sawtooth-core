@@ -128,14 +128,12 @@ class BlockTreeManager:
                 "commit_store")
 
         self.block_publisher = BlockPublisher(
+            block_store=self.block_store,
             block_manager=self.block_manager,
             transaction_executor=MockTransactionExecutor(),
-            transaction_committed=self.block_store.has_transaction,
-            batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
-            chain_head=chain_head.block,
             identity_signer=self.identity_signer,
             data_dir=None,
             config_dir=None,
