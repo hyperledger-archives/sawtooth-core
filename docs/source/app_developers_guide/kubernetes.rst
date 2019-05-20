@@ -242,23 +242,73 @@ Use these steps to start Sawtooth:
    The overview page shows the Sawtooth deployment (``sawtooth-0``)
    and pod (:samp:`sawtooth-0-{POD-ID}`).
 
+.. _connect-to-shell-container-k8s:
 
-Step 5: Test Basic Sawtooth Functionality
+Step 5: Connect to the Kubernetes Shell Container
+=================================================
+
+Connect to the shell container.
+
+.. code-block:: none
+
+   $ kubectl exec -it $(kubectl get pods | awk '/sawtooth-0/{print $1}') --container sawtooth-shell -- bash
+
+.. note::
+
+   In the rest of this procedure, the prompt ``root@sawtooth-0#`` marks the
+   commands that should be run in a Sawtooth container.
+   (The actual prompt is similar to ``root@sawtooth-0-5ff6d9d578-5w45k:/#``.)
+
+.. _confirming-connectivity-k8s-label:
+
+Step 6: Confirm Connectivity to the REST API (for Kubernetes)
+=============================================================
+
+To verify that you can reach the REST API, run this ``curl`` command from the
+shell container:
+
+.. code-block:: console
+
+   root@sawtooth-0# curl http://localhost:8008/blocks
+
+If the validator and REST API are running and reachable, the output for each
+command should be similar to this example:
+
+.. code-block:: console
+
+   {
+     "data": [
+       {
+         "batches": [],
+         "header": {
+           "batch_ids": [],
+           "block_num": 0,
+           "mconsensus": "R2VuZXNpcw==",
+           "previous_block_id": "0000000000000000",
+           "signer_public_key": "03061436bef428626d11c17782f9e9bd8bea55ce767eb7349f633d4bfea4dd4ae9",
+           "state_root_hash": "708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6"
+         },
+         "header_signature": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b"
+       }
+     ],
+     "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+     "link": "http://localhost:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+     "paging": {
+       "start_index": 0,
+       "total_count": 1
+     }
+   }
+
+If the validator process or the validator container is not running, the
+``curl`` command will time out or return nothing.
+
+
+Step 7: Test Basic Sawtooth Functionality
 =========================================
 
-1.  Connect to the shell container.
+Run these commands from the shell container.
 
-   .. code-block:: none
-
-      $ kubectl exec -it $(kubectl get pods | awk '/sawtooth-0/{print $1}') --container sawtooth-shell -- bash
-
-   .. note::
-
-      In the rest of this procedure, the prompt ``root@sawtooth-0#`` marks the
-      commands that should be run in a Sawtooth container.
-      (The actual prompt is similar to ``root@sawtooth-0-5ff6d9d578-5w45k:/#``.)
-
-2. Display the list of blocks on the Sawtooth blockchain.
+1. Display the list of blocks on the Sawtooth blockchain.
 
    .. code-block:: console
 
@@ -316,7 +366,7 @@ The rest of this section introduces you to Sawtooth functionality.
 
 .. _sawtooth-client-kube-label:
 
-Step 6: Use Sawtooth Commands as a Client
+Step 8: Use Sawtooth Commands as a Client
 =========================================
 
 Sawtooth includes commands that act as a client interface for an application.
@@ -330,7 +380,7 @@ global state data.
    options and subcommands.
 
 To run the commands in this step, connect to the shell container as described in
-the previous step.
+an earlier step.
 
 Creating and Submitting Transactions with intkey
 ------------------------------------------------
@@ -515,7 +565,7 @@ state data in a :term:`Merkle-Radix tree` (for more information, see
 
 .. _check-status-kube-label:
 
-Step 7: Verify the Sawtooth Components
+Step 9: Verify the Sawtooth Components
 ======================================
 
 To check whether a Sawtooth component is running, connect to the component's
@@ -552,8 +602,8 @@ container and run the ``ps`` command.
 
 .. _examine-logs-kube-label:
 
-Step 8: Examine Sawtooth Logs
-=============================
+Step 10: Examine Sawtooth Logs
+==============================
 
 The Sawtooth log files are available on the Kubernetes dashboard.
 
@@ -629,8 +679,8 @@ For more information on log files, see
 
 .. _stop-sawtooth-kube-label:
 
-Step 9: Stop the Sawtooth Kubernetes Cluster
-============================================
+Step 11: Stop the Sawtooth Kubernetes Cluster
+=============================================
 
 Use the following commands to stop and reset the Sawtooth environment.
 

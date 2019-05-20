@@ -186,8 +186,10 @@ in other containers.
    :ref:`stop-sawtooth-docker-label`.
 
 
-Step 4: Log Into the Client Container
-=====================================
+.. _log-into-client-container-docker:
+
+Step 4: Log Into the Docker Client Container
+============================================
 
 Sawtooth includes commands that act as a client application. The client
 container is used to run these Sawtooth commands, which interact with the
@@ -215,10 +217,10 @@ be run in the terminal window for the client container.
 
 .. _confirming-connectivity-docker-label:
 
-Step 5: Confirm Connectivity to the REST API
-============================================
+Step 5: Confirm Connectivity to the REST API (for Docker)
+=========================================================
 
-#. To confirm that the REST API and validator are running and reachable from
+1. To confirm that the REST API and validator are running and reachable from
    the client container, run this ``curl`` command:
 
    .. code-block:: console
