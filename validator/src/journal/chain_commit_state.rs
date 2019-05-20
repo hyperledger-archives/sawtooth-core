@@ -17,11 +17,9 @@
 
 use std::collections::HashSet;
 
-use cpython;
-use cpython::ObjectProtocol;
-
 use batch::Batch;
 use journal::block_manager::BlockManager;
+use journal::commit_store::CommitStore;
 use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
@@ -128,15 +126,14 @@ pub fn validate_transaction_dependencies(
 
 pub struct TransactionCommitCache {
     committed: HashSet<String>,
-
-    transaction_committed: cpython::PyObject,
+    commit_store: CommitStore,
 }
 
 impl TransactionCommitCache {
-    pub fn new(transaction_committed: cpython::PyObject) -> Self {
+    pub fn new(commit_store: CommitStore) -> Self {
         TransactionCommitCache {
             committed: HashSet::new(),
-            transaction_committed,
+            commit_store,
         }
     }
 
@@ -163,17 +160,12 @@ impl TransactionCommitCache {
     }
 
     pub fn contains(&self, transaction_id: &str) -> bool {
-        self.committed.contains(transaction_id) || self.blockstore_has_txn(transaction_id)
-    }
-
-    fn blockstore_has_txn(&self, transaction_id: &str) -> bool {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        self.transaction_committed
-            .call(py, (transaction_id,), None)
-            .expect("Call to determine if transaction is committed failed")
-            .extract::<bool>(py)
-            .unwrap()
+        // Shouldn't expect here
+        self.committed.contains(transaction_id)
+            || self
+                .commit_store
+                .contains_transaction(transaction_id)
+                .expect("Couldn't check commit store for txn")
     }
 }
 

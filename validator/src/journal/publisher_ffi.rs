@@ -27,6 +27,7 @@ use block::Block;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
+use journal::commit_store::CommitStore;
 use journal::publisher::{
     BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
@@ -60,10 +61,9 @@ macro_rules! check_null {
 
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_new(
+    commit_store_ptr: *mut c_void,
     block_manager_ptr: *const c_void,
     transaction_executor_ptr: *mut py_ffi::PyObject,
-    batch_committed_ptr: *mut py_ffi::PyObject,
-    transaction_committed_ptr: *mut py_ffi::PyObject,
     state_view_factory_ptr: *const c_void,
     block_sender_ptr: *mut py_ffi::PyObject,
     batch_sender_ptr: *mut py_ffi::PyObject,
@@ -77,10 +77,9 @@ pub unsafe extern "C" fn block_publisher_new(
     block_publisher_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
+        commit_store_ptr,
         block_manager_ptr,
         transaction_executor_ptr,
-        batch_committed_ptr,
-        transaction_committed_ptr,
         state_view_factory_ptr,
         block_sender_ptr,
         batch_sender_ptr,
@@ -95,10 +94,9 @@ pub unsafe extern "C" fn block_publisher_new(
 
     let py = Python::assume_gil_acquired();
 
+    let commit_store = (*(commit_store_ptr as *mut CommitStore)).clone();
     let block_manager = (*(block_manager_ptr as *mut BlockManager)).clone();
     let transaction_executor = PyObject::from_borrowed_ptr(py, transaction_executor_ptr);
-    let batch_committed = PyObject::from_borrowed_ptr(py, batch_committed_ptr);
-    let transaction_committed = PyObject::from_borrowed_ptr(py, transaction_committed_ptr);
     let state_view_factory = (state_view_factory_ptr as *const StateViewFactory)
         .as_ref()
         .unwrap();
@@ -135,13 +133,12 @@ pub unsafe extern "C" fn block_publisher_new(
         .expect("Unable to create BatchPublisher");
 
     let publisher = BlockPublisher::new(
+        commit_store,
         block_manager,
         Box::new(
             PyExecutor::new(transaction_executor)
                 .expect("Failed to create python transaction executor"),
         ),
-        batch_committed,
-        transaction_committed,
         state_view_factory.clone(),
         block_sender,
         batch_publisher,
