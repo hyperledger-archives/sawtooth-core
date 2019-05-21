@@ -107,11 +107,12 @@ class FutureCollection:
         self._resolving_threadpool = resolving_threadpool
 
     def put(self, future):
-        self._futures[future.correlation_id] = future
+        with self._lock:
+            self._futures[future.correlation_id] = future
 
     def set_result(self, correlation_id, result):
         with self._lock:
-            future = self.remove(correlation_id)
+            future = self._remove(correlation_id)
             future.set_result(result)
             if self._resolving_threadpool is not None:
                 self._resolving_threadpool.submit(future.run_callback)
@@ -126,7 +127,7 @@ class FutureCollection:
             raise FutureCollectionKeyError(
                 "no such correlation id: {}".format(correlation_id))
 
-    def remove(self, correlation_id):
+    def _remove(self, correlation_id):
         try:
             return self._futures.pop(correlation_id)
         except KeyError:
