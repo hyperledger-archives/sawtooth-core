@@ -35,6 +35,7 @@ class TestSettingsObserver(unittest.TestCase):
             to_update=self._settings_cache.invalidate,
             forked=self._settings_cache.forked
         )
+        self._state_root_func = lambda: "state_root"
 
         # Make sure SettingsCache has populated settings
         self._settings_view_factory.add_setting("setting1", "test")
@@ -58,7 +59,7 @@ class TestSettingsObserver(unittest.TestCase):
         # Set up cache so it does not fork
         block1 = self.create_block()
         self._settings_obsever.chain_update(block1, [])
-        self._settings_cache.get_setting("setting1", "state_root")
+        self._settings_cache.get_setting("setting1", self._state_root_func)
         self.assertNotEqual(self._settings_cache["setting1"], None)
 
         # Add next block and event that says network was updated.
@@ -76,7 +77,8 @@ class TestSettingsObserver(unittest.TestCase):
             self._settings_view_factory.create_settings_view("state_root")
 
         self.assertEqual(
-            self._settings_cache.get_setting("setting1", "state_root"),
+            self._settings_cache.get_setting(
+                "setting1", self._state_root_func),
             settings_view.get_setting("setting1"))
 
     def test_fork(self):
@@ -95,7 +97,8 @@ class TestSettingsObserver(unittest.TestCase):
             self._settings_view_factory.create_settings_view("state_root")
 
         self.assertEqual(
-            self._settings_cache.get_setting("setting1", "state_root"),
+            self._settings_cache.get_setting(
+                "setting1", self._state_root_func),
             settings_view.get_setting("setting1"))
 
 
@@ -105,6 +108,7 @@ class TestSettingsCache(unittest.TestCase):
         self._settings_cache = SettingsCache(
             self._settings_view_factory,
         )
+        self._state_root_func = lambda: "state_root"
 
     def test_get_settings(self):
         """
@@ -116,7 +120,8 @@ class TestSettingsCache(unittest.TestCase):
         settings_view = \
             self._settings_view_factory.create_settings_view("state_root")
         self.assertEqual(
-            self._settings_cache.get_setting("setting1", "state_root"),
+            self._settings_cache.get_setting(
+                "setting1", self._state_root_func),
             settings_view.get_setting("setting1"))
 
     def test_setting_invalidate(self):
@@ -131,7 +136,8 @@ class TestSettingsCache(unittest.TestCase):
         settings_view = \
             self._settings_view_factory.create_settings_view("state_root")
         self.assertEqual(
-            self._settings_cache.get_setting("setting1", "state_root"),
+            self._settings_cache.get_setting(
+                "setting1", self._state_root_func),
             settings_view.get_setting("setting1"))
 
     def test_forked(self):
@@ -145,8 +151,8 @@ class TestSettingsCache(unittest.TestCase):
         settings_view = \
             self._settings_view_factory.create_settings_view("state_root")
 
-        self._settings_cache.get_setting("setting1", "test1")
-        self._settings_cache.get_setting("setting2", "test2")
+        self._settings_cache.get_setting("setting1", lambda: "test1")
+        self._settings_cache.get_setting("setting2", lambda: "test2")
 
         self.assertEqual(len(self._settings_cache), 2)
         self._settings_cache.forked()
@@ -155,9 +161,11 @@ class TestSettingsCache(unittest.TestCase):
         self.assertEqual(self._settings_cache["setting2"], None)
 
         self.assertEqual(
-            self._settings_cache.get_setting("setting1", "state_root"),
+            self._settings_cache.get_setting(
+                "setting1", self._state_root_func),
             settings_view.get_setting("setting1"))
 
         self.assertEqual(
-            self._settings_cache.get_setting("setting2", "state_root"),
+            self._settings_cache.get_setting(
+                "setting2", self._state_root_func),
             settings_view.get_setting("setting2"))
