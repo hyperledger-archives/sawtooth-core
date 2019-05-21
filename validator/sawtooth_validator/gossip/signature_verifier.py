@@ -196,7 +196,7 @@ class GossipBlockResponseSignatureVerifier(Handler):
         block, _ = message_content
 
         if block.header_signature in self._seen_cache:
-            self.block_dropped_count.inc()
+            self._block_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
 
         if not is_valid_block(block):
