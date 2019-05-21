@@ -100,8 +100,9 @@ class SettingsCache():
             value = self._settings_view.get_setting(key)
             return value
 
-        value = self._cache.get(key)
-        if value is None:
+        if key in self._cache:
+            value = self._cache.get(key)
+        else:
             self.update_view(state_root_func())
             value = self._settings_view.get_setting(key)
             self._cache[key] = value
