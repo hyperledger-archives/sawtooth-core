@@ -263,7 +263,7 @@ class Gossip:
         time_to_live = \
             self._settings_cache.get_setting(
                 "sawtooth.gossip.time_to_live",
-                self._current_root_func(),
+                self._current_root_func,
                 default_value=TIME_TO_LIVE
             )
         return int(time_to_live)

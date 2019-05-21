@@ -107,7 +107,7 @@ pub struct SyncBlockPublisher {
     batch_committed: PyObject,
     transaction_committed: PyObject,
     state_view_factory: PyObject,
-    settings_cache: PyObject,
+    get_setting_from_cache: PyObject,
     block_sender: PyObject,
     batch_publisher: PyObject,
     identity_signer: PyObject,
@@ -141,7 +141,7 @@ impl Clone for SyncBlockPublisher {
             batch_committed: self.batch_committed.clone_ref(py),
             transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone_ref(py),
-            settings_cache: self.settings_cache.clone_ref(py),
+            get_setting_from_cache: self.get_setting_from_cache.clone_ref(py),
             block_sender: self.block_sender.clone_ref(py),
             batch_publisher: self.batch_publisher.clone_ref(py),
             identity_signer: self.identity_signer.clone_ref(py),
@@ -237,17 +237,14 @@ impl SyncBlockPublisher {
 
             let kwargs = PyDict::new(py);
             kwargs.set_item(py, "default_value", 0).unwrap();
+
             let max_batches = self
-                .settings_cache
-                .call_method(
+                .get_setting_from_cache
+                .call(
                     py,
-                    "get_setting",
-                    (
-                        "sawtooth.publisher.max_batches_per_block",
-                        previous_block.block().state_root_hash.clone(),
-                    ),
+                    ("sawtooth.publisher.max_batches_per_block",),
                     Some(&kwargs),
-                ).expect("settings_cache has no method get_setting")
+                ).expect("Failed to call settings_cache.get_setting")
                 .extract::<usize>(py)
                 .unwrap();
 
@@ -507,7 +504,7 @@ impl BlockPublisher {
         batch_committed: PyObject,
         transaction_committed: PyObject,
         state_view_factory: PyObject,
-        settings_cache: PyObject,
+        get_setting_from_cache: PyObject,
         block_sender: PyObject,
         batch_publisher: PyObject,
         chain_head: Option<BlockWrapper>,
@@ -537,7 +534,7 @@ impl BlockPublisher {
             batch_committed,
             transaction_committed,
             state_view_factory,
-            settings_cache,
+            get_setting_from_cache,
             block_sender,
             batch_publisher,
             identity_signer,

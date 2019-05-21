@@ -307,7 +307,10 @@ class Validator:
             transaction_committed=block_store.has_transaction,
             batch_committed=block_store.has_batch,
             state_view_factory=state_view_factory,
-            settings_cache=settings_cache,
+            get_setting_from_cache=lambda setting, **kwargs:
+                settings_cache.get_setting(setting,
+                                           block_store.chain_head_state_root,
+                                           **kwargs),
             block_sender=block_sender,
             batch_sender=batch_sender,
             chain_head=block_store.chain_head,
