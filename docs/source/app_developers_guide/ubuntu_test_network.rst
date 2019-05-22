@@ -3,19 +3,24 @@
 Using Ubuntu for a Sawtooth Test Network
 ========================================
 
-This procedure describes how to create a network of Sawtooth nodes for an
-application development environment on a Ubuntu platform.
+This procedure describes how to create a Sawtooth network for an application
+development environment on a Ubuntu platform. Each host system (physical
+computer or virtual machine) is a `Sawtooth node` that runs a validator and
+related Sawtooth components.
 
-Each host system (physical computer or virtual machine) is a Sawtooth node that
-runs a validator and related Sawtooth components. The first node creates the
-genesis block, which specifies the on-chain network configuration settings.
-Other nodes access those settings when they join the network.
+.. note::
 
-This procedure describes how to configure either PBFT or PoET consensus.
-(Devmode consensus is not recommended for a network.) The initial network must
-include the minimum number of nodes for the chosen consensus:
+   For a single-node environment, see :doc:`ubuntu`.
 
-.. include:: ../_includes/consensus-node-reqs.inc
+This procedure guides you through the following tasks:
+
+ * Installing Sawtooth
+ * Creating user and validator keys
+ * Creating the genesis block on the first node
+   (includes specifying either PBFT or PoET consensus)
+ * Starting Sawtooth on each node
+ * Confirming network functionality
+ * Configuring the allowed transaction types (optional)
 
 .. note::
 
@@ -24,24 +29,32 @@ include the minimum number of nodes for the chosen consensus:
 
 .. _about-sawtooth-nw-env-label:
 
-About the Sawtooth Network Environment
---------------------------------------
+About the Ubuntu Sawtooth Network Environment
+---------------------------------------------
 
-This procedure creates a multiple-node Sawtooth network that can be used for
-an application development environment.
-
-.. include:: ../_includes/about-nw-each-node-runs.inc
-
-Like the single-node environment, this environment uses parallel transaction
-processing and static peering. For PBFT consensus, the network must be `fully
-peered` (each node is connected to all other nodes).
-
-The following figure shows an example network that has five nodes:
+This test environment is a network of several Sawtooth nodes. The following
+figure shows a network with five nodes.
 
 .. figure:: ../images/appdev-environment-multi-node.*
    :width: 100%
    :align: center
    :alt: Ubuntu: Example Sawtooth network with five nodes
+
+.. include:: ../_includes/about-nw-each-node-runs.inc
+
+Like the single-node environment, this environment uses parallel transaction
+processing and static peering. However, it uses a different consensus algorithm
+(Devmode consensus is not recommended for a network).
+
+This procedure explains how to configure either PBFT or PoET consensus. The
+initial network must include the minimum number of nodes for the chosen consensus:
+
+.. include:: ../_includes/consensus-node-reqs.inc
+
+.. note::
+
+   For PBFT consensus, the network must be `fully peered` (each node must be
+   connected to all other nodes).
 
 
 .. _prereqs-multi-ubuntu-label:
@@ -49,45 +62,45 @@ The following figure shows an example network that has five nodes:
 Prerequisites
 -------------
 
-**Remove data from an existing single node**: To reuse the single test node
-described in :doc:`ubuntu`, stop Sawtooth and delete all blockchain data
-and logs from that node.
+* Remove data from an existing single node: To reuse the single test node
+  described in :doc:`ubuntu`, stop Sawtooth and delete all blockchain data
+  and logs from that node.
 
-1. If the first validator node is running, stop the Sawtooth components
-   (validator, REST API, consensus engine, and transaction processors),
-   as described in :ref:`stop-sawtooth-ubuntu-label`.
+  1. If the first validator node is running, stop the Sawtooth components
+     (validator, REST API, consensus engine, and transaction processors),
+     as described in :ref:`stop-sawtooth-ubuntu-label`.
 
-#. Delete the existing blockchain data by removing all files from
-   ``/var/lib/sawtooth/``.
+  #. Delete the existing blockchain data by removing all files from
+     ``/var/lib/sawtooth/``.
 
-#. Delete the logs by removing all files from ``/var/log/sawtooth/``.
+  #. Delete the logs by removing all files from ``/var/log/sawtooth/``.
 
-#. You can reuse the existing user and validator keys. If you want to start with
-   new keys, delete the ``.priv`` and ``.pub`` files from
-   ``/home/yourname/.sawtooth/keys/`` and ``/etc/sawtooth/keys/``.
+  #. You can reuse the existing user and validator keys. If you want to start with
+     new keys, delete the ``.priv`` and ``.pub`` files from
+     ``/home/yourname/.sawtooth/keys/`` and ``/etc/sawtooth/keys/``.
 
-**Gather networking information**: For each validator node that will be on your
-network, gather the following information.
+* Gather networking information: For each validator node that will be on your
+  network, gather the following information.
 
-* **Component bind string**: Where this validator will listen for incoming
-  communication from this validator's components. You will set this value with
-  ``--bind component`` when starting the validator. Default:
-  ``tcp://127.0.0.1:4004``.
+  * **Component bind string**: Where this validator will listen for incoming
+    communication from this validator's components. You will set this value with
+    ``--bind component`` when starting the validator. Default:
+    ``tcp://127.0.0.1:4004``.
 
-* **Network bind string**: Where this validator will listen for incoming
-  communication from other validator nodes (also called peers). You will set
-  this value with ``--bind network`` when starting the validator.  Default:
-  ``tcp://127.0.0.1:8800``.
+  * **Network bind string**: Where this validator will listen for incoming
+    communication from other validator nodes (also called peers). You will set
+    this value with ``--bind network`` when starting the validator.  Default:
+    ``tcp://127.0.0.1:8800``.
 
-* **Public endpoint string**: The address that other peers should use to
-  find this validator node. You will set this value with ``--endpoint`` when
-  starting the validator. You will also specify this value in the peers list
-  when starting a validator on another node. Default: ``tcp://127.0.0.1:8800``.
+  * **Public endpoint string**: The address that other peers should use to
+    find this validator node. You will set this value with ``--endpoint`` when
+    starting the validator. You will also specify this value in the peers list
+    when starting a validator on another node. Default: ``tcp://127.0.0.1:8800``.
 
-* **Peers list**: The addresses that this validator should use to connect to
-  the other validator nodes (peers); that is, the public endpoint strings of
-  those nodes. You will set this value with ``--peers`` when starting the
-  validator. Default: none.
+  * **Peers list**: The addresses that this validator should use to connect to
+    the other validator nodes (peers); that is, the public endpoint strings of
+    those nodes. You will set this value with ``--peers`` when starting the
+    validator. Default: none.
 
 .. include:: ../_includes/about-network-bind-endpoint-strings.inc
 
@@ -125,6 +138,10 @@ Step 2: Create User and Validator Keys on All Nodes
 
 Step 3: Create the Genesis Block on the First Node
 --------------------------------------------------
+
+The first node creates the genesis block, which specifies the initial on-chain
+settings for the network configuration. Other nodes access those settings when
+they join the network.
 
 **Prerequisites**:
 

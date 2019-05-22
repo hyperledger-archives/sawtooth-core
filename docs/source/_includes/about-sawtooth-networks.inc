@@ -8,6 +8,10 @@ set of Docker containers, or Kubernetes pod) is a Sawtooth node that runs one
 validator, an optional REST API, a consensus engine, and a set of transaction
 processors.
 
+The first node creates the :term:`genesis block`, which specifies the initial
+on-chain settings for the network. The other nodes access those settings when
+they join the network.
+
 .. note::
 
    The example environment includes the Sawtooth REST API on all validator
