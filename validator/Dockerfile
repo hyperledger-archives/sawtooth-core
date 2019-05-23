@@ -40,6 +40,7 @@ RUN apt-get install -y -q \
     python3-sawtooth-sdk
 
 RUN apt-get install -y -q \
+    libprotobuf17 \
     libssl-dev \
     openssl \
     pkg-config \
