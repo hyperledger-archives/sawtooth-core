@@ -43,10 +43,12 @@ class PermissionVerifier:
     def __init__(self, permissions, current_root_func, identity_cache):
         # Off-chain permissions to be enforced
         self._permissions = permissions
+        self._chain_head_set = False
         self._current_root_func = current_root_func
         self._cache = identity_cache
         self._log_guard = _LogGuard()
 
+    # pylint: disable=function-redefined
     def is_batch_signer_authorized(self, batch, state_root=None):
         """ Check the batch signing key against the allowed transactor
             permissions. The roles being checked are the following, from first
@@ -67,35 +69,41 @@ class PermissionVerifier:
 
         """
         if state_root is None:
+            state_root_func = self._current_root_func
             from_state = False
-            state_root = self._current_root_func()
-            if state_root == INIT_ROOT_KEY:
-                if not self._log_guard.chain_head_not_yet_set:
-                    LOGGER.debug("Chain head is not set yet. Permit all.")
-                    self._log_guard.chain_head_not_yet_set = True
-                return True
+            if not self._chain_head_set:
+                if self._current_root_func() == INIT_ROOT_KEY:
+                    if not self._log_guard.chain_head_not_yet_set:
+                        LOGGER.debug("Chain head is not set yet. Permit all.")
+                        self._log_guard.chain_head_not_yet_set = True
+                    return True
+                self._chain_head_set = True
         else:
+            def state_root_func():
+                return state_root
             from_state = True
 
-        self._cache.update_view(state_root)
+        self._cache.update_view(state_root_func())
 
         header = BatchHeader()
         header.ParseFromString(batch.header)
 
         role = self._cache.get_role(
             "transactor.batch_signer",
-            state_root,
+            state_root_func,
             from_state)
 
         if role is None:
-            role = self._cache.get_role("transactor", state_root, from_state)
+            role = self._cache.get_role(
+                "transactor", state_root_func, from_state)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
 
-        policy = self._cache.get_policy(policy_name, state_root, from_state)
+        policy = self._cache.get_policy(
+            policy_name, state_root_func, from_state)
         if policy is None:
             allowed = True
         else:
@@ -104,13 +112,13 @@ class PermissionVerifier:
         if allowed:
             return self.is_transaction_signer_authorized(
                 batch.transactions,
-                state_root,
+                state_root_func,
                 from_state)
         LOGGER.debug("Batch Signer: %s is not permitted.",
                      header.signer_public_key)
         return False
 
-    def is_transaction_signer_authorized(self, transactions, state_root,
+    def is_transaction_signer_authorized(self, transactions, state_root_func,
                                          from_state):
         """ Check the transaction signing key against the allowed transactor
             permissions. The roles being checked are the following, from first
@@ -126,28 +134,30 @@ class PermissionVerifier:
             Args:
                 transactions (List of Transactions): The transactions that are
                     being verified.
-                state_root(string): The state root of the previous block. If
-                    this is None, the current state root hash will be
+                state_root_func(fn -> string): The state root of the previous
+                    block. If this is None, the current state root hash will be
                     retrieved.
                 from_state (bool): Whether the identity value should be read
                     directly from state, instead of using the cached values.
-                    This should be used when the state_root passed is not from
-                    the current chain head.
+                    This should be used when the state_root_func passed is not
+                    from the current chain head.
         """
         role = None
         if role is None:
             role = self._cache.get_role("transactor.transaction_signer",
-                                        state_root, from_state)
+                                        state_root_func, from_state)
 
         if role is None:
-            role = self._cache.get_role("transactor", state_root, from_state)
+            role = self._cache.get_role(
+                "transactor", state_root_func, from_state)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
 
-        policy = self._cache.get_policy(policy_name, state_root, from_state)
+        policy = self._cache.get_policy(
+            policy_name, state_root_func, from_state)
 
         family_roles = {}
         for transaction in transactions:
@@ -157,12 +167,12 @@ class PermissionVerifier:
             if header.family_name not in family_roles:
                 role = self._cache.get_role(
                     "transactor.transaction_signer." + header.family_name,
-                    state_root,
+                    state_root_func,
                     from_state)
 
                 if role is not None:
                     family_policy = self._cache.get_policy(role.policy_name,
-                                                           state_root,
+                                                           state_root_func,
                                                            from_state)
                 family_roles[header.family_name] = family_policy
             else:
@@ -290,13 +300,14 @@ class PermissionVerifier:
             return True
 
         self._cache.update_view(state_root)
-        role = self._cache.get_role("network", state_root)
+        role = self._cache.get_role("network", self._current_root_func, True)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
-        policy = self._cache.get_policy(policy_name, state_root)
+        policy = self._cache.get_policy(
+            policy_name, self._current_root_func, True)
         if policy is not None:
             if not self._allowed(public_key, policy):
                 LOGGER.debug("Node is not permitted: %s.", public_key)
@@ -319,13 +330,15 @@ class PermissionVerifier:
         """
         state_root = self._current_root_func()
         self._cache.update_view(state_root)
-        role = self._cache.get_role("network.consensus", state_root)
+        role = self._cache.get_role(
+            "network.consensus", self._current_root_func, True)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
-        policy = self._cache.get_policy(policy_name, state_root)
+        policy = self._cache.get_policy(
+            policy_name, self._current_root_func, True)
         if policy is not None:
             if not self._allowed(public_key, policy):
                 LOGGER.debug(
@@ -471,12 +484,12 @@ class IdentityCache():
     def __iter__(self):
         return iter(self._cache)
 
-    def get_role(self, item, state_root, from_state=False):
+    def get_role(self, item, state_root_func, from_state=False):
         """
         Used to retrieve an identity role.
         Args:
             item (string): the name of the role to be fetched
-            state_root(string): The state root of the previous block.
+            state_root_func(fn -> string): The state root of the previous block
             from_state (bool): Whether the identity value should be read
                 directly from state, instead of using the cached values.
                 This should be used when the state_root passed is not from
@@ -485,24 +498,24 @@ class IdentityCache():
         if from_state:
             # if from state use identity_view and do not add to cache
             if self._identity_view is None:
-                self.update_view(state_root)
+                self.update_view(state_root_func())
             value = self._identity_view.get_role(item)
             return value
 
         value = self._cache.get(item)
         if value is None:
             if self._identity_view is None:
-                self.update_view(state_root)
+                self.update_view(state_root_func())
             value = self._identity_view.get_role(item)
             self._cache[item] = value
         return value
 
-    def get_policy(self, item, state_root, from_state=False):
+    def get_policy(self, item, state_root_func, from_state=False):
         """
         Used to retrieve an identity policy.
         Args:
             item (string): the name of the policy to be fetched
-            state_root(string): The state root of the previous block.
+            state_root_func(fn -> string): The state root of the previous block
             from_state (bool): Whether the identity value should be read
                 directly from state, instead of using the cached values.
                 This should be used when the state_root passed is not from
@@ -511,7 +524,7 @@ class IdentityCache():
         if from_state:
             # if from state use identity_view and do not add to cache
             if self._identity_view is None:
-                self.update_view(state_root)
+                self.update_view(state_root_func())
             value = self._identity_view.get_policy(item)
             return value
 
@@ -519,7 +532,7 @@ class IdentityCache():
             value = self._cache.get(item)
         else:
             if self._identity_view is None:
-                self.update_view(state_root)
+                self.update_view(state_root_func())
             value = self._identity_view.get_policy(item)
             self._cache[item] = value
         return value

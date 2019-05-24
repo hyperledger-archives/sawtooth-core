@@ -445,8 +445,8 @@ class TestIdentityObserver(unittest.TestCase):
         self._identity_view_factory.add_role(
             "network",
             "policy1")
-        self._identity_cache.get_role("network", "state_root")
-        self._identity_cache.get_policy("policy1", "state_root")
+        self._identity_cache.get_role("network", lambda: "state_root")
+        self._identity_cache.get_policy("policy1", lambda: "state_root")
 
     def _current_root_func(self):
         return "0000000000000000000000"
@@ -470,8 +470,8 @@ class TestIdentityObserver(unittest.TestCase):
         # Set up cache so it does not fork
         block1 = self.create_block()
         self._identity_obsever.chain_update(block1, [])
-        self._identity_cache.get_role("network", "state_root")
-        self._identity_cache.get_policy("policy1", "state_root")
+        self._identity_cache.get_role("network", lambda: "state_root")
+        self._identity_cache.get_policy("policy1", lambda: "state_root")
         self.assertNotEqual(self._identity_cache["network"], None)
         self.assertNotEqual(self._identity_cache["policy1"], None)
 
@@ -491,11 +491,11 @@ class TestIdentityObserver(unittest.TestCase):
             self._identity_view_factory.create_identity_view("state_root")
 
         self.assertEqual(
-            self._identity_cache.get_role("network", "state_root"),
+            self._identity_cache.get_role("network", lambda: "state_root"),
             identity_view.get_role("network"))
 
         self.assertEqual(
-            self._identity_cache.get_policy("policy1", "state_root"),
+            self._identity_cache.get_policy("policy1", lambda: "state_root"),
             identity_view.get_policy("policy1"))
 
     def test_fork(self):
@@ -514,11 +514,11 @@ class TestIdentityObserver(unittest.TestCase):
             self._identity_view_factory.create_identity_view("state_root")
 
         self.assertEqual(
-            self._identity_cache.get_role("network", "state_root"),
+            self._identity_cache.get_role("network", lambda: "state_root"),
             identity_view.get_role("network"))
 
         self.assertEqual(
-            self._identity_cache.get_policy("policy1", "state_root"),
+            self._identity_cache.get_policy("policy1", lambda: "state_root"),
             identity_view.get_policy("policy1"))
 
 
@@ -541,7 +541,7 @@ class TestIdentityCache(unittest.TestCase):
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
         self.assertEqual(
-            self._identity_cache.get_role("network", "state_root"),
+            self._identity_cache.get_role("network", lambda: "state_root"),
             identity_view.get_role("network"))
 
     def test_get_policy(self):
@@ -557,7 +557,7 @@ class TestIdentityCache(unittest.TestCase):
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
         self.assertEqual(
-            self._identity_cache.get_policy("policy1", "state_root"),
+            self._identity_cache.get_policy("policy1", lambda: "state_root"),
             identity_view.get_policy("policy1"))
 
     def test_role_invalidate(self):
@@ -574,7 +574,7 @@ class TestIdentityCache(unittest.TestCase):
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
         self.assertEqual(
-            self._identity_cache.get_role("network", "state_root"),
+            self._identity_cache.get_role("network", lambda: "state_root"),
             identity_view.get_role("network"))
 
     def test_policy_invalidate(self):
@@ -591,7 +591,7 @@ class TestIdentityCache(unittest.TestCase):
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
         self.assertEqual(
-            self._identity_cache.get_policy("policy1", "state_root"),
+            self._identity_cache.get_policy("policy1", lambda: "state_root"),
             identity_view.get_policy("policy1"))
 
     def test_forked(self):
@@ -607,8 +607,8 @@ class TestIdentityCache(unittest.TestCase):
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
 
-        self._identity_cache.get_policy("policy1", "state_root")
-        self._identity_cache.get_role("network", "state_root")
+        self._identity_cache.get_policy("policy1", lambda: "state_root")
+        self._identity_cache.get_role("network", lambda: "state_root")
 
         self.assertEqual(len(self._identity_cache), 2)
         self._identity_cache.forked()
@@ -617,9 +617,9 @@ class TestIdentityCache(unittest.TestCase):
         self.assertEqual(self._identity_cache["policy1"], None)
 
         self.assertEqual(
-            self._identity_cache.get_policy("policy1", "state_root"),
+            self._identity_cache.get_policy("policy1", lambda: "state_root"),
             identity_view.get_policy("policy1"))
 
         self.assertEqual(
-            self._identity_cache.get_role("network", "state_root"),
+            self._identity_cache.get_role("network", lambda: "state_root"),
             identity_view.get_role("network"))
