@@ -47,8 +47,7 @@ class PermissionVerifier:
         self._cache = identity_cache
         self._log_guard = _LogGuard()
 
-    def is_batch_signer_authorized(self, batch, state_root=None,
-                                   from_state=False):
+    def is_batch_signer_authorized(self, batch, state_root=None):
         """ Check the batch signing key against the allowed transactor
             permissions. The roles being checked are the following, from first
             to last:
@@ -61,22 +60,22 @@ class PermissionVerifier:
 
             Args:
                 batch (Batch): The batch that is being verified.
-                state_root(string): The state root of the previous block. If
-                    this is None, the current state root hash will be
-                    retrieved.
-                from_state (bool): Whether the identity value should be read
-                    directly from state, instead of using the cached values.
-                    This should be used when the state_root passed is not from
-                    the current chain head.
+                state_root(string): The state root of the previous block; if
+                    this is specified, do not read cached values. If this is
+                    None, the current state root hash and cached values will be
+                    used.
 
         """
         if state_root is None:
+            from_state = False
             state_root = self._current_root_func()
             if state_root == INIT_ROOT_KEY:
                 if not self._log_guard.chain_head_not_yet_set:
                     LOGGER.debug("Chain head is not set yet. Permit all.")
                     self._log_guard.chain_head_not_yet_set = True
                 return True
+        else:
+            from_state = True
 
         self._cache.update_view(state_root)
 

@@ -20,8 +20,7 @@ use cpython::{self, ObjectProtocol, PyClone};
 use batch::Batch;
 
 pub trait PermissionVerifier: Sync + Send {
-    fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str, from_state: bool)
-        -> bool;
+    fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str) -> bool;
 }
 
 pub struct PyPermissionVerifier {
@@ -35,22 +34,12 @@ impl PyPermissionVerifier {
 }
 
 impl PermissionVerifier for PyPermissionVerifier {
-    fn is_batch_signer_authorized(
-        &self,
-        batch: &Batch,
-        state_root: &str,
-        from_state: bool,
-    ) -> bool {
+    fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str) -> bool {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
 
         self.verifier
-            .call_method(
-                py,
-                "is_batch_signer_authorized",
-                (batch, state_root, from_state),
-                None,
-            )
+            .call_method(py, "is_batch_signer_authorized", (batch, state_root), None)
             .expect("PermissionVerifier has no method `is_batch_signer_authorized`")
             .extract(py)
             .expect("Unable to extract bool from `is_batch_signer_authorized`")
