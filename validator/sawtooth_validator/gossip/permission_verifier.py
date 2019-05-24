@@ -513,7 +513,7 @@ class IdentityCache():
             # if from state use identity_view and do not add to cache
             if self._identity_view is None:
                 self.update_view(state_root)
-            value = self._identity_view.get_role(item)
+            value = self._identity_view.get_policy(item)
             return value
 
         if item in self._cache:
