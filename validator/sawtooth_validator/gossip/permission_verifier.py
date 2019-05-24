@@ -516,8 +516,9 @@ class IdentityCache():
             value = self._identity_view.get_role(item)
             return value
 
-        value = self._cache.get(item)
-        if value is None:
+        if item in self._cache:
+            value = self._cache.get(item)
+        else:
             if self._identity_view is None:
                 self.update_view(state_root)
             value = self._identity_view.get_policy(item)
