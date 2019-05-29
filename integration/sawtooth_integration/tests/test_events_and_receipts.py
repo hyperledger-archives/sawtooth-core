@@ -18,12 +18,15 @@ import logging
 import json
 import urllib.request
 import urllib.error
+import hashlib
+import random
 
 import cbor
 
-from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
-from sawtooth_intkey.processor.handler import INTKEY_ADDRESS_PREFIX
-from sawtooth_intkey.processor.handler import make_intkey_address
+
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+
 from sawtooth_sdk.messaging.stream import Stream
 
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
@@ -33,12 +36,25 @@ from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import client_event_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchList
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf import client_receipt_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 WAIT = 300
+
+INTKEY_ADDRESS_PREFIX = hashlib.sha512(
+    'intkey'.encode('utf-8')).hexdigest()[0:6]
+
+
+def make_intkey_address(name):
+    return INTKEY_ADDRESS_PREFIX + hashlib.sha512(
+        name.encode('utf-8')).hexdigest()[-64:]
 
 
 class TestEventsAndReceipts(unittest.TestCase):
@@ -331,8 +347,11 @@ class TestEventsAndReceipts(unittest.TestCase):
 class BatchSubmitter:
     def __init__(self, timeout):
         self.batches = []
-        self.imf = IntkeyMessageFactory()
         self.timeout = timeout
+
+        context = create_context('secp256k1')
+        self.signer = CryptoFactory(context).new_signer(
+            context.new_random_private_key())
 
         wait_for_rest_apis(['rest-api:8008'])
 
@@ -363,7 +382,7 @@ class BatchSubmitter:
         return json.loads(response)
 
     def make_batch(self, num):
-        return self.imf.create_batch([('set', str(num), 0)])
+        return create_batch(self.signer, [('set', str(num), 0)])
 
     def submit_next_batch(self):
         batch_list_bytes = self.make_batch(len(self.batches))
@@ -372,3 +391,57 @@ class BatchSubmitter:
         self.batches.append(batch_list.batches[0])
         self._post_batch(batch_list_bytes)
         return len(self.batches) - 1
+
+
+def create_batch(signer, triples):
+    transactions = [
+        create_transaction(signer, verb, name, value)
+        for verb, name, value in triples
+    ]
+
+    txn_signatures = [txn.header_signature for txn in transactions]
+
+    header = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=txn_signatures
+    ).SerializeToString()
+
+    signature = signer.sign(header)
+
+    batch = Batch(
+        header=header,
+        transactions=transactions,
+        header_signature=signature)
+
+    batch_list = BatchList(batches=[batch])
+
+    return batch_list.SerializeToString()
+
+
+def create_transaction(signer, verb, name, value):
+    payload = cbor.dumps({'Verb': verb, 'Name': name, 'Value': value},
+                         sort_keys=True)
+
+    addresses = [make_intkey_address(name)]
+
+    nonce = hex(random.randint(0, 2**64))
+
+    txn_pub_key = signer.get_public_key().as_hex()
+    header = TransactionHeader(
+        signer_public_key=txn_pub_key,
+        family_name="intkey",
+        family_version="1.0",
+        inputs=addresses,
+        outputs=addresses,
+        dependencies=[],
+        payload_sha512=hashlib.sha512(payload).hexdigest(),
+        batcher_public_key=signer.get_public_key().as_hex(),
+        nonce=nonce
+    )
+
+    signature = signer.sign(header.SerializeToString())
+
+    return Transaction(
+        header=header.SerializeToString(),
+        payload=payload,
+        header_signature=signature)
