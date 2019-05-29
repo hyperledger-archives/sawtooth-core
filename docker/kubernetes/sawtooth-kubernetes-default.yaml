@@ -65,7 +65,7 @@ items:
               && sawtooth keygen my_key \
               && sawset genesis -k /root/.sawtooth/keys/my_key.priv \
               && sawset proposal create \
-                -k /etc/sawtooth/keys/validator.priv \
+                -k /root/.sawtooth/keys/my_key.priv \
                 sawtooth.consensus.algorithm.name=Devmode \
                 sawtooth.consensus.algorithm.version=0.1 \
                 -o config.batch \
