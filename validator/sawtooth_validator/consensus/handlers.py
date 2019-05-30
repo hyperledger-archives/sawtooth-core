@@ -136,8 +136,8 @@ class ConsensusRegisterActivateHandler(Handler):
 
     def handle(self, connection_id, message_content):
         # If this is the configured consensus engine, make it active. This is
-        # necessary for setting the active engine on genesis and when the
-        # configured engine is changed to an engine that is not registered yet
+        # necessary for setting the active engine when the configured engine is
+        # changed to an engine that is not registered yet
         request = consensus_pb2.ConsensusRegisterRequest()
 
         try:
