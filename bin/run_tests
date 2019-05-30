@@ -192,8 +192,8 @@ test_battleship() {
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml
     copy_coverage .coverage.validator
-    run_docker_test test_events_and_receipts
-    copy_coverage .coverage.test_events_and_receipts
+    run_docker_test test_two_families
+    copy_coverage .coverage.test_two_families
     run_docker_test test_namespace_restriction
     copy_coverage .coverage.namespace_restriction
     run_docker_test test_state_verifier --timeout 30

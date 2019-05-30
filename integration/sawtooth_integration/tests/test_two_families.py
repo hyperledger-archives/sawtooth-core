@@ -24,10 +24,20 @@ import urllib.request
 import urllib.error
 import json
 from base64 import b64decode
+import hashlib
+import random
 
 import cbor
 
-from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchList
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 
@@ -38,6 +48,11 @@ LOGGER.setLevel(logging.INFO)
 INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
 WAIT = 300
+
+
+def make_intkey_address(name):
+    return INTKEY_PREFIX + hashlib.sha512(
+        name.encode('utf-8')).hexdigest()[-64:]
 
 
 class TestTwoFamilies(unittest.TestCase):
@@ -70,6 +85,9 @@ class TestTwoFamilies(unittest.TestCase):
         Besides verifying that the xo and intkey commands act as expected,
         verify that there is nothing in the state that isn't xo or intkey.
         '''
+        context = create_context('secp256k1')
+        signer = CryptoFactory(context).new_signer(
+            context.new_random_private_key())
 
         self.intkey_verifier = IntkeyTestVerifier()
         self.xo_verifier = XoTestVerifier()
@@ -85,7 +103,7 @@ class TestTwoFamilies(unittest.TestCase):
         how_many_updates = 0
 
         for intkey_cmd, xo_cmd in commands:
-            _send_intkey_cmd(intkey_cmd)
+            _send_intkey_cmd(signer, intkey_cmd)
             _send_xo_cmd('{} --url {} --wait {}'.format(
                 xo_cmd,
                 'http://rest-api:8008',
@@ -139,13 +157,67 @@ def _send_xo_cmd(cmd_str):
         check=True)
 
 
-def _send_intkey_cmd(txns):
-    batch = IntkeyMessageFactory().create_batch(txns)
+def _send_intkey_cmd(signer, txns):
+    batch = create_batch(signer, txns)
     LOGGER.info('Sending intkey txns')
     _post_batch(batch)
 
-# rest_api calls
 
+def create_batch(signer, triples):
+    transactions = [
+        create_transaction(signer, verb, name, value)
+        for verb, name, value in triples
+    ]
+
+    txn_signatures = [txn.header_signature for txn in transactions]
+
+    header = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=txn_signatures
+    ).SerializeToString()
+
+    signature = signer.sign(header)
+
+    batch = Batch(
+        header=header,
+        transactions=transactions,
+        header_signature=signature)
+
+    batch_list = BatchList(batches=[batch])
+
+    return batch_list.SerializeToString()
+
+
+def create_transaction(signer, verb, name, value):
+    payload = cbor.dumps({'Verb': verb, 'Name': name, 'Value': value},
+                         sort_keys=True)
+
+    addresses = [make_intkey_address(name)]
+
+    nonce = hex(random.randint(0, 2**64))
+
+    txn_pub_key = signer.get_public_key().as_hex()
+    header = TransactionHeader(
+        signer_public_key=txn_pub_key,
+        family_name="intkey",
+        family_version="1.0",
+        inputs=addresses,
+        outputs=addresses,
+        dependencies=[],
+        payload_sha512=hashlib.sha512(payload).hexdigest(),
+        batcher_public_key=signer.get_public_key().as_hex(),
+        nonce=nonce
+    )
+
+    signature = signer.sign(header.SerializeToString())
+
+    return Transaction(
+        header=header.SerializeToString(),
+        payload=payload,
+        header_signature=signature)
+
+
+# rest_api calls
 
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}

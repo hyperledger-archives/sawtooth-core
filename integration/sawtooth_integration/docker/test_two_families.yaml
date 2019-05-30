@@ -37,7 +37,6 @@ services:
 
   intkey-tp-python:
     image: hyperledger/sawtooth-intkey-tp-python:nightly
-      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
@@ -134,4 +133,5 @@ services:
         test_two_families.TestTwoFamilies
     stop_signal: SIGKILL
     environment:
-      PYTHONPATH: "/project/sawtooth-core/integration"
+      PYTHONPATH: "/project/sawtooth-core/validator:\
+        /project/sawtooth-core/integration"

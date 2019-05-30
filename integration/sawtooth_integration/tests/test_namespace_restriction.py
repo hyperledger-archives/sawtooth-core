@@ -21,22 +21,40 @@ import shlex
 import urllib.request
 import urllib.error
 import base64
+import hashlib
+import random
 
-from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+import cbor
+
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
 
 from sawtooth_validator.journal.block_info_injector \
     import CONFIG_ADDRESS
 from sawtooth_validator.journal.block_info_injector \
     import create_block_address
 from sawtooth_validator.protobuf import block_info_pb2
+from sawtooth_validator.protobuf.transaction_pb2 import Transaction
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+
+from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchList
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
-XO_PREFIX = '5b7349'
 WAIT = 300
+XO_PREFIX = '5b7349'
+INTKEY_ADDRESS_PREFIX = hashlib.sha512(
+    'intkey'.encode('utf-8')).hexdigest()[0:6]
+
+
+def make_intkey_address(name):
+    return INTKEY_ADDRESS_PREFIX + hashlib.sha512(
+        name.encode('utf-8')).hexdigest()[-64:]
 
 
 def get_blocks():
@@ -91,11 +109,6 @@ def submit_request(request):
     return json.loads(response)
 
 
-def make_batches(keys):
-    imf = IntkeyMessageFactory()
-    return [imf.create_batch([('set', k, 0)]) for k in keys]
-
-
 def send_xo_cmd(cmd_str):
     LOGGER.info('Sending xo cmd: %s', cmd_str)
     subprocess.run(
@@ -103,6 +116,64 @@ def send_xo_cmd(cmd_str):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=True)
+
+
+def make_batches(signer, keys):
+    return [create_batch(signer, [('set', k, 0)]) for k in keys]
+
+
+def create_batch(signer, triples):
+    transactions = [
+        create_transaction(signer, verb, name, value)
+        for verb, name, value in triples
+    ]
+
+    txn_signatures = [txn.header_signature for txn in transactions]
+
+    header = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=txn_signatures
+    ).SerializeToString()
+
+    signature = signer.sign(header)
+
+    batch = Batch(
+        header=header,
+        transactions=transactions,
+        header_signature=signature)
+
+    batch_list = BatchList(batches=[batch])
+
+    return batch_list.SerializeToString()
+
+
+def create_transaction(signer, verb, name, value):
+    payload = cbor.dumps({'Verb': verb, 'Name': name, 'Value': value},
+                         sort_keys=True)
+
+    addresses = [make_intkey_address(name)]
+
+    nonce = hex(random.randint(0, 2**64))
+
+    txn_pub_key = signer.get_public_key().as_hex()
+    header = TransactionHeader(
+        signer_public_key=txn_pub_key,
+        family_name="intkey",
+        family_version="1.0",
+        inputs=addresses,
+        outputs=addresses,
+        dependencies=[],
+        payload_sha512=hashlib.sha512(payload).hexdigest(),
+        batcher_public_key=signer.get_public_key().as_hex(),
+        nonce=nonce
+    )
+
+    signature = signer.sign(header.SerializeToString())
+
+    return Transaction(
+        header=header.SerializeToString(),
+        payload=payload,
+        header_signature=signature)
 
 
 class TestNamespaceRestriction(unittest.TestCase):
@@ -121,7 +192,11 @@ class TestNamespaceRestriction(unittest.TestCase):
         - intkey transactions are banned
         - xo transactions are allowed
         """
-        batches = make_batches('abcde')
+        context = create_context('secp256k1')
+        signer = CryptoFactory(context).new_signer(
+            context.new_random_private_key())
+
+        batches = make_batches(signer, 'abcde')
 
         send_xo_cmd('sawtooth keygen')
 
