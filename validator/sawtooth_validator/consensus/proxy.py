@@ -366,18 +366,23 @@ def get_configured_engine(block, settings_view_factory):
     conf_version = settings_view.get_setting(
         'sawtooth.consensus.algorithm.version')
 
-    # Fallback to devmode if nothing else is set
-    name = "Devmode"
-    version = "0.1"
-
-    # If name and version settings aren't set, check for PoET
-    if conf_name is None or conf_version is None:
-        algorithm = settings_view.get_setting('sawtooth.consensus.algorithm')
-        if algorithm and (algorithm.lower() == 'poet'):
-            name = "PoET"
-    # Otherwise use name and version settings
-    else:
-        name = conf_name
+    # For backwards compatibility with 1.0:
+    # - Use version "0.1" if sawtooth.consensus.algorithm.version is unset
+    # - Use sawtooth.consensus.algorithm if sawtooth.consensus.algorithm.name
+    #   is unset
+    # - Use "Devmode" if sawtooth.consensus.algorithm is unset
+    if conf_version is not None:
         version = conf_version
+    else:
+        version = "0.1"
+
+    if conf_name is not None:
+        name = conf_name
+    else:
+        algorithm = settings_view.get_setting('sawtooth.consensus.algorithm')
+        if algorithm is not None:
+            name = algorithm
+        else:
+            name = "Devmode"
 
     return name, version
