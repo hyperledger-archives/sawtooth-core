@@ -79,10 +79,17 @@ message ConsensusStateEntry {
 
 // Sent to connect with the validator
 message ConsensusRegisterRequest {
+  message Protocol {
+    string name = 1;
+    string version = 2;
+  }
+
   // The name of this consensus engine
   string name = 1;
   // The version of this consensus engine
   string version = 2;
+  // Any additional name/version pairs the consensus engine supports
+  repeated Protocol additional_protocols = 3;
 }
 
 message ConsensusRegisterResponse {

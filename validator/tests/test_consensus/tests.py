@@ -30,7 +30,7 @@ class TestHandlers(unittest.TestCase):
         result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
-        self.mock_proxy.register.assert_called_with('', '', 'mock-id')
+        self.mock_proxy.register.assert_called_with('', '', [], 'mock-id')
 
     def test_consensus_send_to_handler(self):
         handler = handlers.ConsensusSendToHandler(self.mock_proxy)
@@ -413,7 +413,8 @@ class MockBlockManager:
 
 class MockConsensusRegistry(Mock):
     def get_active_engine_info(self):
-        return EngineInfo('mock-id', 'mock-name', 'mock-version')
+        return EngineInfo('mock-id', 'mock-name', 'mock-version',
+                          [('alt-protocol-name', 'alt-protocol-version')])
 
     def is_active_engine_id(self, engine_id):
         return True
