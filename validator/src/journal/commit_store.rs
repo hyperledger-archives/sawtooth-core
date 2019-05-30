@@ -108,9 +108,9 @@ impl CommitStore {
     fn read_chain_head_id_from_block_num_index(
         reader: &DatabaseReader,
     ) -> Result<Vec<u8>, DatabaseError> {
-        let cursor = reader.index_cursor("index_block_num")?;
+        let mut cursor = reader.index_cursor("index_block_num")?;
         let (_, val) = cursor
-            .last()
+            .seek_last()
             .ok_or_else(|| DatabaseError::NotFoundError("No chain head".into()))?;
         Ok(val)
     }

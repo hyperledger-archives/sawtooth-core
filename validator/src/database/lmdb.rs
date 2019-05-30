@@ -213,14 +213,14 @@ pub struct LmdbDatabaseReaderCursor<'a> {
 }
 
 impl<'a> LmdbDatabaseReaderCursor<'a> {
-    pub fn first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+    pub fn seek_first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .first(&self.access)
             .ok()
             .map(|(key, value): (&[u8], &[u8])| (Vec::from(key), Vec::from(value)))
     }
 
-    pub fn last(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+    pub fn seek_last(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .last(&self.access)
             .ok()
