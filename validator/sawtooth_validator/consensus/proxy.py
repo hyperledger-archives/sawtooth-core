@@ -118,12 +118,13 @@ class ConsensusProxy:
         self._consensus_registry = consensus_registry
         self._consensus_notifier = consensus_notifier
 
-    def register(self, engine_name, engine_version, connection_id):
+    def register(self, engine_name, engine_version,
+                 additional_protocols, connection_id):
         self._consensus_registry.register_engine(
-            connection_id, engine_name, engine_version)
+            connection_id, engine_name, engine_version, additional_protocols)
 
-    def activate_if_configured(self, engine_name, engine_version):
-        # Wait until chain head is committed
+    def activate_if_configured(self, engine_name, engine_version,
+                               additional_protocols):
         try:
             chain_head = self.chain_head_get()
         except UnknownBlock:
@@ -137,10 +138,11 @@ class ConsensusProxy:
         conf_name, conf_version = get_configured_engine(
             chain_head, self._settings_view_factory)
 
-        if engine_name == conf_name and engine_version == conf_version:
+        if ((conf_name, conf_version) == (engine_name, engine_version)
+                or (conf_name, conf_version) in additional_protocols):
             try:
                 self._consensus_registry.activate_engine(
-                    engine_name, engine_version)
+                    conf_name, conf_version)
             except EngineAlreadyActive:
                 return
             except EngineNotRegistered:
@@ -336,7 +338,7 @@ class ConsensusProxy:
         return blocks
 
     def _wrap_consensus_message(self, content, message_type, connection_id):
-        _, name, version = self._consensus_registry.get_active_engine_info()
+        _, name, version, _ = self._consensus_registry.get_active_engine_info()
         header = ConsensusPeerMessageHeader(
             signer_id=self._public_key,
             content_sha512=hashlib.sha512(content).digest(),
