@@ -14,6 +14,7 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+pub mod error;
 
 pub enum Permission {
     PermitKey(String),
