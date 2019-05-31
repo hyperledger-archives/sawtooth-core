@@ -38,6 +38,7 @@ pub(crate) mod execution;
 pub(crate) mod gossip;
 pub(crate) mod journal;
 mod metrics;
+pub(crate) mod permissions;
 pub(crate) mod proto;
 pub(crate) mod py_object_wrapper;
 pub(crate) mod pylogger;
