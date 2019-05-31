@@ -39,6 +39,7 @@ pub mod gossip;
 pub mod hashlib;
 pub mod journal;
 mod metrics;
+pub(crate) mod permissions;
 pub mod proto;
 pub mod pylogger;
 pub mod scheduler;
