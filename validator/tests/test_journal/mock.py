@@ -303,8 +303,7 @@ def CreateSetting(key, value):
 
 
 class MockPermissionVerifier:
-    def is_batch_signer_authorized(self, batch, state_root=None,
-                                   from_state=False):
+    def is_batch_signer_authorized(self, batch, state_root=None):
         return True
 
 

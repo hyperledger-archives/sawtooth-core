@@ -668,7 +668,7 @@ impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
                 let batch_id = &batch.header_signature;
                 if !self
                     .permission_verifier
-                    .is_batch_signer_authorized(batch, state_root, true)
+                    .is_batch_signer_authorized(batch, state_root)
                 {
                     return Err(ValidationError::BlockValidationError(
                             format!("Block {} failed permission verification: batch {} signer is not authorized",
