@@ -16,11 +16,15 @@
  */
 pub mod error;
 
+pub use self::error::IdentityError;
+
+#[derive(Clone)]
 pub enum Permission {
     PermitKey(String),
     DenyKey(String),
 }
 
+#[derive(Clone)]
 pub struct Policy {
     name: String,
     permissions: Vec<Permission>,
@@ -39,6 +43,7 @@ impl Policy {
     }
 }
 
+#[derive(Clone)]
 pub struct Role {
     name: String,
     policy_name: String,
@@ -54,6 +59,6 @@ impl Role {
 }
 
 pub trait IdentitySource: Sync + Send {
-    fn get_role(&self, name: &str) -> Option<Role>;
-    fn get_policy(&self, name: &str) -> Option<Policy>;
+    fn get_role(&self, name: &str) -> Result<Option<Role>, IdentityError>;
+    fn get_policy(&self, name: &str) -> Result<Option<Policy>, IdentityError>;
 }
