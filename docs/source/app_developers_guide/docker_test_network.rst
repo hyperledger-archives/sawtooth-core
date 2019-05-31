@@ -4,21 +4,30 @@ Using Docker for a Sawtooth Test Network
 ========================================
 
 This procedure describes how to use Docker to create a network of five Sawtooth
-nodes for an application development environment, using either PBFT or PoET
-consensus. (Devmode consensus is not recommended for a network.)
+nodes for an application development environment. Each node is a set of Docker
+containers that runs a validator and related Sawtooth components.
 
-.. include:: ../_includes/pbft-vs-poet-cfg.inc
+.. note::
+
+   For a single-node environment, see :doc:`docker`.
+
+This procedure guides you through the following tasks:
+
+ * Downloading the Sawtooth Docker Compose file
+ * Starting the Sawtooth network with `docker-compose`
+ * Checking process status
+ * Configuring the allowed transaction types (optional)
+ * Connecting to the Sawtooth shell container and confirming network
+   functionality
+ * Stopping Sawtooth and resetting the Docker environment
 
 
 .. _about-sawtooth-nw-env-docker-label:
 
-About the Sawtooth Network Environment
---------------------------------------
+About the Docker Sawtooth Network Environment
+---------------------------------------------
 
-Each Sawtooth node runs a validator and related Sawtooth components. The first
-node creates the genesis block, which specifies the on-chain network
-configuration settings. The other nodes access those settings when they join the
-network.
+This test environment is a network of five Sawtooth nodes.
 
 .. figure:: ../images/appdev-environment-multi-node.*
    :width: 100%
@@ -28,7 +37,15 @@ network.
 .. include:: ../_includes/about-nw-each-node-runs.inc
 
 Like the :doc:`single-node test environment <docker>`, this environment uses
-parallel transaction processing and static peering.
+parallel transaction processing and static peering. However, it uses a different
+consensus algorithm (Devmode consensus is not recommended for a network). You
+can choose either PBFT or PoET consensus.
+
+.. include:: ../_includes/pbft-vs-poet-cfg.inc
+
+The first node creates the `genesis block`, which specifies the on-chain
+settings for the network configuration. The other nodes access those settings
+when they join the network.
 
 
 .. _prereqs-multi-docker-label:
@@ -65,11 +82,12 @@ Step 1: Download the Docker Compose File
 
 Download the Docker Compose file for a multiple-node network.
 
-* For PBFT: Download
+* For PBFT, download
   `sawtooth-default-pbft.yaml <./sawtooth-default-pbft.yaml>`_
 
-* For PoET: Download
+* For PoET, download
   `sawtooth-default-poet.yaml <./sawtooth-default-poet.yaml>`_
+
 
 Step 2: Start the Sawtooth Network
 ----------------------------------
@@ -256,7 +274,7 @@ By default, a validator accepts transactions from any transaction processor.
 However, Sawtooth allows you to limit the types of transactions that can be
 submitted.
 
-In this step, you will configure the validator network to accept transactions
+In this step, you will configure the Sawtooth network to accept transactions
 only from the transaction processors running in the example environment.
 Transaction-type restrictions are an on-chain setting, so this configuration
 change is made on one node, then applied to all other nodes.
@@ -265,9 +283,6 @@ The :doc:`Settings transaction processor
 <../transaction_family_specifications/settings_transaction_family>`
 handles on-chain configuration settings. You will use the ``sawset`` command to
 create and submit a batch of transactions containing the configuration change.
-
-Use the following steps to create and submit a batch containing the new on-chain
-setting.
 
 1. Connect to the first validator container (``sawtooth-validator-default-0``).
    The next command requires the validator key that was generated in that
@@ -331,32 +346,14 @@ setting.
 
    The output should be similar to this example:
 
-   * For PBFT:
+   .. code-block:: console
 
-     .. code-block:: console
-
-        sawtooth.consensus.algorithm.name: pbft
-        sawtooth.consensus.algorithm.version: 0.1
-        sawtooth.consensus.pbft.members=["0242fcde86373d0aa376055fc6...
-        sawtooth.publisher.max_batches_per_block=1200
-        sawtooth.settings.vote.authorized_keys: 0242fcde86373d0aa376...
-        sawtooth.validator.transaction_families: [{"family": "intkey...
-
-   * For PoET:
-
-     .. code-block:: console
-
-        sawtooth.consensus.algorithm.name: PoET
-        sawtooth.consensus.algorithm.version: 0.1
-        sawtooth.poet.initial_wait_time: 15
-        sawtooth.poet.report_public_key_pem: -----BEGIN PUBLIC KEY-----
-        MIIBIjANBgkqhki...
-        sawtooth.poet.target_wait_time: 5
-        sawtooth.poet.valid_enclave_basenames: b785c58b77152cbe7fd55ee3...
-        sawtooth.poet.valid_enclave_measurements: c99f21955e38dbb03d2ca...
-        sawtooth.publisher.max_batches_per_block: 100
-        sawtooth.settings.vote.authorized_keys: 036631291bbe87c3c9dde22...
-        sawtooth.validator.transaction_families: [{"family": "intkey", ...
+      sawtooth.consensus.algorithm.name: {name}
+      sawtooth.consensus.algorithm.version: {version}
+      ...
+      sawtooth.publisher.max_batches_per_block=1200
+      sawtooth.settings.vote.authorized_keys: 0242fcde86373d0aa376...
+      sawtooth.validator.transaction_families: [{"family": "intkey...
 
 Step 6: Stop the Sawtooth Network (Optional)
 --------------------------------------------
