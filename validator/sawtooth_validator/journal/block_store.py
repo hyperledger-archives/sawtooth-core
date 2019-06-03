@@ -85,9 +85,20 @@ class BlockStore(ffi.OwnedPointer):
             database.pointer,
             ctypes.byref(self.pointer))
 
+    def _get_data_by_num(self, object_id, ffi_fn_name):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+        _libexec(
+            ffi_fn_name,
+            self.pointer,
+            ctypes.c_ulonglong(object_id),
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+
     def _get_data_by_id(self, object_id, ffi_fn_name):
         (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-
         _libexec(
             ffi_fn_name,
             self.pointer,
@@ -98,6 +109,10 @@ class BlockStore(ffi.OwnedPointer):
 
         return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
+    def _get_block_by_num(self, object_id, ffi_fn_name):
+        return self.deserialize_block(
+            self._get_data_by_num(object_id, ffi_fn_name))
+
     def _get_block_by_id(self, object_id, ffi_fn_name):
         return self.deserialize_block(
             self._get_data_by_id(object_id, ffi_fn_name))
@@ -106,7 +121,7 @@ class BlockStore(ffi.OwnedPointer):
         try:
             return self._get_block_by_id(key, 'commit_store_get_by_block_id')
         except ValueError:
-            raise KeyError("Unable to find block: %s" % key)
+            raise KeyError("Unable to find block id: %s" % key)
 
     def put_blocks(self, blocks):
         c_put_items = (ctypes.POINTER(_PutEntry) * len(blocks))()
@@ -282,8 +297,11 @@ class BlockStore(ffi.OwnedPointer):
         Raises:
             KeyError if no block with the given number is found
         """
-        return self._get_block_by_id(
-            block_num, 'commit_store_get_by_block_num')
+        try:
+            return self._get_block_by_num(
+                block_num, 'commit_store_get_by_block_num')
+        except ValueError:
+            raise KeyError("Unable to find block number: %s" % repr(block_num))
 
     def has_transaction(self, txn_id):
         """Returns True if the transaction is contained in a block in the
