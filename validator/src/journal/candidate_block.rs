@@ -107,6 +107,7 @@ impl CandidateBlock {
     }
 
     pub fn cancel(&mut self) {
+        self.scheduler.finalize(false).unwrap();
         self.scheduler.cancel().unwrap();
     }
 
