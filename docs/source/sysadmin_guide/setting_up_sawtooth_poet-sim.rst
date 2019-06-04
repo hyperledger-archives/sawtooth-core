@@ -13,12 +13,16 @@ Sawtooth PBFT consensus or PoET simulator consensus.
   without a Trusted Execution Environment (TEE). Sawtooth PoET requires a
   minimum of three nodes, but works best with at least four or five nodes.
 
-.. note::
+For more information on the supported consensus types, or to learn how to change
+the consensus later, see :doc:`about_dynamic_consensus`.
 
-   For the procedure to configure Sawtooth with PoET SGX consensus on a system
-   with |Intel (R)| Software Guard Extensions (SGX), see :doc:`configure_sgx`.
+  .. note::
+
+     For the procedure to configure Sawtooth with PoET SGX consensus on a system
+     with |Intel (R)| Software Guard Extensions (SGX), see :doc:`configure_sgx`.
 
 .. |Intel (R)| unicode:: Intel U+00AE .. registered copyright symbol
+
 
 Use this set of procedures to create the first Sawtooth node in a network or to
 add a new node to an existing network.  Note that some procedures are performed
