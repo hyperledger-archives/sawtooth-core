@@ -174,6 +174,8 @@ attestation service.
 `Click here <https://software.intel.com/formfill/sgx-onboarding>`_ for the
 registration form.
 
+.. _config-validator-for-PoET-SGX-label:
+
 Configure the Validator for PoET-SGX
 ------------------------------------
 

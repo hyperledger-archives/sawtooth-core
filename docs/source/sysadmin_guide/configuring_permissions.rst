@@ -29,6 +29,8 @@ change on-chain settings and how many votes are required for a settings change.
    transaction processors can submit transactions. For more information, see
    "Setting the Allowed Transaction Types (Optional)".
 
+.. _transactor-key-permissioning-label:
+
 Transactor Key Permissioning
 ============================
 
