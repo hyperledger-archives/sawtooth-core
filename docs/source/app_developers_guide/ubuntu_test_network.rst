@@ -22,6 +22,9 @@ This procedure guides you through the following tasks:
  * Confirming network functionality
  * Configuring the allowed transaction types (optional)
 
+For information on Sawtooth :term:`dynamic consensus` or to learn how to change
+the consensus type, see :doc:`/sysadmin_guide/about_dynamic_consensus`.
+
 .. note::
 
    These instructions have been tested on Ubuntu 16.04 only.

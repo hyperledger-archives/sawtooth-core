@@ -189,6 +189,8 @@ network. Sawtooth currently includes consensus engines for these algorithms:
       testing a transaction processor. Dev mode is not recommended for
       multi-node networks and should not be used for production.
 
+For more information, see :doc:`/sysadmin_guide/about_dynamic_consensus`.
+
 .. _sample-transaction-families-label:
 
 Sample Transaction Families
