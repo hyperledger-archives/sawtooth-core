@@ -310,8 +310,9 @@ necessary transaction processors must be running.
 If any transactions in the genesis block set or change settings, Sawtooth
 requires the `Sawtooth Settings transaction processor <../cli/settings-tp>`_
 or an equivalent implementation.
-For example, if the genesis block configures PoET consensus, this transaction
-processor is handles the transactions with PoET settings.
+For example, the genesis block specifies the :term:`consensus engine` and
+related settings, so the Settings transaction processor is required to handle
+the transactions with these settings.
 
 When the genesis block is committed, the consensus settings are stored in
 state. All subsequent blocks are processed with the configured consensus

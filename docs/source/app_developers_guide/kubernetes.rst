@@ -187,7 +187,7 @@ Download the Kubernetes configuration file for a single-node environment:
 This file defines the process for constructing a one-node Sawtooth environment
 with following containers:
 
-* A single validator using :ref:`dev mode consensus <dynamic-consensus-label>`
+* A single validator using :term:`Devmode consensus`
 * A REST API connected to the validator
 * The Settings transaction processor (``sawtooth-settings``)
 * The IntegerKey transaction processor (``intkey-tp-python``)

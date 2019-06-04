@@ -127,8 +127,8 @@ contracts can be deployed to Sawtooth using the Seth transaction family.
 
 .. _dynamic-consensus-label:
 
-Dynamic Consensus Algorithms
-----------------------------
+Dynamic Consensus
+-----------------
 
 In a blockchain, consensus is the process of building agreement among a group
 of participants in a network. Algorithms for achieving consensus with
@@ -184,9 +184,9 @@ network. Sawtooth currently includes consensus engines for these algorithms:
       is a leader-based consensus algorithm that provides crash fault tolerance
       for a small network with restricted membership.
 
-    * Dev mode (short for "developer mode")
+    * Devmode (short for "developer mode")
       is a simplified random-leader algorithm that is useful for developing and
-      testing a transaction processor. Dev mode is not recommended for
+      testing a transaction processor. Devmode is not recommended for
       multi-node networks and should not be used for production.
 
 For more information, see :doc:`/sysadmin_guide/about_dynamic_consensus`.
