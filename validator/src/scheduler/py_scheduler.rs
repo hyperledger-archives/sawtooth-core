@@ -124,12 +124,12 @@ impl Scheduler for PyScheduler {
 
     fn complete(&mut self, block: bool) -> Result<Option<ExecutionResults>, SchedulerError> {
         if self.is_complete(block)? {
-            let results =
+            let results = {
+                let gil = cpython::Python::acquire_gil();
+                let py = gil.python();
                 self.batch_ids
                     .iter()
                     .map(|id| {
-                        let gil = cpython::Python::acquire_gil();
-                        let py = gil.python();
                         let batch_result: Option<PyBatchExecutionResult> = self
                             .py_scheduler
                             .call_method(py, "get_batch_execution_result", (id,), None)
@@ -149,45 +149,52 @@ impl Scheduler for PyScheduler {
                             Ok((vec![], None, id.to_owned()))
                         }
                     })
-                    .collect::<PyResult<CombinedOptionalBatchResult>>()?;
+                    .collect::<PyResult<CombinedOptionalBatchResult>>()?
+            };
 
             let beginning_state_hash = results
                 .first()
-                .map(|v| v.0.first().map(|r| r.state_hash.clone()).unwrap_or(None))
+                .map(|(txn_results, _, _)| {
+                    txn_results
+                        .first()
+                        .map(|r| r.state_hash.clone())
+                        .unwrap_or(None)
+                })
                 .unwrap_or(None);
 
             let ending_state_hash = results
                 .iter()
-                .by_ref()
-                .map(|val| val.1.clone())
+                .map(|(_, batch_result, _)| batch_result)
                 .filter(|batch_result| batch_result.is_some())
                 .find(|batch_result| {
                     batch_result
-                        .clone()
+                        .as_ref()
                         .expect("Failed to unwrap batch result to check state hash")
                         .state_hash
                         .is_some()
                 })
                 .map(|batch_result| {
                     batch_result
+                        .as_ref()
                         .expect("Failed to unwrap batch result to get state hash")
                         .state_hash
+                        .clone()
                 })
                 .unwrap_or(None);
 
             let batch_txn_results = results
                 .into_iter()
-                .map(|val| match val.1 {
+                .map(|(txn_results, batch_result, batch_id)| match batch_result {
                     Some(_) => (
-                        val.2.clone(),
+                        batch_id,
                         Some(
-                            val.0
+                            txn_results
                                 .into_iter()
                                 .map(|v: PyTxnExecutionResult| v.into())
                                 .collect(),
                         ),
                     ),
-                    None => (val.2.clone(), None),
+                    None => (batch_id, None),
                 })
                 .collect();
 
