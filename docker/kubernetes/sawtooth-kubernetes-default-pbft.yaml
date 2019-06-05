@@ -110,14 +110,17 @@ items:
                     echo $pbft0priv > /etc/sawtooth/keys/validator.priv
                     echo $pbft0pub > /etc/sawtooth/keys/validator.pub
                   fi &&
+                  if [ ! -e /root/.sawtooth/keys/my_key.priv ]; then
+                    sawtooth keygen my_key
+                  fi &&
                   if [ ! -e config-genesis.batch ]; then
-                    sawset genesis -k /etc/sawtooth/keys/validator.priv -o config-genesis.batch
+                    sawset genesis -k /root/.sawtooth/keys/my_key.priv -o config-genesis.batch
                   fi &&
                   sleep 30 &&
                   echo sawtooth.consensus.pbft.peers=["\"$pbft0pub\",\"$pbft1pub\",\"$pbft2pub\",\"$pbft3pub\",\"$pbft4pub\""] &&
                   if [ ! -e config.batch ]; then
                     sawset proposal create \
-                      -k /etc/sawtooth/keys/validator.priv \
+                      -k /root/.sawtooth/keys/my_key.priv \
                       sawtooth.consensus.algorithm.name=pbft \
                       sawtooth.consensus.algorithm.version=0.1\
                       sawtooth.consensus.pbft.peers=["\"$pbft0pub\",\"$pbft1pub\",\"$pbft2pub\",\"$pbft3pub\",\"$pbft4pub\""] \
@@ -126,9 +129,6 @@ items:
                   fi && \
                   if [ ! -e /var/lib/sawtooth/genesis.batch ]; then
                     sawadm genesis config-genesis.batch config.batch
-                  fi &&
-                  if [ ! -e /root/.sawtooth/keys/my_key.priv ]; then
-                    sawtooth keygen my_key
                   fi &&
                   sawtooth-validator -vv \
                     --endpoint tcp://$SAWTOOTH_0_SERVICE_HOST:8800 \
