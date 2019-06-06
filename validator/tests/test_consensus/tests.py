@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
-from sawtooth_validator.consensus.registry import EngineInfo
+from sawtooth_validator.consensus.registry import ConsensusRegistry, EngineInfo
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 
@@ -382,6 +382,53 @@ class TestProxy(unittest.TestCase):
                 (address_1, 'mock-{}'.format(address_1).encode()),
                 (address_2, 'mock-{}'.format(address_2).encode()),
             ])
+
+
+class TestRegistry(unittest.TestCase):
+
+    def test_consensus_registry(self):
+        registry = ConsensusRegistry()
+
+        assert not registry.has_active_engine()
+
+        # Test basic registration/activation
+        registry.register_engine(
+            'id0', 'name1', 'version1', [('name-a', 'version-a')])
+        registry.activate_engine('name1', 'version1')
+        assert registry.is_active_engine_id('id0')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test deactivation
+        registry.deactivate_current_engine()
+        assert not registry.has_active_engine()
+
+        # Test activating by additional protocol
+        registry.activate_engine('name-a', 'version-a')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test re-registration of existing engine
+        registry.register_engine(
+            'id1', 'name1', 'version1', [('name-a', 'version-a')])
+        assert not registry.has_active_engine()
+        registry.activate_engine('name1', 'version1')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test upgrading engine
+        registry.register_engine(
+            'id2', 'name2', 'version2',
+            [('name1', 'version1'), ('name-a', 'version-a')])
+        assert not registry.has_active_engine()
+        registry.activate_engine('name2', 'version2')
+        assert registry.is_active_engine_name_version('name2', 'version2')
+
+        # Test two engines that support the same protocol can be registered;
+        # first engine to register should be activated
+        registry.register_engine(
+            'id3', 'name3', 'version3', [('name-a', 'version-a')])
+        assert registry.is_active_engine_name_version('name2', 'version2')
+        registry.deactivate_current_engine()
+        registry.activate_engine('name-a', 'version-a')
+        assert registry.is_active_engine_name_version('name2', 'version2')
 
 
 class MockBlock:
