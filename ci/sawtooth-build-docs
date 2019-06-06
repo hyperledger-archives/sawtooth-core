@@ -93,7 +93,7 @@ RUN apt-get update && apt-get install -y -q \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install \
-    sphinx \
+    sphinx==2.0.1 \
     sphinxcontrib-httpdomain \
     sphinxcontrib-openapi \
     sphinx_rtd_theme
