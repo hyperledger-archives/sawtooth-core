@@ -49,8 +49,8 @@ RUN /root/.cargo/bin/cargo deb
 # -------------=== admin tools docker build ===-------------
 FROM ubuntu:bionic
 
-COPY --from=adm-builder /project/adm/target/debian/sawadm_*.deb /tmp
+COPY --from=adm-builder /project/adm/target/debian/sawtooth-sawadm_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawadm_*.deb || true \
+ && dpkg -i /tmp/sawtooth-sawadm_*.deb || true \
  && apt-get -f -y install
