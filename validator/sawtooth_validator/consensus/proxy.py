@@ -118,12 +118,13 @@ class ConsensusProxy:
         self._consensus_registry = consensus_registry
         self._consensus_notifier = consensus_notifier
 
-    def register(self, engine_name, engine_version, connection_id):
+    def register(self, engine_name, engine_version,
+                 additional_protocols, connection_id):
         self._consensus_registry.register_engine(
-            connection_id, engine_name, engine_version)
+            connection_id, engine_name, engine_version, additional_protocols)
 
-    def activate_if_configured(self, engine_name, engine_version):
-        # Wait until chain head is committed
+    def activate_if_configured(self, engine_name, engine_version,
+                               additional_protocols):
         try:
             chain_head = self.chain_head_get()
         except UnknownBlock:
@@ -137,10 +138,11 @@ class ConsensusProxy:
         conf_name, conf_version = get_configured_engine(
             chain_head, self._settings_view_factory)
 
-        if engine_name == conf_name and engine_version == conf_version:
+        if ((conf_name, conf_version) == (engine_name, engine_version)
+                or (conf_name, conf_version) in additional_protocols):
             try:
                 self._consensus_registry.activate_engine(
-                    engine_name, engine_version)
+                    conf_name, conf_version)
             except EngineAlreadyActive:
                 return
             except EngineNotRegistered:
@@ -336,7 +338,7 @@ class ConsensusProxy:
         return blocks
 
     def _wrap_consensus_message(self, content, message_type, connection_id):
-        _, name, version = self._consensus_registry.get_active_engine_info()
+        _, name, version, _ = self._consensus_registry.get_active_engine_info()
         header = ConsensusPeerMessageHeader(
             signer_id=self._public_key,
             content_sha512=hashlib.sha512(content).digest(),
@@ -364,18 +366,23 @@ def get_configured_engine(block, settings_view_factory):
     conf_version = settings_view.get_setting(
         'sawtooth.consensus.algorithm.version')
 
-    # Fallback to devmode if nothing else is set
-    name = "Devmode"
-    version = "0.1"
-
-    # If name and version settings aren't set, check for PoET
-    if conf_name is None or conf_version is None:
-        algorithm = settings_view.get_setting('sawtooth.consensus.algorithm')
-        if algorithm and (algorithm.lower() == 'poet'):
-            name = "PoET"
-    # Otherwise use name and version settings
-    else:
-        name = conf_name
+    # For backwards compatibility with 1.0:
+    # - Use version "0.1" if sawtooth.consensus.algorithm.version is unset
+    # - Use sawtooth.consensus.algorithm if sawtooth.consensus.algorithm.name
+    #   is unset
+    # - Use "Devmode" if sawtooth.consensus.algorithm is unset
+    if conf_version is not None:
         version = conf_version
+    else:
+        version = "0.1"
+
+    if conf_name is not None:
+        name = conf_name
+    else:
+        algorithm = settings_view.get_setting('sawtooth.consensus.algorithm')
+        if algorithm is not None:
+            name = algorithm
+        else:
+            name = "Devmode"
 
     return name, version
