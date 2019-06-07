@@ -66,6 +66,14 @@ def main():
         '-f', compose_file
     ]
 
+    # Search for extra compose files and add them to the compose command
+    if args.extra_file:
+        for file in args.extra_file:
+            extra_file = _get_compose_file(file)
+            compose = compose + [
+            '-f', extra_file
+            ]
+
     compose_up = compose + [
         'up', '--abort-on-container-exit'
     ]
@@ -248,6 +256,12 @@ def parse_args():
     parser.add_argument(
         "compose_file",
         help="docker-compose.yaml file that contains the test")
+
+    parser.add_argument(
+        "-e", "--extra-file",
+        help="extra compose file with additional components. can be specified \
+              more than once",
+        action='append')
 
     parser.add_argument(
         "-c", "--clean",
