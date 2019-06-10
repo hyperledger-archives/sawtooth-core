@@ -21,14 +21,12 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
   Consensus
     Process of reaching agreement among a group of participants (nodes on a
     Sawtooth network), some of which could be faulty or malicious. Sawtooth
-    supports many types of consensus algorithms. See also
-    :term:`Dynamic consensus`.
+    supports many types of consensus algorithms with the :term:`Dynamic
+    consensus` feature.
 
   Consensus API
-    Interface that allows a *consensus engine* to interact with the validator
-    in order to handle consensus functionality in a separate process. The
-    Sawtooth consensus API supports a wide variety of consensus algorithms on a
-    Sawtooth network.
+    Interface that allows a `consensus engine` to interact with the validator
+    in order to handle consensus functionality in a separate process.
 
   Consensus engine
     Sawtooth component that provides consensus-specific functionality for a
@@ -38,11 +36,12 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
   Core
     See :term:`Sawtooth core`.
 
-  Dev mode consensus
+  Devmode consensus
+    (Formerly "dev mode consensus".)
     Simple random-leader consensus algorithm that can be used to test a
-    transaction processor on a single Sawtooth node. (Dev mode is short for
-    "developer mode".) Dev mode is not recommended for a multiple-node network;
-    it should not be used for production.
+    transaction processor on a single Sawtooth node. (Devmode is short for
+    "developer mode".) Devmode consensus is not recommended for a multiple-node
+    network; it should not be used for production.
 
   Distributed ledger
     See :term:`Blockchain`.
@@ -139,7 +138,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
       a Trusted Execution Environment. PoET simulator is also called *PoET/CFT*
       because it is crash fault tolerant, not Byzantine fault tolerant.
 
-  Raft
+  Raft consensus
     Leader-based consensus algorithm that is designed for small networks with
     a restricted membership. Raft is crash fault tolerant, not Byzantine fault
     tolerant, and has finality (does not fork). For more information, see

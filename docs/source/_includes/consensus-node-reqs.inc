@@ -10,7 +10,7 @@
        because it is crash fault tolerant), which is a version of PoET-SGX
        consensus that runs on any processor.
 
-  - :term:`Devmode consensus <dev mode consensus>` has no minimum requirement,
+  - :term:`Devmode consensus` has no minimum requirement,
     but it is not recommended for multiple-node test networks or production
     networks. Devmode is a light-weight consensus that is intended for
     short-term testing on a single node or a very small network (two or three
