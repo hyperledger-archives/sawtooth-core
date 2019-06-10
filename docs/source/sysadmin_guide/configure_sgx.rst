@@ -407,7 +407,8 @@ in your network.
     seeds = ["tcp://[seed address 1]:[port]",
              "tcp://[seed address 2]:[port]"]
 
-If necessary, change the network bind interface in the ``bind`` section.
+If necessary, change the ``network``, ``component``, and ``consensus`` bind
+interface in the ``bind`` section.
 
 .. code-block:: ini
 
