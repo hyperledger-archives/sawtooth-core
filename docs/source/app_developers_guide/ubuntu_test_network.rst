@@ -97,6 +97,11 @@ Prerequisites
     starting the validator. You will also specify this value in the peers list
     when starting a validator on another node. Default: ``tcp://127.0.0.1:8800``.
 
+  * **Consensus endpoint string**: Where this validator will listen for incoming
+    communication from the :term:`consensus engine`. You will set this value
+    with ``--bind consensus`` when starting the validator.  Default:
+    ``tcp://127.0.0.1:5050``.
+
   * **Peers list**: The addresses that this validator should use to connect to
     the other validator nodes (peers); that is, the public endpoint strings of
     those nodes. You will set this value with ``--peers`` when starting the
@@ -220,6 +225,7 @@ to start each component.
       $ sudo -u sawtooth sawtooth-validator \
       --bind component:{component-bind-string} \
       --bind network:{network-bind-string} \
+      --bind consensus:{consensus-bind-string} \
       --endpoint {public-endpoint-string} \
       --peers {peer-list}
 
@@ -235,17 +241,21 @@ to start each component.
       at least four nodes.) If you want to add another PBFT node later, see
       :doc:`../sysadmin_guide/pbft_adding_removing_node`.
 
-   For example, the following command uses the component bind address
-   ``127.0.0.1:4004`` (the default value), the network bind address and endpoint
-   ``192.0.2.0:8800`` (a TEST-NET-1 example address), and three peers at the
-   public endpoints ``203.0.113.0:8800``, ``203.0.113.1:8800``, and
-   ``203.0.113.2:8800``.
+   The following example uses these values:
+
+   * component bind address ``127.0.0.1:4004`` (the default value)
+   * network bind address and endpoint ``192.0.2.0:8800``
+     (a TEST-NET-1 example address)
+   * consensus bind address and endpoint ``192.0.2.0:5050``
+   * three peers at the public endpoints ``203.0.113.0:8800``,
+     ``203.0.113.1:8800``, and ``203.0.113.2:8800``.
 
       .. code-block:: console
 
          $ sudo -u sawtooth sawtooth-validator \
          --bind component:tcp://127.0.0.1:4004 \
          --bind network:tcp://192.0.2.0:8800 \
+         --bind consensus:tcp://192.0.2.0:5050 \
          --endpoint tcp://192.0.2.0:8800 \
          --peers tcp://203.0.113.0:8800,tcp://203.0.113.1:8800,tcp://203.0.113.2:8800
 
@@ -304,6 +314,11 @@ to start each component.
       $ sudo -u sawtooth poet-validator-registry-tp -v
 
 #. Start the consensus engine in a separate terminal window.
+
+   .. note::
+
+      Change the ``--connect`` option, if necessary, to specify a non-default
+      value for validator's consensus bind address and port.
 
    * For PBFT:
 
