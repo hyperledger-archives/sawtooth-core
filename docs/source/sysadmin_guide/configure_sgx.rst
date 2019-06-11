@@ -494,7 +494,7 @@ restrict permissions on ``validator.toml`` to protect the network private key.
 .. code-block:: console
 
     $ sudo chown root:sawtooth /etc/sawtooth/validator.toml
-    $ sudo chown 640 /etc/sawtooth/validator.toml
+    $ sudo chmod 640 /etc/sawtooth/validator.toml
 
 .. _rest-api-config:
 

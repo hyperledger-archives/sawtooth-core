@@ -230,7 +230,7 @@ Additional steps specify the peers for this node, change the scheduler type
    .. code-block:: console
 
       $ sudo chown root:sawtooth /etc/sawtooth/validator.toml
-      $ sudo chown 640 /etc/sawtooth/validator.toml
+      $ sudo chmod 640 /etc/sawtooth/validator.toml
 
 #. Finally, restart the validator to activate the configuration changes.
 
