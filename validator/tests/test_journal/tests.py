@@ -156,6 +156,10 @@ class TestBlockPublisher(unittest.TestCase):
         self.batch_sender = MockBatchSender()
         self.state_view_factory = MockStateViewFactory({})
         self.permission_verifier = MockPermissionVerifier()
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.block_tree_manager.state_view_factory))
+        self.state_root_func = \
+            self.block_tree_manager.block_store.chain_head_state_root
 
         self.publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
@@ -165,10 +169,10 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head,
@@ -342,10 +346,10 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head,
@@ -378,6 +382,8 @@ class TestBlockPublisher(unittest.TestCase):
             'sawtooth.publisher.max_batches_per_block', 1)
         self.state_view_factory = MockStateViewFactory(
             {addr: value})
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.state_view_factory))
 
         self.publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
@@ -387,10 +393,10 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head,
@@ -448,10 +454,10 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head,
@@ -486,6 +492,8 @@ class TestBlockPublisher(unittest.TestCase):
             'sawtooth.validator.block_validation_rules', 'NofX:1,test')
         self.state_view_factory = MockStateViewFactory(
             {addr: value})
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.state_view_factory))
 
         mock_batch_injector_factory.create_injectors.return_value = []
 
@@ -500,10 +508,10 @@ class TestBlockPublisher(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.chain_head,
@@ -983,6 +991,10 @@ class TestChainController(unittest.TestCase):
             batch_execution_result=None)
         self.executor = SynchronousExecutor()
         self.consensus_notifier = MockConsensusNotifier()
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.block_tree_manager.state_view_factory))
+        self.state_root_func = \
+            self.block_tree_manager.block_store.chain_head_state_root
 
         self.block_validator = MockBlockValidator(
             state_view_factory=self.state_view_factory,
@@ -1002,10 +1014,10 @@ class TestChainController(unittest.TestCase):
             ),
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=MockBlockSender(),
             batch_sender=MockBatchSender(),
             chain_head=self.block_tree_manager.chain_head,
@@ -1198,6 +1210,10 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.consensus_notifier = MockConsensusNotifier()
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.block_tree_manager.state_view_factory))
+        self.state_root_func = \
+            self.block_tree_manager.block_store.chain_head_state_root
 
         self.publisher = BlockPublisher(
             transaction_executor=self.txn_executor,
@@ -1208,10 +1224,10 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             batch_committed=self.block_tree_manager.block_store.has_batch,
             state_view_factory=MockStateViewFactory(
                 self.block_tree_manager.state_db),
-            settings_cache=SettingsCache(
-                SettingsViewFactory(
-                    self.block_tree_manager.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             chain_head=self.block_tree_manager.block_store.chain_head,
@@ -1345,10 +1361,10 @@ class TestJournal(unittest.TestCase):
                 transaction_committed=btm.block_store.has_transaction,
                 batch_committed=btm.block_store.has_batch,
                 state_view_factory=MockStateViewFactory(btm.state_db),
-                settings_cache=SettingsCache(
-                    SettingsViewFactory(
-                        btm.state_view_factory),
-                ),
+                get_setting_from_cache=lambda setting, **kwargs:
+                    self.settings_cache.get_setting(setting,
+                                                    self.state_root_func,
+                                                    **kwargs),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
                 chain_head=btm.block_store.chain_head,

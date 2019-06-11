@@ -120,15 +120,20 @@ class BlockTreeManager:
             self.set_chain_head(self.genesis_block)
             chain_head = self.genesis_block
 
+        self.settings_cache = SettingsCache(
+            SettingsViewFactory(self.state_view_factory))
+        self.state_root_func = self.block_store.chain_head_state_root
+
         self.block_publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
             get_block=lambda block: self.block_cache[block],
             transaction_committed=self.block_store.has_transaction,
             batch_committed=self.block_store.has_batch,
             state_view_factory=self.state_view_factory,
-            settings_cache=SettingsCache(
-                SettingsViewFactory(self.state_view_factory),
-            ),
+            get_setting_from_cache=lambda setting, **kwargs:
+                self.settings_cache.get_setting(setting,
+                                                self.state_root_func,
+                                                **kwargs),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
             chain_head=chain_head,

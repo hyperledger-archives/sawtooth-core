@@ -53,7 +53,7 @@ pub extern "C" fn block_publisher_new(
     batch_committed_ptr: *mut py_ffi::PyObject,
     transaction_committed_ptr: *mut py_ffi::PyObject,
     state_view_factory_ptr: *mut py_ffi::PyObject,
-    settings_cache_ptr: *mut py_ffi::PyObject,
+    get_setting_from_cache: *mut py_ffi::PyObject,
     block_sender_ptr: *mut py_ffi::PyObject,
     batch_sender_ptr: *mut py_ffi::PyObject,
     chain_head_ptr: *mut py_ffi::PyObject,
@@ -71,7 +71,7 @@ pub extern "C" fn block_publisher_new(
         batch_committed_ptr,
         transaction_committed_ptr,
         state_view_factory_ptr,
-        settings_cache_ptr,
+        get_setting_from_cache,
         block_sender_ptr,
         batch_sender_ptr,
         chain_head_ptr,
@@ -91,7 +91,7 @@ pub extern "C" fn block_publisher_new(
     let transaction_committed =
         unsafe { PyObject::from_borrowed_ptr(py, transaction_committed_ptr) };
     let state_view_factory = unsafe { PyObject::from_borrowed_ptr(py, state_view_factory_ptr) };
-    let settings_cache = unsafe { PyObject::from_borrowed_ptr(py, settings_cache_ptr) };
+    let get_setting_from_cache = unsafe { PyObject::from_borrowed_ptr(py, get_setting_from_cache) };
     let block_sender = unsafe { PyObject::from_borrowed_ptr(py, block_sender_ptr) };
     let batch_sender = unsafe { PyObject::from_borrowed_ptr(py, batch_sender_ptr) };
     let chain_head = unsafe { PyObject::from_borrowed_ptr(py, chain_head_ptr) };
@@ -159,7 +159,7 @@ pub extern "C" fn block_publisher_new(
         batch_committed,
         transaction_committed,
         state_view_factory,
-        settings_cache,
+        get_setting_from_cache,
         block_sender,
         batch_publisher,
         chain_head,
