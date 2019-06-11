@@ -5,7 +5,7 @@ System Administrator's Guide
 This guide explains how to install, configure, and run Hyperledger Sawtooth
 on a Ubuntu system for proof-of-concept or production use in a Sawtooth network.
 
-* See :doc:`sysadmin_guide/setting_up_sawtooth_poet-sim` to configure and run
+* See :doc:`sysadmin_guide/setting_up_sawtooth_network` to configure and run
   a Sawtooth node with either :term:`PBFT <PBFT consensus>` or
   :term:`PoET simulator consensus <PoET consensus>`.
 
@@ -27,7 +27,7 @@ and explain how to
 .. toctree::
    :maxdepth: 2
 
-   sysadmin_guide/setting_up_sawtooth_poet-sim
+   sysadmin_guide/setting_up_sawtooth_network
    sysadmin_guide/configure_sgx
    sysadmin_guide/setting_allowed_txns
    sysadmin_guide/rest_auth_proxy
