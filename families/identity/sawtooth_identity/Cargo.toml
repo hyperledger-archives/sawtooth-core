@@ -42,7 +42,7 @@ sawtooth-sdk = "0.3"
 
 [build-dependencies]
 cfg-if = "0.1"
-glob = "0.2"
+glob = "0.3"
 protoc-rust = "2.0"
 
 [package.metadata.deb]
