@@ -94,7 +94,11 @@ fn run() -> Result<(), Error> {
     let current_user =
         users::get_current_username().ok_or_else(|| format_err!("Couldn't get current user!"))?;
 
-    let key = matches.value_of("key").unwrap_or(&current_user);
+    let key = matches.value_of("key").unwrap_or_else(|| {
+        current_user
+            .to_str()
+            .expect("Unable to convert current user to str")
+    });
     let client = BattleshipClient::new(url, key)?;
 
     match matches.subcommand() {
