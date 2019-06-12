@@ -275,7 +275,7 @@ fn get_state_data(
     address: &str,
     context: &mut TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
-    context.get_state(vec![address.to_string()]).map_err(|err| {
+    context.get_state_entry(address).map_err(|err| {
         #[cfg(not(target_arch = "wasm32"))]
         warn!("Invalid transaction: Failed to load state: {:?}", err);
         ApplyError::InvalidTransaction(format!("Failed to load state: {:?}", err))
