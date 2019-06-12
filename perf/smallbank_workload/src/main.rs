@@ -208,15 +208,11 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             None => None,
         }
     };
-    let seed: Vec<usize> = match args
-        .value_of("seed")
-        .unwrap_or({
-            let mut rng = rand::thread_rng();
-            rng.gen::<usize>().to_string().as_ref()
-        })
-        .parse()
-    {
-        Ok(s) => vec![s],
+    let seed: u64 = match args.value_of("seed").map(str::parse).unwrap_or_else(|| {
+        let mut rng = rand::thread_rng();
+        Ok(rng.gen::<u64>())
+    }) {
+        Ok(seed) => seed,
         Err(_) => return arg_error("The seed is a number to seed the random number generator."),
     };
     let mut key_file = File::open(args.value_of("key").unwrap())?;
@@ -231,7 +227,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let mut transformer = SBPayloadTransformer::new(&signer);
 
-    let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed.as_slice())
+    let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed)
         .map(|payload| transformer.payload_to_transaction(&payload))
         .map(|item| item.unwrap());
 
