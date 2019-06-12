@@ -13,7 +13,6 @@ cfg_if! {
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use protobuf;
-use std::collections::HashMap;
 use std::iter::repeat;
 
 pub struct IdentityState<'a> {
@@ -50,13 +49,11 @@ impl<'a> IdentityState<'a> {
     }
 
     fn get_state_data(&mut self, address: &str) -> Result<Option<Vec<u8>>, ApplyError> {
-        self.context
-            .get_state(vec![address.to_string()])
-            .map_err(|err| {
-                #[cfg(not(target_arch = "wasm32"))]
-                warn!("Invalid transaction: Failed to load state: {:?}", err);
-                ApplyError::InvalidTransaction(format!("Failed to load state: {:?}", err))
-            })
+        self.context.get_state_entry(address).map_err(|err| {
+            #[cfg(not(target_arch = "wasm32"))]
+            warn!("Invalid transaction: Failed to load state: {:?}", err);
+            ApplyError::InvalidTransaction(format!("Failed to load state: {:?}", err))
+        })
     }
 
     pub fn set_policy(&mut self, new_policy: Policy) -> Result<(), ApplyError> {
@@ -125,13 +122,13 @@ impl<'a> IdentityState<'a> {
     }
 
     fn set_state(&mut self, name: &str, address: &str, data: Vec<u8>) -> Result<(), ApplyError> {
-        let mut state_entries = HashMap::new();
-        state_entries.insert(address.to_string(), data);
-        self.context.set_state(state_entries).map_err(|_err| {
-            #[cfg(not(target_arch = "wasm32"))]
-            warn!("Failed to set {} at {}", name, address);
-            ApplyError::InternalError(format!("Unable to set {}", name))
-        })?;
+        self.context
+            .set_state_entry(address.into(), data)
+            .map_err(|_err| {
+                #[cfg(not(target_arch = "wasm32"))]
+                warn!("Failed to set {} at {}", name, address);
+                ApplyError::InternalError(format!("Unable to set {}", name))
+            })?;
         #[cfg(not(target_arch = "wasm32"))]
         debug!("Set: \n{:?}", name);
 
