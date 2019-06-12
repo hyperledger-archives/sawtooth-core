@@ -18,12 +18,12 @@ version = "0.1.0"
 authors = ["Intel Corporation"]
 
 [dependencies]
-sawtooth-sdk = "0.2"
+sawtooth-sdk = "0.3"
 chrono = "0.4"
 protobuf = "2.0"
 futures = "0.1"
 hyper = "0.11"
-rand = "0.4"
+rand = "0.6"
 tokio-core = "0.1"
 tokio-timer = "0.1"
 log = "0.4"
