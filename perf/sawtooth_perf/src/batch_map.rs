@@ -55,10 +55,8 @@ impl BatchMap {
 mod tests {
     use super::BatchMap;
 
-    use rand::Rng;
-    use rand::StdRng;
-
     use protobuf::RepeatedField;
+    use rand::prelude::*;
 
     use sawtooth_sdk::messages::batch::Batch;
     use sawtooth_sdk::messages::batch::BatchList;
@@ -137,13 +135,17 @@ mod tests {
 
         let mut batchlists = Vec::new();
 
-        let mut rng = StdRng::new().unwrap();
+        let mut rng = rand::thread_rng();
 
         for _ in 0..num {
             let mut batch = Batch::new();
             let mut batchlist = BatchList::new();
 
-            batch.set_header_signature(rng.gen_iter::<char>().take(100).collect());
+            batch.set_header_signature(
+                rng.sample_iter(&rand::distributions::Alphanumeric)
+                    .take(100)
+                    .collect(),
+            );
 
             let batches = RepeatedField::from_vec(vec![batch]);
 
