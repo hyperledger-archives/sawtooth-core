@@ -42,7 +42,7 @@ path = "./src/main.rs"
 cfg-if = "0.1"
 clap = "2"
 protobuf = "2.0"
-base64 = "~0.6.0"
+base64 = "0.10"
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -58,5 +58,5 @@ log4rs = "0.8"
 
 [build-dependencies]
 protoc-rust = "2.0"
-glob = "0.2"
+glob = "0.3"
 cfg-if = "0.1"
