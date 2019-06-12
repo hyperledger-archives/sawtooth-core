@@ -42,7 +42,6 @@ use protos::settings::{
     SettingCandidate, SettingCandidate_VoteRecord, SettingCandidates, SettingProposal, SettingVote,
     SettingVote_Vote, SettingsPayload, SettingsPayload_Action,
 };
-use std::collections::HashMap;
 use std::iter::repeat;
 
 #[cfg(target_arch = "wasm32")]
@@ -333,12 +332,12 @@ fn set_state(
         ApplyError::InternalError(format!("Failed to serialize Setting: {:?}", err))
     })?;
 
-    let mut state_entries = HashMap::new();
-    state_entries.insert(address.to_string(), data);
-    context.set_state(state_entries).map_err(|_| {
-        warn!("Failed to save value on address {}", &address);
-        ApplyError::InternalError(format!("Unable to save config value {}", key))
-    })?;
+    context
+        .set_state_entry(address.to_string(), data)
+        .map_err(|_| {
+            warn!("Failed to save value on address {}", &address);
+            ApplyError::InternalError(format!("Unable to save config value {}", key))
+        })?;
     if key != "sawtooth.settings.vote.proposals" {
         info!("Setting {:?} changed to {:?}", key, value);
     }
@@ -476,7 +475,7 @@ fn get_setting_data(
     address: &str,
     context: &mut TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
-    context.get_state(vec![address.to_string()]).map_err(|err| {
+    context.get_state_entry(address).map_err(|err| {
         warn!("Internal Error: Failed to load state: {:?}", err);
         ApplyError::InternalError(format!("Failed to load state: {:?}", err))
     })
