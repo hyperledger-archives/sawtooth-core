@@ -20,6 +20,7 @@ extern crate cfg_if;
 
 cfg_if! {
      if #[cfg(target_arch = "wasm32")] {
+        #[macro_use]
         extern crate sabre_sdk;
      } else {
         #[macro_use]
@@ -27,6 +28,8 @@ cfg_if! {
         extern crate log4rs;
         extern crate rustc_serialize;
         extern crate sawtooth_sdk;
+        #[macro_use]
+        extern crate log;
         use log::LevelFilter;
         use log4rs::append::console::ConsoleAppender;
         use log4rs::config::{Appender, Config, Root};
@@ -43,8 +46,6 @@ pub mod handler;
 mod protos;
 extern crate crypto;
 extern crate protobuf;
-#[macro_use]
-extern crate log;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
