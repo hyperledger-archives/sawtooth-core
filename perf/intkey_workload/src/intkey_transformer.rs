@@ -21,7 +21,7 @@ use crypto::sha2::Sha512;
 use intkey_addresser::IntKeyAddresser;
 use intkey_iterator::IntKeyPayload;
 use protobuf::{Message, RepeatedField};
-use rand::{Rng, SeedableRng, StdRng};
+use rand::prelude::*;
 use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
 use sawtooth_sdk::signing;
 use std::collections::HashMap;
@@ -51,7 +51,7 @@ pub struct IntKeyTransformer<'a> {
 impl<'a> IntKeyTransformer<'a> {
     pub fn new(
         signer: &'a signing::Signer<'a>,
-        seed: &[usize],
+        seed: u64,
         unsatisfiable: f32,
         wildcard: f32,
         num_names: usize,
@@ -63,7 +63,7 @@ impl<'a> IntKeyTransformer<'a> {
             num_names,
             unnecessary,
             signer,
-            rng: SeedableRng::from_seed(seed),
+            rng: SeedableRng::seed_from_u64(seed),
             addresser: IntKeyAddresser::new(),
             txn_id_by_name: HashMap::new(),
             txn_id_and_name: Vec::new(),
@@ -96,7 +96,12 @@ impl<'a> IntKeyTransformer<'a> {
         txn_header.set_family_name(self.addresser.family_name.clone());
         txn_header.set_family_version(self.addresser.version.clone());
 
-        txn_header.set_nonce(self.rng.gen_ascii_chars().take(50).collect());
+        txn_header.set_nonce(
+            self.rng
+                .sample_iter(&rand::distributions::Alphanumeric)
+                .take(50)
+                .collect(),
+        );
 
         let payload_bytes = self.payload_to_cbor_bytes(&payload)?;
 
@@ -133,7 +138,7 @@ impl<'a> IntKeyTransformer<'a> {
             }
         }
         if self.rng.gen_range(0.0, 1.0) < self.unsatisfiable {
-            let random_bytes: Vec<u8> = self.rng.gen_iter::<u8>().take(100).collect();
+            let random_bytes: Vec<u8> = (0..100).map(|_| self.rng.gen()).collect();
 
             if let Ok(dep) = self.signer.sign(random_bytes.as_slice()) {
                 txn_header.dependencies.push(dep)
@@ -185,15 +190,15 @@ mod tests {
 
     #[test]
     fn test_unsatisfiable() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 100;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 1.0, 0.0, num_names, 0.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 1.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
@@ -227,15 +232,15 @@ mod tests {
 
     #[test]
     fn test_all_satisfiable() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 100;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
@@ -269,15 +274,15 @@ mod tests {
 
     #[test]
     fn test_all_wildcards() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 100;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 1.0, num_names, 0.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 0.0, 1.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
@@ -308,15 +313,15 @@ mod tests {
 
     #[test]
     fn test_no_wildcards() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 100;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
@@ -347,15 +352,15 @@ mod tests {
 
     #[test]
     fn test_all_unnecessary() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 1_000;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 1.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 0.0, 0.0, num_names, 1.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
@@ -385,15 +390,15 @@ mod tests {
 
     #[test]
     fn test_no_unnecessary() {
-        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+        let seed = 234595182222252245;
         let num_names = 1000;
-        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, &seed);
+        let intkey_iterator = IntKeyIterator::new(num_names, 0.0, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
         let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
-        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
+        let mut transformer = IntKeyTransformer::new(&signer, seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
             .map(|payload| transformer.intkey_payload_to_transaction(&payload))
