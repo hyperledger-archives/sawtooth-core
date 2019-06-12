@@ -50,7 +50,6 @@ impl<'a> IdentityState<'a> {
 
     fn get_state_data(&mut self, address: &str) -> Result<Option<Vec<u8>>, ApplyError> {
         self.context.get_state_entry(address).map_err(|err| {
-            #[cfg(not(target_arch = "wasm32"))]
             warn!("Invalid transaction: Failed to load state: {:?}", err);
             ApplyError::InvalidTransaction(format!("Failed to load state: {:?}", err))
         })
@@ -125,11 +124,9 @@ impl<'a> IdentityState<'a> {
         self.context
             .set_state_entry(address.into(), data)
             .map_err(|_err| {
-                #[cfg(not(target_arch = "wasm32"))]
                 warn!("Failed to set {} at {}", name, address);
                 ApplyError::InternalError(format!("Unable to set {}", name))
             })?;
-        #[cfg(not(target_arch = "wasm32"))]
         debug!("Set: \n{:?}", name);
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -140,7 +137,6 @@ impl<'a> IdentityState<'a> {
                 &[],
             )
             .map_err(|_err| {
-                #[cfg(not(target_arch = "wasm32"))]
                 warn!("Failed to add event {}", name);
                 ApplyError::InternalError(format!("Failed to add event {}", name))
             })?;
@@ -183,7 +179,6 @@ where
     T: protobuf::Message,
 {
     protobuf::parse_from_bytes(&data).map_err(|err| {
-        #[cfg(not(target_arch = "wasm32"))]
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err

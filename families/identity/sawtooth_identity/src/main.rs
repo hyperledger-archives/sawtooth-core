@@ -20,6 +20,7 @@ extern crate cfg_if;
 
 cfg_if! {
      if #[cfg(target_arch = "wasm32")] {
+         #[macro_use]
          extern crate sabre_sdk;
      } else {
         #[macro_use]

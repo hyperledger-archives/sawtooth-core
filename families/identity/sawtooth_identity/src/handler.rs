@@ -163,7 +163,6 @@ where
     T: protobuf::Message,
 {
     protobuf::parse_from_bytes(&data).map_err(|err| {
-        #[cfg(not(target_arch = "wasm32"))]
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err
@@ -276,7 +275,6 @@ fn get_state_data(
     context: &mut TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
     context.get_state_entry(address).map_err(|err| {
-        #[cfg(not(target_arch = "wasm32"))]
         warn!("Invalid transaction: Failed to load state: {:?}", err);
         ApplyError::InvalidTransaction(format!("Failed to load state: {:?}", err))
     })
