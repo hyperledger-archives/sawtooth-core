@@ -12,6 +12,7 @@ transaction family, XO, using the Sawtooth JavaScript SDK.
    sdk_prerequisites
    ../_autogen/sdk_TP_tutorial_js
    ../_autogen/sdk_submit_tutorial_js
+   ../sdk_javascript
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
