@@ -18,7 +18,6 @@
 use addressing::{create_block_address, get_config_addr};
 use protobuf::Message;
 use protos;
-use sawtooth_sdk::processor::handler::ContextError;
 
 pub const DEFAULT_SYNC_TOLERANCE: u64 = 60 * 5;
 pub const DEFAULT_TARGET_COUNT: u64 = 256;
@@ -61,7 +60,6 @@ impl<'a> BlockInfoState<'a> {
 
         let block_config = match state_data {
             Ok(result) => result,
-            Err(ContextError::ResponseAttributeError(_)) => None,
             Err(err) => {
                 warn!("Error getting BlockConfig from state, {}", err);
                 return Err(ApplyError::InternalError(
@@ -89,7 +87,6 @@ impl<'a> BlockInfoState<'a> {
 
         let block_data = match state_data {
             Ok(result) => result,
-            Err(ContextError::ResponseAttributeError(_)) => None,
             Err(err) => {
                 warn!("Error getting BlockInfo from state, {}", err);
                 return Err(ApplyError::InternalError(
