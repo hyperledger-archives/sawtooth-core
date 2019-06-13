@@ -16,7 +16,6 @@ use game;
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::{ApplyError, TransactionContext, TransactionHandler};
 use serde_json;
-use std::collections::HashMap;
 
 pub struct BattleshipTransactionHandler {
     family_name: String,
@@ -47,7 +46,7 @@ impl BattleshipTransactionHandler {
         name: &str,
     ) -> Result<Option<game::Game>, ApplyError> {
         let address = game::get_battleship_address(name);
-        let state = context.get_state(vec![address])?;
+        let state = context.get_state_entry(&address)?;
 
         match state {
             Some(s) => serde_json::from_slice(s.as_slice()).map_err(|err| {
@@ -72,12 +71,11 @@ impl BattleshipTransactionHandler {
             ApplyError::InvalidTransaction(format!("Couldn't serialize game: {}", err))
         })?;
 
-        let mut state_map = HashMap::new();
-        state_map.insert(address, serialized.into());
-
-        context.set_state(state_map).map_err(|err| {
-            ApplyError::InvalidTransaction(format!("Couldn't set new game state: {}", err))
-        })
+        context
+            .set_state_entry(address, serialized.into())
+            .map_err(|err| {
+                ApplyError::InvalidTransaction(format!("Couldn't set new game state: {}", err))
+            })
     }
 
     /// Handles CREATE action

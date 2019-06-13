@@ -31,7 +31,7 @@ mod intkey_transformer;
 use clap::{App, Arg, ArgMatches};
 use intkey_iterator::IntKeyIterator;
 use intkey_transformer::IntKeyTransformer;
-use rand::{Rng, StdRng};
+use rand::prelude::*;
 use sawtooth_perf::batch_gen::SignedBatchIterator;
 use sawtooth_perf::batch_submit::{run_workload, InfiniteBatchListIterator};
 use sawtooth_sdk::signing;
@@ -118,7 +118,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .takes_value(true)
                 .number_of_values(1)
                 .value_name("SEED")
-                .help("Comma separated list of u8 to make the workload reproduceable"),
+                .help("a u64 value to make the workload reproduceable"),
         )
         .arg(
             Arg::with_name("unnecessary")
@@ -288,19 +288,11 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             None => None,
         }
     };
-    let s: Result<Vec<usize>, std::num::ParseIntError> = match args.value_of("seed") {
-        Some(s) => {
-            let split: Split<char> = s.split(',');
-            split.map(|s| s.parse()).collect()
-        }
-        None => {
-            let mut rng = StdRng::new()?;
 
-            Ok(rng.gen_iter().take(10).collect())
-        }
-    };
-
-    let seed = s?;
+    let seed: u64 = args.value_of("seed").map(str::parse).unwrap_or_else(|| {
+        let mut rng = rand::thread_rng();
+        Ok(rng.gen::<u64>())
+    })?;
 
     let context = signing::create_context("secp256k1")?;
 
@@ -327,14 +319,14 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let mut transformer = IntKeyTransformer::new(
         signer_ref,
-        &seed,
+        seed,
         unsatisfiable,
         wildcard,
         num_names,
         unnecessary,
     );
 
-    let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, &seed)
+    let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, seed)
         .map(|payload| transformer.intkey_payload_to_transaction(&payload))
         .filter_map(|payload| payload.ok());
     let mut batch_iter =

@@ -18,8 +18,6 @@
 use addressing::{create_block_address, get_config_addr};
 use protobuf::Message;
 use protos;
-use sawtooth_sdk::processor::handler::ContextError;
-use std::collections::HashMap;
 
 pub const DEFAULT_SYNC_TOLERANCE: u64 = 60 * 5;
 pub const DEFAULT_TARGET_COUNT: u64 = 256;
@@ -58,11 +56,10 @@ impl<'a> BlockInfoState<'a> {
     }
 
     pub fn get_config_from_state(&mut self) -> Result<Option<Config>, ApplyError> {
-        let state_data = self.context.get_state(vec![get_config_addr()]);
+        let state_data = self.context.get_state_entry(&get_config_addr());
 
         let block_config = match state_data {
             Ok(result) => result,
-            Err(ContextError::ResponseAttributeError(_)) => None,
             Err(err) => {
                 warn!("Error getting BlockConfig from state, {}", err);
                 return Err(ApplyError::InternalError(
@@ -86,11 +83,10 @@ impl<'a> BlockInfoState<'a> {
     pub fn get_block_by_num(&mut self, block_num: u64) -> Result<Option<BlockInfo>, ApplyError> {
         let state_data = self
             .context
-            .get_state(vec![create_block_address(block_num)]);
+            .get_state_entry(&create_block_address(block_num));
 
         let block_data = match state_data {
             Ok(result) => result,
-            Err(ContextError::ResponseAttributeError(_)) => None,
             Err(err) => {
                 warn!("Error getting BlockInfo from state, {}", err);
                 return Err(ApplyError::InternalError(
@@ -135,43 +131,36 @@ impl<'a> BlockInfoState<'a> {
         let num_deletes = deletes.len();
 
         if num_deletes > 0 {
-            if let Some(actually_deleted) = self.context.delete_state(deletes)? {
-                if actually_deleted.len() != num_deletes {
-                    return Err(ApplyError::InternalError(
-                        "Failed to delete blocks thate should have been in state.".into(),
-                    ));
-                }
-            } else if num_deletes > 0 {
+            let actually_deleted = self.context.delete_state_entries(&deletes)?;
+            if actually_deleted.len() != num_deletes {
                 return Err(ApplyError::InternalError(
                     "Failed to delete blocks that should have been in state.".into(),
                 ));
             }
         }
 
-        let mut sets = HashMap::new();
-        sets.insert(
-            get_config_addr(),
-            config_proto.write_to_bytes().map_err(|_| {
-                warn!("Failed to serialize config proto");
-                ApplyError::InvalidTransaction(
-                    "This transaction caused the config to fail to serialze".into(),
-                )
-            })?,
-        );
-
         let block_num = block.block_num;
         let block_info: protos::block_info::BlockInfo = block.into();
-
-        sets.insert(
-            create_block_address(block_num),
-            block_info.write_to_bytes().map_err(|_| {
-                warn!("Failed to serialize block info proto");
-                ApplyError::InvalidTransaction(
-                    "This transaction caused the block info to fail to serialze".into(),
-                )
-            })?,
-        );
-        self.context.set_state(sets)?;
+        self.context.set_state_entries(vec![
+            (
+                get_config_addr(),
+                config_proto.write_to_bytes().map_err(|_| {
+                    warn!("Failed to serialize config proto");
+                    ApplyError::InvalidTransaction(
+                        "This transaction caused the config to fail to serialze".into(),
+                    )
+                })?,
+            ),
+            (
+                create_block_address(block_num),
+                block_info.write_to_bytes().map_err(|_| {
+                    warn!("Failed to serialize block info proto");
+                    ApplyError::InvalidTransaction(
+                        "This transaction caused the block info to fail to serialze".into(),
+                    )
+                })?,
+            ),
+        ])?;
 
         Ok(())
     }

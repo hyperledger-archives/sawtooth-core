@@ -16,7 +16,7 @@
  */
 
 use cbor::value::{Key, Text, Value};
-use rand::{Rng, SeedableRng, StdRng};
+use rand::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
 const HALF_MAX_VALUE: u32 = 2_147_483_647;
@@ -66,12 +66,12 @@ pub struct IntKeyIterator {
 }
 
 impl IntKeyIterator {
-    pub fn new(num_names: usize, invalid: f32, seed: &[usize]) -> IntKeyIterator {
+    pub fn new(num_names: usize, invalid: f32, seed: u64) -> IntKeyIterator {
         IntKeyIterator {
             num_names,
             invalid,
 
-            rng: SeedableRng::from_seed(seed),
+            rng: SeedableRng::seed_from_u64(seed),
 
             names: HashMap::new(),
             incs_and_decs_per_set: INCS_AND_DECS_PER_SET as u32,
@@ -80,7 +80,10 @@ impl IntKeyIterator {
     }
 
     fn gen_name(&mut self) -> String {
-        self.rng.gen_ascii_chars().take(MAX_NAME_LEN).collect()
+        self.rng
+            .sample_iter(&rand::distributions::Alphanumeric)
+            .take(MAX_NAME_LEN)
+            .collect()
     }
 
     /// Generate a RNG chosen inc or dec payload with the name supplied if not None,
@@ -166,8 +169,7 @@ mod tests {
 
     #[test]
     fn test_sets_incs_and_decs() {
-        let mut intkey_iterator =
-            IntKeyIterator::new(2, 0.0, &[2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45]);
+        let mut intkey_iterator = IntKeyIterator::new(2, 0.0, 234595182222252245);
 
         let payload1 = intkey_iterator.next();
         assert!(payload1.is_some());
@@ -197,8 +199,7 @@ mod tests {
 
     #[test]
     fn test_invalid() {
-        let intkey_iterator =
-            IntKeyIterator::new(2, 1.0, &[2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45]);
+        let intkey_iterator = IntKeyIterator::new(2, 1.0, 234595182222252245);
 
         assert_eq!(
             INCS_AND_DECS_PER_SET,

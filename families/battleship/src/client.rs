@@ -16,7 +16,6 @@ use base64::decode;
 use dirs::home_dir;
 use failure::Error;
 use game::{Action, Game};
-use reqwest::header::ContentType;
 use reqwest::{Client, Url};
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 use sawtooth_sdk::signing::{create_context, PrivateKey, Signer};
@@ -146,7 +145,10 @@ impl<'a> BattleshipClient<'a> {
             .client
             .post(&(self.url.clone() + "batches"))
             .body(request_bytes)
-            .header(ContentType::octet_stream())
+            .header(
+                reqwest::header::CONTENT_TYPE,
+                reqwest::header::HeaderValue::from_static("application/octet-stream"),
+            )
             .send()?
             .json()?;
 
