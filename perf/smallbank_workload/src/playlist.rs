@@ -29,14 +29,12 @@ use std::io::Read;
 use std::io::Write;
 use std::time::Instant;
 
-use self::rand::Rng;
-use self::rand::SeedableRng;
-use self::rand::StdRng;
 use self::yaml_rust::yaml::Hash;
 use self::yaml_rust::EmitError;
 use self::yaml_rust::Yaml;
 use self::yaml_rust::YamlEmitter;
 use self::yaml_rust::YamlLoader;
+use rand::prelude::*;
 
 use protos::smallbank;
 use protos::smallbank::SmallbankTransactionPayload;
@@ -203,12 +201,8 @@ pub fn create_smallbank_playlist(
     seed: Option<i32>,
 ) -> Box<Iterator<Item = SmallbankTransactionPayload>> {
     let rng = match seed {
-        Some(seed) => {
-            let v = vec![seed as usize];
-            let seed: &[usize] = &v;
-            SeedableRng::from_seed(seed)
-        }
-        None => StdRng::new().unwrap(),
+        Some(seed) => StdRng::seed_from_u64(seed as u64),
+        None => StdRng::from_entropy(),
     };
 
     let iter = SmallbankGeneratingIter {
@@ -256,11 +250,11 @@ pub struct SmallbankGeneratingIter {
 }
 
 impl SmallbankGeneratingIter {
-    pub fn new(num_accounts: usize, seed: &[usize]) -> Self {
+    pub fn new(num_accounts: usize, seed: u64) -> Self {
         SmallbankGeneratingIter {
             num_accounts,
             current_account: 0,
-            rng: SeedableRng::from_seed(seed),
+            rng: SeedableRng::seed_from_u64(seed),
         }
     }
 }
@@ -276,7 +270,12 @@ impl Iterator for SmallbankGeneratingIter {
             let mut create_account =
                 smallbank::SmallbankTransactionPayload_CreateAccountTransactionData::new();
             create_account.set_customer_id(self.current_account as u32);
-            create_account.set_customer_name(self.rng.gen_iter::<char>().take(20).collect());
+            create_account.set_customer_name(
+                self.rng
+                    .sample_iter(&rand::distributions::Alphanumeric)
+                    .take(20)
+                    .collect(),
+            );
 
             create_account.set_initial_savings_balance(1_000_000);
             create_account.set_initial_checking_balance(1_000_000);

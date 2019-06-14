@@ -178,9 +178,9 @@ mod tests {
 
     #[test]
     fn test_dependencies() {
-        let seed = [84, 24, 24, 29, 98, 254, 76, 111, 198, 96, 211, 218, 238, 27];
+        let seed = 8411989621121823827u64;
 
-        let payload_iterator = SmallbankGeneratingIter::new(NUM_CREATE_ACCOUNTS, &seed);
+        let payload_iterator = SmallbankGeneratingIter::new(NUM_CREATE_ACCOUNTS, seed);
 
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();

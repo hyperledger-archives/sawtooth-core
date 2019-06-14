@@ -19,14 +19,14 @@ build = "build.rs"
 authors = ["Intel Corporation"]
 
 [dependencies]
-sawtooth-sdk = "0.2"
+sawtooth-sdk = "0.3"
 sawtooth_perf = { path = "../sawtooth_perf" }
-protobuf = "2.0"
-clap = "2.26.0"
-yaml-rust = "0.3.5"
-rand = "0.3.16"
+protobuf = "2"
+clap = "2"
+yaml-rust = "0.4"
+rand = "0.6"
 rust-crypto = "0.2.36"
-env_logger = "0.5.3"
+env_logger = "0.6"
 
 [[bin]]
 name = "smallbank-workload"
@@ -34,4 +34,4 @@ path = "./src/main.rs"
 
 [build-dependencies]
 protoc-rust = "2.0"
-glob = "0.2"
+glob = "0.3"
