@@ -25,13 +25,14 @@ class EngineAlreadyActive(Exception):
     """The engine is already active."""
 
 
-EngineInfo = namedtuple('EngineInfo', ['connection_id', 'name', 'version'])
+EngineInfo = namedtuple(
+    'EngineInfo', ['connection_id', 'name', 'version', 'additional_protocols'])
 
 
 class ConsensusRegistry:
-    """A thread-safe construct that stores the connection_id, name, and version
-    of all registered consensus engines, and tracks which engine is currently
-    active."""
+    """A thread-safe construct that stores the connection_id, name, version,
+    and any additional supported protocols of all registered consensus engines,
+    and tracks which engine is currently active."""
 
     def __init__(self):
         self._registry = []
@@ -45,19 +46,38 @@ class ConsensusRegistry:
         with self._lock:
             return self._active is not None
 
-    def register_engine(self, connection_id, name, version):
+    def register_engine(self, connection_id, name, version,
+                        additional_protocols):
         with self._lock:
-            # If this engine is already registered, remove the old connection
+            engine_info = EngineInfo(
+                connection_id, name, version, additional_protocols)
+
+            # If this engine is already registered or if there is an existing
+            # engine that this one replaces (supports all the same protocols),
+            # remove the old connection.
+            def is_same_engine(eng):
+                return eng.name == name and eng.version == version
+
+            def is_replaced(eng):
+                return (
+                    engine_handles_protocol(eng.name, eng.version, engine_info)
+                    and all([True for (n, v) in eng.additional_protocols
+                             if engine_handles_protocol(n, v, engine_info)]))
+
             self._registry = list(filter(
-                lambda e: e.name != name and e.version != version,
+                lambda e: not is_same_engine(e) and not is_replaced(e),
                 self._registry))
-            self._registry.append(EngineInfo(connection_id, name, version))
+
+            # If this engine displaced the active engine, reset active engine
+            if self._active not in self._registry:
+                self._active = None
+
+            self._registry.append(engine_info)
 
     def activate_engine(self, name, version):
         with self._lock:
             if self._active is not None:
-                if (self._active.name == name
-                        and self._active.version == version):
+                if engine_handles_protocol(name, version, self._active):
                     raise EngineAlreadyActive()
                 else:
                     # A different engine is active; remove it
@@ -65,7 +85,7 @@ class ConsensusRegistry:
             try:
                 self._active = next(
                     e for e in self._registry
-                    if e.name == name and e.version == version)
+                    if engine_handles_protocol(name, version, e))
             except StopIteration:
                 raise EngineNotRegistered()
 
@@ -89,3 +109,8 @@ class ConsensusRegistry:
                 self._active is not None
                 and name == self._active.name
                 and version == self._active.version)
+
+
+def engine_handles_protocol(name, version, engine):
+    return ((name, version) == (engine.name, engine.version)
+            or (name, version) in engine.additional_protocols)

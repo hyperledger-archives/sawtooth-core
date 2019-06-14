@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from sawtooth_validator.consensus import handlers
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import UnknownBlock
-from sawtooth_validator.consensus.registry import EngineInfo
+from sawtooth_validator.consensus.registry import ConsensusRegistry, EngineInfo
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 
@@ -30,7 +30,7 @@ class TestHandlers(unittest.TestCase):
         result = handler.handle('mock-id', request.SerializeToString())
         response = result.message_out
         self.assertEqual(response.status, handler.response_class.OK)
-        self.mock_proxy.register.assert_called_with('', '', 'mock-id')
+        self.mock_proxy.register.assert_called_with('', '', [], 'mock-id')
 
     def test_consensus_send_to_handler(self):
         handler = handlers.ConsensusSendToHandler(self.mock_proxy)
@@ -384,6 +384,53 @@ class TestProxy(unittest.TestCase):
             ])
 
 
+class TestRegistry(unittest.TestCase):
+
+    def test_consensus_registry(self):
+        registry = ConsensusRegistry()
+
+        assert not registry.has_active_engine()
+
+        # Test basic registration/activation
+        registry.register_engine(
+            'id0', 'name1', 'version1', [('name-a', 'version-a')])
+        registry.activate_engine('name1', 'version1')
+        assert registry.is_active_engine_id('id0')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test deactivation
+        registry.deactivate_current_engine()
+        assert not registry.has_active_engine()
+
+        # Test activating by additional protocol
+        registry.activate_engine('name-a', 'version-a')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test re-registration of existing engine
+        registry.register_engine(
+            'id1', 'name1', 'version1', [('name-a', 'version-a')])
+        assert not registry.has_active_engine()
+        registry.activate_engine('name1', 'version1')
+        assert registry.is_active_engine_name_version('name1', 'version1')
+
+        # Test upgrading engine
+        registry.register_engine(
+            'id2', 'name2', 'version2',
+            [('name1', 'version1'), ('name-a', 'version-a')])
+        assert not registry.has_active_engine()
+        registry.activate_engine('name2', 'version2')
+        assert registry.is_active_engine_name_version('name2', 'version2')
+
+        # Test two engines that support the same protocol can be registered;
+        # first engine to register should be activated
+        registry.register_engine(
+            'id3', 'name3', 'version3', [('name-a', 'version-a')])
+        assert registry.is_active_engine_name_version('name2', 'version2')
+        registry.deactivate_current_engine()
+        registry.activate_engine('name-a', 'version-a')
+        assert registry.is_active_engine_name_version('name2', 'version2')
+
+
 class MockBlock:
     def get_state_view(self, state_view_factory):
         return MockStateView()
@@ -413,7 +460,8 @@ class MockBlockManager:
 
 class MockConsensusRegistry(Mock):
     def get_active_engine_info(self):
-        return EngineInfo('mock-id', 'mock-name', 'mock-version')
+        return EngineInfo('mock-id', 'mock-name', 'mock-version',
+                          [('alt-protocol-name', 'alt-protocol-version')])
 
     def is_active_engine_id(self, engine_id):
         return True

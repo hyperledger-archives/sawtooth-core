@@ -115,12 +115,20 @@ class ConsensusRegisterHandler(ConsensusServiceHandler):
         self._proxy = proxy
 
     def handle_request(self, request, response, connection_id):
-        self._proxy.register(request.name, request.version, connection_id)
+        if request.additional_protocols is not None:
+            additional_protocols = \
+                [(p.name, p.version) for p in request.additional_protocols]
+        else:
+            additional_protocols = []
+
+        self._proxy.register(
+            request.name, request.version, additional_protocols, connection_id)
 
         LOGGER.info(
-            "Consensus engine registered: %s %s",
+            "Consensus engine registered: %s %s (additional protocols: %s)",
             request.name,
-            request.version)
+            request.version,
+            request.additional_protocols)
 
         return HandlerStatus.RETURN_AND_PASS
 
@@ -136,8 +144,8 @@ class ConsensusRegisterActivateHandler(Handler):
 
     def handle(self, connection_id, message_content):
         # If this is the configured consensus engine, make it active. This is
-        # necessary for setting the active engine on genesis and when the
-        # configured engine is changed to an engine that is not registered yet
+        # necessary for setting the active engine when the configured engine is
+        # changed to an engine that is not registered yet
         request = consensus_pb2.ConsensusRegisterRequest()
 
         try:
@@ -146,7 +154,14 @@ class ConsensusRegisterActivateHandler(Handler):
             LOGGER.exception("Unable to decode ConsensusRegisterRequest")
             return HandlerResult(status=HandlerResult.DROP)
 
-        self._proxy.activate_if_configured(request.name, request.version)
+        if request.additional_protocols is not None:
+            additional_protocols = \
+                [(p.name, p.version) for p in request.additional_protocols]
+        else:
+            additional_protocols = []
+
+        self._proxy.activate_if_configured(
+            request.name, request.version, additional_protocols)
 
         return HandlerResult(status=HandlerStatus.PASS)
 
