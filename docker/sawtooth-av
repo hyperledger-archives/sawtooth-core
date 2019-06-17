@@ -44,8 +44,8 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable bionic u
     python3-sawtooth-intkey \
     python3-sawtooth-poet-families \
     python3-sawtooth-rest-api \
-    python3-sawtooth-settings \
     python3-sawtooth-xo  \
+    sawtooth-settings-tp \
     clamav\
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
