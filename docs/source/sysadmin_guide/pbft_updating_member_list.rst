@@ -1,6 +1,6 @@
-************************************
-PBFT Only: Updating PBFT Member List
-************************************
+****************************************
+PBFT Only: Updating the PBFT Member List
+****************************************
 
 If you are adding a new node to an existing PBFT network, you must update the
 on-chain setting ``sawtooth.consensus.pbft.members`` after the new node has
