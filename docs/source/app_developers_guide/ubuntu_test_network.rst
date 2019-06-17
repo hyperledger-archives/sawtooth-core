@@ -27,7 +27,7 @@ the consensus type, see :doc:`/sysadmin_guide/about_dynamic_consensus`.
 
 .. note::
 
-   These instructions have been tested on Ubuntu 16.04 only.
+   These instructions have been tested on Ubuntu 18.04 (Bionic) only.
 
 
 .. _about-sawtooth-nw-env-label:
