@@ -4,7 +4,7 @@ Using a Proxy Server to Authorize the REST API
 
 .. note::
 
-    These instructions have been tested on Ubuntu 16.04 only.
+    These instructions have been tested on Ubuntu 18.04 (Bionic) only.
 
 The Sawtooth REST API is designed to be a lightweight shim on top of internal
 communications. When the REST API receives a request, it passes that request to
