@@ -16,22 +16,6 @@ or all of the following commands to test basic Sawtooth functionality.
 
 .. include:: ../_includes/sawtooth-settings-list-pbft.inc
 
-.. tip::
-
-   To change the setting, run this command on the same node that created the
-   genesis block:
-
-   .. code-block:: console
-
-      [sawtooth@system]$ sawset proposal create \
-       --key /etc/sawtooth/keys/validator.priv \
-       sawtooth.consensus.pbft.members=[VAL1KEY, VAL2KEY, VAL3KEY]
-
-   Replace ``VAL1KEY``, ``VAL2KEY``, and ``VAL3KEY``, with the
-   validator public keys of the other nodes on the network. This
-   information is available in ``/etc/sawtooth/keys/validator.pub`` on
-   each node.
-
 **Test the network**
 
 For the remaining steps, multiple nodes in the network must be running. If this
