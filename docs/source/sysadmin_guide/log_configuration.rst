@@ -56,6 +56,8 @@ validator or REST API, put a log configuration file in the config directory
 Sawtooth provides an example log configuration file in
 ``/etc/sawtooth/log_config.toml.example``. To create a log configuration file,
 copy the example file to the config directory and name it ``log_config.toml``.
+Copy with ``cp -a`` to preserve the file's ownership and permissions (or change
+after copying to owner ``root``, group ``sawtooth``, and permissions ``640``).
 
 Each transaction processor can define its own config file. The name of
 this file is determined by the author. The transaction processors included in
