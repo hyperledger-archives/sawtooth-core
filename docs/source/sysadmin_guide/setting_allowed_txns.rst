@@ -52,10 +52,10 @@ accepted transaction types to those from this network's transaction processors
    that specifies the family name and version of the following transaction
    processors:
 
-   * `sawtooth_identity` (Identity)
-   * `intkey` (IntegerKey)
-   * `sawtooth_settings` (Settings)
-   * (PoET only) `sawtooth_validator_registry` (PoET Validator Registry)
+   * ``sawtooth_identity`` (Identity)
+   * ``intkey`` (IntegerKey)
+   * ``sawtooth_settings`` (Settings)
+   * (PoET only) ``sawtooth_validator_registry`` (PoET Validator Registry)
 
    See :doc:`transaction family specification <../transaction_family_specifications>`
    for the family names and versions of all Sawtooth transaction processors.
