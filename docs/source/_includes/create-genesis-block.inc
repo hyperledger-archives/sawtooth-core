@@ -73,7 +73,7 @@ genesis block also includes the keys for the other nodes in the initial network.
         -o config-consensus.batch \
         sawtooth.consensus.algorithm.name=pbft \
         sawtooth.consensus.algorithm.version=VERSION \
-        sawtooth.consensus.pbft.members=[VAL1KEY,VAL2KEY,...,VALnKEY]
+        sawtooth.consensus.pbft.members='["VAL1KEY","VAL2KEY",...,"VALnKEY"]'
 
      Replace ``VERSION`` with the PBFT version number.
 
@@ -84,9 +84,10 @@ genesis block also includes the keys for the other nodes in the initial network.
           digits (major and minor release numbers); omit the patch number.
           For example, if the version is 1.0.3, use ``1.0`` for this setting.
 
-     Replace ``VAL1KEY,VAL2KEY,VAL3KEY,...,VALnKEY`` with the validator public
+     Replace ``"VAL1KEY","VAL2KEY","VAL3KEY",...,"VALnKEY"`` with the validator public
      keys of all the nodes (including this node). This information is in the
-     file ``/etc/sawtooth/keys/validator.pub`` on each node.
+     file ``/etc/sawtooth/keys/validator.pub`` on each node. Be sure to use
+     single quotes and double quotes correctly, as shown in the example.
 
    * For PoET:
 
@@ -127,7 +128,7 @@ genesis block also includes the keys for the other nodes in the initial network.
        Lists the member nodes on the initial network as a JSON-formatted
        string of the validators' public keys, using the following format:
 
-       ``[<public-key-1>,<public-key-2>,...,<public-key-n>]``
+       ``'["<public-key-1>","<public-key-2>",...,"<public-key-n>"]'``
 
       (PoET only) ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/simulator_rk_pub.pem)"``
        Adds the public key for the PoET Validator Registry transaction

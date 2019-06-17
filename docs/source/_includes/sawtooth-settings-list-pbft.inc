@@ -16,5 +16,12 @@
 
      .. code-block:: console
 
-        sawtooth.consensus.pbft.members=[03e27504580fa15...
+        sawtooth.consensus.pbft.members=["03e27504580fa15...
+
+
+     .. tip::
+
+        You can use the ``sawset proposal create`` command to change this
+        setting. For more information, see
+        :doc:`/sysadmin_guide/pbft_adding_removing_node`.
 
