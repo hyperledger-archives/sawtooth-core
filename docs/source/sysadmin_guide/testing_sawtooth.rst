@@ -7,8 +7,8 @@ Testing Sawtooth Functionality
 
 **Test a single node**
 
-After :doc:`starting Sawtooth services <systemd>` on one node, you can any or
-all of the following commands to test basic Sawtooth functionality.
+After :doc:`starting Sawtooth services <systemd>` on one node, you can use any
+or all of the following commands to test basic Sawtooth functionality.
 
 .. include:: ../_includes/testing-rest-api.inc
 
