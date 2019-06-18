@@ -22,7 +22,7 @@ then update ``sawtooth.consensus.pbft.members`` on an existing node.
 You can add several nodes at the same time.
 
 1. Install and configure Sawtooth on the new node, as described in
-   :doc:`setting_up_sawtooth_poet-sim`. Note these important items:
+   :doc:`setting_up_sawtooth_network`. Note these important items:
 
    * Skip the procedure to create a genesis block.
 
