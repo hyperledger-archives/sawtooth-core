@@ -97,7 +97,7 @@ EPID
 EPID Pseudonym
   Pseudonym of an SGX platform used in linkable quotes.  It is
   part of the IAS attestation response according to IAS API specifications. It
-  is computed as a function of the service Basename (validator network in our
+  is computed as a function of the service Basename (Sawtooth network in our
   case) and the device's EPID private key.
 
 PPK, PSK
@@ -343,7 +343,7 @@ following sign-up procedure:
    \textnormal{ENC.generateSignUpData(OPKhash)}` The ``report_data`` (512 bits)
    field in the report body includes the SHA256 digest of (OPKhash | PPK).
 #. Ask SGX Quoting Enclave (QE) for linkable quote on the report (using the
-   validator network's Basename).
+   Sawtooth network's Basename).
 #. If Self Attestation is enabled in IAS API: request attestation of linkable
    quote and PSE manifest to IAS. The AEP sent to IAS must contain:
 

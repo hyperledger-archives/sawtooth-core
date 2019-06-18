@@ -18,7 +18,7 @@ block with this transaction. Note that the
 :doc:`Settings transaction processor <../transaction_family_specifications/settings_transaction_family>`
 is required to handle on-chain configuration settings.
 
-In this procedure, you will configure the validator network to limit the
+In this procedure, you will configure the Sawtooth network to limit the
 accepted transaction types to those from this network's transaction processors
 (as started in :doc:`systemd`).
 

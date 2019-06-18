@@ -2,7 +2,7 @@
 Journal
 *******
 
-The `journal` is the group of validator components that work together to handle
+The `journal` is the group of validator subcomponents that work together to handle
 batches and proposed blocks. These components are responsible for completing
 published blocks, publishing batches into blocks to extend the chain, and
 validating proposed blocks to determine if they should be considered for the new
@@ -195,7 +195,7 @@ block-creation process that is described in the
 :doc:`previous Journal sections <journal>`.
 
 A genesis block (the root of a blockchain) is required to bootstrap a new
-Sawtooth validator network with on-chain settings such as the desired consensus
+Sawtooth network with on-chain settings such as the desired consensus
 algorithm, any deployment-specific configuration settings, and any
 application-specific transactions that are needed at genesis time.
 

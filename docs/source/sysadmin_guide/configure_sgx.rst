@@ -223,9 +223,11 @@ Create validator keys:
 
     $ sudo sawadm keygen
 
-.. note::  If you're configuring multiple validators, the steps below are
-    required for the first validator only.  For additional validators, you
-    can skip the rest of this procedure. Continue with :ref:`val-config`.
+.. note::
+
+   If you're configuring multiple Sawtooth nodes, the following steps are
+   required for the first node only.  For the other nodes, you
+   can skip the rest of this procedure; continue with :ref:`val-config`.
 
 Become the ``sawtooth`` user and change to ``/tmp``.
 In the following commands, the prompt ``[sawtooth@system]`` shows the commands
@@ -369,7 +371,7 @@ Add the following content to the file:
     # Advertised network endpoint URL.
     endpoint = "tcp://[external interface]:[port]"
 
-    # Uri(s) to connect to in order to initially connect to the validator network,
+    # URI(s) to connect to in order to initially connect to the Sawtooth network,
     # in the format tcp://hostname:port. This is not needed in static peering mode
     # and defaults to None.
     seeds = ["tcp://[seed address 1]:[port]",

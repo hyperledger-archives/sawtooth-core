@@ -166,8 +166,8 @@ Step 4: Create the Genesis Block
 ================================
 
 Because this is a new network, you must create a genesis block (the first block
-on the distributed ledger). This step is done only for the first validator node
-on the network. Validator nodes that join an existing network do not create
+on the distributed ledger). This step is done only for the first node
+on the network. Nodes that join an existing network do not create
 a genesis block.
 
 The genesis block contains initial values that are necessary when a Sawtooth
