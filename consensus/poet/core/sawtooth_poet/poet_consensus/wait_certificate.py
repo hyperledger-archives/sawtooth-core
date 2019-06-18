@@ -174,6 +174,7 @@ class WaitCertificate(object):
     def check_valid(self,
                     poet_enclave_module,
                     previous_certificate_id,
+                    validator_id,
                     poet_public_key,
                     consensus_state,
                     poet_settings_view):
@@ -184,6 +185,8 @@ class WaitCertificate(object):
                 underlying PoET enclave.
             previous_certificate_id (str): The ID of the wait certificate for
                 the block attempting to build upon
+            validator_id (str): The ID (sometimes called the address) of the
+                validator that published this block.
             poet_public_key (str): The PoET public key that corresponds to
                 the private key used to sign the certificate.  This is
                 obtained from the signup information for the validator
@@ -218,6 +221,15 @@ class WaitCertificate(object):
                     '{1}'.format(
                         enclave_certificate.previous_certificate_id,
                         previous_certificate_id))
+
+        if enclave_certificate.validator_address != \
+                validator_id:
+            raise \
+                ValueError(
+                    'Publishing validator ID does not match: {0} != '
+                    '{1}'.format(
+                        enclave_certificate.validator_address,
+                        validator_id))
 
         try:
             poet_enclave_module.verify_wait_certificate(
