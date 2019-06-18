@@ -16,15 +16,14 @@ your own transaction family. These transaction families are available in the
   is an extensible role- and policy-based system for defining permissions in a
   way that can be used by other Sawtooth components.
   The family name is ``sawtooth_identity``;
-  the associated transaction processor is ``identity-tp`` (see
-  :doc:`/cli/identity-tp`).
+  the associated transaction processor is ``identity-tp``.
 
 * The :doc:`/transaction_family_specifications/integerkey_transaction_family`
   (also called "intkey") simply sets, increments, and decrements the value of
   entries stored in a state dictionary.
-  The :doc:`intkey command </cli/intkey>` command provides an example CLI client.
+  The :doc:`intkey command </cli/intkey>` provides an example CLI client.
 
-  intkey is available in several languages, including Go, Java, and JavaScript
+  IntegerKey is available in several languages, including Go, Java, and JavaScript
   (Node.js); see the ``sawtooth-sdk-{language}`` repositories under
   ``examples``.
 
