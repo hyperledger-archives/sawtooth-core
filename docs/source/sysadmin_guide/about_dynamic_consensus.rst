@@ -150,7 +150,14 @@ Requirements:
 
      sawtooth.consensus.algorithm.name=pbft
      sawtooth.consensus.algorithm.version=[VERSION]
-     sawtooth.consensus.pbft.members=[VAL1KEY,VAL2KEY,...,VALnKEY]
+     sawtooth.consensus.pbft.members=["VAL1KEY","VAL2KEY",...,"VALnKEY"]
+
+  .. note::
+
+     Use double quotes around each member key in a comma-separated list
+     with no spaces. If using the ``sawset proposal create`` command, you must
+     also surround the entire members string with single quotes (to protect the
+     double quotes).
 
   See :doc:`/sysadmin_guide/creating_genesis_block` for more information on the
   version and validator public keys for the PBFT member list .

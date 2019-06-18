@@ -86,6 +86,9 @@ You can add several nodes at the same time.
       .. Important::
 
          BE VERY CAREFUL! Make sure to specify the full list of keys.
+         Use double quotes around each key and surround the entire members
+         string in single quotes, as shown in the following example.
+
          Double-check each key before you run this command, because a typo could
          stall the network.
 
@@ -93,7 +96,7 @@ You can add several nodes at the same time.
 
          $ sawset proposal create \
            --key /etc/sawtooth/keys/validator.priv \
-           sawtooth.consensus.pbft.members=[previous-list,NEW-KEY]
+           sawtooth.consensus.pbft.members='[previous-list,"NEW-KEY"]'
 
       If there are no errors, this change will be committed to the blockchain.
 
@@ -133,6 +136,9 @@ down the removed node. You can delete several nodes at the same time.
       .. Important::
 
          BE VERY CAREFUL! Make sure to specify the correct list of keys.
+         Use double quotes around each key and surround the entire members
+         string in single quotes, as shown in the following example.
+
          Double-check each key before you run this command, because a typo could
          stall the network.
 
@@ -140,7 +146,7 @@ down the removed node. You can delete several nodes at the same time.
 
          $ sawset proposal create \
            --key /etc/sawtooth/keys/validator.priv \
-           sawtooth.consensus.pbft.members=[UPDATED-LIST]
+           sawtooth.consensus.pbft.members='[UPDATED-LIST]'
 
       If there are no errors, this change will be committed to the blockchain.
 
