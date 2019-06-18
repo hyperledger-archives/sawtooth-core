@@ -8,7 +8,7 @@ Overview
 The validator registry transaction family provides a way to add new validators
 to the network.
 
-The validator's information is used by poet_consensus to verify that when a
+The validator's information is used by PoET consensus to verify that when a
 validator tries to claim a block it is following the block claiming policies of
 PoET consensus. For example, the Z policy will refuse blocks from a validator
 if it has already claimed a disproportionate amount of blocks compared to the
@@ -17,14 +17,14 @@ claim blocks, after being added to the registry or updating their information,
 until a certain number of blocks are claimed by other participants. The number
 of blocks claimed since signup can be found by checking the current block number
 against the block number that is stored in the validator information when the
-validator registry information has either been added or updated. And finally the K
-policy requires new signup information to be sent to the validator registry
-after it has claimed a maximum number of block. If the validator is not found
-in the validator registry the block will be rejected since there is no way to
-validate.
+validator registry information has either been added or updated. And, finally,
+the K policy requires new signup information to be sent to the validator registry
+after it has claimed a maximum number of blocks. If the validator is not found
+in the validator registry, the block will be rejected, since there is no way to
+validate it.
 
-Currently the number of blocks claimed by a specific validator is stored within
-the poet_consensus, not within the validator registry.
+Currently, the number of blocks claimed by a specific validator is stored within
+the PoET consensus engine, not within the validator registry.
 
 
 State
@@ -104,15 +104,16 @@ to the validator registry. This check is necessary because if the number of
 blocks that must be waited on is greater than the number of validators minus
 one, it is possible for the network to get into a state where nobody can
 publish blocks because the validators are all waiting for more blocks to be
-committed or their signup information to be added to a block.
+committed or for their signup information to be added to a block.
 
-Validator registry transaction would not be able to be done at the same time as
-any other transaction as an update to the ValidatorMap is necessary. However all
-other transaction that need to access the state set by the validator registry,
-can be done in parallel since it will only be a read and  the statics for each
-validator is stored in the poet_enclave. If this was changed so that the stats
-were stored in the validator registry this would require a write to state every
-time a block is published and would reduce the ability for parallelism.
+A validator registry transaction cannot be done at the same time as
+any other transaction, because an update to the ValidatorMap is necessary.
+However, all other transactions that need to access the state set by the
+validator registry can be done in parallel, since it will only be a read and the
+statics for each validator is stored in the poet_enclave. If this was changed so
+that the stats were stored in the validator registry, this would require a write
+to state every time a block is published and would reduce the ability for
+parallelism.
 
 Addressing
 ----------
@@ -224,7 +225,7 @@ transaction is rejected and a invalid transaction response is returned.
 If the transaction is deemed to be valid, the validator_id is used to find
 the address where the validator_info should be stored. Store the serialized
 ValidatorInfo protocol buffer in state at the address as mentioned above. If
-this validator is new (not updating its SignUpInfo), the validator’s id needs
+this validator is new (not updating its SignUpInfo), the validator’s ID needs
 to be added to the validator_map.
 
 .. Licensed under Creative Commons Attribution 4.0 International License

@@ -40,7 +40,7 @@ two different methods for defining the transactors that a validator will accept.
 
 The first method is configuring a validator to only accept batches and
 transactions from predefined transactors that are loaded from a local validator
-config file. Once the validator is configured the list of allowed transactors
+config file. Once the validator is configured, the list of allowed transactors
 is immutable while the validator is running. This set of permissions are only
 enforced when receiving a batch from a connected client, but not when receiving
 a batch from a peer on the network.
@@ -104,7 +104,7 @@ additional ``PERMIT_KEY`` or ``DENY_KEY`` lines.
 .. note::
 
    A policy file implicitly ends with the rule ``DENY_KEY *``, which denies
-   all transactors or validators who are not explicitly specified in a
+   all transactors or validators that are not explicitly specified in a
    ``PERMIT_KEY`` rule. For example, if a transactor policy file contains a
    single rule that permits one transactor, it is implicitly denying all
    other transactors.

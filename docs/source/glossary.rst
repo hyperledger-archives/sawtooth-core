@@ -93,7 +93,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
 
   Node
     Participant in Sawtooth network. Each node runs a single validator, a
-    REST API, and one or more transaction processors.
+    REST API, a consensus engine, and one or more transaction processors.
 
   Off-chain setting
     Setting or value that is stored locally, rather than on the blockchain.

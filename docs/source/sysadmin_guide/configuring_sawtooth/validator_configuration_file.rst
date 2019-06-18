@@ -43,7 +43,7 @@ The ``validator.toml`` configuration file has the following options:
 
 - ``peering = "{static,dynamic}"``
 
-  Specifies the type of peering approach the validator should take: static
+  Specifies the type of peering the validator should use: static
   or dynamic.  Default: ``static``.
 
   Static peering attempts to peer only with the candidates provided with the
