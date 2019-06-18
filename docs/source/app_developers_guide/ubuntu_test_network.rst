@@ -295,6 +295,10 @@ to start each component.
 
    .. code-block:: console
 
+      $ sudo -u sawtooth identity-tp -v
+
+   .. code-block:: console
+
       $ sudo -u sawtooth intkey-tp-python -v
 
    .. code-block:: console
