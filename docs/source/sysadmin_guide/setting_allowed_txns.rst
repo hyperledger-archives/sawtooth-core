@@ -14,9 +14,13 @@ This setting, ``sawtooth.validator.transaction_families``, improves the
 Sawtooth network's security by ignoring any unrecognized transaction processors.
 It is an on-chain setting, which means that the change is submitted on one node;
 the other nodes in the network apply the settings change when they receive the
-block with this transaction. Note that the
+block with this transaction.
+
+The :doc:`Identity transaction processor <../transaction_family_specifications/identity_transaction_family>`
+(or an equivalent) is required to change permissions such as the allowed
+transaction types. The
 :doc:`Settings transaction processor <../transaction_family_specifications/settings_transaction_family>`
-is required to handle on-chain configuration settings.
+(or an equivalent) is required to handle the on-chain configuration settings.
 
 In this procedure, you will configure the validator network to limit the
 accepted transaction types to those from this network's transaction processors

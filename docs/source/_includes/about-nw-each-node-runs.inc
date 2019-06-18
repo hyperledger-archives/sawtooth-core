@@ -7,6 +7,11 @@ a consensus engine, and the following
   Settings transaction processor (or an equivalent) is required for all Sawtooth
   networks.
 
+* :doc:`Identity <../transaction_family_specifications/identity_transaction_family>`
+  (``identity-tp``): Handles permissions for other components in the network.
+  The Identity transaction processor (or an equivalent) is required to change
+  permissions such as the allowed transaction types.
+
 * :doc:`IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`
   (``intkey-tp-python``): Demonstrates basic Sawtooth functionality. The
   associated ``intkey`` client includes shell commands to perform integer-based
