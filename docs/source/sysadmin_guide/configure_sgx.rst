@@ -174,6 +174,8 @@ attestation service.
 `Click here <https://software.intel.com/formfill/sgx-onboarding>`_ for the
 registration form.
 
+.. _config-validator-for-PoET-SGX-label:
+
 Configure the Validator for PoET-SGX
 ------------------------------------
 
@@ -405,7 +407,8 @@ in your network.
     seeds = ["tcp://[seed address 1]:[port]",
              "tcp://[seed address 2]:[port]"]
 
-If necessary, change the network bind interface in the ``bind`` section.
+If necessary, change the ``network``, ``component``, and ``consensus`` bind
+interface in the ``bind`` section.
 
 .. code-block:: ini
 

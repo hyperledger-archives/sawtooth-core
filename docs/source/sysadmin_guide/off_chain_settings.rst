@@ -90,7 +90,7 @@ Additional steps specify the peers for this node, change the scheduler type
         processors
 
       - ``consensus`` specifies where the validator listens for communication
-        from consensus engines
+        from the consensus engine
 
       .. tip::
 

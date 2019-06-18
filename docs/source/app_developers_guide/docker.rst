@@ -98,7 +98,7 @@ Download the Docker Compose file for the Sawtooth environment,
 This example Compose file defines the process for constructing a simple
 Sawtooth environment with following containers:
 
-* A single validator using dev mode consensus
+* A single validator using Devmode consensus
 * A REST API connected to the validator
 * The Settings transaction processor (``sawtooth-settings``)
 * The IntegerKey transaction processor (``intkey-tp-python``)
