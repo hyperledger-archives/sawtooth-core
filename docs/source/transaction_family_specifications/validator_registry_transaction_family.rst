@@ -5,8 +5,8 @@ PoET Validator Registry Transaction Family
 Overview
 =========
 
-The validator registry transaction family provides a way to add new validators
-to the network.
+The PoET Validator Registry transaction family provides a way to add new validators
+to a network using :term:`PoET consensus`.
 
 The validator's information is used by PoET consensus to verify that when a
 validator tries to claim a block it is following the block claiming policies of
@@ -30,8 +30,8 @@ the PoET consensus engine, not within the validator registry.
 State
 =====
 This section describes in detail how validator information, including
-identification and signup data, is stored and addressed using the validator
-registry transaction family.
+identification and signup data, is stored and addressed using the PoET Validator
+Registry transaction family.
 
 The following protocol buffers definition defines the validator info:
 
@@ -121,11 +121,11 @@ Addressing
 When a validator’s signup info is registered or updated it should be accessed
 using the following algorithm:
 
-Addresses for the validator registry transaction family are set by adding
-sha256 hash of the validator's id to the validator registry namespace. The
-namespace for the validator registry will be the first 6 characters of the
-sha256  hash of the string “validator_registry”, which is “6a4372” For example,
-the validator signup info of a validator with the id “validator_id” could be
+Addresses for the PoET Validator Registry transaction family are set by adding
+sha256 hash of the validator's ID to the PoET Validator Registry namespace. The
+namespace for this transaction family is the first 6 characters of the
+sha256 hash of the string “validator_registry”, which is “6a4372” For example,
+the validator signup info of a validator with the ID “validator_id” could be
 set like this:
 
 .. code-block:: pycon
@@ -144,7 +144,7 @@ following address:
 
 Transaction Payload
 ===================
-Validator registry transaction family payloads are defined by the following
+PoET Validator Registry transaction family payloads are defined by the following
 protocol buffers code:
 
 .. code-block:: protobuf
@@ -174,7 +174,7 @@ Transaction Header
 Inputs and Outputs
 ------------------
 
-The inputs for validator registry family transactions must include:
+The inputs for PoET Validator Registry family transactions must include:
 
 * the address of *validator_id*
 * the address of *validator_map*
@@ -182,7 +182,7 @@ The inputs for validator registry family transactions must include:
 * the address of *sawtooth.poet.valid_enclave_measurement*
 * the address of *sawtooth.poet.valid_enclave_basenames*
 
-The outputs for validator registry family transactions must include:
+The outputs for PoET Validator Registry family transactions must include:
 
 * the address of *validator_id*
 * the address of *validator_map*
