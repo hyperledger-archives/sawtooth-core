@@ -57,7 +57,7 @@ Block Publisher
 ---------------
 
 The Block Publisher is responsible for creating new candidate blocks.  As
-batches are received by the validator (from clients or other validator nodes),
+batches are received by the validator (from clients or other Sawtooth nodes),
 they are added to the Block Publisher's pending queue.  Only valid transactions
 will be added to the next candidate block.  For timeliness, batches are added
 to a scheduler as they are added to the pending queue; thus, transactions are

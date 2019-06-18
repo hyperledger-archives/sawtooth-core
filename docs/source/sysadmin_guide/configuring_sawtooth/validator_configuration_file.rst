@@ -55,7 +55,7 @@ The ``validator.toml`` configuration file has the following options:
 
   Dynamic peering first processes any static peers, starts topology buildouts,
   then uses the URLs specified by the seeds option for the initial connection
-  to the validator network.
+  to the Sawtooth network.
 
   .. code-block:: none
 
@@ -75,7 +75,7 @@ The ``validator.toml`` configuration file has the following options:
 - ``seeds`` = [``URI``]
 
   (Dynamic peering only.) Specifies the URI or URIs for the initial connection
-  to the validator network.  Specify multiple URIs in a comma-separated list;
+  to the Sawtooth network.  Specify multiple URIs in a comma-separated list;
   each URI must be enclosed in double quotes.  Default: none.
 
   Note that this option is not needed in static peering mode.

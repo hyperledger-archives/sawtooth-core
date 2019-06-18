@@ -31,11 +31,11 @@ along with additional information about the interfaces. For example:
 This example output shows that ``eth0`` is a network interface that has access
 to the Internet. In this case, you could use one of the following:
 
-* If you would like the validator node to accept connections from other
-  validator nodes on the network behind ``eth0``, you could specify a
+* If you would like the validator to accept connections from other
+  nodes on the network behind ``eth0``, you could specify a
   network bind string such as ``tcp://eth0:8800``.
 
-* If you would like the validator node to accept only connections from local
+* If you would like the validator to accept only connections from local
   Sawtooth components, you could specify the component bind string
   ``tcp://lo:4004``. Note that this is equivalent to ``tcp://127.0.0.1:4004``.
 
@@ -51,13 +51,13 @@ About the public endpoint string
 The correct value for your public endpoint string depends on your network
 configuration.
 
-* If this network is for development purposes and all of the validator nodes
+* If this network is for development purposes and all of the nodes
   will be on the same local network, the IP address returned by ``ifconfig``
   should work as your public endpoint string.
 
 * If part of your network is behind a NAT or firewall, or if you want to start
   up a public network on the Internet, you must determine the correct routable
-  values for all the validator nodes in your network.
+  values for all the nodes in your network.
 
   Determining these values for a distributed or production network is an
   advanced networking topic that is beyond the scope of this guide. Contact your

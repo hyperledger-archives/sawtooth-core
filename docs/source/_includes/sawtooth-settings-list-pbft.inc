@@ -2,7 +2,7 @@
   ``sawtooth.consensus.pbft.members`` lists the validator public keys of all
   PBFT member nodes on the network.
 
-  a. Connect to the first validator node (the one that created the genesis
+  a. Connect to the first node (the one that created the genesis
      block).
 
   #. Display the on-chain settings.

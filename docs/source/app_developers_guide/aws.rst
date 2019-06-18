@@ -4,7 +4,7 @@ Using AWS for a Single Sawtooth Node
 
 This tutorial explains how to set up Hyperledger Sawtooth for application
 development using the Amazon Elastic Compute Cloud (Amazon EC2) service.
-It shows you how to launch an instance of a Sawtooth validator node from the
+It shows you how to launch an instance of a Sawtooth node from the
 `Amazon Web Services (AWS) Marketplace <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_,
 then walks you through the following tasks:
 
@@ -85,7 +85,7 @@ For more information, see the Amazon guide
       * To access the REST API remotely, add an inbound rule to allow TCP
         traffic on port 8008.
 
-      * To communicate with another validator node, add an inbound rule to
+      * To communicate with another node, add an inbound rule to
         allow TCP traffic on port 8800.
 
       For information on editing the security group rules, see Amazon's

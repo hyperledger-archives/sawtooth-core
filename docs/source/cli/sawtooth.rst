@@ -19,8 +19,8 @@
 sawtooth
 ********
 
-The ``sawtooth`` command is the usual way to interact with validators or
-validator networks.
+The ``sawtooth`` command is the usual way to interact with Sawtooth validators
+and networks.
 
 This command has a multi-level structure. It starts with the base call to
 ``sawtooth``. Next is a top-level subcommand such as ``block`` or ``state``.

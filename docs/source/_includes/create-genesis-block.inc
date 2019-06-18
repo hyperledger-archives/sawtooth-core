@@ -8,7 +8,7 @@ genesis block also includes the keys for the other nodes in the initial network.
 
 .. important::
 
-   Use this procedure **only** for the first validator node on a Sawtooth
+   Use this procedure **only** for the first node on a Sawtooth
    network. Skip this procedure for a node that will join an existing network.
 
 1. Ensure that the required user and validator keys exist on this node:
