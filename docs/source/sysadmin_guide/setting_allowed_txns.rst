@@ -41,6 +41,7 @@ accepted transaction types to those from this network's transaction processors
 
         $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
         sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+
    * For PoET:
 
      .. code-block:: console
