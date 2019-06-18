@@ -4,9 +4,8 @@ Using Sawtooth with PoET-SGX
 
 .. note::
 
-   PoET-SGX is currently not compatible with Sawtooth 1.1. Users looking to
-   leverage PoET-SGX should remain on Sawtooth 1.0. PoET-SGX is being upgraded
-   to be made compatible with 1.1 and will be released before the end of 2018.
+   PoET-SGX is currently not compatible with Sawtooth 1.1 or later.
+   Users looking to leverage PoET-SGX should remain on Sawtooth 1.0.
 
 This procedure describes how to install, configure, and run Hyperledger Sawtooth
 with PoET simulator consensus on a system with |Intel (R)| Software Guard
