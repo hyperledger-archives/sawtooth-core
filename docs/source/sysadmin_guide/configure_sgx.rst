@@ -277,16 +277,16 @@ lines of output showing that the SGX enclave has been initialized:
       Changes the version of the consensus algorithm to 0.1.
 
     ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)"``
-      Adds the public key that the validator registry transaction processor uses
+      Adds the public key that the PoET Validator Registry transaction processor uses
       to verify attestation reports.
 
     ``sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement)``
       Adds the enclave measurement for your enclave to the blockchain for the
-      validator registry transaction processor to use to check signup information.
+      PoET Validator Registry transaction processor to use to check signup information.
 
     ``sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename)``
       Adds the enclave basename for your enclave to the blockchain for the
-      validator registry transaction processor to use to check signup information.
+      PoET Validator Registry transaction processor to use to check signup information.
 
     ``sawtooth.poet.enclave_module_name``
       Specifies the name of the Python module that implements the PoET enclave.
