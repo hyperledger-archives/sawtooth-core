@@ -158,6 +158,7 @@ Install Sawtooth
     $ sudo apt-get install -y \
       sawtooth \
       python3-sawtooth-poet-engine \
+      python3-sawtooth-poet-families \
       python3-sawtooth-poet-sgx
 
 Certificate File

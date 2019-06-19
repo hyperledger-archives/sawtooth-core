@@ -52,7 +52,7 @@
 
      .. code-block:: console
 
-        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine
+        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine python3-sawtooth-poet-families
 
    .. tip::
    
