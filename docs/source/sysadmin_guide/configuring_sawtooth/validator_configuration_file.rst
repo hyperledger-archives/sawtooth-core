@@ -19,8 +19,10 @@ setting in the configuration file.
 
 An example configuration file is in ``/etc/sawtooth/validator.toml.example``.
 To create a validator configuration file, copy the example file to the config
-directory and name it ``validator.toml``. Then edit the file to change the
-example configuration options as necessary for your system.
+directory and name it ``validator.toml``. Important: Copy with ``cp -a`` to
+preserve the file's ownership and permissions (or change after copying to
+owner ``root``, group ``sawtooth``, and permissions ``640``). Then edit the file
+to change the example configuration options as necessary for your system.
 
 .. note::
 

@@ -17,8 +17,10 @@ path for application data.
 
 An example file is in ``/etc/sawtooth/path.toml.example``. To create a path
 configuration file, copy the example file to the config directory and name it
-``path.toml``. Then edit the file to change the example configuration options as
-necessary for your system.
+``path.toml``. Important: Copy with ``cp -a`` to preserve the file's ownership
+and permissions (or change after copying to owner ``root``, group ``sawtooth``,
+and permissions ``640``). Then edit the file to change the example configuration
+options as necessary for your system.
 
 This file configures the following settings:
 
