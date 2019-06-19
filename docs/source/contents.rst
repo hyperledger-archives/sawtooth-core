@@ -11,7 +11,6 @@ Table of Contents
    sysadmin_guide.rst
    api_references.rst
    cli.rst
-   Sawtooth PBFT Consensus <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/>
    community.rst
    glossary.rst
 
