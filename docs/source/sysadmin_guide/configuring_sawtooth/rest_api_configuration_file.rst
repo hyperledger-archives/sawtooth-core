@@ -18,8 +18,10 @@ in the configuration file.
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/rest_api/packaging/rest_api.toml.example``.
 To create a REST API configuration file, download this example file to the
-config directory and name it ``rest_api.toml``. Then edit the file to change the
-example configuration options as necessary for your system.
+config directory and name it ``rest_api.toml``. Set the ownership and
+permissions to owner ``root``, group ``sawtooth``, and permissions ``640``.
+Then edit the file to change the example configuration options as necessary for
+your system.
 
 The ``rest_api.toml`` configuration file has the following options:
 

@@ -18,9 +18,10 @@ file.
 An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/families/settings/packaging/settings.toml.example``.
 To create a Settings transaction processor configuration file, download this
-example file to the config directory and name it ``settings.toml``. Then edit
-the file to change the example configuration options as necessary for your
-system.
+example file to the config directory and name it ``settings.toml``. Set the
+ownership and permissions to owner ``root``, group ``sawtooth``, and
+permissions ``640``. Then edit the file to change the example configuration
+options as necessary for your system.
 
 The ``settings.toml`` configuration file has the following option:
 
