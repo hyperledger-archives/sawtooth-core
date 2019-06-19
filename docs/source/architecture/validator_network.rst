@@ -1,6 +1,6 @@
-*****************
-Validator Network
-*****************
+****************
+Sawtooth Network
+****************
 
 The network layer is responsible for communication between validators in a
 Sawtooth network, including performing initial connectivity, peer discovery,
@@ -52,7 +52,7 @@ States
 ======
 
 Sawtooth defines three states related to the connection between any two
-validator nodes:
+nodes:
 
 - Unconnected
 - Connected - A connection is a required prerequisite for peering.
@@ -216,7 +216,7 @@ Network Permissioning
 =====================
 The Sawtooth
 :doc:`permissioning design <../architecture/permissioning_requirement>`
-allows the validator network to
+allows the network to
 limit the nodes that are able to connect to it. The permissioning rules
 determine the roles a connection is able to play on the network. The roles
 control the types of messages that can be sent and received over a given
@@ -232,7 +232,7 @@ from their identity signing key. Permission verifiers examine incoming
 messages against the policy and the current configuration and either permit,
 drop, or respond with an error. In certain cases, the connection will be
 forcibly closed -- for example, if a node is not allowed to connect to the
-validator network.
+network.
 
 The following describes the procedure for establishing a new connection with
 the validator. The procedure supports implementing different authorization

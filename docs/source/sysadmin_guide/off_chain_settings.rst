@@ -149,7 +149,7 @@ Additional steps specify the peers for this node, change the scheduler type
          peers = ["tcp://node1:8800", "tcp://node2:8800", "tcp://node3:8800"]
 
    #. (Dynamic peering only). Find the ``seeds`` setting, which specifies the
-      peers to use for the initial connection to the validator network.
+      peers to use for the initial connection to the Sawtooth network.
       This setting is ignored for static peering.
 
       Replace the default address and port (``host1:8800``) with the values for

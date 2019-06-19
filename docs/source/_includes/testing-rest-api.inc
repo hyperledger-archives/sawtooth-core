@@ -7,7 +7,7 @@
   .. note::
 
      The Sawtooth environment described this guide runs a local REST API on
-     each validator node. For a node that is not running a local REST API,
+     each node. For a node that is not running a local REST API,
      replace ``localhost:8008`` with the externally advertised IP address and
      port.
 

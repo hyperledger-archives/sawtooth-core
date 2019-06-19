@@ -69,7 +69,7 @@ Prerequisites
   described in :doc:`ubuntu`, stop Sawtooth and delete all blockchain data
   and logs from that node.
 
-  1. If the first validator node is running, stop the Sawtooth components
+  1. If the first node is running, stop the Sawtooth components
      (validator, REST API, consensus engine, and transaction processors),
      as described in :ref:`stop-sawtooth-ubuntu-label`.
 
@@ -82,7 +82,7 @@ Prerequisites
      new keys, delete the ``.priv`` and ``.pub`` files from
      ``/home/yourname/.sawtooth/keys/`` and ``/etc/sawtooth/keys/``.
 
-* Gather networking information: For each validator node that will be on your
+* Gather networking information: For each node that will be on your
   network, gather the following information.
 
   * **Component bind string**: Where this validator will listen for incoming
@@ -91,12 +91,12 @@ Prerequisites
     ``tcp://127.0.0.1:4004``.
 
   * **Network bind string**: Where this validator will listen for incoming
-    communication from other validator nodes (also called peers). You will set
+    communication from other nodes (also called peers). You will set
     this value with ``--bind network`` when starting the validator.  Default:
     ``tcp://127.0.0.1:8800``.
 
   * **Public endpoint string**: The address that other peers should use to
-    find this validator node. You will set this value with ``--endpoint`` when
+    find the validator on this node. You will set this value with ``--endpoint`` when
     starting the validator. You will also specify this value in the peers list
     when starting a validator on another node. Default: ``tcp://127.0.0.1:8800``.
 
@@ -106,7 +106,7 @@ Prerequisites
     ``tcp://127.0.0.1:5050``.
 
   * **Peers list**: The addresses that this validator should use to connect to
-    the other validator nodes (peers); that is, the public endpoint strings of
+    the other nodes (peers); that is, the public endpoint strings of
     those nodes. You will set this value with ``--peers`` when starting the
     validator. Default: none.
 
@@ -378,7 +378,7 @@ Use the procedure in :ref:`start-sawtooth-first-node-label`.
    network to fail.
 
    Start the same transaction processors that are running on the first
-   validator node. For example, if you chose not to start ``intkey-tp-python``
+   node. For example, if you chose not to start ``intkey-tp-python``
    and ``xo-tp-python`` on the first node, do not start them on the other nodes.
 
 When each node's validator fully starts, it will peer with the other running
@@ -396,9 +396,9 @@ For the remaining steps, multiple nodes in the network must be running.
       * PoET requires at least three nodes.
 
 1. To check whether peering has occurred on the network, submit a peers query
-   to the REST API on the first validator node.
+   to the REST API on the first node.
 
-   Open a terminal window on the first validator node and run the following
+   Open a terminal window on the first node and run the following
    command.
 
      .. code-block:: console
@@ -407,7 +407,7 @@ For the remaining steps, multiple nodes in the network must be running.
 
    .. note::
 
-      This environment runs a local REST API on each validator node. For
+      This environment runs a local REST API on each node. For
       a node that is not running a local REST API, you must replace
       ``localhost:8008`` with the externally advertised IP address and
       port.  (Non-default values are set with the ``--bind`` option when
@@ -426,7 +426,7 @@ For the remaining steps, multiple nodes in the network must be running.
           "link": "http://rest-api:8008/peers"
         }
 
-#. Run the following Sawtooth commands on a validator node to show the other
+#. Run the following Sawtooth commands on a node to show the other
    nodes on the network.
 
    a. Run ``sawtooth peer list`` to show the peers of a particular node.
@@ -436,20 +436,20 @@ For the remaining steps, multiple nodes in the network must be running.
 
 #. Verify that transactions are being processed correctly.
 
-   a. Submit a transaction to the REST API on the first validator node. This
+   a. Submit a transaction to the REST API on the first node. This
       example sets a key named ``MyKey`` to the value 999.
 
-      Run the following command in a terminal window on the first validator node.
+      Run the following command in a terminal window on the first node.
 
       .. code-block:: console
 
          $ intkey set MyKey 999
 
-   #. Watch for this transaction to appear on the other validator node. The
+   #. Watch for this transaction to appear on the other node. The
       following command requests the value of ``MyKey`` from the REST API on the
-      that validator node.
+      that node.
 
-      Open a terminal window on another validator node to run the following
+      Open a terminal window on another node to run the following
       command.
 
 

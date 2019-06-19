@@ -55,7 +55,7 @@ PoET essentially works as follows:
 
 #. Another function, such as “CheckTimer”, verifies that the timer
    was created by the enclave. If the timer has expired, this function
-   creates an attestation that can be used to verify that validator did
+   creates an attestation that can be used to verify that the validator did
    wait the allotted time before claiming the leadership role.
 
 The PoET leader election algorithm meets the criteria for a good lottery
@@ -97,7 +97,7 @@ EPID
 EPID Pseudonym
   Pseudonym of an SGX platform used in linkable quotes.  It is
   part of the IAS attestation response according to IAS API specifications. It
-  is computed as a function of the service Basename (validator network in our
+  is computed as a function of the service Basename (Sawtooth network, in our
   case) and the device's EPID private key.
 
 PPK, PSK
@@ -343,7 +343,7 @@ following sign-up procedure:
    \textnormal{ENC.generateSignUpData(OPKhash)}` The ``report_data`` (512 bits)
    field in the report body includes the SHA256 digest of (OPKhash | PPK).
 #. Ask SGX Quoting Enclave (QE) for linkable quote on the report (using the
-   validator network's Basename).
+   Sawtooth network's Basename).
 #. If Self Attestation is enabled in IAS API: request attestation of linkable
    quote and PSE manifest to IAS. The AEP sent to IAS must contain:
 
@@ -378,9 +378,9 @@ The server side of the validator runs the following sign-up procedure:
       digest of the most recently committed block. It may be that the sender has
       not seen :math:`WaitCertId_{n}` yet and could be sending
       :math:`WaitCertId_{n'}` where :math:`n'<n`. In this case the sender should
-      be urged to updated his/her view of the ledger by appending the new blocks
+      be urged to updated the view of the ledger by appending the new blocks
       and retry. It could also happen that the receiving validator has not seen
-      :math:`WaitCertId_{n}` in which case he/she should try to update his/her
+      :math:`WaitCertId_{n}` in which case it should try to update the
       view of the ledger and verify again.
    #. Verify MRENCLAVE value within quote is equal to PoET\_MRENCLAVE (there
       could be more than one allowed value).
@@ -425,7 +425,7 @@ Election Phase
 --------------
 
 Assume the identifier of the most recent valid block is :math:`WaitCertId_{n}`.
-Broadcast messages are signed by a validator with his/her PPK. To participate in
+Broadcast messages are signed by a validator with its PPK. To participate in
 the election phase a validator runs the following procedure on the client side:
 
 1. Start the PoET SGX enclave: ENC.
@@ -440,7 +440,7 @@ the election phase a validator runs the following procedure on the client side:
    (waitCertificate, signature, block, OPK, PPK) where block is the transaction
    block identified by blockDigest.
 
-On the server side a validator waits for incoming (waitCertificate, signature,
+On the server side, a validator waits for incoming (waitCertificate, signature,
 block, OPK, PPK) tuples. When one is received the following validity checks are
 performed:
 
@@ -485,8 +485,8 @@ validator could perform on other validators' EPID keys  at any time.
 
 #. **Asynchronous sign-up quote verification** A validator can (at any time) ask
    IAS for attestation on a quote that another validator used to sign-up to
-   check if his/her EPID key has been revoked since. If so the returned AVR will
-   indicate that the key is revoked. A validator who obtains such an AVR from
+   check if its EPID key has been revoked since. If so, the returned AVR will
+   indicate that the key is revoked. A validator that obtains such an AVR from
    IAS can broadcast it in a blacklisting transaction, so that all the
    validators can check the veracity of the AVR and proceed with the
    blacklisting. To limit the use of blacklisting transactions as a means to
@@ -496,10 +496,10 @@ validator could perform on other validators' EPID keys  at any time.
    * A certain number of participation tokens needs to be burned to commit a
      blacklisting transaction.
 
-   * A validator can commit a blacklisting transaction only once he/she wins one
+   * A validator can commit a blacklisting transaction only once it wins one
      or more elections.
 
-   * A validator who commits a certain number of non-legit blacklisting
+   * A validator that commits a certain number of non-legit blacklisting
      transactions is blacklisted.
 
 Security Considerations
@@ -518,7 +518,7 @@ Security Considerations
    arbitrarily win elections cannot affect the correctness of the system, but
    can hinder progress by publishing void transactions. This problem is
    mitigated by limiting the frequency with which a validator (identified by
-   his/her PPK) can win elections in a given time frame (see z-test
+   its PPK) can win elections in a given time frame (see z-test
    documentation).
 
 #. **WaitTimer duration manipulation:**
@@ -547,7 +547,7 @@ Security Considerations
       validator does not have control over the resulting :math:`WaitCertId_{n}`.
       A validator winning an election could otherwise try different blockDigest
       input values to createWaitCertificate and broadcast the WaitCertificate
-      whose :math:`WaitCertId_{n}` results in the lowest duration of his/her
+      whose :math:`WaitCertId_{n}` results in the lowest duration of its
       next WaitTimer.
 
    #. The call ``createWaitTimer()`` in step 1 of the election phase (client
@@ -562,8 +562,8 @@ Security Considerations
       user from creating multiple WaitCertificates (each with a different nonce)
       resulting in different WaitCertId digests without re-creating a WaitTimer
       (and waiting for its duration) each time. It follows that as long as the
-      duration of WaitTimer is not too small a malicious validator who wins the
-      current election has very limited control over the duration of his/hers
+      duration of WaitTimer is not too small, a malicious validator that wins the
+      current election has very limited control over the duration of its
       next WaitTimer.
 
    #. The check on the Monotonic Counter value guarantees only one enclave

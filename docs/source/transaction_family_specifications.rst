@@ -31,7 +31,8 @@ your own transaction family. These transaction families are available in the
   The family name is ``intkey``.
   The transaction processor is ``intkey-tp-{language}``.
 
-* The :doc:`/transaction_family_specifications/validator_registry_transaction_family`
+* The :doc:`PoET Validator Registry transaction
+  family </transaction_family_specifications/validator_registry_transaction_family>`
   provides a way to add new validators to the network. It is used by the PoET
   consensus algorithm implementation to keep track of other validators.
 

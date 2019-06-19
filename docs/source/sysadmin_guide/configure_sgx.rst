@@ -222,9 +222,11 @@ Create validator keys:
 
     $ sudo sawadm keygen
 
-.. note::  If you're configuring multiple validators, the steps below are
-    required for the first validator only.  For additional validators, you
-    can skip the rest of this procedure. Continue with :ref:`val-config`.
+.. note::
+
+   If you're configuring multiple Sawtooth nodes, the following steps are
+   required for the first node only.  For the other nodes, you
+   can skip the rest of this procedure; continue with :ref:`val-config`.
 
 Become the ``sawtooth`` user and change to ``/tmp``.
 In the following commands, the prompt ``[sawtooth@system]`` shows the commands
@@ -274,16 +276,16 @@ lines of output showing that the SGX enclave has been initialized:
       Changes the version of the consensus algorithm to 0.1.
 
     ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)"``
-      Adds the public key that the validator registry transaction processor uses
+      Adds the public key that the PoET Validator Registry transaction processor uses
       to verify attestation reports.
 
     ``sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement)``
       Adds the enclave measurement for your enclave to the blockchain for the
-      validator registry transaction processor to use to check signup information.
+      PoET Validator Registry transaction processor to use to check signup information.
 
     ``sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename)``
       Adds the enclave basename for your enclave to the blockchain for the
-      validator registry transaction processor to use to check signup information.
+      PoET Validator Registry transaction processor to use to check signup information.
 
     ``sawtooth.poet.enclave_module_name``
       Specifies the name of the Python module that implements the PoET enclave.
@@ -368,7 +370,7 @@ Add the following content to the file:
     # Advertised network endpoint URL.
     endpoint = "tcp://[external interface]:[port]"
 
-    # Uri(s) to connect to in order to initially connect to the validator network,
+    # URI(s) to connect to in order to initially connect to the Sawtooth network,
     # in the format tcp://hostname:port. This is not needed in static peering mode
     # and defaults to None.
     seeds = ["tcp://[seed address 1]:[port]",
