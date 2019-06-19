@@ -457,8 +457,32 @@ fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block
         return Ok(None);
     }
 
-    let block = protobuf::parse_from_reader(source)
-        .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
+    source
+        .read_message()
+        .map(Some)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))
+}
 
-    Ok(Some(block))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use protobuf::CodedInputStream;
+
+    #[test]
+    fn backup_and_restore() {
+        let mut buffer: Vec<u8> = vec![];
+
+        let mut block = Block::new();
+        block.set_header_signature("abc123".into());
+
+        backup_block(&block, &mut buffer).unwrap();
+        let mut is = CodedInputStream::from_bytes(&buffer);
+
+        let restored_block = restore_block(&mut is).unwrap();
+
+        assert_eq!(Some(block), restored_block);
+
+        assert_eq!(None, restore_block(&mut is).unwrap());
+    }
 }
