@@ -1,6 +1,36 @@
-**************
-Available SDKs
-**************
+*************************
+Summary of Available SDKs
+*************************
+
+The Sawtooth SDKs are in the following repositories:
+
+* C++:
+  `hyperledger/sawtooth-sdk-cxx
+  <https://github.com/hyperledger/sawtooth-sdk-cxx>`__
+
+* Go:
+  `hyperledger/sawtooth-sdk-go
+  <https://github.com/hyperledger/sawtooth-sdk-go>`__
+
+* Java:
+  `hyperledger/sawtooth-sdk-java
+  <https://github.com/hyperledger/sawtooth-sdk-java>`__
+
+* JavaScript:
+  `hyperledger/sawtooth-sdk-javascript
+  <https://github.com/hyperledger/sawtooth-sdk-javascript>`__
+
+* Python:
+  `hyperledger/sawtooth-sdk-python
+  <https://github.com/hyperledger/sawtooth-sdk-python>`__
+
+* Rust:
+  `hyperledger/sawtooth-sdk-rust
+  <https://github.com/hyperledger/sawtooth-sdk-rust>`__
+
+* Swift:
+  `hyperledger/sawtooth-sdk-swift
+  <https://github.com/hyperledger/sawtooth-sdk-swift>`__
 
 The following table summarizes the Sawtooth SDKs. It shows the feature completeness,
 API stability, and maturity level for the client signing, transaction
@@ -11,17 +41,19 @@ processors, and state delta features.
 +            +-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
 |            | Complete? | Stable API? | Maturity | Complete? | Stable API? | Maturity | Complete? | Stable API? | Maturity |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| Python     | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   1      | |yes|     | |yes|       | 1        |
+| Python     | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   1      | |yes|     | |yes|       |  1       |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| Go         | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   1      | |yes|     | |yes|       | 1        |
+| Go         | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   1      | |yes|     | |yes|       |  1       |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| JavaScript | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   2      | |yes|     | |yes|       | 2        |
+| JavaScript | |yes|     | |yes|       |   1      | |yes|     | |yes|       |   2      | |yes|     | |yes|       |  2       |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| Rust       | |yes|     |             |   1      | |yes|     |             |   1      | |yes|     |             | 1        |
+| Rust       | |yes|     |             |   1      | |yes|     |             |   1      | |yes|     |             |  1       |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| Java       |           |             |   3      |           |             |   3      |           |             | 3        |
+| Java       |           |             |   3      |           |             |   3      |           |             |  3       |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
-| C++        |           |             |   3      |           |             |   3      |           |             | 3        |
+| C++        |           |             |   3      |           |             |   3      |           |             |  3       |
++------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
+| Swift      |           |             |   3      | N/A       | N/A         |  N/A     | N/A       | N/A         | N/A      |
 +------------+-----------+-------------+----------+-----------+-------------+----------+-----------+-------------+----------+
 
 A stable API means that the Sawtooth development team is committed to backward
@@ -34,31 +66,6 @@ The Maturity column shows the general maturity level of each feature:
   2.  Community support only (core maintainers do not update these SDKs)
   3.  Experimental: Might have known issues and future API changes
 
-The available SDKs are in the following repositories:
-
-* Python:
-  `https://github.com/hyperledger/sawtooth-sdk-python/
-  <https://github.com/hyperledger/sawtooth-sdk-python>`_
-
-* Rust:
-  `https://github.com/hyperledger/sawtooth-sdk-rust
-  <https://github.com/hyperledger/sawtooth-sdk-rust>`_
-
-* Go:
-  `https://github.com/hyperledger/sawtooth-sdk-go
-  <https://github.com/hyperledger/sawtooth-sdk-go>`_
-
-* JavaScript:
-  `https://github.com/hyperledger/sawtooth-sdk-javascript
-  <https://github.com/hyperledger/sawtooth-sdk-javascript>`_
-
-* Java:
-  `https://github.com/hyperledger/sawtooth-sdk-java
-  <https://github.com/hyperledger/sawtooth-sdk-java>`_
-
-* C++:
-  `https://github.com/hyperledger/sawtooth-sdk-cxx
-  <https://github.com/hyperledger/sawtooth-sdk-cxx>`_
 
 .. |yes| unicode:: U+2713 .. checkmark
 
