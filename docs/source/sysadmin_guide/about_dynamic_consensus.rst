@@ -118,7 +118,7 @@ PBFT Consensus
 consensus algorithm with finality that provides Byzantine Fault Tolerance
 (BFT). PBFT is best for small, consortium-style networks that do not require
 open membership. For more information, see the
-`PBFT documentation <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/>`__.
+`PBFT documentation <https://sawtooth.hyperledger.org/docs/pbft/releases/latest/>`__.
 
 Requirements:
 
@@ -156,7 +156,7 @@ Requirements:
   version and validator public keys for the PBFT member list .
 
 * For optional PBFT consensus settings, see
-  `Configuring PBFT <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/configuring-pbft.html>`__
+  `Configuring PBFT <https://sawtooth.hyperledger.org/docs/pbft/releases/latest/configuring-pbft.html>`__
   in the PBFT documentation.
 
 
