@@ -19,7 +19,7 @@ algorithm, such as PoET, see :doc:`setting_up_sawtooth_poet-sim`.
 
 .. note::
 
-   These instructions have been tested on Ubuntu 16.04 only.
+   These instructions have been tested with Sawtooth 1.0 on Ubuntu 16.04 only.
 
 
 Prerequisites
