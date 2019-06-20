@@ -59,7 +59,6 @@ typedef struct {
 } ValidatorSignupData;
 
 static const std::string    NULL_IDENTIFIER = "0000000000000000";
-static const uint32_t       WAIT_CERTIFICATE_NONCE_LENGTH = 32;
 
 // Timers, once expired, should not be usuable indefinitely.
 // This constant allows a 30-second window after expiration for
@@ -128,6 +127,13 @@ static void ParseWaitTimer(
     );
 
 static size_t CalculateSealedSignupDataSize();
+
+static std::string GenerateWaitCertificateNonce(
+    const uint8_t *pPoetPrivateKey,
+    const size_t keyLen,
+    const uint8_t *pSequenceID,
+    const size_t sequenceLen
+    );
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // XX External interface                                             XX
@@ -842,13 +848,14 @@ poet_err_t ecall_CreateWaitCertificate(
 
         // Verify that another wait timer has not been created after this
         // one and before the wait certificate has been requested.
+        // Treat this as an attempt and automatically increment the counter.
         uint32_t sequenceId = 0;
-        ret = sgx_read_monotonic_counter(
+        ret = sgx_increment_monotonic_counter(
             &validatorSignupData.counterId,
             &sequenceId);
-        sp::ThrowSgxError(ret, "Failed to read monotonic counter.");
+        sp::ThrowSgxError(ret, "Failed to increment monotonic counter.");
 
-        if (sequenceId != waitTimer.SequenceId) {
+        if (sequenceId - 1 != waitTimer.SequenceId) {
             Log(
                 POET_LOG_ERROR,
                 "WaitTimer out of sequence.  %d != %d (Attempted replay "
@@ -910,14 +917,17 @@ poet_err_t ecall_CreateWaitCertificate(
             throw sp::ValueError("Wait timer has timed out");
         }
 
-        // Create a random nonce for the wait certificate to randomize the
-        // wait certificate ID and convert into a hex string so it can be
-        // serialized.
-        uint8_t nonce[WAIT_CERTIFICATE_NONCE_LENGTH];
-        ret = sgx_read_rand(nonce, sizeof(nonce));
-        sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
-        std::string nonceHexString =
-            sp::BinaryToHexString(nonce, sizeof(nonce));
+        // Create a nonce for the wait certificate in order to make the
+        // wait certificate ID unpredictable and difficult to influence.
+        // The nonce creation must be deterministic to prevent reentrant
+        // attacks attempting to influence the nonce and resulting wait
+        // certificate ID.
+        std::string nonceHexString = GenerateWaitCertificateNonce(
+            reinterpret_cast<const uint8_t *>(&validatorSignupData.privateKey),
+            sizeof(validatorSignupData.privateKey),
+            reinterpret_cast<const uint8_t *>(&sequenceId),
+            sizeof(sequenceId)
+            );
 
         // Serialize the wait certificate to a JSON string
         JsonValue waitCertValue(json_value_init_object());
@@ -1016,13 +1026,6 @@ poet_err_t ecall_CreateWaitCertificate(
                 outWaitCertificateSignature,
                 eccStateHandle);
         sp::ThrowSgxError(ret, "Failed to sign wait certificate");
-
-        // Increment the counter to prevent creating another
-        // wait certificate from the same timer.
-        ret = sgx_increment_monotonic_counter(
-            &validatorSignupData.counterId,
-            &sequenceId);
-        sp::ThrowSgxError(ret, "Failed to increment monotonic counter.");
 
     } catch (sp::PoetError& e) {
         Log(
@@ -1302,3 +1305,39 @@ size_t CalculateSealedSignupDataSize()
 {
     return sgx_calc_sealed_data_size(0, sizeof(ValidatorSignupData));
 } // CalculateSealedSignupDataSize
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// The PoET Private Key and the monotonic counter (sequenceID) are never
+// exposed outside the enclave. This makes the resulting nonce unpredictable
+// They are both deterministic values. The conjunction of the private key
+// and the sequence number will occur only once in the lifecycle of that
+// validator registration.
+// Returns a 64 character hex formatted string
+std::string GenerateWaitCertificateNonce(
+        const uint8_t *pPoetPrivateKey,
+        const size_t keyLen,
+        const uint8_t *pSequenceID,
+        const size_t sequenceLen
+        )
+{
+    sgx_status_t ret;
+    sgx_sha256_hash_t nonce;
+    sgx_sha_state_handle_t sha_handle;
+
+    ret = sgx_sha256_init(&sha_handle);
+    sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
+
+    ret = sgx_sha256_update(pPoetPrivateKey, keyLen, sha_handle);
+    sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
+
+    ret = sgx_sha256_update(pSequenceID, sequenceLen, sha_handle);
+    sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
+
+    ret = sgx_sha256_get_hash(sha_handle, &nonce);
+    sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
+
+    ret = sgx_sha256_close(sha_handle);
+    sp::ThrowSgxError(ret, "Failed to generate wait certificate nonce");
+
+    return(sp::BinaryToHexString(nonce, SGX_SHA256_HASH_SIZE));
+}
