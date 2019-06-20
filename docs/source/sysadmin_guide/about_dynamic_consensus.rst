@@ -56,7 +56,7 @@ processors that are required by that consensus type.
 
 1. The administrator of the first node uses the command ``sawset proposal
    create`` to specify the consensus settings in the genesis block.
-   See :doc:`/sysadmin_guide/setting_up_sawtooth_poet-sim` for this procedure.
+   See :doc:`/sysadmin_guide/setting_up_sawtooth_network` for this procedure.
 
 #. On each node, the administrator installs and starts the consensus engine and
    any transaction processors required for consensus (such as PoET Validator
