@@ -40,7 +40,7 @@ two different methods for defining the transactors that a validator will accept.
 
 The first method is configuring a validator to only accept batches and
 transactions from predefined transactors that are loaded from a local validator
-config file. Once the validator is configured the list of allowed transactors
+config file. Once the validator is configured, the list of allowed transactors
 is immutable while the validator is running. This set of permissions are only
 enforced when receiving a batch from a connected client, but not when receiving
 a batch from a peer on the network.
@@ -104,7 +104,7 @@ additional ``PERMIT_KEY`` or ``DENY_KEY`` lines.
 .. note::
 
    A policy file implicitly ends with the rule ``DENY_KEY *``, which denies
-   all transactors or validators who are not explicitly specified in a
+   all transactors or validators that are not explicitly specified in a
    ``PERMIT_KEY`` rule. For example, if a transactor policy file contains a
    single rule that permits one transactor, it is implicitly denying all
    other transactors.
@@ -233,7 +233,7 @@ are allowed to sign transactions and batches on the system.
 Validator Key Permissioning
 ===========================
 
-Sawtooth allows the validator network to
+Sawtooth allows the network to
 limit the nodes that are able to connect to it. The permissioning rules
 determine the roles a connection is able to play on the network. These roles
 control the types of messages that can be sent and received over a given
@@ -247,7 +247,7 @@ from its identity signing key. Permission verifiers examine incoming
 messages against the policy and the current configuration and either permit,
 drop, or respond with an error. In certain cases, the connection will be
 forcibly closed -- such as if a node is not allowed to connect to the
-validator network.
+network.
 
 This on-chain approach allows the whole network to change its policies at the
 same time while the network is live, instead of relying on a startup
@@ -256,14 +256,14 @@ configuration.
 Configuring Authorization
 -------------------------
 The Identity namespace stores roles as key-value pairs, where the key is a role
-name and the value is a policy. Validator network permissioning roles use
+name and the value is a policy. Sawtooth network permissioning roles use
 the following pattern:
 
 .. code-block:: none
 
   network[.SUB_ROLE] = POLICY_NAME
 
-where network is the name of the role to be used for validator network
+where ``network`` is the name of the role to be used for network-wide validator
 permissioning. POLICY_NAME refers to the name of a policy that is set in the
 Identity namespace. The policy defines the public keys that are allowed to
 participate in that role. The policy is made up of PERMIT_KEY and DENY_KEY
@@ -299,7 +299,7 @@ will be rejected. For more information, please look at the
 
 Network Roles
 -------------
-The following is the suggested high-level role for on-chain validator network
+The following is the suggested high-level role for on-chain network
 permissioning.
 
 ``default``:
@@ -310,7 +310,7 @@ permissioning.
   is ``PERMIT_KEY *`` (permit all).
 
 ``network``:
-  If a validator receives a peer request from a node whose public key is not
+  If a validator receives a peer request from a node whose validator public key is not
   permitted by the policy, the message will be dropped, an
   ``AuthorizationViolation`` will be returned, and the connection will be closed.
 
@@ -331,7 +331,7 @@ permissioning.
 
 ``network.consensus``:
   If a validator receives a ``GossipMessage`` that contains a new block published
-  by a node whose public key is not permitted by the policy, the message will
+  by a node whose validator public key is not permitted by the policy, the message will
   be dropped, an ``AuthorizationViolation`` will be returned, and the connection
   will be closed.
 

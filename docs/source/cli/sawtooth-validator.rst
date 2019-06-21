@@ -42,7 +42,7 @@ validator.
   - If set to ``dynamic``, any static peers will be processed first,
     before starting the topology buildout starting, then the URLs
     specified by ``--seeds`` will be used for the initial connection
-    to the validator network.
+    to the Sawtooth network.
 
 - Use ``--scheduler`` to set the scheduler type to ``serial`` or
   ``parallel``. Note that both scheduler types result in the same

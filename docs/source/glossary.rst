@@ -62,7 +62,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
   Global state
     Database that stores a local (validator-specific) record of transactions for
     the blockchain. Sawtooth represents state in a single instance of a
-    Merkle-Radix tree on each validator node.  For more information, see
+    Merkle-Radix tree on each Sawtooth node.  For more information, see
     :doc:`architecture/global_state`.
 
   Identity
@@ -93,7 +93,7 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
 
   Node
     Participant in Sawtooth network. Each node runs a single validator, a
-    REST API, and one or more transaction processors.
+    REST API, a consensus engine, and one or more transaction processors.
 
   Off-chain setting
     Setting or value that is stored locally, rather than on the blockchain.
@@ -209,7 +209,10 @@ This glossary defines Hyperledger Sawtooth terms and concepts.
     Component responsible for validating batches of transactions, combining
     them into blocks, maintaining consensus with the Sawtooth network,
     and coordinating communication between clients, transaction processors, and
-    other validator nodes.
+    other validators on the network.
+
+  Validator node
+    See :term:`node`.
 
   XO
     Sample transaction family that demonstrates basic transactions by playing

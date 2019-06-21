@@ -11,7 +11,7 @@ inside a virtual machine (VM) on your computer.
 
 .. note::
 
-   This environment has one Sawtooth validator node. For a
+   This environment has one Sawtooth node. For a
    multiple-node environment, see :doc:`creating_sawtooth_network`.
 
 This procedure walks you through the following tasks:

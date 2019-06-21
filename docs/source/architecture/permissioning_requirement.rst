@@ -12,9 +12,9 @@ Sawtooth divides permissioning into two general groups:
   - `Transactor key permissioning` controls who can submit transactions and
     batches, based on signing keys.
   - `Validator key permissioning` controls which nodes are allowed to
-    establish connections to the validator network.
+    establish connections to the Sawtooth network.
 
-This chapter summarizes the types of validator networks, then lists the
+This chapter summarizes the types of Sawtooth networks, then lists the
 capability requirements for these permissioning groups. Each requirement has
 a short description, the network scenario the requirement supports, and
 associated `user stories`. User stories are short statements about a requirement
@@ -26,8 +26,8 @@ and network-wide on-chain permissioning.
 
 - Local configuration allows a validator to limit who is allowed to submit
   batches and transactions directly to that validator. This is useful, for
-  example, if a company is running its own validator and wishes to allow only
-  members of that company to submit transactions.
+  example, if a company is running its own Sawtooth node and wishes to allow
+  only members of that company to submit transactions.
 
 - On-chain configuration allows a Sawtooth network to enforce consistent
   permissioning rules. For example, in validator key permissioning, all the
@@ -61,7 +61,7 @@ Client
 
 Policy
   Set of DENY and PERMIT rules that can be used to permission the
-  access to the validator network and which transactors can participate on the
+  access to the Sawtooth network and which transactors can participate on the
   network.
 
 Transaction
@@ -106,12 +106,12 @@ Network Operator
   modifying on-chain roles.
 
 Sysadmin
-  System administrator; a person who installs and configures the validator
-  software and configures the validator software using config files. The
+  System administrator; a person who installs and configures a Sawtooth
+  node using config files. The
   role of sysadmin does not include activities that modify on-chain settings.
 
-Validator Network Scenarios
-===========================
+Sawtooth Network Scenarios
+==========================
 
 Sawtooth is designed to support public, consortium, and private networks.
 The following network scenarios are used in the discussion of capability
@@ -122,14 +122,14 @@ requirements to illustrate when each requirement would be useful.
   allowed to sign batches and transactions.
 
 - Consortium network:
-  In a consortium network, only specific validators are allowed to join the
-  validator network and participate in consensus. However, the network allows
+  In a consortium network, only specific nodes are allowed to join the
+  Sawtooth network and participate in consensus. However, the network allows
   any client, transaction processor, or event subscriber to connect to a
   validator and accept batches and transactions signed by all transactors.
 
 - Private Network:
-  In a private network, only specific validators are allowed to join the
-  validator network and participate in consensus. The validators in the network
+  In a private network, only specific nodes are allowed to join the
+  Sawtooth network and participate in consensus. The validators in the network
   accept only connections from specific clients. The validators also control
   whether the client is allowed to submit batches and query specific address
   prefixes in state. Only specific transaction processors and event subscribers
@@ -146,11 +146,11 @@ scenario.
 +--------------------+--------------------------------------------------------+
 | Public Network     | - Allow all batch signers to submit batches            |
 |                    | - Allow all transaction signers to submit transactions |
-|                    | - Allow all nodes to join the validator network        |
+|                    | - Allow all nodes to join the Sawtooth network         |
 +--------------------+--------------------------------------------------------+
 | Consortium Network | - Allow all batch signers to submit batches            |
 |                    | - Allow all transaction signers to submit transactions |
-|                    | - Allow only specific nodes to join the validator      |
+|                    | - Allow only specific nodes to join the Sawtooth       |
 |                    |   network                                              |
 |                    | - Allow only specific nodes to participate in consensus|
 |                    | - Support policy-based transactor permissioning        |
@@ -158,7 +158,7 @@ scenario.
 | Private Network    | - Allow only specific batch signers to submit batches  |
 |                    | - Allow only specific transaction signers to submit    |
 |                    |   transactions                                         |
-|                    | - Allow only specific nodes to join the validator      |
+|                    | - Allow only specific nodes to join the Sawtooth       |
 |                    |   network                                              |
 |                    | - Allow only specific nodes to participate in consensus|
 |                    | - Restrict the type of transactions transactors can    |
@@ -205,7 +205,7 @@ Allow all batch signers to submit batches
 |                    |   validator to accept batches signed by any batch      |
 |                    |   signer.                                              |
 |                    | - A network operator can configure the                 |
-|                    |   validator network to accept batches signed by any    |
+|                    |   Sawtooth network to accept batches signed by any     |
 |                    |   batch signer.                                        |
 +--------------------+--------------------------------------------------------+
 
@@ -222,7 +222,7 @@ Allow only specific batch signers to submit batches
 |                    | validator receives a batch that was signed by a batch  |
 |                    | signer whose public key is not allowed, that batch     |
 |                    | is dropped. Batches are also checked                   |
-|                    | before block validation. If the validator network      |
+|                    | before block validation. If the Sawtooth network       |
 |                    | permits a given batch signer, the validator accepts    |
 |                    | batches signed by that batch signer from peers,        |
 |                    | regardless of its local configuration.                 |
@@ -231,7 +231,7 @@ Allow only specific batch signers to submit batches
 |                    |   validator to accept batches signed only by predefined|
 |                    |   batch signers.                                       |
 |                    | - A network operator can configure the                 |
-|                    |   whole validator network to only accept batches from  |
+|                    |   whole Sawtooth network to only accept batches from   |
 |                    |   specific batch signers.                              |
 +--------------------+--------------------------------------------------------+
 
@@ -256,7 +256,7 @@ Allow all transaction signers to submit transactions
 |                    |   validator to accept transactions signed by any       |
 |                    |   transaction signer.                                  |
 |                    | - A network operator can configure the                 |
-|                    |   whole validator network to accept transactions signed|
+|                    |   whole Sawtooth network to accept transactions signed |
 |                    |   by any batch signer.                                 |
 +--------------------+--------------------------------------------------------+
 
@@ -274,7 +274,7 @@ Allow only specific transaction signers to submit transactions
 |                    | a transaction that was signed by a transaction signer  |
 |                    | whose public key is not allowed, that transaction      |
 |                    | should be dropped. Transactions should also be checked |
-|                    | during block validation. If the validator network      |
+|                    | during block validation. If the Sawtooth network       |
 |                    | permits a given transaction signer, the validator will |
 |                    | accept transactions signed by that transaction signer  |
 |                    | from peers, regardless of its local configuration.     |
@@ -283,7 +283,7 @@ Allow only specific transaction signers to submit transactions
 |                    |   validator to accept transactions signed only by      |
 |                    |   predefined transaction signers.                      |
 |                    | - A network operator can configure the                 |
-|                    |   whole validator network to accept batches only from  |
+|                    |   whole Sawtooth network to accept batches only from   |
 |                    |   specific transaction signers.                        |
 +--------------------+--------------------------------------------------------+
 
@@ -302,7 +302,7 @@ Restrict the type of transactions transactors can sign
 |                    | by the transaction family logic.                       |
 +--------------------+--------------------------------------------------------+
 | User Stories       | - A network operator can configure the                 |
-|                    |   whole validator network to only accept transactions  |
+|                    |   whole Sawtooth network to only accept transactions   |
 |                    |   that were signed by allowed transaction signers for a|
 |                    |   specific transaction family.                         |
 +--------------------+--------------------------------------------------------+
@@ -323,7 +323,7 @@ Support policy-based transactor permissioning
 |                    |   that are signed by transactors that are allowed by   |
 |                    |   predefined locally stored policies.                  |
 |                    | - A network operator can configure the                 |
-|                    |   whole validator network to accept only transactions  |
+|                    |   whole Sawtooth network to accept only transactions   |
 |                    |   and batches that are signed by transactor that are   |
 |                    |   allowed by defined policies.                         |
 +--------------------+--------------------------------------------------------+
@@ -331,13 +331,13 @@ Support policy-based transactor permissioning
 Validator Key Permissioning
 ===========================
 
-Validator key permissioning is performed on the basis of a validator node’s
+Validator key permissioning is performed on the basis of a validator’s
 public signing key.
 
 The following tables describe the design of each capability for validator
 key permissioning.
 
-Allow all nodes to join the validator network
+Allow all nodes to join the Sawtooth network
 ---------------------------------------------
 
 +--------------------+--------------------------------------------------------+
@@ -345,11 +345,11 @@ Allow all nodes to join the validator network
 |                    | - Consortium - NO                                      |
 |                    | - Private - NO                                         |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network can be configured to             |
-|                    | allow all validator nodes to join the network. This    |
+| Description        | The Sawtooth network can be configured to              |
+|                    | allow all nodes to join the network. This              |
 |                    | means that every validator on the network should accept|
 |                    | the node as a peer, regardless of its public key.      |
-|                    | The validator nodes are also able to                   |
+|                    | The nodes are also able to                             |
 |                    | participate in consensus and communicate over the      |
 |                    | gossip protocol. The node must still go through        |
 |                    | the authorization procedure defined by the validator   |
@@ -358,11 +358,11 @@ Allow all nodes to join the validator network
 |                    | rejected.                                              |
 +--------------------+--------------------------------------------------------+
 | User Stories       | - A network operator can configure the                 |
-|                    |   validator network to accept all nodes that wish to   |
+|                    |   Sawtooth network to accept all nodes that wish to    |
 |                    |   connect, regardless of the node’s public key.        |
 +--------------------+--------------------------------------------------------+
 
-Allow only specific nodes to join the validator network
+Allow only specific nodes to join the Sawtooth network
 -------------------------------------------------------
 
 +--------------------+--------------------------------------------------------+
@@ -370,7 +370,7 @@ Allow only specific nodes to join the validator network
 |                    | - Consortium - YES                                     |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network can be configured to             |
+| Description        | The Sawtooth network can be configured to              |
 |                    | only allow nodes to join the network if the node's     |
 |                    | public key is permitted. In other words, if a validator|
 |                    | receives a connection request from a node, and the     |
@@ -378,7 +378,7 @@ Allow only specific nodes to join the validator network
 |                    | connection is rejected.                                |
 +--------------------+--------------------------------------------------------+
 | User Stories       | - A network operator can configure the                 |
-|                    |   validator network to only accept connections from    |
+|                    |   Sawtooth network to only accept connections from     |
 |                    |   nodes with specific public keys.                     |
 +--------------------+--------------------------------------------------------+
 
@@ -390,7 +390,7 @@ Allow only specific nodes to participate in consensus
 |                    | - Consortium - YES                                     |
 |                    | - Private - YES                                        |
 +--------------------+--------------------------------------------------------+
-| Description        | The validator network can be configured to             |
+| Description        | The Sawtooth network can be configured to              |
 |                    | only allow specific nodes to participate in consensus. |
 |                    | This is separate from any restrictions enforced by the |
 |                    | consensus algorithm. The nodes that are not allowed to |
@@ -398,7 +398,7 @@ Allow only specific nodes to participate in consensus
 |                    | are not allowed to publish blocks.                     |
 +--------------------+--------------------------------------------------------+
 | User Stories       | - A network operator can configure the                 |
-|                    |   validator network to only allow certain nodes to     |
+|                    |   Sawtooth network to only allow certain nodes to      |
 |                    |   participate in consensus.                            |
 +--------------------+--------------------------------------------------------+
 
