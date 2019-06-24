@@ -153,11 +153,12 @@ Install Sawtooth
 .. code-block:: console
 
     $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-    $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
+    $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe'
     $ sudo apt-get update
     $ sudo apt-get install -y \
       sawtooth \
       python3-sawtooth-poet-engine \
+      python3-sawtooth-poet-families \
       python3-sawtooth-poet-sgx
 
 Certificate File
@@ -508,7 +509,7 @@ by copying the example file from ``/etc/sawtooth/rest_api.toml.example``.
 
 .. code-block:: console
 
-    $ sudo cp /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
+    $ sudo cp -a /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
 
 Use ``sudo`` to edit this file.
 

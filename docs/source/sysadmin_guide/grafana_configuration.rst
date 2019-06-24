@@ -262,7 +262,7 @@ the Sawtooth nodes to send operating system and hardware metrics to InfluxDB.
    .. code-block:: console
 
       $ curl -sL https://repos.influxdata.com/influxdb.key |  sudo apt-key add -
-      $ sudo apt-add-repository "deb https://repos.influxdata.com/ubuntu xenial stable"
+      $ sudo apt-add-repository "deb https://repos.influxdata.com/ubuntu bionic stable"
       $ sudo apt-get update
       $ sudo apt-get install telegraf
 

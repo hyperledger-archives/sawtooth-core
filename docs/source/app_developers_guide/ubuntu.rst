@@ -90,7 +90,7 @@ stable or nightly.  We recommend using the stable repository.
      .. code-block:: console
 
        user@validator$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-       user@validator$ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
+       user@validator$ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe'
        user@validator$ sudo apt-get update
 
    * To use the nightly repository, run the following commands:
@@ -104,7 +104,7 @@ stable or nightly.  We recommend using the stable repository.
      .. code-block:: console
 
         user@validator$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-        user@validator$ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
+        user@validator$ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe"
         user@validator$ sudo apt-get update
 
 #. Install the Sawtooth packages. Sawtooth consists of several Ubuntu packages

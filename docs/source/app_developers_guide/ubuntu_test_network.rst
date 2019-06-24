@@ -180,7 +180,7 @@ setting is in the off-chain
 
    .. code-block:: console
 
-      $ sudo cp /etc/sawtooth/validator.toml.example /etc/sawtooth/validator.toml
+      $ sudo cp -a /etc/sawtooth/validator.toml.example /etc/sawtooth/validator.toml
 
 #. Use ``sudo`` to edit this file.
 
