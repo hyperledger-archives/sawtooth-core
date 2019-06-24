@@ -149,7 +149,7 @@ Requirements:
   .. code-block:: none
 
      sawtooth.consensus.algorithm.name=pbft
-     sawtooth.consensus.algorithm.version=[VERSION]
+     sawtooth.consensus.algorithm.version=1.0
      sawtooth.consensus.pbft.members=["VAL1KEY","VAL2KEY",...,"VALnKEY"]
 
   .. note::
