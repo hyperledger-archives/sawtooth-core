@@ -20,7 +20,7 @@ volumes:
 
 services:
   shell:
-    image: hyperledger/sawtooth-all:chime
+    image: hyperledger/sawtooth-shell:chime
     container_name: sawtooth-shell-default
     entrypoint: "bash -c \"\
         sawtooth keygen && \

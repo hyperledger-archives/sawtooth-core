@@ -80,7 +80,7 @@ services:
     entrypoint: sawtooth-rest-api -C tcp://validator:4004 --bind rest-api:8008
 
   shell:
-    image: hyperledger/sawtooth-all:chime
+    image: hyperledger/sawtooth-shell:chime
     container_name: sawtooth-shell-default
     depends_on:
       - rest-api
