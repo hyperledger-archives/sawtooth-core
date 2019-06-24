@@ -72,10 +72,8 @@ genesis block also includes the keys for the other nodes in the initial network.
         --key /etc/sawtooth/keys/validator.priv \
         -o config-consensus.batch \
         sawtooth.consensus.algorithm.name=pbft \
-        sawtooth.consensus.algorithm.version=VERSION \
+        sawtooth.consensus.algorithm.version=1.0 \
         sawtooth.consensus.pbft.members='["VAL1KEY","VAL2KEY",...,"VALnKEY"]'
-
-     Replace ``VERSION`` with the PBFT version number.
 
        .. tip::
 
