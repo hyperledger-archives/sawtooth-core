@@ -17,7 +17,7 @@ items:
       spec:
         containers:
           - name: sawtooth-devmode-engine
-            image: hyperledger/sawtooth-devmode-engine-rust:1.1
+            image: hyperledger/sawtooth-devmode-engine-rust:nightly
             command:
               - bash
             args:
@@ -25,7 +25,7 @@ items:
               - "devmode-engine-rust -C tcp://$HOSTNAME:5050"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -33,7 +33,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -41,7 +41,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
@@ -49,7 +49,7 @@ items:
               - "xo-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -77,7 +77,7 @@ items:
                   --bind network:tcp://eth0:8800"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -88,7 +88,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
