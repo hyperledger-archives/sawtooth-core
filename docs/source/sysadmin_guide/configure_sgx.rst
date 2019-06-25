@@ -507,7 +507,7 @@ by copying the example file from ``/etc/sawtooth/rest_api.toml.example``.
 
 .. code-block:: console
 
-    $ sudo cp /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
+    $ sudo cp -a /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
 
 Use ``sudo`` to edit this file.
 

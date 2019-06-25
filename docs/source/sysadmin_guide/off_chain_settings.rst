@@ -51,7 +51,7 @@ Additional steps specify the peers for this node, change the scheduler type
 
    .. code-block:: console
 
-      $ sudo cp /etc/sawtooth/validator.toml.example /etc/sawtooth/validator.toml
+      $ sudo cp -a /etc/sawtooth/validator.toml.example /etc/sawtooth/validator.toml
 
 #. Use ``sudo`` to edit this file.
 
@@ -259,7 +259,7 @@ Use these steps to change the network settings for the REST API.
 
    .. code-block:: console
 
-      $ sudo cp /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
+      $ sudo cp -a /etc/sawtooth/rest_api.toml.example /etc/sawtooth/rest_api.toml
 
 #. Use ``sudo`` to edit this file.
 
@@ -314,7 +314,7 @@ For more information, see
 
    .. code-block:: console
 
-      $ sudo cp /etc/sawtooth/cli.toml.example /etc/sawtooth/cli.toml
+      $ sudo cp -a /etc/sawtooth/cli.toml.example /etc/sawtooth/cli.toml
 
 #. Use ``sudo`` to edit this file.
 
