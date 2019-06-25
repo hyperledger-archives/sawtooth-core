@@ -203,7 +203,7 @@ Requirements:
   processor (included in the ``sawtooth`` package):
 
   * Service: ``sawtooth-poet-validator-registry-tp.service``
-  * Executable: ``sawtooth-poet-validator-registry-tp``
+  * Executable: ``poet-validator-registry-tp``
 
 * Use these on-chain settings for the PoET consensus engine:
 

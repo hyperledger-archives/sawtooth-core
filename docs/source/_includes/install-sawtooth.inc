@@ -40,7 +40,8 @@
 
       $ sudo apt-get install -y sawtooth
 
-#. Install a Sawtooth consensus engine package.
+#. Install a Sawtooth consensus engine package. For PoET, also install the PoET
+   Validator Registry transaction family package.
 
    * For PBFT:
 
@@ -52,7 +53,7 @@
 
      .. code-block:: console
 
-        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine
+        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine python3-sawtooth-poet-families
 
    .. tip::
    
