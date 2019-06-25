@@ -1,17 +1,17 @@
 1. Choose whether you want the stable version (recommended) or the most recent
    nightly build (for testing purposes only).
 
-   * (Release 1.1 and later) To add the stable repository, run these commands in
+   * (Release 1.2 and later) To add the stable repository, run these commands in
      a terminal window on your host system.
 
      .. code-block:: console
 
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-        $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable xenial universe'
+        $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe'
 
      .. note::
 
-        The ``bumper`` metapackage includes the Sawtooth core software and
+        The ``chime`` metapackage includes the Sawtooth core software and
         associated items such as separate consensus software.
 
    * The latest version of Sawtooth is available in a repository of nightly
@@ -24,7 +24,7 @@
      .. code-block:: console
 
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-        $ sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly xenial universe'
+        $ sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly bionic universe'
 
 #. Update your package lists.
 
