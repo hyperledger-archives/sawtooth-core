@@ -27,6 +27,9 @@
 
 FROM ubuntu:bionic
 
+RUN apt-get update \
+&& apt-get install gnupg -y
+
 LABEL "install-type"="repo"
 
 RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/bumper/stable bionic universe" >> /etc/apt/sources.list \
