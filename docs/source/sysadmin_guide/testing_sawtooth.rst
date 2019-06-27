@@ -3,7 +3,7 @@ Testing Sawtooth Functionality
 
 .. note::
 
-    These instructions have been tested on Ubuntu 16.04 only.
+    These instructions have been tested on Ubuntu 18.04 (Bionic) only.
 
 **Test a single node**
 
