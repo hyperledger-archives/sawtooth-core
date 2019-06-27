@@ -3,8 +3,8 @@ Using Ubuntu for a Single Sawtooth Node
 *********************************************
 
 This procedure explains how to set up Hyperledger Sawtooth for application
-development on Ubuntu 16.04. It shows you how to install Sawtooth on Ubuntu,
-then walks you through the following tasks:
+development on Ubuntu 18.04 (Bionic). It shows you how to install Sawtooth on
+Ubuntu, then walks you through the following tasks:
 
  * Generating a user key
  * Generating a root key
@@ -67,7 +67,7 @@ for each Sawtooth component and one to use for client commands.
 Prerequisites
 =============
 
-This Sawtooth development environment requires Ubuntu 16.04.
+This Sawtooth development environment requires Ubuntu 18.04 (Bionic).
 
 
 Step 1: Install Sawtooth

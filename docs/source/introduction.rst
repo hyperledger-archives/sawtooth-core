@@ -276,7 +276,7 @@ included example :term:`transaction families<Transaction family>`, as
 well as to any transaction families you might write yourself.
 
 Sawtooth validators can be run from pre-built Docker containers, installed
-natively using Ubuntu 16.04, or launched in AWS from the AWS Marketplace.
+natively using Ubuntu, or launched in AWS from the AWS Marketplace.
 
 To get started, see :doc:`/app_developers_guide/installing_sawtooth`.
 

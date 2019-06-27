@@ -4,7 +4,7 @@ Using Grafana to Display Sawtooth Metrics
 
 .. note::
 
-    These instructions have been tested on Ubuntu 16.04 only.
+    These instructions have been tested on Ubuntu 18.04 (Bionic) only.
 
 This procedure describes how to display Sawtooth metrics with
 `Grafana <https://grafana.com>`__, using
