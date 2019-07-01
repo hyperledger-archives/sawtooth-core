@@ -196,10 +196,13 @@ For more information, see :doc:`/sysadmin_guide/about_dynamic_consensus`.
 Sample Transaction Families
 ---------------------------
 
-In Sawtooth, the data model and transaction language are implemented
-in a :term:`transaction family<Transaction family>`. While we expect users to
-build custom transaction families that reflect the unique requirements of their
-ledgers, we provide several core transaction families as models\:
+In a Sawtooth application, the data model and transaction language are
+implemented in a :term:`transaction family<Transaction family>`, which runs
+on a Sawtooth node as a :term:`transaction processor`.
+
+While most application developers will build custom transaction families
+that reflect the unique requirements of their ledgers, Sawtooth provides
+several core transaction families as models\:
 
     * IntegerKey - Used for testing deployed ledgers.
 
@@ -220,12 +223,12 @@ Additional transaction families provide models for specific areas\:
     * BlockInfo - Provides a methodology for storing information
       about a configurable number of historic blocks.
 
-The following projects provide smart-contract functionality for the Sawtooth
+Other Hyperledger projects provide smart-contract functionality for the Sawtooth
 platform\:
 
     * `Sawtooth Sabre <https://sawtooth.hyperledger.org/docs/sabre/releases/latest/>`__ -
       Implements on-chain smart contracts that are executed in a WebAssembly
-      (WASM) virtual machine
+      (WASM) virtual machine.
 
     * `Sawtooth Seth <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>`__ -
       Supports running Ethereum Virtual Machine (EVM) smart contracts on Sawtooth
