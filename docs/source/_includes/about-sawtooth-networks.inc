@@ -27,6 +27,11 @@ they join the network.
 
 A Sawtooth network has the following requirements:
 
+* Each node must run the same :term:`consensus engine`. The procedures in this
+  guide show you how to configure :term:`PBFT <PBFT consensus>` or
+  :term:`PoET <PoET consensus>` consensus. For more information, see
+  :doc:`/sysadmin_guide/about_dynamic_consensus`.
+
 * Each node must run the same set of transaction processors as all other nodes
   in the network.
 
