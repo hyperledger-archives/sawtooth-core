@@ -74,7 +74,7 @@ your own transaction family. These transaction families are available in the
 
 The following transaction families run on top of the Sawtooth platform:
 
-* `Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>`__:
+* `Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/releases/latest/>`__:
   Implements on-chain smart contracts that are executed in a WebAssembly (WASM)
   virtual machine.
   This transaction family is in the
@@ -96,7 +96,7 @@ The following transaction families run on top of the Sawtooth platform:
    transaction_family_specifications/xo_transaction_family.rst
    transaction_family_specifications/validator_registry_transaction_family.rst
    transaction_family_specifications/smallbank_transaction_family.rst
-   Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>
+   Sawtooth Sabre Transaction Family <https://sawtooth.hyperledger.org/docs/sabre/releases/latest/>
    Sawtooth Seth Transaction Family <https://sawtooth.hyperledger.org/docs/seth/nightly/master/>
 
 .. Licensed under Creative Commons Attribution 4.0 International License

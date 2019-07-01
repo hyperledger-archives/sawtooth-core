@@ -151,7 +151,7 @@ transaction or two.
 The Sawtooth consensus API supports a wide variety of consensus algorithms on a
 network. Sawtooth currently includes consensus engines for these algorithms:
 
-    * `Sawtooth PBFT <https://sawtooth.hyperledger.org/docs/pbft/nightly/master/>`__
+    * `Sawtooth PBFT <https://sawtooth.hyperledger.org/docs/pbft/releases/latest/>`__
       (Practical Byzantine Fault Tolerance) is a voting-based consensus
       algorithm that provides Byzantine fault tolerance with finality.
       Sawtooth PBFT extends the
@@ -223,7 +223,7 @@ Additional transaction families provide models for specific areas\:
 The following projects provide smart-contract functionality for the Sawtooth
 platform\:
 
-    * `Sawtooth Sabre <https://sawtooth.hyperledger.org/docs/sabre/nightly/master/>`__ -
+    * `Sawtooth Sabre <https://sawtooth.hyperledger.org/docs/sabre/releases/latest/>`__ -
       Implements on-chain smart contracts that are executed in a WebAssembly
       (WASM) virtual machine
 
