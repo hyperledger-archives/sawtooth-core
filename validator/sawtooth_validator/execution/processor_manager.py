@@ -149,6 +149,9 @@ class ProcessorManager:
             None
         """
         with self._condition:
+            if processor_type not in self:
+                LOGGER.info("waiting for processor type %s to register",
+                            processor_type)
             self._condition.wait_for(lambda: (
                 processor_type in self
                 or self._cancelled_event.is_set()))
