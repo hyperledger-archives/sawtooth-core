@@ -411,16 +411,6 @@ impl CandidateBlock {
                         "Batch {} is invalid, due to missing txn dependency",
                         header_signature
                     );
-                    bad_batches.push(batch.clone());
-                    pending_batches.clear();
-                    pending_batches.append(
-                        &mut self
-                            .pending_batches
-                            .clone()
-                            .into_iter()
-                            .filter(|b| !bad_batches.contains(b))
-                            .collect(),
-                    );
                     return Ok(None);
                 } else {
                     let gil = Python::acquire_gil();
