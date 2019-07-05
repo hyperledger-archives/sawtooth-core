@@ -9,7 +9,9 @@
 | Dan Middleton | dcmiddle | Dan |
 | Darian Plumb | dplumb94 | dplumb |
 | James Mitchell | jsmitchell | jsmitchell |
+| Logan Seeley | ltseeley | ltseeley |
 | Peter Schwarz | peterschwarz | pschwarz |
+| Richard Berg | rberg2 | rberg2 |
 | Ryan Beck-Buysse | rbuysse | rbuysse |
 | Shawn Amundson | vaporos | amundson |
 
