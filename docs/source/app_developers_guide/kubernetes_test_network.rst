@@ -608,21 +608,6 @@ create and submit a batch of transactions containing the configuration change.
 
            [2018-09-05 20:07:41.903 DEBUG    core] received message of type: TP_PROCESS_REQUEST
 
-   * You can also connect to the ``sawtooth-settings-tp`` container on any pod,
-     then examine ``/var/log/sawtooth/logs/settings-xxxxxxx-debug.log``. (Each
-     Settings log file has a unique string in the name.) The messages will
-     resemble this example:
-
-     .. code-block:: none
-
-         .
-         .
-         .
-        [20:07:58.039 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
-        [20:07:58.190 [MainThread] handler INFO] Setting setting
-        sawtooth.validator.transaction_families changed from None to [{"family":
-        "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, ...
-
 #. Run the following command to check the setting change. You can use any
    container, such as a shell or another validator container.
 
