@@ -75,9 +75,9 @@ Prerequisites
   transaction processor.
   (The IntegerKey transaction processor is not used in this procedure.)
 
-* This procedure also requires the XO transaction processor. The Docker and AWS
-  procedures start it automatically. For Ubuntu, this procedure shows how to
-  start the XO transaction processor if necessary.
+* This procedure also requires the XO transaction processor. The Docker and
+  Kubernetes procedures start it automatically. For Ubuntu, this procedure shows
+  how to start the XO transaction processor if necessary.
 
 
 Step 1: Connect to the Sawtooth Node
@@ -88,8 +88,6 @@ To connect to the Sawtooth node, use the steps for your platform:
 * Docker: See :ref:`log-into-client-container-docker`
 
 * Kubernetes: See :ref:`connect-to-shell-container-k8s`
-
-* AWS: See :ref:`connect-to-instance-aws`
 
 * Ubuntu: Open a client terminal window on the host system running Sawtooth
 
@@ -118,8 +116,6 @@ If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
            $ xo create my-game --username jack --url http://rest-api:8008
 
 * Kubernetes: See :ref:`confirming-connectivity-k8s-label`
-
-* AWS: See :ref:`confirming-connectivity-aws-label`
 
 * Ubuntu: See :ref:`confirming-rest-api-ubuntu-label`
 

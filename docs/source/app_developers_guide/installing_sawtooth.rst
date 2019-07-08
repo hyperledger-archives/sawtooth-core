@@ -18,9 +18,7 @@ well as any transaction processors you might write yourself.
 You can install and run a single-node Sawtooth application development
 environment using prebuilt `Docker <https://www.docker.com/>`_ containers,
 a `Kubernetes <https://kubernetes.io>`_ cluster inside a virtual machine on
-your computer, `Amazon Web Services
-(AWS) <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_,
-or a native `Ubuntu <https://www.ubuntu.com/>`_ installation.
+your computer, or a native `Ubuntu <https://www.ubuntu.com/>`_ installation.
 
 To get started, choose the guide for the platform of your choice.
 
@@ -29,7 +27,6 @@ To get started, choose the guide for the platform of your choice.
 
 	docker.rst
 	kubernetes.rst
-	aws.rst
 	ubuntu.rst
 
 .. Licensed under Creative Commons Attribution 4.0 International License
