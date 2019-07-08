@@ -17,7 +17,7 @@ items:
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -25,7 +25,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-poet-engine
-            image: hyperledger/sawtooth-poet-engine:1.1
+            image: hyperledger/sawtooth-poet-engine:nightly
             command:
               - bash
             args:
@@ -51,7 +51,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-poet-validator-registry-tp
-            image: hyperledger/sawtooth-poet-validator-registry-tp:1.1
+            image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
             command:
               - bash
             args:
@@ -59,7 +59,7 @@ items:
               - "poet-validator-registry-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -70,7 +70,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -78,7 +78,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
@@ -86,7 +86,7 @@ items:
               - "sawtooth keygen && tail -f /dev/null"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -154,7 +154,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
@@ -207,7 +207,7 @@ items:
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -215,7 +215,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-poet-engine
-            image: hyperledger/sawtooth-poet-engine:1.1
+            image: hyperledger/sawtooth-poet-engine:nightly
             command:
               - bash
             args:
@@ -231,7 +231,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-poet-validator-registry-tp
-            image: hyperledger/sawtooth-poet-validator-registry-tp:1.1
+            image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
             command:
               - bash
             args:
@@ -239,7 +239,7 @@ items:
               - "poet-validator-registry-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -250,7 +250,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -258,7 +258,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
@@ -266,7 +266,7 @@ items:
               - "sawtooth keygen && tail -f /dev/null"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -296,7 +296,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
@@ -349,7 +349,7 @@ items:
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -357,7 +357,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-poet-engine
-            image: hyperledger/sawtooth-poet-engine:1.1
+            image: hyperledger/sawtooth-poet-engine:nightly
             command:
               - bash
             args:
@@ -373,7 +373,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-poet-validator-registry-tp
-            image: hyperledger/sawtooth-poet-validator-registry-tp:1.1
+            image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
             command:
               - bash
             args:
@@ -381,7 +381,7 @@ items:
               - "poet-validator-registry-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -392,7 +392,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -400,7 +400,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
@@ -408,7 +408,7 @@ items:
               - "sawtooth keygen && tail -f /dev/null"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -438,7 +438,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
@@ -491,7 +491,7 @@ items:
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -499,7 +499,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-poet-engine
-            image: hyperledger/sawtooth-poet-engine:1.1
+            image: hyperledger/sawtooth-poet-engine:nightly
             command:
               - bash
             args:
@@ -515,7 +515,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-poet-validator-registry-tp
-            image: hyperledger/sawtooth-poet-validator-registry-tp:1.1
+            image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
             command:
               - bash
             args:
@@ -523,7 +523,7 @@ items:
               - "poet-validator-registry-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -534,7 +534,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -542,7 +542,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
@@ -550,7 +550,7 @@ items:
               - "sawtooth keygen && tail -f /dev/null"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -580,7 +580,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
@@ -633,7 +633,7 @@ items:
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
-            image: hyperledger/sawtooth-intkey-tp-python:1.1
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
             command:
               - bash
             args:
@@ -641,7 +641,7 @@ items:
               - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-poet-engine
-            image: hyperledger/sawtooth-poet-engine:1.1
+            image: hyperledger/sawtooth-poet-engine:nightly
             command:
               - bash
             args:
@@ -657,7 +657,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-poet-validator-registry-tp
-            image: hyperledger/sawtooth-poet-validator-registry-tp:1.1
+            image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
             command:
               - bash
             args:
@@ -665,7 +665,7 @@ items:
               - "poet-validator-registry-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-rest-api
-            image: hyperledger/sawtooth-rest-api:1.1
+            image: hyperledger/sawtooth-rest-api:nightly
             ports:
               - name: api
                 containerPort: 8008
@@ -676,7 +676,7 @@ items:
               - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-settings-tp
-            image: hyperledger/sawtooth-settings-tp:1.1
+            image: hyperledger/sawtooth-settings-tp:nightly
             command:
               - bash
             args:
@@ -684,7 +684,7 @@ items:
               - "settings-tp -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-shell
-            image: hyperledger/sawtooth-shell:1.1
+            image: hyperledger/sawtooth-shell:nightly
             command:
               - bash
             args:
@@ -692,7 +692,7 @@ items:
               - "sawtooth keygen && tail -f /dev/null"
 
           - name: sawtooth-validator
-            image: hyperledger/sawtooth-validator:1.1
+            image: hyperledger/sawtooth-validator:nightly
             ports:
               - name: tp
                 containerPort: 4004
@@ -722,7 +722,7 @@ items:
                   mountPath: "/poet-shared"
 
           - name: sawtooth-xo-tp-python
-            image: hyperledger/sawtooth-xo-tp-python:1.1
+            image: hyperledger/sawtooth-xo-tp-python:nightly
             command:
               - bash
             args:
