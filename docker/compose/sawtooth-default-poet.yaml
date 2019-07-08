@@ -349,7 +349,7 @@ services:
     container_name: sawtooth-settings-tp-default-0
     expose:
       - 4004
-    command: settings-tp -C tcp://validator-0:4004
+    command: settings-tp -v -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   settings-tp-1:
@@ -357,7 +357,7 @@ services:
     container_name: sawtooth-settings-tp-default-1
     expose:
       - 4004
-    command: settings-tp -C tcp://validator-1:4004
+    command: settings-tp -v -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   settings-tp-2:
@@ -365,7 +365,7 @@ services:
     container_name: sawtooth-settings-tp-default-2
     expose:
       - 4004
-    command: settings-tp -C tcp://validator-2:4004
+    command: settings-tp -v -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
   settings-tp-3:
@@ -373,7 +373,7 @@ services:
     container_name: sawtooth-settings-tp-default-3
     expose:
       - 4004
-    command: settings-tp -C tcp://validator-3:4004
+    command: settings-tp -v -C tcp://validator-3:4004
     stop_signal: SIGKILL
 
   settings-tp-4:
@@ -381,7 +381,7 @@ services:
     container_name: sawtooth-settings-tp-default-4
     expose:
       - 4004
-    command: settings-tp -C tcp://validator-4:4004
+    command: settings-tp -v -C tcp://validator-4:4004
     stop_signal: SIGKILL
 
   poet-engine-0:
