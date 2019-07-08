@@ -556,7 +556,7 @@ handles on-chain configuration settings. You will use the ``sawset`` command to
 create and submit a batch of transactions containing the configuration change.
 
 1. Connect to the validator container of the first node. The next command
-   requires the validator key that was generated in that container.
+   requires the user key that was generated in that container.
 
    Replace ``pod-0-xxxxxxxxxx-yyyyy`` with the name of the first pod, as
    shown by ``kubectl get pods``.
@@ -573,14 +573,14 @@ create and submit a batch of transactions containing the configuration change.
 
      .. code-block:: console
 
-        root@sawtooth-0# sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        root@sawtooth-0# sawset proposal create --key /root/.sawtooth/keys/my_key.priv \
         sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}]'
 
    * For PoET:
 
      .. code-block:: console
 
-        root@sawtooth-0# sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        root@sawtooth-0# sawset proposal create --key /root/.sawtooth/keys/my_key.priv \
         sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array
