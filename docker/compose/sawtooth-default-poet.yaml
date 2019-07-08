@@ -68,7 +68,7 @@ services:
           --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
-          --peering dynamic \
+          --peering static \
           --endpoint tcp://validator-0:8800 \
           --scheduler parallel \
           --network-auth trust
@@ -97,9 +97,9 @@ services:
             --bind network:tcp://eth0:8800 \
             --bind component:tcp://eth0:4004 \
             --bind consensus:tcp://eth0:5050 \
-            --peering dynamic \
+            --peering static \
             --endpoint tcp://validator-1:8800 \
-            --seeds tcp://validator-0:8800 \
+            --peers tcp://validator-0:8800 \
             --scheduler parallel \
             --network-auth trust
       "
@@ -127,9 +127,9 @@ services:
             --bind network:tcp://eth0:8800 \
             --bind component:tcp://eth0:4004 \
             --bind consensus:tcp://eth0:5050 \
-            --peering dynamic \
+            --peering static \
             --endpoint tcp://validator-2:8800 \
-            --seeds tcp://validator-0:8800 \
+            --peers tcp://validator-0:8800,tcp://validator-1:8800 \
             --scheduler parallel \
             --network-auth trust
       "
@@ -157,9 +157,9 @@ services:
             --bind network:tcp://eth0:8800 \
             --bind component:tcp://eth0:4004 \
             --bind consensus:tcp://eth0:5050 \
-            --peering dynamic \
+            --peering static \
             --endpoint tcp://validator-3:8800 \
-            --seeds tcp://validator-0:8800 \
+            --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800 \
             --scheduler parallel \
             --network-auth trust
       "
@@ -187,9 +187,9 @@ services:
             --bind network:tcp://eth0:8800 \
             --bind component:tcp://eth0:4004 \
             --bind consensus:tcp://eth0:5050 \
-            --peering dynamic \
+            --peering static \
             --endpoint tcp://validator-4:8800 \
-            --seeds tcp://validator-0:8800 \
+            --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
             --scheduler parallel \
             --network-auth trust
       "
