@@ -480,7 +480,7 @@ Step 6: Confirm Network and Blockchain Functionality
 
       .. code-block:: console
 
-         root@sawtooth-N# sawnet peers list
+         root@sawtooth-N# sawnet peers list http://localhost:8008
 
 #. You can submit a transaction on one Sawtooth node, then look for the results
    of that transaction on another node.
