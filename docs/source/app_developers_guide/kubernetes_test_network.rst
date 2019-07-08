@@ -521,7 +521,7 @@ Step 6: Confirm Network and Blockchain Functionality
 
       root@sawtooth-3# ps --pid 1 fw
         PID TTY      STAT   TIME COMMAND
-          1 ?        Ssl    0:02 /usr/bin/python3 /usr/bin/settings-tp -vv -C tcp://sawtooth-3-5bd565ff45-2klm7:4004
+          1 ?        Ssl    0:02 settings-tp -vv -C tcp://sawtooth-3-5bd565ff45-2klm7:4004
 
 At this point, your environment is ready for experimenting with Sawtooth.
 
