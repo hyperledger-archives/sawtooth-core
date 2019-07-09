@@ -19,6 +19,7 @@ name = "sawtooth-identity-tp"
 version = "0.1.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
+description = "The Sawtooth Identity TP for validating on-chain roles and identities."
 
 [[bin]]
 name = "identity-tp"
