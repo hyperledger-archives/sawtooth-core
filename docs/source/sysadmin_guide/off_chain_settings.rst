@@ -191,13 +191,13 @@ Additional steps specify the peers for this node, change the scheduler type
 
          .. code-block:: python
 
-            python
+            python3
              ...
             >>> import zmq
             >>> (public, secret) = zmq.curve_keypair()
-            >>> print public
+            >>> print(public.decode('UTF-8'))
             wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)
-            >>> print secret
+            >>> print(secret.decode('UTF-8'))
             r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*
 
       * Or you could use the following steps to compile and run ``curve_keygen``
