@@ -278,8 +278,8 @@ using HTTP and the Sawtooth :term:`REST API`. These methods apply to the
 included example :term:`transaction families<Transaction family>`, as
 well as to any transaction families you might write yourself.
 
-Sawtooth validators can be run from pre-built Docker containers, installed
-natively using Ubuntu, or launched in AWS from the AWS Marketplace.
+Sawtooth can be run from a pre-built Docker container, from a Kubernetes cluster
+inside a virtual machine on your computer, or on a native Ubuntu installation.
 
 To get started, see :doc:`/app_developers_guide/installing_sawtooth`.
 
