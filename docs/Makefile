@@ -71,6 +71,7 @@ html: templates cli
 	@cp $(SAWTOOTH)/docker/compose/sawtooth-default-pbft.yaml $(HTMLDIR)/app_developers_guide/sawtooth-default-pbft.yaml
 	@cp $(SAWTOOTH)/docker/compose/sawtooth-default-poet.yaml $(HTMLDIR)/app_developers_guide/sawtooth-default-poet.yaml
 	@cp $(SAWTOOTH)/docker/kubernetes/sawtooth-kubernetes-default.yaml $(HTMLDIR)/app_developers_guide/sawtooth-kubernetes-default.yaml
+	@cp $(SAWTOOTH)/docker/kubernetes/sawtooth-kubernetes-default-pbft.yaml $(HTMLDIR)/app_developers_guide/sawtooth-kubernetes-default-pbft.yaml
 	@cp $(SAWTOOTH)/docker/kubernetes/sawtooth-kubernetes-default-poet.yaml $(HTMLDIR)/app_developers_guide/sawtooth-kubernetes-default-poet.yaml
 
 dirhtml: templates cli
