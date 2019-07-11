@@ -333,7 +333,7 @@ to start each component.
 
      .. code-block:: console
 
-        $ sudo -u sawtooth sawtooth-poet-engine -vv --connect tcp://localhost:5050
+        $ sudo -u sawtooth poet-engine -vv --connect tcp://localhost:5050
 
    The terminal window displays log messages as the consensus engine connects to
    and registers with the validator. The output will be similar to this example:

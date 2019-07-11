@@ -316,25 +316,15 @@ create and submit a batch of transactions containing the configuration change.
    :doc:`transaction family specification <../transaction_family_specifications>`).
 
 #. After this command runs, a ``TP_PROCESS_REQUEST`` message appears in the
-   Settings transaction processor log.
-
-   You can view this log file by connecting to the Sawtooth Settings container
-   on any node, then examining
-   ``/var/log/sawtooth/logs/settings-{xxxxxxx}-debug.log``. (Each Settings log
-   file has a unique string in the name.)
-
-   For example, connect to the Sawtooth Settings container on the first node
-   (``sawtooth-settings-tp-default-0``), then display the end of the log file.
+   docker-compose output.
 
    .. code-block:: console
 
-      user@host$ docker exec -it sawtooth-settings-tp-default-0 bash
-      root@1bee7c8d9# tail /var/log/sawtooth/settings-*-debug.log
       .
       .
       .
-      [22:18:33.137 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
-      [22:18:33.219 [MainThread] handler INFO] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, ...
+      sawtooth-settings-tp-default-0  | INFO  | settings_tp::handler | Setting "sawtooth.validator.transaction_families" changed to "[{\"family\": \"intkey\", \"version\": \"1.0\"}, {\"family\":\"sawtooth_settings\", \"version\":\"1.0\"}, {\"family\":\"xo\", \"version\":\"1.0\"}, {\"family\":\"sawtooth_validator_registry\", \"version\":\"1.0\"}]"
+      sawtooth-settings-tp-default-0  | INFO  | sawtooth_sdk::proces | TP_PROCESS_REQUEST sending TpProcessResponse: OK
 
 #. Run the following command to check the setting change on the shell container
    or any validator container. You can specify any REST API on the network;
