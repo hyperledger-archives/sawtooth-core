@@ -19,6 +19,7 @@ name = "sawtooth-block-info-tp"
 version = "1.0.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
+description = "The Sawtooth Block Info transaction processor"
 
 [package.metadata.deb]
 depends = "$auto"
