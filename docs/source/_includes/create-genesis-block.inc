@@ -46,7 +46,9 @@ genesis block also includes the keys for the other nodes in the initial network.
       You must use the same key for the ``sawset proposal create`` commands
       in the following steps. In theory, some of these commands could use a
       different key, but configuring multiple keys is a complicated process
-      that is not shown in this procedure.
+      that is not shown in this procedure. For more information, see
+      :doc:`/sysadmin_guide/adding_authorized_users`.
+
 
 #. Create a batch to initialize the consensus settings.
 

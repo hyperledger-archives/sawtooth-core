@@ -22,11 +22,11 @@ accepted transaction types to those from this network's transaction processors
 
    .. important::
 
-      If the genesis block was created with the first validator's key, and there
-      are no other authorized users, you **must** run this procedure on the same
-      node that created the genesis block, because the
-      ``sawset proposal create`` command requires the private validator key
-      from that node.
+      If the genesis block was created with the first validator's key,
+      and there are no other :doc:`authorized users <adding_authorized_users>`,
+      you **must** run this procedure on the same node that created the genesis
+      block, because the ``sawset proposal create`` command requires the private
+      validator key from that node.
 
 #. Use the ``sawset proposal create`` command to create and submit a batch of
    transactions that changes the allowed transaction types.
@@ -35,7 +35,9 @@ accepted transaction types to those from this network's transaction processors
 
       For ``{PRIVATE-KEY}``, specify the path to the private key file for an
       authorized user or validator, such as the key used to create the genesis
-      block.
+      block. For more information, see
+      :doc:`/sysadmin_guide/adding_authorized_users`.
+
 
    * For PBFT:
 
