@@ -15,8 +15,8 @@ genesis block also includes the keys for the other nodes in the initial network.
 
    .. code-block:: console
 
-      $ ls ~/.sawtooth/keys/
-      {yourname}.priv    {yourname}.pub
+      $ ls $HOME/.sawtooth/keys/
+      my_key.priv    my_key.pub
 
       $ ls /etc/sawtooth/keys/
       validator.priv   validator.pub
@@ -24,43 +24,29 @@ genesis block also includes the keys for the other nodes in the initial network.
    If these key files do not exist, create them as described in the previous
    step.
 
-#. Become the ``sawtooth`` user. Otherwise, you must preface each command with
-   ``sudo -u sawtooth``.
-
-   .. code-block:: console
-
-      $ sudo -u sawtooth -s
-      [sawtooth@system]$
-
-   In the following commands, the prompt ``[sawtooth@system]`` shows the
-   commands that must be executed as the ``sawtooth`` user.
-
 #. Change to a writable directory such as ``/tmp``.
 
    .. code-block:: console
 
-      [sawtooth@system]$ cd /tmp
+      $ cd /tmp
 
 #. Create a batch with a settings proposal for the genesis block.
 
    .. code-block:: console
 
-      [sawtooth@system]$ sawset genesis \
-      --key /etc/sawtooth/keys/validator.priv \
+      $ sawset genesis --key $HOME/.sawtooth/keys/my_key.priv \
       -o config-genesis.batch
 
-   This command authorizes this key (the validator key on this node) to change
-   Sawtooth settings. You must use the same key for the following commands in
-   this procedure. Also, any later commands to change on-chain Sawtooth settings
-   must specify this key.
+   This command authorizes you to set and change Sawtooth settings. The
+   settings changes will take effect after the validator and Settings
+   transaction processor have started.
 
    .. note::
 
-      This procedure uses the same validator key for all commands that require a
-      key. In theory, some of these commands could use a different key, but
-      configuring multiple keys is a complicated process. Describing how to use
-      multiple keys to create the genesis block is outside the scope of this
-      guide.
+      You must use the same key for the ``sawset proposal create`` commands
+      in the following steps. In theory, some of these commands could use a
+      different key, but configuring multiple keys is a complicated process
+      that is not shown in this procedure.
 
 #. Create a batch to initialize the consensus settings.
 
@@ -68,8 +54,7 @@ genesis block also includes the keys for the other nodes in the initial network.
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawset proposal create \
-        --key /etc/sawtooth/keys/validator.priv \
+        $ sawset proposal create --key $HOME/.sawtooth/keys/my_key.priv \
         -o config-consensus.batch \
         sawtooth.consensus.algorithm.name=pbft \
         sawtooth.consensus.algorithm.version=1.0 \
@@ -91,8 +76,7 @@ genesis block also includes the keys for the other nodes in the initial network.
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawset proposal create \
-        --key /etc/sawtooth/keys/validator.priv \
+        $ sawset proposal create --key $HOME/.sawtooth/keys/my_key.priv \
         -o config-consensus.batch \
         sawtooth.consensus.algorithm.name=PoET \
         sawtooth.consensus.algorithm.version=0.1 \
@@ -105,10 +89,9 @@ genesis block also includes the keys for the other nodes in the initial network.
       This is a complicated command. Here's an explanation of the options and
       arguments:
 
-      ``--key /etc/sawtooth/keys/validator.priv``
-       Signs the proposal with this node's validator key. Only this key can be
-       used to change on-chain settings. For more information, see
-       :doc:`../sysadmin_guide/configuring_permissions`.
+      ``--key $HOME/.sawtooth/keys/my_key.priv``
+       Signs the proposal with your private key. Only this key can be
+       used to change on-chain settings.
 
       ``-o config-consensus.batch``
        Wraps the consensus proposal transaction in a batch named
@@ -142,12 +125,13 @@ genesis block also includes the keys for the other nodes in the initial network.
        Validator Registry uses this value to check signup information.
 
 #. (PoET only) Create a batch to register the first Sawtooth node with the PoET
-   Validator Registry transaction processor. Without this command, the validator
-   would not be able to publish any blocks.
+   Validator Registry transaction processor, using the validator's private key.
+   Without this command, the validator would not be able to publish any blocks.
+
 
    .. code-block:: console
 
-      [sawtooth@system]$ poet registration create --key /etc/sawtooth/keys/validator.priv -o poet.batch
+      $ poet registration create --key /etc/sawtooth/keys/validator.priv -o poet.batch
 
 #. (Optional) Create a batch to configure other consensus settings.
 
@@ -155,8 +139,7 @@ genesis block also includes the keys for the other nodes in the initial network.
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawset proposal create \
-        --key /etc/sawtooth/keys/validator.priv \
+        $ sawset proposal create --key $HOME/.sawtooth/keys/my_key.priv \
         -o pbft-settings.batch \
         SETTING-NAME=VALUE \
         ... \
@@ -170,8 +153,7 @@ genesis block also includes the keys for the other nodes in the initial network.
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawset proposal create \
-        --key /etc/sawtooth/keys/validator.priv \
+        $ sawset proposal create --key $HOME/.sawtooth/keys/my_key.priv \
         -o poet-settings.batch \
         sawtooth.poet.target_wait_time=5 \
         sawtooth.poet.initial_wait_time=25 \
@@ -180,26 +162,25 @@ genesis block also includes the keys for the other nodes in the initial network.
      .. note::
 
         This example shows the default PoET settings.
+        For more information, see the `Hyperledger Sawtooth Settings
+        FAQ <https://sawtooth.hyperledger.org/faq/settings/>`__.
 
-     For more information, see the `Hyperledger Sawtooth Settings
-     FAQ <https://sawtooth.hyperledger.org/faq/settings/>`__.
-
-#. Combine the separate batches into a single genesis batch that will be
-   committed in the genesis block.
+#. As the sawtooth user, combine the separate batches into a single genesis
+   batch that will be committed in the genesis block.
 
    * For PBFT:
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawadm genesis config-genesis.batch \
-        config-consensus.batch pbft-settings.batch
+        $ sudo -u sawtooth sawadm genesis \
+        config-genesis.batch config-consensus.batch pbft-settings.batch
 
    * For PoET:
 
      .. code-block:: console
 
-        [sawtooth@system]$ sawadm genesis config-genesis.batch \
-        config-consensus.batch poet.batch poet-settings.batch
+        $ sudo -u sawtooth sawadm genesis \
+        config-genesis.batch config-consensus.batch poet.batch poet-settings.batch
 
    You’ll see some output indicating success:
 
@@ -217,13 +198,7 @@ genesis block also includes the keys for the other nodes in the initial network.
       genesis`` will fail if they are not present in one of the batches unless
       the ``--ignore-required-settings`` flag is used.
 
-#. When this command finishes, the genesis block is complete. Log out of the
-   ``sawtooth`` account.
-
-   .. code-block:: console
-
-      [sawtooth@system]$ exit
-      $
+When this command finishes, the genesis block is complete.
 
 The settings in the genesis block will be available after the first node has
 started and the genesis block has been committed.
