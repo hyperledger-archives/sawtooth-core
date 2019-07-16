@@ -8,9 +8,9 @@
 
     .. code-block:: console
 
-       $ sawtooth keygen
-       writing file: /home/yourname/.sawtooth/keys/yourname.priv
-       writing file: /home/yourname/.sawtooth/keys/yourname.pub
+       $ sawtooth keygen my_key
+       writing file: /home/yourname/.sawtooth/keys/my_key.priv
+       writing file: /home/yourname/.sawtooth/keys/my_key.pub
 
 #. Generate the key for the validator, which runs as root.
 

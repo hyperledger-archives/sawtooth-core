@@ -133,8 +133,8 @@ Use these steps on each system to install Hyperledger Sawtooth.
 
 .. _appdev-multinode-keys-label:
 
-Step 2: Create User and Validator Keys on All Nodes
----------------------------------------------------
+Step 2: Create User and Validator Keys
+--------------------------------------
 
 .. note::
 
@@ -153,8 +153,8 @@ they join the network.
 
 **Prerequisites**:
 
-* If you are reusing an existing node, ensure that you have deleted blockchain
-  data before continuing (as described in :ref:`the Ubuntu section's
+* If you are reusing an existing node, make sure that you have deleted the
+  blockchain data before continuing (as described in :ref:`the Ubuntu section's
   prerequisites <prereqs-multi-ubuntu-label>`).
 
 * For PBFT, the genesis block requires the validator keys for at least four
@@ -162,7 +162,7 @@ they join the network.
   installed Sawtooth and generated keys on the other nodes, perform
   :ref:`Step 1 <appdev-multinode-install-label>` and
   :ref:`Step 2 <appdev-multinode-keys-label>`
-  on those nodes, then gather the keys nodes from
+  on those nodes, then gather the public keys from
   ``/etc/sawtooth/keys/validator.pub`` on each node.
 
 .. include:: ../_includes/create-genesis-block.inc
