@@ -40,19 +40,20 @@
 
       $ sudo apt-get install -y sawtooth
 
-#. Install a Sawtooth consensus engine package.
+ #. (PBFT only) Install the PBFT consensus engine package.
 
-   * For PBFT:
+    .. code-block:: console
 
-     .. code-block:: console
+       $ sudo apt-get install -y sawtooth sawtooth-pbft-engine
 
-        $ sudo apt-get install -y sawtooth sawtooth-pbft-engine
+ #. (PoET only) Install the PoET consensus engine, transaction processor, and CLI packages.
 
-   * For PoET:
+    .. code-block:: console
 
-     .. code-block:: console
-
-        $ sudo apt-get install -y sawtooth python3-sawtooth-poet-engine python3-sawtooth-poet-families
+       $ sudo apt-get install -y sawtooth \
+       python3-sawtooth-poet-cli \
+       python3-sawtooth-poet-engine \
+       python3-sawtooth-poet-families
 
    .. tip::
    

@@ -480,7 +480,7 @@ Step 6: Confirm Network and Blockchain Functionality
 
       .. code-block:: console
 
-         root@sawtooth-N# sawnet peers list
+         root@sawtooth-N# sawnet peers list http://localhost:8008
 
 #. You can submit a transaction on one Sawtooth node, then look for the results
    of that transaction on another node.
@@ -521,7 +521,7 @@ Step 6: Confirm Network and Blockchain Functionality
 
       root@sawtooth-3# ps --pid 1 fw
         PID TTY      STAT   TIME COMMAND
-          1 ?        Ssl    0:02 /usr/bin/python3 /usr/bin/settings-tp -vv -C tcp://sawtooth-3-5bd565ff45-2klm7:4004
+          1 ?        Ssl    0:02 settings-tp -vv -C tcp://sawtooth-3-5bd565ff45-2klm7:4004
 
 At this point, your environment is ready for experimenting with Sawtooth.
 
@@ -556,7 +556,7 @@ handles on-chain configuration settings. You will use the ``sawset`` command to
 create and submit a batch of transactions containing the configuration change.
 
 1. Connect to the validator container of the first node. The next command
-   requires the validator key that was generated in that container.
+   requires the user key that was generated in that container.
 
    Replace ``pod-0-xxxxxxxxxx-yyyyy`` with the name of the first pod, as
    shown by ``kubectl get pods``.
@@ -573,14 +573,14 @@ create and submit a batch of transactions containing the configuration change.
 
      .. code-block:: console
 
-        root@sawtooth-0# sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        root@sawtooth-0# sawset proposal create --key /root/.sawtooth/keys/my_key.priv \
         sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}]'
 
    * For PoET:
 
      .. code-block:: console
 
-        root@sawtooth-0# sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        root@sawtooth-0# sawset proposal create --key /root/.sawtooth/keys/my_key.priv \
         sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array
@@ -607,21 +607,6 @@ create and submit a batch of transactions containing the configuration change.
         .. code-block:: none
 
            [2018-09-05 20:07:41.903 DEBUG    core] received message of type: TP_PROCESS_REQUEST
-
-   * You can also connect to the ``sawtooth-settings-tp`` container on any pod,
-     then examine ``/var/log/sawtooth/logs/settings-xxxxxxx-debug.log``. (Each
-     Settings log file has a unique string in the name.) The messages will
-     resemble this example:
-
-     .. code-block:: none
-
-         .
-         .
-         .
-        [20:07:58.039 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
-        [20:07:58.190 [MainThread] handler INFO] Setting setting
-        sawtooth.validator.transaction_families changed from None to [{"family":
-        "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"xo", "version":"1.0"}, ...
 
 #. Run the following command to check the setting change. You can use any
    container, such as a shell or another validator container.
