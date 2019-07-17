@@ -16,8 +16,9 @@ Adding a PBFT Node
 ==================
 
 To add a new node to an existing PBFT network, you will install and configure
-the node, start it and wait for it to catch up with the rest of the network,
-then update ``sawtooth.consensus.pbft.members`` on an existing node.
+the node, start it and wait for it to catch up with the rest of the network.
+Next, the administrator of an existing node will update
+``sawtooth.consensus.pbft.members``.
 
 You can add several nodes at the same time.
 
@@ -49,36 +50,35 @@ You can add several nodes at the same time.
    :ref:`sawtooth block list <sawtooth-block-list-label>` to check on the
    new node's progress.
 
-#. Copy the new node's public validator key for use in the next step.
+#. Send the new node's public validator key to the administrator who will update
+   ``sawtooth.consensus.pbft.members``. Use this command to display the public
+   validator key:
 
    .. code-block:: console
 
       $ cat /etc/sawtooth/keys/validator.pub
 
-   This step assumes that the validator key is stored in the default location,
-   ``/etc/sawtooth/keys``. If not, use the location specified by the ``key_dir``
-   setting (see :doc:`configuring_sawtooth/path_configuration_file`).
+   This command assumes that the validator key is stored in the default
+   location, ``/etc/sawtooth/keys``. If not, use the location specified by the
+   ``key_dir`` setting (see
+   :doc:`configuring_sawtooth/path_configuration_file`).
 
-#. On an existing member node, update ``sawtooth.consensus.pbft.members`` to
-   include the public validator key of the new node.
+#. An authorized user must update the on-chain setting
+   ``sawtooth.consensus.pbft.members`` to include the public validator key of
+   the new node.
 
-   Run the following steps on a node that has permission to change on-chain
-   settings; that is, a node whose validator key is listed in
-   ``sawtooth.identity.allowed_keys``.
+   a. Log into an existing member node as a user who has permission to change
+      on-chain settings (by default, the owner of the private key used to create
+      the genesis block). For more information, see
+      :doc:`/sysadmin_guide/adding_authorized_users`.
 
-   .. Tip::
-
-      Usually, the node that created the genesis block is listed in
-      ``sawtooth.identity.allowed_keys``. Note that this list can include user
-      keys as well as validator keys, so that changes can be made by an
-      administrator from any node. For more information, see
-      :ref:`config-onchain-txn-perm-label`.
-
-   a. List the current PBFT member nodes:
+   #. List the current PBFT member nodes:
 
       .. code-block:: console
 
          $ sawtooth settings list --filter sawtooth.consensus.pbft.members
+
+      Copy the list of validator keys to use in the next step.
 
    #. Submit a transaction that specifies the new list of all PBFT member nodes
       (the previous list plus the new node's key).
@@ -100,37 +100,48 @@ You can add several nodes at the same time.
 
       If there are no errors, this change will be committed to the blockchain.
 
-#. When all nodes have detected the change and updated their local copy of the
-   member list, the new member node begins to participate in the PBFT network.
+When all nodes have detected the change and updated their local copy of the
+member list, the new member node begins to participate in the PBFT network.
 
 .. _removing-a-pbft-node-label:
 
 Removing a PBFT Node
 ====================
 
-To remove an existing node from a PBFT network, you will delete the node's
-validator key from  the ``sawtooth.consensus.pbft.members`` setting, then shut
-down the removed node. You can delete several nodes at the same time.
+To remove an existing node from a PBFT network, an authorized user will delete
+the node's validator key from  the ``sawtooth.consensus.pbft.members`` setting.
+
+You can delete several nodes at the same time.
 
 .. note::
 
    PBFT consensus requires a network with at least four nodes. A network with
    fewer than four nodes will fail.
 
-1. Update ``sawtooth.consensus.pbft.members`` to no longer include the
-   validator public key of the node you want to remove.
+1. Send the node's public validator key to the administrator who will update
+   ``sawtooth.consensus.pbft.members``. On the node you want to remove, use this
+   command to display the public validator key:
 
-   Run the following steps on a node or as a user that has permission to change
-   on-chain settings. For more information, see the tip in
-   :ref:`adding-a-pbft-node-label`.
+   .. code-block:: console
 
-   a. List the current PBFT member nodes:
+      $ cat /etc/sawtooth/keys/validator.pub
+
+#. An authorized user must update the on-chain setting
+   ``sawtooth.consensus.pbft.members`` to delete the public validator key of
+   the node to be removed.
+
+   a. Log into an existing member node as a user who has permission to change
+      on-chain settings (by default, the owner of the private key used to create
+      the genesis block). For more information, see
+      :doc:`/sysadmin_guide/adding_authorized_users`.
+
+   #. List the current PBFT member nodes:
 
       .. code-block:: console
 
          $ sawtooth settings list --filter sawtooth.consensus.pbft.members
 
-   #. Submit a transaction that specifies the new list of all PBFT member nodes
+   #. Submit a transaction that specifies the new list of PBFT member nodes
       (the previous list, minus the key of the node or nodes to be removed).
 
       .. Important::
@@ -157,7 +168,7 @@ down the removed node. You can delete several nodes at the same time.
 
       $ sawtooth settings list --filter sawtooth.consensus.pbft.members
 
-   .. note::
+   .. Important::
 
       Until the settings change is committed on all nodes, the removed node is
       considered part of the network. If the node is shut down too soon, it
