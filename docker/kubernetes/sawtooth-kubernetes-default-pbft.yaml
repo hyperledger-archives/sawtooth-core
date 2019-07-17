@@ -81,13 +81,13 @@ items:
               - -c
               - "sawtooth keygen && tail -f /dev/null"
 
-          - name: sawtooth-smallbank-tp-go
-            image: hyperledger/sawtooth-smallbank-tp-go:nightly
+          - name: sawtooth-smallbank-tp-rust
+            image: hyperledger/sawtooth-smallbank-tp-rust:nightly
             command:
               - bash
             args:
               - -c
-              - "smallbank-tp-go -vv -C tcp://$HOSTNAME:4004"
+              - "smallbank-tp-rust -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:nightly
@@ -241,13 +241,13 @@ items:
               - -c
               - "sawtooth keygen && tail -f /dev/null"
 
-          - name: sawtooth-smallbank-tp-go
-            image: hyperledger/sawtooth-smallbank-tp-go:nightly
+          - name: sawtooth-smallbank-tp-rust
+            image: hyperledger/sawtooth-smallbank-tp-rust:nightly
             command:
               - bash
             args:
               - -c
-              - "smallbank-tp-go -vv -C tcp://$HOSTNAME:4004"
+              - "smallbank-tp-rust -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:nightly
@@ -390,13 +390,13 @@ items:
               - -c
               - "sawtooth keygen && tail -f /dev/null"
 
-          - name: sawtooth-smallbank-tp-go
-            image: hyperledger/sawtooth-smallbank-tp-go:nightly
+          - name: sawtooth-smallbank-tp-rust
+            image: hyperledger/sawtooth-smallbank-tp-rust:nightly
             command:
               - bash
             args:
               - -c
-              - "smallbank-tp-go -vv -C tcp://$HOSTNAME:4004"
+              - "smallbank-tp-rust -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:nightly
@@ -541,13 +541,13 @@ items:
               - -c
               - "sawtooth keygen && tail -f /dev/null"
 
-          - name: sawtooth-smallbank-tp-go
-            image: hyperledger/sawtooth-smallbank-tp-go:nightly
+          - name: sawtooth-smallbank-tp-rust
+            image: hyperledger/sawtooth-smallbank-tp-rust:nightly
             command:
               - bash
             args:
               - -c
-              - "smallbank-tp-go -vv -C tcp://$HOSTNAME:4004"
+              - "smallbank-tp-rust -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:nightly
@@ -693,13 +693,13 @@ items:
               - -c
               - "sawtooth keygen && tail -f /dev/null"
 
-          - name: sawtooth-smallbank-tp-go
-            image: hyperledger/sawtooth-smallbank-tp-go:nightly
+          - name: sawtooth-smallbank-tp-rust
+            image: hyperledger/sawtooth-smallbank-tp-rust:nightly
             command:
               - bash
             args:
               - -c
-              - "smallbank-tp-go -vv -C tcp://$HOSTNAME:4004"
+              - "smallbank-tp-rust -vv -C tcp://$HOSTNAME:4004"
 
           - name: sawtooth-validator
             image: hyperledger/sawtooth-validator:nightly

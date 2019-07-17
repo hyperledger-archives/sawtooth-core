@@ -356,7 +356,7 @@ Use these steps to start the Sawtooth network.
       .. code-block:: console
 
          $ kubectl get pods pod-N-xxxxxxxxxx-yyyyy -o jsonpath={.spec.containers[*].name}
-         sawtooth-intkey-tp-python sawtooth-pbft-engine sawtooth-rest-api sawtooth-settings-tp sawtooth-shell sawtooth-smallbank-tp-go sawtooth-validator sawtooth-xo-tp-python
+         sawtooth-intkey-tp-python sawtooth-pbft-engine sawtooth-rest-api sawtooth-settings-tp sawtooth-shell sawtooth-smallbank-tp-rust sawtooth-validator sawtooth-xo-tp-python
 
       Note that each pod has a shell container named ``sawtooth-shell``. You
       will connect to the shell containers in later steps.
