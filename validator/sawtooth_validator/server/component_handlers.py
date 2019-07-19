@@ -95,6 +95,11 @@ def add(
 
     dispatcher.add_handler(
         validator_pb2.Message.TP_REGISTER_REQUEST,
+        processor_handlers.ProcessorRegisterValidationHandler(),
+        thread_pool)
+
+    dispatcher.add_handler(
+        validator_pb2.Message.TP_REGISTER_REQUEST,
         processor_handlers.ProcessorRegisterHandler(
             executor.processor_manager),
         thread_pool)
