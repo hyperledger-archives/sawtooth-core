@@ -44,7 +44,7 @@ class ProcessorRegisterValidationHandler(Handler):
         if request.protocol_version > MAX_SDK_PROTOCOL_VERSION:
             ack = processor_pb2.TpRegisterResponse()
             ack.status = ack.ERROR
-            ack.protocol_version = request.protocol_version
+            ack.protocol_version = MAX_SDK_PROTOCOL_VERSION
             LOGGER.error(
                 'Validator version %s does not support the features requested'
                 ' by the %s version of transaction processor',
