@@ -64,9 +64,9 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         .map_err(|err| CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
 
     let mut current = match args.value_of("start") {
-        None => blockstore
-            .get_chain_head()
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err))),
+        None => blockstore.get_chain_head().map_err(|err| {
+            CliError::EnvironmentError(format!("unable to read chain head: {}", err))
+        }),
         Some(sig) => Ok(sig.into()),
     }?;
 
@@ -76,7 +76,7 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         })?;
         backup_block(&block, &mut file)?;
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
-            .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+            .map_err(|err| CliError::ParseError(format!("Unable to read block header: {}", err)))?;
         current = block_header.previous_block_id
     }
     Ok(())
@@ -110,9 +110,9 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     // Get the chain head
     let head_sig = match args.value_of("start") {
-        None => blockstore
-            .get_chain_head()
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err))),
+        None => blockstore.get_chain_head().map_err(|err| {
+            CliError::EnvironmentError(format!("failed to get chain head id: {}", err))
+        }),
         Some(sig) => Ok(sig.into()),
     }?;
 
@@ -121,11 +121,16 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     print_block_store_list_header();
 
     while block_id != NULL_BLOCK_IDENTIFIER && count > 0 {
-        let block = blockstore
-            .get(&block_id)
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
-            .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+        let block = blockstore.get(&block_id).map_err(|err| {
+            CliError::EnvironmentError(format!("failed to read block {}: {}", block_id, err))
+        })?;
+        let block_header: BlockHeader =
+            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+                CliError::ParseError(format!(
+                    "failed to parse header for block {}: {}",
+                    block_id, err
+                ))
+            })?;
         let batches = block.batches.len();
         let txns = block
             .batches
@@ -202,11 +207,13 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     }
     .map_err(|err| CliError::ArgumentError(format!("Error getting block: {}", err)))?;
 
-    let block_wrapper = BlockWrapper::try_from(block)
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let block_wrapper = BlockWrapper::try_from(block).map_err(|err| {
+        CliError::EnvironmentError(format!("failed to create block wrapper: {}", err))
+    })?;
 
-    let block_yaml = serde_yaml::to_string(&block_wrapper)
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let block_yaml = serde_yaml::to_string(&block_wrapper).map_err(|err| {
+        CliError::EnvironmentError(format!("failed to serialize block wrapper: {}", err))
+    })?;
 
     println!("{}", block_yaml);
     Ok(())
@@ -225,27 +232,42 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         .map_err(|_| CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
 
     // Get the chain head
-    let chain_head = blockstore
-        .get_chain_head()
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let chain_head = blockstore.get_chain_head().map_err(|err| {
+        CliError::EnvironmentError(format!("failed to get chain head id: {}", err))
+    })?;
 
-    let mut current = blockstore
-        .get(&chain_head)
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let mut current = blockstore.get(&chain_head).map_err(|err| {
+        CliError::EnvironmentError(format!(
+            "failed to get chain head ({}): {}",
+            chain_head, err
+        ))
+    })?;
 
     loop {
         blockstore
             .delete(&current.header_signature)
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+            .map_err(|err| {
+                CliError::EnvironmentError(format!(
+                    "failed to delete block {}: {}",
+                    current.header_signature, err
+                ))
+            })?;
         if current.header_signature == block_id {
             break;
         }
-        let header: BlockHeader = protobuf::parse_from_bytes(&current.header)
-            .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+        let header: BlockHeader = protobuf::parse_from_bytes(&current.header).map_err(|err| {
+            CliError::ParseError(format!(
+                "failed to parse block_header for block {}: {}",
+                current.header_signature, err
+            ))
+        })?;
 
-        current = blockstore
-            .get(&header.previous_block_id)
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        current = blockstore.get(&header.previous_block_id).map_err(|err| {
+            CliError::EnvironmentError(format!(
+                "failed to read block {}: {}",
+                header.previous_block_id, err
+            ))
+        })?;
     }
     Ok(())
 }
@@ -267,16 +289,22 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             let mut file = File::create(filepath).map_err(|err| {
                 CliError::EnvironmentError(format!("Failed to create file: {}", err))
             })?;
-            block
-                .write_to_writer(&mut file)
-                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+            block.write_to_writer(&mut file).map_err(|err| {
+                CliError::EnvironmentError(format!(
+                    "failed to write {} to {}: {}",
+                    block_id, filepath, err
+                ))
+            })
         }
         None => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            block
-                .write_to_writer(&mut handle)
-                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+            block.write_to_writer(&mut handle).map_err(|err| {
+                CliError::EnvironmentError(format!(
+                    "failed to write block {} to stdout: {}",
+                    block_id, err
+                ))
+            })
         }
     }
 }
@@ -312,7 +340,10 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         }
         Err(DatabaseError::NotFoundError(_)) => (),
         Err(err) => {
-            return Err(CliError::EnvironmentError(format!("{}", err)));
+            return Err(CliError::EnvironmentError(format!(
+                "failed to read chain head id: {}",
+                err
+            )));
         }
     }
 
@@ -328,42 +359,54 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_count = blockstore
-        .get_current_height()
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-    let batch_count = blockstore
-        .get_batch_count()
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-    let txn_count = blockstore
-        .get_transaction_count()
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let block_count = blockstore.get_current_height().map_err(|err| {
+        CliError::EnvironmentError(format!("failed to read block count: {}", err))
+    })?;
+    let batch_count = blockstore.get_batch_count().map_err(|err| {
+        CliError::EnvironmentError(format!("failed to read batch count: {}", err))
+    })?;
+    let txn_count = blockstore.get_transaction_count().map_err(|err| {
+        CliError::EnvironmentError(format!("failed to read transaction count: {}", err))
+    })?;
 
     if args.is_present("extended") {
         let mut txn_family_counts = HashMap::new();
-        let chain_head = blockstore
-            .get_chain_head()
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-        let mut block = blockstore
-            .get(&chain_head)
-            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        let chain_head = blockstore.get_chain_head().map_err(|err| {
+            CliError::EnvironmentError(format!("failed to get chain head id: {}", err))
+        })?;
+        let mut block = blockstore.get(&chain_head).map_err(|err| {
+            CliError::EnvironmentError(format!("failed to read chain head: {}", err))
+        })?;
 
         loop {
             for batch in &block.batches {
                 for txn in &batch.transactions {
                     let txn_header: TransactionHeader = protobuf::parse_from_bytes(&txn.header)
-                        .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+                        .map_err(|err| {
+                            CliError::ParseError(format!(
+                                "failed to parse header for transaction {}: {}",
+                                txn.header_signature, err
+                            ))
+                        })?;
                     let count = txn_family_counts.entry(txn_header.family_name).or_insert(0);
                     *count += 1;
                 }
             }
-            let header: BlockHeader = protobuf::parse_from_bytes(&block.header)
-                .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+            let header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
+                CliError::ParseError(format!(
+                    "failed to parse header for block {}: {}",
+                    block.header_signature, err
+                ))
+            })?;
             if header.previous_block_id == NULL_BLOCK_IDENTIFIER {
                 break;
             }
-            block = blockstore
-                .get(&header.previous_block_id)
-                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+            block = blockstore.get(&header.previous_block_id).map_err(|err| {
+                CliError::EnvironmentError(format!(
+                    "failed to read block {}: {}",
+                    header.previous_block_id, err
+                ))
+            })?;
         }
 
         println!("Blocks:       {}", block_count);
@@ -385,8 +428,9 @@ fn create_context() -> Result<lmdb::LmdbContext, CliError> {
     let path_config = config::get_path_config();
     let blockstore_path = &path_config.data_dir.join(config::get_blockstore_filename());
 
-    lmdb::LmdbContext::new(blockstore_path, 3, None)
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+    lmdb::LmdbContext::new(blockstore_path, 3, None).map_err(|err| {
+        CliError::EnvironmentError(format!("failed to create block store context: {}", err))
+    })
 }
 
 fn open_blockstore(ctx: &lmdb::LmdbContext) -> Result<Blockstore, CliError> {
@@ -394,7 +438,7 @@ fn open_blockstore(ctx: &lmdb::LmdbContext) -> Result<Blockstore, CliError> {
         ctx,
         &["index_batch", "index_transaction", "index_block_num"],
     )
-    .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    .map_err(|err| CliError::EnvironmentError(format!("failed to open block store DB: {}", err)))?;
 
     Ok(Blockstore::new(blockstore_db))
 }
@@ -413,8 +457,32 @@ fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block
         return Ok(None);
     }
 
-    let block = protobuf::parse_from_reader(source)
-        .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
+    source
+        .read_message()
+        .map(Some)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))
+}
 
-    Ok(Some(block))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use protobuf::CodedInputStream;
+
+    #[test]
+    fn backup_and_restore() {
+        let mut buffer: Vec<u8> = vec![];
+
+        let mut block = Block::new();
+        block.set_header_signature("abc123".into());
+
+        backup_block(&block, &mut buffer).unwrap();
+        let mut is = CodedInputStream::from_bytes(&buffer);
+
+        let restored_block = restore_block(&mut is).unwrap();
+
+        assert_eq!(Some(block), restored_block);
+
+        assert_eq!(None, restore_block(&mut is).unwrap());
+    }
 }
