@@ -144,6 +144,12 @@ previous step.
    writing file: /home/yourname/.sawtooth/keys/my_key.priv
    writing file: /home/yourname/.sawtooth/keys/my_key.pub
 
+.. note::
+
+   This command specifies ``my_key`` as the base name for the key files, to be
+   consistent with the key name that is used in the example Docker and
+   Kubernetes files. By default (when no key name is specified), the
+   ``sawtooth keygen`` command uses your user name.
 
 .. _generate-root-key-ubuntu:
 
