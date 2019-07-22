@@ -19,10 +19,10 @@ families is used by the transaction processing platform.
 In addition, pluggable components such as transaction family implementations
 can use the settings during their execution.
 
-This design supports two authorization options: a) a single authorized key
-which can make changes, and b) multiple authorized keys.  In the case of
-multiple keys, a percentage of votes signed by the keys is required to make a
-change.
+This design supports two authorization options: a single authorized key
+that can make changes and multiple authorized keys.  In the case of
+multiple keys, a configuration setting controls how many nodes must vote to
+make a change.
 
 .. note::
 
@@ -63,7 +63,7 @@ The Settings transaction family uses the following settings for its own configur
 +-------------------------------------------+------------------------------------------------------------------------------+
 | Setting (Settings)                        | Value Description                                                            |
 +===========================================+==============================================================================+
-| sawtooth.settings.vote.authorized_keys    | List of public keys allowed to vote                                          |
+| sawtooth.settings.vote.authorized_keys    | List of public keys allowed to propose and vote on settings changes          |
 +-------------------------------------------+------------------------------------------------------------------------------+
 | sawtooth.settings.vote.approval_threshold | Minimum number of votes required to accept or reject a proposal (default: 1) |
 +-------------------------------------------+------------------------------------------------------------------------------+

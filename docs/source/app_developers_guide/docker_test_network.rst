@@ -284,6 +284,15 @@ The :doc:`Settings transaction processor
 handles on-chain configuration settings. You will use the ``sawset`` command to
 create and submit a batch of transactions containing the configuration change.
 
+.. important::
+
+   You **must** run this procedure from the first validator container, because
+   the example Docker Compose file uses the first validator's key to create and
+   sign the genesis block. (At this point, only the key used to create the
+   genesis block can change on-chain settings.) For more information, see
+   :doc:`/sysadmin_guide/adding_authorized_users`.
+
+
 1. Connect to the first validator container (``sawtooth-validator-default-0``).
    The next command requires the validator key that was generated in that
    container.
