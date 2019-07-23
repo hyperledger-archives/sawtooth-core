@@ -2,10 +2,6 @@
 Setting the Allowed Transaction Types (Optional)
 ************************************************
 
-.. note::
-
-    These instructions have been tested on Ubuntu 18.04 (Bionic) only.
-
 By default, a validator accepts transactions from any transaction processor.
 However, Sawtooth allows you to limit the types of transactions that can be
 submitted.
@@ -22,31 +18,39 @@ In this procedure, you will configure the Sawtooth network to limit the
 accepted transaction types to those from this network's transaction processors
 (as started in :doc:`systemd`).
 
-.. important::
+1. Log into the node with your public/private key files.
 
-   For the environment described in this guide, you  **must** run this procedure
-   on the same node that created the genesis block, because the ``sawset
-   proposal create`` command requires the validator key that was generated on
-   that node.
+   .. important::
 
-#. Open a terminal window on the "genesis node" (the Sawtooth node that created
-   the genesis block in a previous procedure).
+      If the genesis block was created with the first validator's key,
+      and there are no other :doc:`authorized users <adding_authorized_users>`,
+      you **must** run this procedure on the same node that created the genesis
+      block, because the ``sawset proposal create`` command requires the private
+      validator key from that node.
 
-#. Use the ``sawset`` command to create and submit a batch of transactions that
-   changes the allowed transaction types.
+#. Use the ``sawset proposal create`` command to create and submit a batch of
+   transactions that changes the allowed transaction types.
+
+   .. note::
+
+      For ``{PRIVATE-KEY}``, specify the path to the private key file for an
+      authorized user or validator, such as the key used to create the genesis
+      block. For more information, see
+      :doc:`/sysadmin_guide/adding_authorized_users`.
+
 
    * For PBFT:
 
      .. code-block:: console
 
-        $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        $ sudo sawset proposal create --key {PRIVATE-KEY} \
         sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
 
    * For PoET:
 
      .. code-block:: console
 
-        $ sudo sawset proposal create --key /etc/sawtooth/keys/validator.priv \
+        $ sudo sawset proposal create --key {PRIVATE-KEY} \
         sawtooth.validator.transaction_families='[{"family":"sawtooth_identity", "version":"1.0"}, {"family":"intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}, {"family":"sawtooth_validator_registry", "version":"1.0"}]'
 
    This command sets ``sawtooth.validator.transaction_families`` to a JSON array

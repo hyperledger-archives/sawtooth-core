@@ -138,12 +138,18 @@ Step 2: Generate a User Key
 Generate your user key for Sawtooth, using the same terminal window as the
 previous step.
 
-   .. code-block:: console
+.. code-block:: console
 
-      user@validator$ sawtooth keygen
-      writing file: /home/yourname/.sawtooth/keys/yourname.priv
-      writing file: /home/yourname/.sawtooth/keys/yourname.pub
+   user@validator$ sawtooth keygen my_key
+   writing file: /home/yourname/.sawtooth/keys/my_key.priv
+   writing file: /home/yourname/.sawtooth/keys/my_key.pub
 
+.. note::
+
+   This command specifies ``my_key`` as the base name for the key files, to be
+   consistent with the key name that is used in the example Docker and
+   Kubernetes files. By default (when no key name is specified), the
+   ``sawtooth keygen`` command uses your user name.
 
 .. _generate-root-key-ubuntu:
 
@@ -176,50 +182,60 @@ for users who are authorized to set and change configuration settings.
 
 Use the same terminal window as the previous step.
 
-#. Create a settings proposal (as a batch of transactions) that authorizes you
-   to set and change configuration settings. By default (if no options are
-   specified), the ``sawset genesis`` command uses the key of the current user
-   (you). Execute these commands in a directory writable by user sawtooth (such as ``/tmp``).
+1. Change to a writable directory such as ``/tmp``.
 
    .. code-block:: console
 
       user@validator$ cd /tmp
-      user@validator$ sudo -u sawtooth sawset genesis -k /etc/sawtooth/keys/validator.priv
-      Generated config-genesis.batch
 
-    This settings proposal will change authorized keys in the setting
-    ``sawtooth.settings.vote.authorized_keys``. The change will take effect
-    after the validator and Settings transaction processor have started.
-
-#. Create a settings proposal to initialize the Devmode consensus engine settings. This command sets the consensus algorithm to Devmode.
+#. Create a batch with a settings proposal for the genesis
+   block.
 
    .. code-block:: console
 
-      user@validator$ sudo -u sawtooth sawset proposal create \
-         -k /etc/sawtooth/keys/validator.priv \
-         sawtooth.consensus.algorithm.name=Devmode \
-         sawtooth.consensus.algorithm.version=0.1 -o config.batch
+      user@validator$ sawset genesis --key $HOME/.sawtooth/keys/my_key.priv
+      Generated config-genesis.batch
+
+   This command authorizes you to set and change Sawtooth settings. The
+   settings changes will take effect after the validator and Settings
+   transaction processor have started.
+
+   .. important::
+
+      You must use the same key for the ``sawset proposal create`` command in
+      the next step.
+
+#. Create another settings proposal to initialize the Devmode consensus engine
+   settings. This command sets the consensus algorithm to Devmode.
+
+   .. code-block:: console
+
+      user@validator$ sawset proposal create \
+      --key $HOME/.sawtooth/keys/my_key.priv \
+      sawtooth.consensus.algorithm.name=Devmode \
+      sawtooth.consensus.algorithm.version=0.1 -o config.batch
 
    .. note::
 
       The ``sawtooth.consensus.algorithm.name`` and
       ``sawtooth.consensus.algorithm.version`` settings are required; ``sawadm
-      genesis`` will fail if they are not present in one of the batches unless
+      genesis`` will fail if they are not present in one of the batches, unless
       the ``--ignore-required-settings`` flag is used.
 
-#. Combine the previously created batches into a single genesis batch that will be committed in the genesis block:
+#. As the sawtooth user, combine the previously created batches into a single
+   genesis batch that will be committed in the genesis block.
 
    .. code-block:: console
 
-     user@validator$ sudo -u sawtooth sawadm genesis config-genesis.batch config.batch
-     Processing config-genesis.batch...
-     Processing config.batch...
-     Generating /var/lib/sawtooth/genesis.batch
+      user@validator$ sudo -u sawtooth sawadm genesis config-genesis.batch config.batch
+      Processing config-genesis.batch...
+      Processing config.batch...
+      Generating /var/lib/sawtooth/genesis.batch
 
    .. note::
 
       The ``-u sawtooth`` option refers to the sawtooth user,
-      not the sawtooth command.
+      not the ``sawtooth`` command.
 
 
 .. _start-validator-ubuntu-label:
@@ -229,7 +245,8 @@ Step 5: Start the Validator
 
 Use the same terminal window as the previous step.
 
-#. Start a validator that listens locally on the default ports.
+1. As the sawtooth user, start a validator that listens locally on the default
+   ports.
 
    .. code-block:: console
 
@@ -248,7 +265,7 @@ Use the same terminal window as the previous step.
       [2018-03-14 15:53:34.909 INFO     cli] sawtooth-validator (Hyperledger Sawtooth) version 1.0.1
       [2018-03-14 15:53:34.909 INFO     path] Skipping path loading from non-existent config file: /etc/sawtooth/path.toml
       [2018-03-14 15:53:34.910 INFO     validator] Skipping validator config loading from non-existent config file: /etc/sawtooth/validator.toml
-      [2018-03-14 15:53:34.911 INFO     keys] Loading signing key: /etc/sawtooth/keys/validator.priv
+      [2018-03-14 15:53:34.911 INFO     keys] Loading signing key: /home/username/.sawtooth/keys/my_key.priv
       [2018-03-14 15:53:34.912 INFO     cli] config [path]: config_dir = "/etc/sawtooth"; config [path]: key_dir = "/etc/sawtooth/keys"; config [path]: data_dir = "/var/lib/sawtooth"; config [path]: log_dir = "/var/log/sawtooth"; config [path]: policy_dir = "/etc/sawtooth/policy"
       [2018-03-14 15:53:34.913 WARNING  cli] Network key pair is not configured, Network communications between validators will not be authenticated or encrypted.
       [2018-03-14 15:53:34.914 DEBUG    core] global state database file is /var/lib/sawtooth/merkle-00.lmdb
@@ -285,7 +302,7 @@ Step 6: Start the Devmode Consensus Engine
 
    .. code-block:: console
 
-       user@consensus$ sudo -u sawtooth devmode-engine-rust -vv --connect tcp://localhost:5050
+      user@consensus$ sudo -u sawtooth devmode-engine-rust -vv --connect tcp://localhost:5050
 
    The consensus terminal window displays verbose log messages showing the
    Devmode engine connecting to and registering with the validator.

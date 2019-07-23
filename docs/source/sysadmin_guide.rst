@@ -30,6 +30,7 @@ and explain how to
    sysadmin_guide/setting_up_sawtooth_network
    sysadmin_guide/configure_sgx
    sysadmin_guide/setting_allowed_txns
+   sysadmin_guide/adding_authorized_users
    sysadmin_guide/rest_auth_proxy
    sysadmin_guide/configuring_permissions
    sysadmin_guide/grafana_configuration
