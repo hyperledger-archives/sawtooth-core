@@ -33,7 +33,44 @@ DEFAULT_MAX_OCCUPANCY = 10
 MAX_SDK_PROTOCOL_VERSION = 1
 
 
+class ProcessorRegisterValidationHandler(Handler):
+    """Validates the TP Register Request and emits an Ack"""
+    def handle(self, connection_id, message_content):
+        request = processor_pb2.TpRegisterRequest()
+        request.ParseFromString(message_content)
+
+        # Reject the request if requested version cannot be handled,
+        # validator does backward compatible support.
+        if request.protocol_version > MAX_SDK_PROTOCOL_VERSION:
+            ack = processor_pb2.TpRegisterResponse()
+            ack.status = ack.ERROR
+            ack.protocol_version = MAX_SDK_PROTOCOL_VERSION
+            LOGGER.error(
+                'Validator version %s does not support the features requested'
+                ' by the %s version of transaction processor',
+                str(MAX_SDK_PROTOCOL_VERSION),
+                str(request.protocol_version))
+
+            return HandlerResult(
+                status=HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
+
+        ack = processor_pb2.TpRegisterResponse()
+        ack.status = ack.OK
+        # Echo back the requested protocol_version, so that the SDK can
+        # cross verify that it can get all services requested
+        ack.protocol_version = request.protocol_version
+
+        return HandlerResult(
+            status=HandlerStatus.RETURN_AND_PASS,
+            message_out=ack,
+            message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
+
+
 class ProcessorRegisterHandler(Handler):
+    """Adds the Processor to the processor collection, enabling TP process
+    requests"""
     def __init__(self, processor_collection):
         self._collection = processor_collection
 
@@ -58,25 +95,6 @@ class ProcessorRegisterHandler(Handler):
         else:
             header_style = request.request_header_style
 
-        # Reject the request if requested version cannot be handled,
-        # validator does backward compatible support.
-        if request.protocol_version > MAX_SDK_PROTOCOL_VERSION:
-            ack = processor_pb2.TpRegisterResponse()
-            ack.status = ack.ERROR
-            # Send protocol_version of validator, so that the SDK can cross
-            # verify if it can get all services requested for.
-            ack.protocol_version = request.protocol_version
-            LOGGER.error(
-                'Validator version %s does not support the features requested'
-                ' by the %s version of transaction processor',
-                str(MAX_SDK_PROTOCOL_VERSION),
-                str(request.protocol_version))
-
-            return HandlerResult(
-                status=HandlerStatus.RETURN,
-                message_out=ack,
-                message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
-
         processor_type = processor_manager.ProcessorType(
             request.family,
             request.version)
@@ -89,12 +107,6 @@ class ProcessorRegisterHandler(Handler):
 
         self._collection[processor_type] = processor
 
-        ack = processor_pb2.TpRegisterResponse()
-        ack.status = ack.OK
-        # Echo back the requested protocol_version, so that the SDK can
-        # cross verify that it can get all services requested
-        ack.protocol_version = request.protocol_version
-
         LOGGER.info(
             'registered transaction processor: connection_id=%s, family=%s, '
             'version=%s, namespaces=%s, max_occupancy=%s',
@@ -104,10 +116,7 @@ class ProcessorRegisterHandler(Handler):
             list(request.namespaces),
             max_occupancy)
 
-        return HandlerResult(
-            status=HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.TP_REGISTER_RESPONSE)
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class ProcessorUnRegisterHandler(Handler):

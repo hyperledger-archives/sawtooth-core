@@ -152,6 +152,11 @@ def verify_state(global_state_db, blockstore, bind_component, scheduler_type):
 
     component_dispatcher.add_handler(
         validator_pb2.Message.TP_REGISTER_REQUEST,
+        processor_handlers.ProcessorRegisterValidationHandler(),
+        component_thread_pool)
+
+    component_dispatcher.add_handler(
+        validator_pb2.Message.TP_REGISTER_REQUEST,
         processor_handlers.ProcessorRegisterHandler(
             transaction_executor.processor_manager),
         component_thread_pool)
