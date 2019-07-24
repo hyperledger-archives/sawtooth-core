@@ -2,6 +2,7 @@
 name = "sawtooth-intkey-workload"
 version = "0.1.0"
 authors = ["Intel Corporation"]
+description = "Workload generator for Sawtooth Intkey"
 
 [[bin]]
 name = "intkey-workload"
