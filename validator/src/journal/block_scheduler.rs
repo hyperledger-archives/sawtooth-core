@@ -201,7 +201,9 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 
         for blk in &ready {
             self.pending.remove(&blk.header_signature);
+            self.processing.insert(blk.header_signature.clone());
         }
+
         self.update_gauges();
         ready
     }
