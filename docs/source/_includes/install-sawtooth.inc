@@ -6,6 +6,8 @@
 
      .. code-block:: console
 
+        $ sudo apt-get update
+        $ sudo apt-get install gnupg -y
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
         $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe'
 
@@ -23,6 +25,8 @@
 
      .. code-block:: console
 
+        $ sudo apt-get update
+        $ sudo apt-get install gnupg -y
         $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
         $ sudo apt-add-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly bionic universe'
 
