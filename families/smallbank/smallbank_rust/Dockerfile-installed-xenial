@@ -50,8 +50,8 @@ RUN export VERSION=$(../../../bin/get_version) \
 # -------------=== smallbank rust docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=smallbank-rust-builder /project/families/smallbank/smallbank_rust/target/debian/smallbank_rust_*.deb /tmp
+COPY --from=smallbank-rust-builder /project/families/smallbank/smallbank_rust/target/debian/sawtooth-smallbank*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/smallbank_rust_*.deb || true \
+ && dpkg -i /tmp/sawtooth-smallbank*.deb || true \
  && apt-get -f -y install

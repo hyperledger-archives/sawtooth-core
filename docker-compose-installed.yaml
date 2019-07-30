@@ -190,6 +190,17 @@ services:
     image: sawtooth-intkey-workload:${ISOLATION_ID}
     container_name: sawtooth-intkey-workload
 
+  smallbank-tp-rust:
+    build:
+      context: .
+      dockerfile: families/smallbank/smallbank_rust/Dockerfile-installed-${DISTRO}
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-smallbank-tp-rust:${ISOLATION_ID}
+    container_name: sawtooth-tp-rust
+
   sawtooth-meta:
     build:
       context: .
