@@ -43,8 +43,9 @@ COPY . /project
 
 WORKDIR /project/families/smallbank/smallbank_rust/
 
-RUN sed -i -e s/version.*$/version\ =\ \"$(../../../bin/get_version)\"/ Cargo.toml
-RUN /root/.cargo/bin/cargo deb
+RUN export VERSION=$(../../../bin/get_version) \
+ && sed -i -e s/version.*$/version\ =\ \"${VERSION}\"/ Cargo.toml \
+ && /root/.cargo/bin/cargo deb --deb-version $VERSION
 
 # -------------=== smallbank rust docker build ===-------------
 FROM ubuntu:bionic
