@@ -15,10 +15,14 @@
 # ------------------------------------------------------------------------------
 
 [package]
-name = "smallbank_rust"
+name = "sawtooth-smallbank-tp-rust"
 version = "1.0.0"
 authors = ["Intel Corporation"]
 build = "build.rs"
+
+[[bin]]
+name = "smallbank-tp-rust"
+path = "src/main.rs"
 
 [dependencies]
 sawtooth-sdk = "0.3"

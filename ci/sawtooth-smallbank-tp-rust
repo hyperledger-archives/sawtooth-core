@@ -1,4 +1,5 @@
 # Copyright 2017 Intel Corporation
+# Copyright 2019 Cargill Incorporated
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +15,16 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with smallbank-tp-go from
-#   the nightly Sawtooth Package Repository.
+#   Builds an image with smallbank-tp-rust from
+#   the Sawtooth Package Repository.
 #
 # Build:
-#   $ cd sawtooth-core/ci/nightly
-#   $ docker build . -f sawtooth-smallbank-tp-go -t sawtooth-smallbank-tp-go
+#   $ cd sawtooth-core/ci
+#   $ docker build . -f sawtooth-smallbank-tp-rust -t sawtooth-smallbank-tp-rust
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run sawtooth-smallbank-tp-go
+#   $ docker run -it sawtooth-smallbank-tp-rust bash
 
 FROM ubuntu:bionic
 
@@ -32,15 +33,13 @@ RUN apt-get update \
 
 LABEL "install-type"="repo"
 
-RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/nightly bionic universe" >> /etc/apt/sources.list \
- && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA \
- || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 44FC67F19B2466EA) \
+RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/chime/stable bionic universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 8AA7AF1F1091A5FD) \
  && apt-get update \
  && apt-get install -y -q \
-    sawtooth-smallbank-tp-go \
+    sawtooth-smallbank-tp-rust \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 4004/tcp
-
-CMD ["smallbank-tp-go", "-vv"]
+CMD ["smallbank-tp-rust", "-v"]
