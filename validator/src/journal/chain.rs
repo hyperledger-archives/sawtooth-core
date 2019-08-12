@@ -388,24 +388,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                         .ref_block(block.header_signature.as_str())?,
                 );
 
-                match self.block_validation_results.get(&block.header_signature) {
-                    Some(validation_results) => {
-                        let receipts: Vec<TransactionReceipt> = validation_results
-                            .execution_results
-                            .iter()
-                            .map(TransactionReceipt::from)
-                            .collect();
-                        for observer in &mut state.observers {
-                            observer.chain_update(&block, receipts.as_slice());
-                        }
-                    }
-                    None => {
-                        error!(
-                            "While committing {}, found block missing execution results",
-                            &block,
-                        );
-                    }
-                }
+                self.notify_chain_observers(state, &block);
 
                 let mut guard = lock.acquire();
                 guard.notify_on_chain_updated(block.clone(), vec![], vec![]);
@@ -797,24 +780,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 });
 
                 for blk in result.new_chain.iter().rev() {
-                    match self.block_validation_results.get(&blk.header_signature) {
-                        Some(validation_results) => {
-                            let receipts: Vec<TransactionReceipt> = validation_results
-                                .execution_results
-                                .iter()
-                                .map(TransactionReceipt::from)
-                                .collect();
-                            for observer in &mut state.observers {
-                                observer.chain_update(&block, receipts.as_slice());
-                            }
-                        }
-                        None => {
-                            error!(
-                                "While committing {}, found block {} missing execution results",
-                                &block, &blk,
-                            );
-                        }
-                    }
+                    self.notify_chain_observers(&mut state, &blk);
                 }
 
                 let total_committed_txns = match state.chain_reader.count_committed_transactions() {
@@ -939,9 +905,33 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
             block_num_guage.set_value(&chain_head.block_num);
+
+            self.notify_chain_observers(&mut state, &chain_head);
+
             let mut guard = self.chain_head_lock.acquire();
 
             guard.notify_on_chain_updated(chain_head, vec![], vec![]);
+        }
+    }
+
+    fn notify_chain_observers(&self, state: &mut ChainControllerState, block: &Block) {
+        match self.block_validation_results.get(&block.header_signature) {
+            Some(validation_results) => {
+                let receipts: Vec<TransactionReceipt> = validation_results
+                    .execution_results
+                    .iter()
+                    .map(TransactionReceipt::from)
+                    .collect();
+                for observer in &mut state.observers {
+                    observer.chain_update(&block, receipts.as_slice());
+                }
+            }
+            None => {
+                error!(
+                    "While committing {}, found block missing execution results",
+                    &block,
+                );
+            }
         }
     }
 
