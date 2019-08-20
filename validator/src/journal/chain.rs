@@ -539,7 +539,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
         // Drop Ref-C: Consensus is not interested in this block anymore
         match state.block_references.remove(&block.header_signature) {
             Some(_) => info!("Ignored block {}", block),
-            None => warn!(
+            None => debug!(
                 "Could not ignore block {}; consensus has already decided on it",
                 &block.header_signature
             ),
@@ -559,7 +559,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     .fail_block(&block.header_signature);
                 info!("Failed block {}", block);
             }
-            None => warn!(
+            None => debug!(
                 "Could not fail block {}; consensus has already decided on it",
                 &block.header_signature
             ),
