@@ -77,6 +77,7 @@ pub enum ChainControllerError {
     BlockValidationError(ValidationError),
     BrokenQueue,
     ConsensusError(String),
+    UnknownBlock(String),
 }
 
 impl From<RecvError> for ChainControllerError {
@@ -439,10 +440,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             }
         }
 
-        let sender = self.validation_result_sender.as_ref().expect(
-            "Attempted to submit blocks for validation before starting the chain controller",
-        );
-
         let block = {
             let mut state = self
                 .state
@@ -450,16 +447,14 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .expect("No lock holder should have poisoned the lock");
 
             if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-                // Create Ref-C: Hold this reference until we finish validating the block. If the
-                // block is invalid, drop the ref. If the block is valid, hold onto the reference
-                // and wait for consensus to render a {commit, ignore, fail} opinion on the block.
+                // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
+                // fail} opinion on the block.
                 match state.block_manager.ref_block(&block_id) {
                     Ok(block_ref) => {
                         state
                             .block_references
                             .insert(block_ref.block_id().to_owned(), block_ref);
-                        self.block_validator
-                            .submit_blocks_for_verification(&[block.clone()], &sender);
+                        self.consensus_notifier.notify_block_new(&block);
                         Some(block)
                     }
                     Err(err) => {
@@ -525,6 +520,14 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
         }
 
         Ok(())
+    }
+
+    pub fn validate_block(&self, block: &Block) {
+        let sender = self.validation_result_sender.as_ref().expect(
+            "Attempted to submit block for validation before starting the chain controller",
+        );
+        self.block_validator
+            .submit_blocks_for_verification(&[block.clone()], &sender);
     }
 
     pub fn ignore_block(&self, block: &Block) {
@@ -643,9 +646,13 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // maintained. The consensus engine is responsible for rendering an opinion of
                 // either commit, fail, or ignore, at which time the ext. ref. will be accounted
                 // for (moved into chain head in case of commit, dropped otherwise)
-                self.consensus_notifier.notify_block_new(block);
+                self.consensus_notifier
+                    .notify_block_valid(&block.header_signature);
             }
             BlockStatus::Invalid => {
+                self.consensus_notifier
+                    .notify_block_invalid(&block.header_signature);
+
                 let mut state = self
                     .state
                     .write()

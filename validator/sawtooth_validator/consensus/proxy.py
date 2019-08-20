@@ -219,6 +219,14 @@ class ConsensusProxy:
         except KeyError as key_error:
             raise UnknownBlock(key_error.args[0])
 
+    def validate_block(self, block_id):
+        """Instruct the chain controller to validate the given block."""
+        try:
+            block = next(self._block_manager.get([block_id]))
+        except StopIteration as stop_iteration:
+            raise UnknownBlock(stop_iteration.args[0])
+        self._chain_controller.validate_block(block)
+
     def commit_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
