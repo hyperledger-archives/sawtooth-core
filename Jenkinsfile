@@ -77,7 +77,7 @@ pipeline {
 
         stage('Build Lint Requirements') {
             steps {
-                sh 'docker-compose -f docker/compose/run-lint.yaml build'
+                sh 'docker-compose -f docker/compose/run-lint.yaml build --parallel'
                 sh 'docker-compose -f docker/compose/sawtooth-build.yaml up'
                 sh 'docker-compose -f docker/compose/sawtooth-build.yaml down'
             }
@@ -93,8 +93,8 @@ pipeline {
 
         stage('Build Test Dependencies') {
             steps {
-                sh 'docker-compose -f docker-compose-installed.yaml build'
-                sh 'docker-compose -f docker/compose/external.yaml build'
+                sh 'docker-compose -f docker-compose-installed.yaml build --parallel'
+                sh 'docker-compose -f docker/compose/external.yaml build --parallel '
                 sh 'docker build -f docker/bandit -t bandit:$ISOLATION_ID .'
             }
         }
