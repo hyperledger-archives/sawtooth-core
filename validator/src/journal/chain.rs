@@ -728,8 +728,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // Move Ref-C: Consensus has decided this block should become the new chain
                 // head, so the ChainController will maintain ownership of this ext. ref until a
                 // new chain head replaces it.
-                // Drop Ref-C: The ext. ref. of the old chain head is dropped here since it's
-                // superceded by the new chain head.
                 state.chain_head = Some(
                     state
                         .block_references
