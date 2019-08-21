@@ -296,6 +296,7 @@ class _SendReceive:
         if zmq_identity in self._identities_to_connection_ids:
             del self._identities_to_connection_ids[zmq_identity]
         connection_id = self._identity_to_connection_id(zmq_identity)
+        LOGGER.debug("Removing connected identity: %s", connection_id)
         if connection_id in self._connections:
             del self._connections[connection_id]
 
@@ -303,6 +304,7 @@ class _SendReceive:
         self._last_message_times[zmq_identity] = time.time()
         connection_id = self._identity_to_connection_id(zmq_identity)
         if connection_id not in self._connections:
+            LOGGER.debug("Adding new connection: %s", connection_id)
             self._connections[connection_id] = \
                 ConnectionInfo(ConnectionType.ZMQ_IDENTITY,
                                zmq_identity,
@@ -509,6 +511,8 @@ class _SendReceive:
                     self._zmq_identity,
                     hashlib.sha512(uuid.uuid4().hex.encode()
                                    ).hexdigest()[:23]).encode('ascii')
+                LOGGER.debug("ZMQ DEALER SOCKET SETUP: %s",
+                             self._socket.identity)
 
                 if self._secured:
                     # Generate ephemeral certificates for this connection
@@ -533,6 +537,7 @@ class _SendReceive:
 
                 try:
                     self._socket.bind(self._address)
+                    LOGGER.debug("ZMQ ROUTER SOCKET SETUP: %s", self._address)
                 except zmq.error.ZMQError as e:
                     raise LocalConfigurationError(
                         "Can't bind to {}: {}".format(self._address,
@@ -595,6 +600,7 @@ class _SendReceive:
         self._close_sockets()
 
     def _close_sockets(self):
+        LOGGER.debug("ZMQ SOCKET CLOSE")
         if self._socket:
             self._socket.close(linger=0)
         if self._monitor:
@@ -829,11 +835,12 @@ class Interconnect:
         Returns:
             bool
         """
-        LOGGER.debug("Determining whether inbound connection should "
-                     "be allowed. num connections: %s max %s",
-                     len(self._connections),
-                     self._max_incoming_connections)
-        return self._max_incoming_connections >= len(self._connections)
+        with self._connections_lock:
+            LOGGER.debug("Determining whether inbound connection should "
+                         "be allowed. num connections: %s max %s",
+                         len(self._connections),
+                         self._max_incoming_connections)
+            return self._max_incoming_connections >= len(self._connections)
 
     def add_outbound_connection(self, uri):
         """Adds an outbound connection to the network.
@@ -1125,21 +1132,22 @@ class Interconnect:
             endpoint (str): A zmq-style uri which identifies a publically
                 reachable endpoint.
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            self._connections[connection_id] = \
-                ConnectionInfo(connection_info.connection_type,
-                               connection_info.connection,
-                               endpoint,
-                               connection_info.status,
-                               connection_info.public_key)
+        with self._connections_lock:
+            if connection_id in self._connections:
+                connection_info = self._connections[connection_id]
+                self._connections[connection_id] = \
+                    ConnectionInfo(connection_info.connection_type,
+                                   connection_info.connection,
+                                   endpoint,
+                                   connection_info.status,
+                                   connection_info.public_key)
 
-        else:
-            LOGGER.debug("Could not update the endpoint %s for "
-                         "connection_id %s. The connection does not "
-                         "exist.",
-                         endpoint,
-                         connection_id)
+            else:
+                LOGGER.debug("Could not update the endpoint %s for "
+                             "connection_id %s. The connection does not "
+                             "exist.",
+                             endpoint,
+                             connection_id)
 
     def update_connection_public_key(self, connection_id, public_key):
         """Adds the public_key to the connection definition.
@@ -1150,20 +1158,21 @@ class Interconnect:
                 connections.
 
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            self._connections[connection_id] = \
-                ConnectionInfo(connection_info.connection_type,
-                               connection_info.connection,
-                               connection_info.uri,
-                               connection_info.status,
-                               public_key)
-        else:
-            LOGGER.debug("Could not update the public key %s for "
-                         "connection_id %s. The connection does not "
-                         "exist.",
-                         public_key,
-                         connection_id)
+        with self._connections_lock:
+            if connection_id in self._connections:
+                connection_info = self._connections[connection_id]
+                self._connections[connection_id] = \
+                    ConnectionInfo(connection_info.connection_type,
+                                   connection_info.connection,
+                                   connection_info.uri,
+                                   connection_info.status,
+                                   public_key)
+            else:
+                LOGGER.debug("Could not update the public key %s for "
+                             "connection_id %s. The connection does not "
+                             "exist.",
+                             public_key,
+                             connection_id)
 
     def update_connection_status(self, connection_id, status):
         """Adds a status to the connection definition. This allows the handlers
@@ -1176,24 +1185,27 @@ class Interconnect:
                 authortization the connection is at.
 
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            self._connections[connection_id] = \
-                ConnectionInfo(connection_info.connection_type,
-                               connection_info.connection,
-                               connection_info.uri,
-                               status,
-                               connection_info.public_key)
-        else:
-            LOGGER.debug("Could not update the status to %s for "
-                         "connection_id %s. The connection does not "
-                         "exist.",
-                         status,
-                         connection_id)
+        with self._connections_lock:
+            if connection_id in self._connections:
+                connection_info = self._connections[connection_id]
+                self._connections[connection_id] = \
+                    ConnectionInfo(connection_info.connection_type,
+                                   connection_info.connection,
+                                   connection_info.uri,
+                                   status,
+                                   connection_info.public_key)
+            else:
+                LOGGER.debug("Could not update the status to %s for "
+                             "connection_id %s. The connection does not "
+                             "exist.",
+                             status,
+                             connection_id)
 
     def _add_connection(self, connection, uri=None):
         with self._connections_lock:
             connection_id = connection.connection_id
+            LOGGER.debug("Adding outbound connection: %s %s",
+                         connection_id, uri)
             if connection_id not in self._connections:
                 self._connections[connection_id] = \
                     ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
@@ -1227,44 +1239,49 @@ class Interconnect:
         :param data: bytes serialized protobuf
         :return: future.Future
         """
-        if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: {}".format(connection_id))
-        connection_info = self._connections.get(connection_id)
-        if connection_info.connection_type == \
-                ConnectionType.ZMQ_IDENTITY:
-            message = validator_pb2.Message(
-                correlation_id=_generate_id(),
-                content=data,
-                message_type=message_type)
+        with self._connections_lock:
+            LOGGER.debug("send_last_message to connection: %s", connection_id)
+            if connection_id not in self._connections:
+                raise ValueError("Unknown connection "
+                                 "id: {}".format(connection_id))
+            connection_info = self._connections.get(connection_id)
+            if connection_info.connection_type == \
+                    ConnectionType.ZMQ_IDENTITY:
+                message = validator_pb2.Message(
+                    correlation_id=_generate_id(),
+                    content=data,
+                    message_type=message_type)
 
-            fut = future.Future(message.correlation_id, message.content,
-                                callback, timeout=self._connection_timeout)
+                fut = future.Future(message.correlation_id, message.content,
+                                    callback, timeout=self._connection_timeout)
 
-            if not one_way:
-                self._futures.put(fut)
+                if not one_way:
+                    self._futures.put(fut)
 
-            self._send_receive_thread.send_last_message(
-                msg=message,
-                connection_id=connection_id)
-            return fut
+                self._send_receive_thread.send_last_message(
+                    msg=message,
+                    connection_id=connection_id)
+                return fut
 
-        del self._connections[connection_id]
-        return connection_info.connection.send_last_message(
-            message_type,
-            data,
-            callback=callback)
+            del self._connections[connection_id]
+            return connection_info.connection.send_last_message(
+                message_type,
+                data,
+                callback=callback)
 
     def has_connection(self, connection_id):
-        if connection_id in self._connections:
-            return True
-        return False
+        with self._connections_lock:
+            if connection_id in self._connections:
+                return True
+            return False
 
     def is_outbound_connection(self, connection_id):
-        connection_info = self._connections[connection_id]
-        if connection_info.connection_type == \
-                ConnectionType.OUTBOUND_CONNECTION:
-            return True
-        return False
+        with self._connections_lock:
+            connection_info = self._connections[connection_id]
+            if connection_info.connection_type == \
+                    ConnectionType.OUTBOUND_CONNECTION:
+                return True
+            return False
 
     def _safe_send(self, message_type, message, connection_id, callback=None):
         try:
