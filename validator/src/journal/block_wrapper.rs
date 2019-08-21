@@ -27,6 +27,7 @@ pub enum BlockStatus {
     Invalid = 1,
     Valid = 2,
     Missing = 3,
+    InValidation = 5,
 }
 
 impl Default for BlockStatus {
