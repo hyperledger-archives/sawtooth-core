@@ -142,6 +142,7 @@ class _SendReceive:
         self._socket = None
         self._auth = None
         self._ready = Event()
+        self._cancellable_tasks = []
 
         # The last time a message was received over an outbound
         # socket we established.
@@ -544,14 +545,17 @@ class _SendReceive:
             self._dispatcher.add_send_last_message(self._connection,
                                                    self.send_last_message)
 
-            asyncio.ensure_future(self._remove_expired_futures(),
-                                  loop=self._event_loop)
+            task = asyncio.ensure_future(self._remove_expired_futures(),
+                                         loop=self._event_loop)
+            self._cancellable_tasks.append(task)
 
-            asyncio.ensure_future(self._receive_message(),
-                                  loop=self._event_loop)
+            task = asyncio.ensure_future(self._receive_message(),
+                                         loop=self._event_loop)
+            self._cancellable_tasks.append(task)
 
-            asyncio.ensure_future(self._dispatch_message(),
-                                  loop=self._event_loop)
+            task = asyncio.ensure_future(self._dispatch_message(),
+                                         loop=self._event_loop)
+            self._cancellable_tasks.append(task)
 
             self._dispatcher_queue = asyncio.Queue()
 
@@ -561,8 +565,9 @@ class _SendReceive:
                 self._monitor_sock = self._socket.get_monitor_socket(
                     zmq.EVENT_DISCONNECTED,
                     addr=self._monitor_fd)
-                asyncio.ensure_future(self._monitor_disconnects(),
-                                      loop=self._event_loop)
+                task = asyncio.ensure_future(self._monitor_disconnects(),
+                                             loop=self._event_loop)
+                self._cancellable_tasks.append(task)
 
         except Exception as e:
             # Put the exception on the queue where in start we are waiting
@@ -572,12 +577,16 @@ class _SendReceive:
             raise
 
         if self._heartbeat:
-            asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
+            task = asyncio.ensure_future(self._do_heartbeat(),
+                                         loop=self._event_loop)
+            self._cancellable_tasks.append(task)
 
         # Put a 'complete with the setup tasks' sentinel on the queue.
         complete_or_error_queue.put_nowait(_STARTUP_COMPLETE_SENTINEL)
 
-        asyncio.ensure_future(self._notify_started(), loop=self._event_loop)
+        task = asyncio.ensure_future(self._notify_started(),
+                                     loop=self._event_loop)
+        self._cancellable_tasks.append(task)
 
         self._event_loop.run_forever()
         # event_loop.stop called elsewhere will cause the loop to break out
@@ -626,8 +635,7 @@ class _SendReceive:
         self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
 
-        tasks = list(asyncio.Task.all_tasks(self._event_loop).copy())
-        for task in tasks:
+        for task in self._cancellable_tasks:
             task.cancel()
 
         asyncio.ensure_future(self._stop_event_loop(), loop=self._event_loop)
