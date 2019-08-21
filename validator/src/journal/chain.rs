@@ -523,6 +523,24 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     }
 
     pub fn validate_block(&self, block: &Block) {
+        // If there is already a result for this block, no need to validate it
+        if self
+            .block_validation_results
+            .get(&block.header_signature)
+            .is_some()
+        {
+            return;
+        }
+
+        // Create block validation result, maked as in-validation
+        self.block_validation_results.insert(BlockValidationResult {
+            block_id: block.header_signature.clone(),
+            execution_results: vec![],
+            num_transactions: 0,
+            status: BlockStatus::InValidation,
+        });
+
+        // Submit for validation
         let sender = self.validation_result_sender.as_ref().expect(
             "Attempted to submit block for validation before starting the chain controller",
         );
