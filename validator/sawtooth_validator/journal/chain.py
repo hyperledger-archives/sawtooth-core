@@ -94,6 +94,11 @@ class ChainController(OwnedPointer):
         payload = block.SerializeToString()
         _libexec(name, self.pointer, payload, len(payload))
 
+    def validate_block(self, block):
+        self._chain_controller_block_ffi_fn(
+            'chain_controller_validate_block',
+            block)
+
     def ignore_block(self, block):
         self._chain_controller_block_ffi_fn(
             'chain_controller_ignore_block',

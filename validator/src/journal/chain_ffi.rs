@@ -231,6 +231,12 @@ macro_rules! chain_controller_block_ffi {
     }
 }
 
+chain_controller_block_ffi!(
+    chain_controller_validate_block,
+    validate_block,
+    block,
+    &block
+);
 chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, &block);
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);

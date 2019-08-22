@@ -56,6 +56,9 @@ impl ToPyObject for BlockStatus {
             BlockStatus::Missing => PY_BLOCK_STATUS
                 .getattr(py, "Missing")
                 .expect("No BlockStatus.Missing"),
+            BlockStatus::InValidation => PY_BLOCK_STATUS
+                .getattr(py, "InValidation")
+                .expect("No BlockStatus.InValidation"),
         }
     }
 }
@@ -67,6 +70,7 @@ impl<'source> FromPyObject<'source> for BlockStatus {
             1 => BlockStatus::Invalid,
             2 => BlockStatus::Valid,
             3 => BlockStatus::Missing,
+            5 => BlockStatus::InValidation,
             _ => BlockStatus::Unknown,
         })
     }
