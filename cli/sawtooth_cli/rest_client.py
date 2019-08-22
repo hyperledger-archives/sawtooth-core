@@ -206,6 +206,10 @@ class RestClient:
         except (requests.exceptions.MissingSchema,
                 requests.exceptions.InvalidURL) as e:
             raise CliException(e)
+        except requests.exceptions.InvalidSchema as e:
+            raise CliException(
+                ('Schema not valid in "{}": '
+                 'make sure URL has valid schema').format(self._base_url))
         except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
