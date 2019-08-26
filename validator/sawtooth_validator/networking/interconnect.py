@@ -195,23 +195,6 @@ class _SendReceive:
         return self._received_message_counters[tag]
 
     @asyncio.coroutine
-    def _remove_expired_futures(self):
-        while True:
-            try:
-                yield from asyncio.sleep(self._connection_timeout,
-                                         loop=self._event_loop)
-                self._futures.remove_expired()
-            except CancelledError:  # pylint: disable=try-except-raise
-                # The concurrent.futures.CancelledError is caught by asyncio
-                # when the Task associated with the coroutine is cancelled.
-                # The raise is required to stop this component.
-                raise
-            except Exception as e:  # pylint: disable=broad-except
-                LOGGER.exception("An error occurred while"
-                                 " cleaning up expired futures: %s",
-                                 e)
-
-    @asyncio.coroutine
     def _do_heartbeat(self):
         while True:
             try:
@@ -267,7 +250,6 @@ class _SendReceive:
                 fut = future.Future(
                     message.correlation_id,
                     message.content,
-                    timeout=self._connection_timeout,
                 )
                 self._futures.put(fut)
                 message_frame = [
@@ -544,10 +526,6 @@ class _SendReceive:
                                               self.send_message)
             self._dispatcher.add_send_last_message(self._connection,
                                                    self.send_last_message)
-
-            task = asyncio.ensure_future(self._remove_expired_futures(),
-                                         loop=self._event_loop)
-            self._cancellable_tasks.append(task)
 
             task = asyncio.ensure_future(self._receive_message(),
                                          loop=self._event_loop)
@@ -1064,7 +1042,6 @@ class Interconnect:
                 message.correlation_id,
                 message.content,
                 callback,
-                timeout=self._connection_timeout,
                 timer_ctx=timer_ctx)
             if not one_way:
                 self._futures.put(fut)
@@ -1238,7 +1215,7 @@ class Interconnect:
                 message_type=message_type)
 
             fut = future.Future(message.correlation_id, message.content,
-                                callback, timeout=self._connection_timeout)
+                                callback)
 
             if not one_way:
                 self._futures.put(fut)
@@ -1343,7 +1320,7 @@ class OutboundConnection:
             message_type=message_type)
 
         fut = future.Future(message.correlation_id, message.content,
-                            callback, timeout=self._connection_timeout)
+                            callback)
         if not one_way:
             self._futures.put(fut)
 
@@ -1369,7 +1346,7 @@ class OutboundConnection:
             message_type=message_type)
 
         fut = future.Future(message.correlation_id, message.content,
-                            callback, timeout=self._connection_timeout)
+                            callback)
 
         if not one_way:
             self._futures.put(fut)
@@ -1391,4 +1368,3 @@ class OutboundConnection:
 
     def stop(self):
         self._send_receive_thread.shutdown()
-        self._futures.clean()

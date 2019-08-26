@@ -35,7 +35,7 @@ class FutureTimeoutError(Exception):
 
 class Future:
     def __init__(self, correlation_id, request=None, callback=None,
-                 timeout=None, timer_ctx=None):
+                 timer_ctx=None):
         self.correlation_id = correlation_id
         self._request = request
         self._result = None
@@ -43,7 +43,6 @@ class Future:
         self._create_time = time.time()
         self._callback_func = callback
         self._reconcile_time = None
-        self._timeout = timeout
         self._timer_ctx = timer_ctx
 
     def done(self):
@@ -84,11 +83,6 @@ class Future:
 
     def get_duration(self):
         return self._reconcile_time - self._create_time
-
-    def is_expired(self):
-        if self._result is None and self._timeout is not None:
-            return (time.time() - self._create_time) > self._timeout
-        return False
 
     def timer_stop(self):
         if self._timer_ctx:
@@ -133,20 +127,3 @@ class FutureCollection:
         except KeyError:
             raise FutureCollectionKeyError(
                 "no such correlation id: {}".format(correlation_id))
-
-    def remove_expired(self):
-        correlation_ids = [
-            correlation_id
-            for correlation_id, future
-            in self._futures.items()
-            if future.is_expired()
-        ]
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
-
-    def clean(self):
-        correlation_ids = list(self._futures.keys())
-        for correlation_id in correlation_ids:
-            self._futures[correlation_id].timer_stop()
-            del self._futures[correlation_id]
