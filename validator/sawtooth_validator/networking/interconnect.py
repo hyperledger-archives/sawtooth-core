@@ -331,17 +331,23 @@ class _SendReceive:
                     connection_id = \
                         self._identity_to_connection_id(
                             self._connection.encode())
-                try:
-                    self._futures.set_result(
-                        message.correlation_id,
-                        future.FutureResult(
-                            message_type=message.message_type,
-                            content=message.content,
-                            connection_id=connection_id))
-                except future.FutureCollectionKeyError:
-                    self._dispatcher.dispatch(self._connection,
-                                              message,
-                                              connection_id)
+
+                if self._dispatcher.has_connection(self._connection):
+                    try:
+                        self._futures.set_result(
+                            message.correlation_id,
+                            future.FutureResult(
+                                message_type=message.message_type,
+                                content=message.content,
+                                connection_id=connection_id))
+                    except future.FutureCollectionKeyError:
+                        self._dispatcher.dispatch(self._connection,
+                                                  message,
+                                                  connection_id)
+                else:
+                    LOGGER.warning("Received message from connection %s "
+                                   "but connection not in dispatcher. "
+                                   "Dropping", self._connection)
 
             except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio

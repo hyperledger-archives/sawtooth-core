@@ -73,6 +73,9 @@ class Dispatcher(InstrumentedThread):
                 instance=self)
         return self._dispatch_timers[tag]
 
+    def has_connection(self, connection):
+        return connection in self._send_message
+
     def add_send_message(self, connection, send_message):
         """Adds a send_message function to the Dispatcher's
         dictionary of functions indexed by connection.
