@@ -196,7 +196,8 @@ class DisconnectHandler(Handler):
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
-        self._network.remove_connection(connection_id)
+        LOGGER.debug("DisconnectHandler attempt to remove "
+                     "connection %s", connection_id)
 
         return HandlerResult(
             HandlerStatus.RETURN,

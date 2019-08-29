@@ -900,25 +900,8 @@ class ConnectionManager(InstrumentedThread):
                     self._remove_temporary_connection(connection_id)
 
     def _remove_temporary_connection(self, connection_id):
-        status = self._connection_statuses.get(connection_id)
-        if status == PeerStatus.TEMP:
-            LOGGER.debug("Closing connection to %s", connection_id)
-            msg = DisconnectMessage()
-            try:
-                self._network.send(validator_pb2.Message.NETWORK_DISCONNECT,
-                                   msg.SerializeToString(),
-                                   connection_id)
-            except ValueError:
-                pass
-            del self._connection_statuses[connection_id]
-            self._network.remove_connection(connection_id)
-        elif status == PeerStatus.PEER:
-            LOGGER.debug("Connection close request for peer ignored: %s",
-                         connection_id)
-        elif status is None:
-            LOGGER.debug("Connection close request for unknown connection "
-                         "ignored: %s",
-                         connection_id)
+        LOGGER.debug("remove_temp_connection attempt to close connection %s",
+                     connection_id)
 
     def connect_success(self, connection_id):
         """
