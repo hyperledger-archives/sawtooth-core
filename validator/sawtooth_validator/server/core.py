@@ -288,7 +288,7 @@ class Validator:
             gossip=gossip,
             cache_keep_time=base_keep_time,
             cache_purge_frequency=30,
-            requested_keep_time=300)
+            requested_keep_time=20)
         self._completer = completer
 
         block_sender = BroadcastBlockSender(completer, gossip)

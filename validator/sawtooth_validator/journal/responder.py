@@ -25,7 +25,7 @@ from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 
-CACHE_KEEP_TIME = 300
+CACHE_KEEP_TIME = 20
 
 
 class _LogGuard:
