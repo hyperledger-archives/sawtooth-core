@@ -122,6 +122,9 @@ class Completer:
             # The predecessor dropped out of the block manager between when we
             # checked if it was there and when the block was determined to be
             # complete.
+            LOGGER.debug("Attempting to complete %s - The predecessor %s "
+                         "is missing from the block manager",
+                         blkw, blkw.previous_block_id)
             return self._request_previous_if_not_already_requested(blkw)
 
     def _request_previous_if_not_already_requested(self, blkw):
@@ -170,6 +173,9 @@ class Completer:
         # NOTE: We cannot assume that if the previous block _is_ in the block
         # manager, that it will still be in there when this block is complete.
         if block.previous_block_id not in self._block_manager:
+            LOGGER.debug("Attempting to complete block %s - parent block "
+                         "%s not in block manager. Requesting.",
+                         block, block.previous_block_id)
             return self._request_previous_if_not_already_requested(block)
 
         # Check for same number of batch_ids and batches
@@ -190,6 +196,9 @@ class Completer:
             for batch_id in block.header.batch_ids:
                 if batch_id not in self._batch_cache and \
                         batch_id not in temp_batches:
+                    LOGGER.debug("Attempting to complete block %s - "
+                                 "block is missing batch %s",
+                                 block, batch_id)
                     # Request all missing batches
                     if batch_id not in self._incomplete_blocks:
                         self._incomplete_blocks[batch_id] = [block]
@@ -205,6 +214,8 @@ class Completer:
 
             # The block cannot be completed.
             if not building:
+                LOGGER.debug("Attempting to complete block %s - block is "
+                             "not completable", block)
                 return None
 
             batches = self._finalize_batch_list(block, temp_batches)
@@ -214,6 +225,8 @@ class Completer:
             if block.header_signature in self._requested:
                 del self._requested[block.header_signature]
 
+            LOGGER.debug("Attempting to complete block %s - return post "
+                         "reset batches list", block)
             return self._put_or_request_if_missing_predecessor(block)
 
         batch_id_list = [x.header_signature for x in block.batches]
@@ -234,6 +247,8 @@ class Completer:
             if batches is not None:
                 block.batches.extend(batches)
             else:
+                LOGGER.debug("Attempting to complete block %s - batches "
+                             "list is empty", block)
                 return None
 
             if block.header_signature in self._requested:
@@ -315,6 +330,7 @@ class Completer:
                     del self._incomplete_blocks[my_key]
 
     def _send_block(self, block):
+        LOGGER.debug("Sending complete block %s to journal", block)
         self._on_block_received(block.header_signature)
 
     def set_on_block_received(self, on_block_received_func):
@@ -328,8 +344,11 @@ class Completer:
             blkw = BlockWrapper(block)
             block = self._complete_block(blkw)
             if block is not None:
+                LOGGER.debug("add_block block %s is complete", blkw)
                 self._send_block(block.block)
                 self._process_incomplete_blocks(block.header_signature)
+            else:
+                LOGGER.debug("add_block block %s is incomplete", blkw)
             self._incomplete_blocks_length.set_value(
                 len(self._incomplete_blocks))
 
