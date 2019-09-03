@@ -400,26 +400,24 @@ class Completer:
                 return None
 
     def get_batch(self, batch_id):
-        with self.lock:
-            if batch_id in self._batch_cache:
-                return self._batch_cache[batch_id]
+        if batch_id in self._batch_cache:
+            return self._batch_cache[batch_id]
 
-            try:
-                return self._get_committed_batch_by_id(batch_id)
-            except ValueError:
-                return None
+        try:
+            return self._get_committed_batch_by_id(batch_id)
+        except ValueError:
+            return None
 
     def get_batch_by_transaction(self, transaction_id):
-        with self.lock:
-            if transaction_id in self._seen_txns:
-                batch_id = self._seen_txns[transaction_id]
-                return self.get_batch(batch_id)
+        if transaction_id in self._seen_txns:
+            batch_id = self._seen_txns[transaction_id]
+            return self.get_batch(batch_id)
 
-            try:
-                return self._get_committed_batch_by_txn_id(
-                    transaction_id)
-            except ValueError:
-                return None
+        try:
+            return self._get_committed_batch_by_txn_id(
+                transaction_id)
+        except ValueError:
+            return None
 
 
 class CompleterBatchListBroadcastHandler(Handler):
