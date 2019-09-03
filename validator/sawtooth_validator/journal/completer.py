@@ -16,6 +16,7 @@
 import logging
 from threading import RLock
 from collections import deque
+import time
 
 from sawtooth_validator.journal.block_manager import MissingPredecessor
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -330,7 +331,8 @@ class Completer:
                     del self._incomplete_blocks[my_key]
 
     def _send_block(self, block):
-        LOGGER.debug("Sending complete block %s to journal", block)
+        LOGGER.debug("Sending complete block %s to journal",
+                     block.header_signature)
         self._on_block_received(block.header_signature)
 
     def set_on_block_received(self, on_block_received_func):
@@ -342,11 +344,19 @@ class Completer:
     def add_block(self, block):
         with self.lock:
             blkw = BlockWrapper(block)
+            start = time.time()
+            LOGGER.debug("add_block started %s", start)
             block = self._complete_block(blkw)
+            LOGGER.debug("add_block complete_block completed %s",
+                         time.time() - start)
             if block is not None:
                 LOGGER.debug("add_block block %s is complete", blkw)
                 self._send_block(block.block)
+                LOGGER.debug("add_block send_block completed %s",
+                             time.time() - start)
                 self._process_incomplete_blocks(block.header_signature)
+                LOGGER.debug("add_block process_incomplete_blocks "
+                             "completed %s", time.time() - start)
             else:
                 LOGGER.debug("add_block block %s is incomplete", blkw)
             self._incomplete_blocks_length.set_value(
