@@ -26,6 +26,11 @@ targets:
     args:
       language: Go
 
+  sdk_submit_tutorial_rust:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: Rust
+
   sdk_TP_tutorial_python:
     template: sdk_TP_tutorial.rst
     args:

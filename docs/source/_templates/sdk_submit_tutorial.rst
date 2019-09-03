@@ -42,6 +42,21 @@ bytes and getting the private key's associated public key.
     privateKey := context.NewRandomPrivateKey()
     signer := signing.NewCryptoFactory(context).NewSigner(privateKey)
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use sawtooth_sdk::signing::CryptoFactory;
+    use sawtooth_sdk::signing::create_context;
+
+    let context = create_context("secp256k1")
+        .expect("Error creating the right context");
+    let private_key = context
+        .new_random_private_key()
+        .expect("Error generating a new Private Key");
+    let crypto_factory = CryptoFactory::new(context.as_ref());
+    let signer = crypto_factory.new_signer(private_key.as_ref());
+
 {% else %}
 
 {# Python 3 code should be the default #}
@@ -153,6 +168,71 @@ SHA-512 hash of the payload bytes.
     // Check if err is nil before continuing
     transactionHeaderBytes, err := proto.Marshal(&rawTransactionHeader)
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    extern crate protobuf;
+    extern crate openssl;
+    extern crate rand;
+
+    use rand::{thread_rng, Rng};
+
+    use protobuf::Message
+    use protobuf::RepeatedField;
+
+    use openssl::sha::sha512;
+    use sawtooth_sdk::messages::transaction::TransactionHeader;
+
+    let mut txn_header = TransactionHeader::new();
+    txn_header.set_family_name(String::from("intkey"));
+    txn_header.set_family_version(String::from("1.0"));
+
+    // Generate a random 128 bit number to use as a nonce
+    let mut nonce = [0u8; 16];
+    thread_rng()
+        .try_fill(&mut nonce[..])
+        .expect("Error generating random nonce");
+    txn_header.set_nonce(to_hex_string(&nonce.to_vec()));
+
+    let input_vec: Vec<String> = vec![String::from(
+        "1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7",
+    )];
+    let output_vec: Vec<String> = vec![String::from(
+        "1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7",
+    )];
+
+    txn_header.set_inputs(RepeatedField::from_vec(input_vec));
+    txn_header.set_outputs(RepeatedField::from_vec(output_vec));
+    txn_header.set_signer_public_key(
+        signer
+            .get_public_key()
+            .expect("Error retrieving Public Key")
+            .as_hex(),
+    );
+    txn_header.set_batcher_public_key(
+        signer
+            .get_public_key()
+            .expect("Error retrieving Public Key")
+            .as_hex(),
+    );
+
+    txn_header.set_payload_sha512(to_hex_string(&sha512(&payload_bytes).to_vec()));
+
+    let txn_header_bytes = txn_header
+        .write_to_bytes()
+        .expect("Error converting transaction header to bytes");
+
+    // --snip--
+
+    // To properly format the Sha512 String
+    pub fn to_hex_string(bytes: &Vec<u8>) -> String {
+        let strs: Vec<String> = bytes.iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        strs.join("")
+    }
+
 {% else %}
 
 .. code-block::  python
@@ -178,6 +258,7 @@ SHA-512 hash of the payload bytes.
         dependencies=[],
         payload_sha512=sha512(payload_bytes).hexdigest()
     ).SerializeToString()
+
 
 {% endif %}
 
@@ -241,6 +322,21 @@ construct the complete Transaction.
         Payload:         payloadBytes,
     }
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use sawtooth_sdk::messages::transaction::Transaction;
+
+    let signature = signer
+        .sign(&txn_header_bytes)
+        .expect("Error signing the transaction header");
+
+    let mut txn = Transaction::new();
+    txn.set_header(txn_header_bytes.to_vec());
+    txn.set_header_signature(signature);
+    txn.set_payload(payload_bytes);
+
 {% else %}
 
 .. code-block::  python
@@ -299,6 +395,18 @@ be serialized as a single Transaction.
 
     // Check if err is nil before continuing
     transactionBytes, err := proto.Marshal(&transaction)
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    let txn_list_vec = vec![txn1, txn2];
+    let txn_list = TransactionList::new();
+    txn_list.set_transactions(RepeatedField::from_vec(txn_list_vec));
+
+    let txn_list_bytes = txn_list
+        .write_to_bytes()
+        .expect("Error converting Transaction List to bytes");
 
 {% else %}
 
@@ -365,6 +473,32 @@ are listed in the Batch.
     // Check if err is nil before continuing
     batchHeaderBytes, err := proto.Marshal(&rawBatchHeader)
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use sawtooth_sdk::messages::batch::BatchHeader;
+
+    let mut batch_header = BatchHeader::new();
+
+    batch_header.set_signer_public_key(
+        signer
+            .get_public_key()
+            .expect("Error retrieving Public Key")
+            .as_hex(),
+    );
+
+    let transaction_ids = vec![txn.clone()]
+        .iter()
+        .map(|trans| String::from(trans.get_header_signature()))
+        .collect();
+
+    batch_header.set_transaction_ids(RepeatedField::from_vec(transaction_ids));
+
+    let batch_header_bytes = batch_header
+        .write_to_bytes()
+        .expect("Error converting batch header to bytes");
+
 {% else %}
 
 .. code-block:: python
@@ -418,6 +552,22 @@ transactions that make up the batch.
         HeaderSignature: signature,
     }
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use sawtooth_sdk::messages::batch::Batch;
+
+    let signature = signer
+        .sign(&batch_header_bytes)
+        .expect("Error signing the batch header");
+
+    let mut batch = Batch::new();
+
+    batch.set_header(batch_header_bytes);
+    batch.set_header_signature(signature);
+    batch.set_transactions(RepeatedField::from_vec(vec![txn]));
+
 {% else %}
 
 .. code-block:: python
@@ -467,6 +617,18 @@ interleaved with yours.
 
     // Check if err is nil before continuing
     batchListBytes := proto.Marshal(&rawBatchList)
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use sawtooth_sdk::messages::batch::BatchList;
+
+    let mut batch_list = BatchList::new();
+    batch_list.set_batches(RepeatedField::from_vec(vec![batch]));
+    let batch_list_bytes = batch_list
+        .write_to_bytes()
+        .expect("Error converting batch list to bytes");
 
 {% else %}
 

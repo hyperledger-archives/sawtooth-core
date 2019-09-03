@@ -43,6 +43,23 @@ prepared the BatchList:
         bytes.NewBuffer(batchListBytes)
     )
 
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    // When using an external crate don't forget to add it to your dependencies
+    // in the Cargo.toml file, just like with the sdk itself
+    extern crate reqwest;
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("http://localhost:8008/batches")
+        .header("Content-Type", "application/octet-stream")
+        .body(
+            batch_list_bytes,
+        )
+        .send()
+
 {% else %}
 
 .. code-block:: python
@@ -87,6 +104,17 @@ sent it from the command line with ``curl``:
 
     // Check if err is nil before continuing
     err = ioutil.WriteFile("intkey.batches", batchListBytes, 0644)
+
+{% elif language == 'Rust' %}
+
+.. code-block:: rust
+
+    use std::fs::File;
+    use std::io::Write;
+
+    let mut file = File::create("intkey.batches").expect("Error creating file");
+    file.write_all(&batch_list_bytes)
+        .expect("Error writing bytes");
 
 {% else %}
 
