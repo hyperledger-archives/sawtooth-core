@@ -154,7 +154,6 @@ struct ChainControllerState {
     block_manager: BlockManager,
     block_references: HashMap<String, BlockRef>,
     chain_reader: Box<ChainReader>,
-    chain_head: Option<BlockRef>,
     chain_id_manager: ChainIdManager,
     observers: Vec<Box<ChainObserver>>,
     state_pruning_manager: StatePruningManager,
@@ -247,6 +246,7 @@ impl ChainControllerState {
 #[derive(Clone)]
 pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> {
     state: Arc<RwLock<ChainControllerState>>,
+    chain_head: Arc<RwLock<Option<BlockRef>>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
     consensus_notifier: Arc<ConsensusNotifier>,
@@ -290,10 +290,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 chain_reader,
                 chain_id_manager: ChainIdManager::new(data_dir),
                 observers,
-                chain_head: None,
                 state_pruning_manager,
                 fork_cache: ForkCache::new(fork_cache_keep_time),
             })),
+            chain_head: Arc::new(RwLock::new(None)),
             block_validator,
             block_validation_results,
             stop_handle: Arc::new(Mutex::new(None)),
@@ -313,12 +313,12 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     }
 
     pub fn chain_head(&self) -> Option<Block> {
-        let state = self
-            .state
+        let chain_head = self
+            .chain_head
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        if let Some(head) = &state.chain_head {
+        if let Some(head) = chain_head.as_ref() {
             self.get_block(head.block_id())
         } else {
             None
@@ -353,6 +353,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     fn set_genesis(
         &self,
         state: &mut ChainControllerState,
+        chain_head: &mut Option<BlockRef>,
         lock: &ChainHeadLock,
         block: &Block,
     ) -> Result<(), ChainControllerError> {
@@ -383,7 +384,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 // Create Ref-C: External reference for the chain head will be held until it is
                 // superceded by a new chain head.
-                state.chain_head = Some(
+                *chain_head = Some(
                     state
                         .block_manager
                         .ref_block(block.header_signature.as_str())?,
@@ -425,18 +426,37 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
-                    if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
-                        warn!(
-                            "Unable to set chain head; genesis block {} is not valid: {:?}",
-                            &block.header_signature, err
-                        );
+            {
+                let requires_genesis_block = {
+                    self.chain_head
+                        .read()
+                        .expect("No lock holder should have poisoned the lock")
+                        .is_none()
+                };
+
+                if requires_genesis_block {
+                    debug!("Setting block {} as genesis block", block_id);
+                    if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                        let mut chain_head = self
+                            .chain_head
+                            .write()
+                            .expect("No lock holder should have poisoned the lock");
+                        if let Err(err) = self.set_genesis(
+                            &mut state,
+                            &mut chain_head,
+                            &self.chain_head_lock,
+                            &block,
+                        ) {
+                            warn!(
+                                "Unable to set chain head; genesis block {} is not valid: {:?}",
+                                &block.header_signature, err
+                            );
+                        }
+                    } else {
+                        warn!("Received block not in block manager");
                     }
-                } else {
-                    warn!("Received block not in block manager");
+                    return Ok(());
                 }
-                return Ok(());
             }
         }
 
@@ -746,7 +766,11 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 // Move Ref-C: Consensus has decided this block should become the new chain
                 // head, so the ChainController will maintain ownership of this ext. ref until a
                 // new chain head replaces it.
-                state.chain_head = Some(
+                let mut chain_head = self
+                    .chain_head
+                    .write()
+                    .expect("No lock holder should have poisoned the lock");
+                *chain_head = Some(
                     state
                         .block_references
                         .remove(&block.header_signature)
@@ -886,6 +910,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     pub fn light_clone(&self) -> Self {
         ChainController {
             state: self.state.clone(),
+            chain_head: Arc::clone(&self.chain_head),
             // This instance doesn't share the stop handle: it's not a
             // publicly accessible instance
             stop_handle: Arc::new(Mutex::new(None)),
@@ -932,9 +957,9 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     fn initialize_chain_head(&mut self) {
         // we need to check to see if a genesis block was created and stored,
         // before this controller was started
-        let mut state = self
+        let state = self
             .state
-            .write()
+            .read()
             .expect("No lock holder should have poisoned the lock");
 
         let chain_head = state
@@ -950,7 +975,12 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
             // Create Ref-C: External reference for the chain head will be held until it is
             // superceded by a new chain head.
-            state.chain_head = Some(
+            let mut in_mem_chain_head = self
+                .chain_head
+                .write()
+                .expect("No lock holder should have poisoned the lock");
+
+            *in_mem_chain_head = Some(
                 state
                     .block_manager
                     .ref_block(chain_head.header_signature.as_str())
