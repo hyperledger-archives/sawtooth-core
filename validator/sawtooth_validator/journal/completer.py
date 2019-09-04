@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import time
 from threading import RLock
 from collections import deque
 
@@ -109,6 +110,18 @@ class Completer:
         self._incomplete_batches_length = COLLECTOR.gauge(
             'incomplete_batches_length', instance=self)
         self._incomplete_batches_length.set_value(0)
+        self._complete_batch_timer = COLLECTOR.timer(
+            'complete_batch_time', instance=self)
+        self._complete_block_timer = COLLECTOR.timer(
+            'complete_block_time', instance=self)
+        self._incomplete_batches_timer = COLLECTOR.timer(
+            'process_incomplete_batches_time', instance=self)
+        self._incomplete_blocks_timer = COLLECTOR.timer(
+            'process_incomplete_blocks_time', instance=self)
+        self._add_block_timer = COLLECTOR.timer(
+            'add_block_time', instance=self)
+        self._add_batch_timer = COLLECTOR.timer(
+            'add_batch_time', instance=self)
 
     def _put_or_request_if_missing_predecessor(self, blkw):
         try:
@@ -159,88 +172,105 @@ class Completer:
             is added to the block_manager and is returned.
 
         """
-
-        if block.header_signature in self._block_manager:
-            LOGGER.debug("Drop duplicate block: %s", block)
-            return None
-
-        # NOTE: We cannot assume that if the previous block _is_ in the block
-        # manager, that it will still be in there when this block is complete.
-        if block.previous_block_id not in self._block_manager:
-            return self._request_previous_if_not_already_requested(block)
-
-        # Check for same number of batch_ids and batches
-        # If different starting building batch list, Otherwise there is a batch
-        # that does not belong, block should be dropped.
-        if len(block.batches) > len(block.header.batch_ids):
-            LOGGER.debug("Block has extra batches. Dropping %s", block)
-            return None
-
-        # used to supplement batch_cache, contains batches already in block
-        temp_batches = {}
-        for batch in block.batches:
-            temp_batches[batch.header_signature] = batch
-
-        # The block is missing batches. Check to see if we can complete it.
-        if len(block.batches) != len(block.header.batch_ids):
-            building = True
-            for batch_id in block.header.batch_ids:
-                if batch_id not in self._batch_cache and \
-                        batch_id not in temp_batches:
-                    # Request all missing batches
-                    if batch_id not in self._incomplete_blocks:
-                        self._incomplete_blocks[batch_id] = [block]
-                    elif block not in self._incomplete_blocks[batch_id]:
-                        self._incomplete_blocks[batch_id] += [block]
-
-                    # We have already requested the batch, do not do so again
-                    if batch_id in self._requested:
-                        return None
-                    self._requested[batch_id] = None
-                    self._gossip.broadcast_batch_by_batch_id_request(batch_id)
-                    building = False
-
-            # The block cannot be completed.
-            if not building:
+        with self._complete_block_timer.time():
+            if block.header_signature in self._block_manager:
+                LOGGER.debug("Drop duplicate block: %s", block)
                 return None
 
-            batches = self._finalize_batch_list(block, temp_batches)
-            del block.batches[:]
-            # reset batches with full list batches
-            block.batches.extend(batches)
-            if block.header_signature in self._requested:
-                del self._requested[block.header_signature]
+            # NOTE: We cannot assume that if the previous block _is_ in the
+            # block manager, that it will still be in there when this block
+            # is complete.
+            if block.previous_block_id not in self._block_manager:
+                LOGGER.debug("Attempting to complete block %s - parent block "
+                             "%s not in block manager. Requesting.",
+                             block, block.previous_block_id)
+                return self._request_previous_if_not_already_requested(block)
 
-            return self._put_or_request_if_missing_predecessor(block)
+            # Check for same number of batch_ids and batches
+            # If different starting building batch list, Otherwise there is
+            # a batch that does not belong, block should be dropped.
+            if len(block.batches) > len(block.header.batch_ids):
+                LOGGER.debug("Block has extra batches. Dropping %s", block)
+                return None
 
-        batch_id_list = [x.header_signature for x in block.batches]
-        # Check to see if batchs are in the correct order.
-        if batch_id_list == list(block.header.batch_ids):
-            if block.header_signature in self._requested:
-                del self._requested[block.header_signature]
+            # used to supplement batch_cache, contains batches already in
+            # block
+            temp_batches = {}
+            for batch in block.batches:
+                temp_batches[batch.header_signature] = batch
 
-            return self._put_or_request_if_missing_predecessor(block)
+            # The block is missing batches. Check to see if we can
+            # complete it.
+            if len(block.batches) != len(block.header.batch_ids):
+                building = True
+                for batch_id in block.header.batch_ids:
+                    if batch_id not in self._batch_cache and \
+                            batch_id not in temp_batches:
+                        LOGGER.debug("Attempting to complete block %s - "
+                                     "block is missing batch %s",
+                                     block, batch_id)
+                        # Request all missing batches
+                        if batch_id not in self._incomplete_blocks:
+                            self._incomplete_blocks[batch_id] = [block]
+                        elif block not in self._incomplete_blocks[batch_id]:
+                            self._incomplete_blocks[batch_id] += [block]
 
-        # Check to see if the block has all batch_ids and they can be put
-        # in the correct order
-        if sorted(batch_id_list) == sorted(list(block.header.batch_ids)):
-            batches = self._finalize_batch_list(block, temp_batches)
-            # Clear batches from block
-            del block.batches[:]
-            # reset batches with full list batches
-            if batches is not None:
+                        # We have already requested the batch, do not do so
+                        # again
+                        if batch_id in self._requested:
+                            return None
+                        self._requested[batch_id] = None
+                        self._gossip.broadcast_batch_by_batch_id_request(
+                            batch_id)
+                        building = False
+
+                # The block cannot be completed.
+                if not building:
+                    LOGGER.debug("Attempting to complete block %s - block is "
+                                 "not completable", block)
+                    return None
+
+                batches = self._finalize_batch_list(block, temp_batches)
+                del block.batches[:]
+                # reset batches with full list batches
                 block.batches.extend(batches)
-            else:
-                return None
+                if block.header_signature in self._requested:
+                    del self._requested[block.header_signature]
 
-            if block.header_signature in self._requested:
-                del self._requested[block.header_signature]
+                LOGGER.debug("Attempting to complete block %s - return post "
+                             "reset batches list", block)
+                return self._put_or_request_if_missing_predecessor(block)
 
-            return self._put_or_request_if_missing_predecessor(block)
+            batch_id_list = [x.header_signature for x in block.batches]
+            # Check to see if batchs are in the correct order.
+            if batch_id_list == list(block.header.batch_ids):
+                if block.header_signature in self._requested:
+                    del self._requested[block.header_signature]
 
-        LOGGER.debug("Block.header.batch_ids does not match set of "
-                     "batches in block.batches Dropping %s", block)
-        return None
+                return self._put_or_request_if_missing_predecessor(block)
+
+            # Check to see if the block has all batch_ids and they can be put
+            # in the correct order
+            if sorted(batch_id_list) == sorted(list(block.header.batch_ids)):
+                batches = self._finalize_batch_list(block, temp_batches)
+                # Clear batches from block
+                del block.batches[:]
+                # reset batches with full list batches
+                if batches is not None:
+                    block.batches.extend(batches)
+                else:
+                    LOGGER.debug("Attempting to complete block %s - batches "
+                                 "list is empty", block)
+                    return None
+
+                if block.header_signature in self._requested:
+                    del self._requested[block.header_signature]
+
+                return self._put_or_request_if_missing_predecessor(block)
+
+            LOGGER.debug("Block.header.batch_ids does not match set of "
+                         "batches in block.batches Dropping %s", block)
+            return None
 
     def _finalize_batch_list(self, block, temp_batches):
         batches = []
@@ -255,31 +285,34 @@ class Completer:
         return batches
 
     def _complete_batch(self, batch):
-        valid = True
-        dependencies = []
-        for txn in batch.transactions:
-            txn_header = TransactionHeader()
-            txn_header.ParseFromString(txn.header)
-            for dependency in txn_header.dependencies:
-                # Check to see if the dependency has been seen or is committed
-                if dependency not in self._seen_txns and not \
-                        self._transaction_committed(dependency):
-                    self._unsatisfied_dependency_count.inc()
+        with self._complete_batch_timer.time():
+            valid = True
+            dependencies = []
+            for txn in batch.transactions:
+                txn_header = TransactionHeader()
+                txn_header.ParseFromString(txn.header)
+                for dependency in txn_header.dependencies:
+                    # Check to see if the dependency has been seen or
+                    # is committed
+                    if dependency not in self._seen_txns and not \
+                            self._transaction_committed(dependency):
+                        self._unsatisfied_dependency_count.inc()
 
-                    # Check to see if the dependency has already been requested
-                    if dependency not in self._requested:
-                        dependencies.append(dependency)
-                        self._requested[dependency] = None
-                    if dependency not in self._incomplete_batches:
-                        self._incomplete_batches[dependency] = [batch]
-                    elif batch not in self._incomplete_batches[dependency]:
-                        self._incomplete_batches[dependency] += [batch]
-                    valid = False
-        if not valid:
-            self._gossip.broadcast_batch_by_transaction_id_request(
-                dependencies)
+                        # Check to see if the dependency has already been
+                        # requested
+                        if dependency not in self._requested:
+                            dependencies.append(dependency)
+                            self._requested[dependency] = None
+                        if dependency not in self._incomplete_batches:
+                            self._incomplete_batches[dependency] = [batch]
+                        elif batch not in self._incomplete_batches[dependency]:
+                            self._incomplete_batches[dependency] += [batch]
+                        valid = False
+            if not valid:
+                self._gossip.broadcast_batch_by_transaction_id_request(
+                    dependencies)
 
-        return valid
+            return valid
 
     def _add_seen_txns(self, batch):
         for txn in batch.transactions:
@@ -289,27 +322,34 @@ class Completer:
 
     def _process_incomplete_batches(self, key):
         # Keys are transaction_id
-        if key in self._incomplete_batches:
-            batches = self._incomplete_batches[key]
-            for batch in batches:
-                self.add_batch(batch)
-            del self._incomplete_batches[key]
+        with self._incomplete_batches_timer.time():
+            if key in self._incomplete_batches:
+                batches = self._incomplete_batches[key]
+                for batch in batches:
+                    self.add_batch(batch)
+                del self._incomplete_batches[key]
+                self._incomplete_batches_length.set_value(
+                    len(self._incomplete_batches))
 
     def _process_incomplete_blocks(self, key):
         # Keys are either a block_id or batch_id
-        if key in self._incomplete_blocks:
-            to_complete = deque()
-            to_complete.append(key)
+        with self._incomplete_blocks_timer.time():
+            if key in self._incomplete_blocks:
+                to_complete = deque()
+                to_complete.append(key)
 
-            while to_complete:
-                my_key = to_complete.popleft()
-                if my_key in self._incomplete_blocks:
-                    inc_blocks = self._incomplete_blocks[my_key]
-                    for inc_block in inc_blocks:
-                        if self._complete_block(inc_block):
-                            self._send_block(inc_block.block)
-                            to_complete.append(inc_block.header_signature)
-                    del self._incomplete_blocks[my_key]
+                while to_complete:
+                    my_key = to_complete.popleft()
+                    if my_key in self._incomplete_blocks:
+                        inc_blocks = self._incomplete_blocks[my_key]
+                        for inc_block in inc_blocks:
+                            if self._complete_block(inc_block):
+                                self._send_block(inc_block.block)
+                                to_complete.append(inc_block.header_signature)
+                        del self._incomplete_blocks[my_key]
+
+                self._incomplete_blocks_length.set_value(
+                    len(self._incomplete_blocks))
 
     def _send_block(self, block):
         self._on_block_received(block.header_signature)
@@ -324,35 +364,49 @@ class Completer:
         self._on_batch_received = on_batch_received_func
 
     def add_block(self, block):
-        with self.lock:
-            blkw = BlockWrapper(block)
-            block = self._complete_block(blkw)
-            if block is not None:
-                self._send_block(block.block)
-                self._process_incomplete_blocks(block.header_signature)
-            self._incomplete_blocks_length.set_value(
-                len(self._incomplete_blocks))
+        with self._add_block_timer.time():
+            with self.lock:
+                blkw = BlockWrapper(block)
+                start = time.time()
+                LOGGER.debug("add_block started %s", start)
+                block = self._complete_block(blkw)
+                LOGGER.debug("add_block complete_block completed %s",
+                             time.time() - start)
+                if block is not None:
+                    LOGGER.debug("add_block block %s is complete", blkw)
+                    self._send_block(block.block)
+                    LOGGER.debug("add_block send_block completed %s",
+                                 time.time() - start)
+                    self._process_incomplete_blocks(block.header_signature)
+                    LOGGER.debug("add_block process_incomplete_blocks "
+                                 "completed %s", time.time() - start)
+                else:
+                    LOGGER.debug("add_block block %s is incomplete", blkw)
+                self._incomplete_blocks_length.set_value(
+                    len(self._incomplete_blocks))
 
     def add_batch(self, batch):
-        with self.lock:
-            if batch.header_signature in self._batch_cache:
-                return
-            if self._complete_batch(batch):
-                self._batch_cache[batch.header_signature] = batch
-                self._add_seen_txns(batch)
-                self._on_batch_received(batch)
-                self._process_incomplete_blocks(batch.header_signature)
-                if batch.header_signature in self._requested:
-                    del self._requested[batch.header_signature]
-                # If there was a batch waiting on this transaction, process
-                # that batch
-                for txn in batch.transactions:
-                    if txn.header_signature in self._incomplete_batches:
-                        if txn.header_signature in self._requested:
-                            del self._requested[txn.header_signature]
-                        self._process_incomplete_batches(txn.header_signature)
-            self._incomplete_batches_length.set_value(
-                len(self._incomplete_batches))
+        with self._add_batch_timer.time():
+            with self.lock:
+                if batch.header_signature in self._batch_cache:
+                    return
+                if self._complete_batch(batch):
+                    self._batch_cache[batch.header_signature] = batch
+                    self._add_seen_txns(batch)
+                    self._on_batch_received(batch)
+                    self._process_incomplete_blocks(batch.header_signature)
+                    if batch.header_signature in self._requested:
+                        del self._requested[batch.header_signature]
+                    # If there was a batch waiting on this transaction,
+                    # process that batch
+                    for txn in batch.transactions:
+                        if txn.header_signature in self._incomplete_batches:
+                            if txn.header_signature in self._requested:
+                                del self._requested[txn.header_signature]
+                            self._process_incomplete_batches(
+                                txn.header_signature)
+                self._incomplete_batches_length.set_value(
+                    len(self._incomplete_batches))
 
     def get_chain_head(self):
         """Returns the block which is the current head of the chain.
