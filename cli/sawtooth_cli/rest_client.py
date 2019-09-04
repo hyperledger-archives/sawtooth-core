@@ -28,6 +28,9 @@ class RestClient:
     def __init__(self, base_url=None, user=None):
         self._base_url = base_url or 'http://localhost:8008'
 
+        if '://' not in self._base_url.lower():
+            self._base_url = 'http://{}'.format(self._base_url)
+
         if user:
             b64_string = b64encode(user.encode()).decode()
             self._auth_header = 'Basic {}'.format(b64_string)
@@ -203,6 +206,10 @@ class RestClient:
         except (requests.exceptions.MissingSchema,
                 requests.exceptions.InvalidURL) as e:
             raise CliException(e)
+        except requests.exceptions.InvalidSchema as e:
+            raise CliException(
+                ('Schema not valid in "{}": '
+                 'make sure URL has valid schema').format(self._base_url))
         except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
