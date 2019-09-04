@@ -360,8 +360,7 @@ class Completer:
         Returns:
             BlockWrapper: The head of the chain.
         """
-        with self.lock:
-            return self._get_chain_head()
+        return self._get_chain_head()
 
     def get_block(self, block_id):
         with self.lock:
