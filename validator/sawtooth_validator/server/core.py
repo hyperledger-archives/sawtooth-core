@@ -284,7 +284,6 @@ class Validator:
             get_committed_batch_by_txn_id=(
                 block_store.get_batch_by_transaction
             ),
-            get_chain_head=lambda: unwrap_if_not_none(block_store.chain_head),
             gossip=gossip,
             cache_keep_time=base_keep_time,
             cache_purge_frequency=30,
@@ -362,6 +361,8 @@ class Validator:
                 settings_observer,
                 consensus_activation_observer
             ])
+
+        completer.set_get_chain_head(lambda: chain_controller.chain_head)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
