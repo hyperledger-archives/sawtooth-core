@@ -54,8 +54,8 @@ class TestCompleter(unittest.TestCase):
             get_committed_batch_by_txn_id=(
                 self.block_store.get_batch_by_transaction
             ),
-            get_chain_head=lambda: self.block_store.chain_head,
             gossip=self.gossip)
+        self.completer.set_get_chain_head(lambda: self.block_store.chain_head)
         self.completer.set_on_block_received(self._on_block_received)
         self.completer.set_on_batch_received(self._on_batch_received)
         self._has_block_value = True
