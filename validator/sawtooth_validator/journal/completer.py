@@ -48,7 +48,6 @@ class Completer:
                  transaction_committed,
                  get_committed_batch_by_id,
                  get_committed_batch_by_txn_id,
-                 get_chain_head,
                  gossip,
                  cache_keep_time=1200,
                  cache_purge_frequency=30,
@@ -63,8 +62,6 @@ class Completer:
         :param get_committed_batch_by_txn_id
             (fn(transaction_id) -> Batch) A function for retrieving a committed
             batch from a committed transction id.
-        :param get_chain_head (fn() -> Block) A function for getting the
-            current chain head.
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
                 peers
         :param cache_keep_time (float) Time in seconds to keep values in
@@ -84,7 +81,6 @@ class Completer:
         self._transaction_committed = transaction_committed
         self._get_committed_batch_by_id = get_committed_batch_by_id
         self._get_committed_batch_by_txn_id = get_committed_batch_by_txn_id
-        self._get_chain_head = get_chain_head
 
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
@@ -93,6 +89,7 @@ class Completer:
                                              cache_purge_frequency)
         self._requested = TimedCache(requested_keep_time,
                                      cache_purge_frequency)
+        self._get_chain_head = None
         self._on_block_received = None
         self._on_batch_received = None
         self.lock = RLock()
@@ -316,6 +313,9 @@ class Completer:
 
     def _send_block(self, block):
         self._on_block_received(block.header_signature)
+
+    def set_get_chain_head(self, get_chain_head):
+        self._get_chain_head = get_chain_head
 
     def set_on_block_received(self, on_block_received_func):
         self._on_block_received = on_block_received_func
