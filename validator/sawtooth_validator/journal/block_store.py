@@ -22,6 +22,9 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 from sawtooth_validator import ffi
+from sawtooth_validator import metrics
+
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class ErrorCode(IntEnum):
@@ -80,34 +83,42 @@ class BlockStore(ffi.OwnedPointer):
 
     def __init__(self, database):
         super().__init__('commit_store_drop')
+        self._get_chain_head_timer = COLLECTOR.timer(
+            'get_chain_head_time', instance=self)
+        self._get_data_by_num_timer = COLLECTOR.timer(
+            'get_data_by_num_time', instance=self)
+        self._get_data_by_id_timer = COLLECTOR.timer(
+            'get_data_by_id_time', instance=self)
         _libexec(
             'commit_store_new',
             database.pointer,
             ctypes.byref(self.pointer))
 
     def _get_data_by_num(self, object_id, ffi_fn_name):
-        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-        _libexec(
-            ffi_fn_name,
-            self.pointer,
-            ctypes.c_ulonglong(object_id),
-            ctypes.byref(vec_ptr),
-            ctypes.byref(vec_len),
-            ctypes.byref(vec_cap))
+        with self._get_data_by_num_timer.time():
+            (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+            _libexec(
+                ffi_fn_name,
+                self.pointer,
+                ctypes.c_ulonglong(object_id),
+                ctypes.byref(vec_ptr),
+                ctypes.byref(vec_len),
+                ctypes.byref(vec_cap))
 
-        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+            return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
     def _get_data_by_id(self, object_id, ffi_fn_name):
-        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-        _libexec(
-            ffi_fn_name,
-            self.pointer,
-            ctypes.c_char_p(object_id.encode()),
-            ctypes.byref(vec_ptr),
-            ctypes.byref(vec_len),
-            ctypes.byref(vec_cap))
+        with self._get_data_by_id_timer.time():
+            (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+            _libexec(
+                ffi_fn_name,
+                self.pointer,
+                ctypes.c_char_p(object_id.encode()),
+                ctypes.byref(vec_ptr),
+                ctypes.byref(vec_len),
+                ctypes.byref(vec_cap))
 
-        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+            return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
     def _get_block_by_num(self, object_id, ffi_fn_name):
         return self.deserialize_block(
@@ -176,20 +187,21 @@ class BlockStore(ffi.OwnedPointer):
         """
         Return the head block of the current chain.
         """
-        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+        with self._get_chain_head_timer.time():
+            (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
 
-        try:
-            _libexec(
-                'commit_store_get_chain_head',
-                self.pointer,
-                ctypes.byref(vec_ptr),
-                ctypes.byref(vec_len),
-                ctypes.byref(vec_cap))
-        except ValueError:
-            return None
+            try:
+                _libexec(
+                    'commit_store_get_chain_head',
+                    self.pointer,
+                    ctypes.byref(vec_ptr),
+                    ctypes.byref(vec_len),
+                    ctypes.byref(vec_cap))
+            except ValueError:
+                return None
 
-        return self.deserialize_block(
-            ffi.from_rust_vec(vec_ptr, vec_len, vec_cap))
+            return self.deserialize_block(
+                ffi.from_rust_vec(vec_ptr, vec_len, vec_cap))
 
     def chain_head_state_root(self):
         """
