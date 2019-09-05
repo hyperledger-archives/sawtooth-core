@@ -115,23 +115,23 @@ class ChainController(OwnedPointer):
             block)
 
     def queue_block(self, block_id):
-        _libexec('chain_controller_queue_block', self.pointer,
-                 ctypes.c_char_p(block_id.encode('utf-8')))
+        _pylibexec('chain_controller_queue_block', self.pointer,
+                   ctypes.c_char_p(block_id.encode('utf-8')))
 
     def block_validation_result(self, block_id):
         status = ctypes.c_int32(0)
 
-        _libexec("chain_controller_block_validation_result", self.pointer,
-                 ctypes.c_char_p(block_id.encode()),
-                 ctypes.byref(status))
+        _pylibexec("chain_controller_block_validation_result", self.pointer,
+                   ctypes.c_char_p(block_id.encode()),
+                   ctypes.byref(status))
 
         return BlockStatus(status.value)
 
     def on_block_received(self, block_id):
         """This is exposed for unit tests, and should not be called directly.
         """
-        _libexec('chain_controller_on_block_received', self.pointer,
-                 ctypes.c_char_p(block_id.encode('utf-8')))
+        _pylibexec('chain_controller_on_block_received', self.pointer,
+                   ctypes.c_char_p(block_id.encode('utf-8')))
 
     @property
     def chain_head(self):

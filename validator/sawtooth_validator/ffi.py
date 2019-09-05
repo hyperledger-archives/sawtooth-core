@@ -82,7 +82,7 @@ def prepare_string_result():
 def from_rust_string(string_ptr, string_len, string_cap):
     # pylint: disable=invalid-slice-index
     py_bytes = bytes(string_ptr[:string_len.value])
-    LIBRARY.call(
+    PY_LIBRARY.call(
         "ffi_reclaim_string",
         string_ptr,
         string_len,
@@ -104,7 +104,7 @@ def prepare_vec_result(pointer_type=ctypes.c_uint8):
 def from_rust_vec(vec_ptr, vec_len, vec_cap):
     # pylint: disable=invalid-slice-index
     py_bytes = bytes(vec_ptr[:vec_len.value])
-    LIBRARY.call(
+    PY_LIBRARY.call(
         "ffi_reclaim_vec",
         vec_ptr,
         vec_len,
@@ -189,7 +189,7 @@ class BlockIterator(OwnedPointer):
         (vec_ptr, vec_len, vec_cap) = prepare_vec_result()
 
         self._check_return_code(
-            LIBRARY.call(
+            PY_LIBRARY.call(
                 "{}_next".format(self.name),
                 self.pointer,
                 ctypes.byref(vec_ptr),

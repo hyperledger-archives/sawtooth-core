@@ -65,14 +65,13 @@ class BlockManager(OwnedPointer):
 
     def __init__(self):
         super(BlockManager, self).__init__('block_manager_drop')
-        _libexec("block_manager_new",
-                 ctypes.byref(self.pointer))
+        _pylibexec("block_manager_new",
+                   ctypes.byref(self.pointer))
 
     def add_commit_store(self, block_store):
-        _libexec(
-            "block_manager_add_commit_store",
-            self.pointer,
-            block_store.pointer)
+        _pylibexec("block_manager_add_commit_store",
+                   self.pointer,
+                   block_store.pointer)
 
     def put(self, branch):
         c_put_items = (ctypes.POINTER(_PutEntry) * len(branch))()
@@ -81,37 +80,34 @@ class BlockManager(OwnedPointer):
                 block.SerializeToString(),
             ))
 
-        _libexec("block_manager_put",
-                 self.pointer,
-                 c_put_items, ctypes.c_size_t(len(branch)))
+        _pylibexec("block_manager_put",
+                   self.pointer,
+                   c_put_items, ctypes.c_size_t(len(branch)))
 
     # Raises UnknownBlock if the block is not found
     def ref_block(self, block_id):
-        _libexec(
-            "block_manager_ref_block",
-            self.pointer,
-            ctypes.c_char_p(block_id.encode()))
+        _pylibexec("block_manager_ref_block",
+                   self.pointer,
+                   ctypes.c_char_p(block_id.encode()))
 
     # Raises UnknownBlock if the block is not found
     def unref_block(self, block_id):
-        _libexec(
-            "block_manager_unref_block",
-            self.pointer,
-            ctypes.c_char_p(block_id.encode()))
+        _pylibexec("block_manager_unref_block",
+                   self.pointer,
+                   ctypes.c_char_p(block_id.encode()))
 
     def persist(self, block_id, store_name):
-        _libexec("block_manager_persist",
-                 self.pointer,
-                 ctypes.c_char_p(block_id.encode()),
-                 ctypes.c_char_p(store_name.encode()))
+        _pylibexec("block_manager_persist",
+                   self.pointer,
+                   ctypes.c_char_p(block_id.encode()),
+                   ctypes.c_char_p(store_name.encode()))
 
     def __contains__(self, block_id):
         contains = ctypes.c_bool(False)
-        _libexec(
-            "block_manager_contains",
-            self.pointer,
-            ctypes.c_char_p(block_id.encode()),
-            ctypes.byref(contains))
+        _pylibexec("block_manager_contains",
+                   self.pointer,
+                   ctypes.c_char_p(block_id.encode()),
+                   ctypes.byref(contains))
         return contains
 
     def get(self, block_ids):
@@ -169,11 +165,11 @@ class _GetBlockIterator(ffi.BlockIterator):
         for i, block_id in enumerate(block_ids):
             c_block_ids[i] = ctypes.c_char_p(block_id.encode())
 
-        _libexec("{}_new".format(self.name),
-                 block_manager_ptr,
-                 c_block_ids,
-                 ctypes.c_size_t(len(block_ids)),
-                 ctypes.byref(self.pointer))
+        _pylibexec("{}_new".format(self.name),
+                   block_manager_ptr,
+                   c_block_ids,
+                   ctypes.c_size_t(len(block_ids)),
+                   ctypes.byref(self.pointer))
 
 
 class _BranchDiffIterator(ffi.BlockIterator):
@@ -186,11 +182,11 @@ class _BranchDiffIterator(ffi.BlockIterator):
         c_tip = ctypes.c_char_p(tip.encode())
         c_exclude = ctypes.c_char_p(exclude.encode())
 
-        _libexec("{}_new".format(self.name),
-                 block_manager_ptr,
-                 c_tip,
-                 c_exclude,
-                 ctypes.byref(self.pointer))
+        _pylibexec("{}_new".format(self.name),
+                   block_manager_ptr,
+                   c_tip,
+                   c_exclude,
+                   ctypes.byref(self.pointer))
 
 
 class _BranchIterator(ffi.BlockIterator):
@@ -202,7 +198,7 @@ class _BranchIterator(ffi.BlockIterator):
 
         c_tip = ctypes.c_char_p(tip.encode())
 
-        _libexec("{}_new".format(self.name),
-                 block_manager_ptr,
-                 c_tip,
-                 ctypes.byref(self.pointer))
+        _pylibexec("{}_new".format(self.name),
+                   block_manager_ptr,
+                   c_tip,
+                   ctypes.byref(self.pointer))
