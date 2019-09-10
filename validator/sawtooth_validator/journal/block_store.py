@@ -62,6 +62,10 @@ def _libexec(name, *args):
     _check_error(ffi.LIBRARY.call(name, *args))
 
 
+def _pylibexec(name, *args):
+    _check_error(ffi.PY_LIBRARY.call(name, *args))
+
+
 class _PutEntry(ctypes.Structure):
     _fields_ = [('block_bytes', ctypes.c_char_p),
                 ('block_bytes_len', ctypes.c_size_t)]
