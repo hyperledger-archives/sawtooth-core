@@ -101,26 +101,24 @@ class BlockStore(ffi.OwnedPointer):
     def _get_data_by_num(self, object_id, ffi_fn_name):
         with self._get_data_by_num_timer.time():
             (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-            _libexec(
-                ffi_fn_name,
-                self.pointer,
-                ctypes.c_ulonglong(object_id),
-                ctypes.byref(vec_ptr),
-                ctypes.byref(vec_len),
-                ctypes.byref(vec_cap))
+            _pylibexec(ffi_fn_name,
+                       self.pointer,
+                       ctypes.c_ulonglong(object_id),
+                       ctypes.byref(vec_ptr),
+                       ctypes.byref(vec_len),
+                       ctypes.byref(vec_cap))
 
             return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
     def _get_data_by_id(self, object_id, ffi_fn_name):
         with self._get_data_by_id_timer.time():
             (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
-            _libexec(
-                ffi_fn_name,
-                self.pointer,
-                ctypes.c_char_p(object_id.encode()),
-                ctypes.byref(vec_ptr),
-                ctypes.byref(vec_len),
-                ctypes.byref(vec_cap))
+            _pylibexec(ffi_fn_name,
+                       self.pointer,
+                       ctypes.c_char_p(object_id.encode()),
+                       ctypes.byref(vec_ptr),
+                       ctypes.byref(vec_len),
+                       ctypes.byref(vec_cap))
 
             return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
 
@@ -151,11 +149,10 @@ class BlockStore(ffi.OwnedPointer):
 
     def _contains_id(self, object_id, fn_name):
         contains = ctypes.c_bool(False)
-        _libexec(
-            fn_name,
-            self.pointer,
-            ctypes.c_char_p(object_id.encode()),
-            ctypes.byref(contains))
+        _pylibexec(fn_name,
+                   self.pointer,
+                   ctypes.c_char_p(object_id.encode()),
+                   ctypes.byref(contains))
         return contains.value
 
     def __contains__(self, block_id):
