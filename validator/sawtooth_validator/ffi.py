@@ -21,9 +21,11 @@ import os
 import sys
 
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator import metrics
 
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class Library:
@@ -58,9 +60,18 @@ class Library:
         LOGGER.debug("loading library %s", library_path)
 
         self._cdll = library_loader(library_path)
+        self._call_timers = {}
+
+    def _get_call_timer(self, tag):
+        if tag not in self._call_timers:
+            self._call_timers[tag] = COLLECTOR.timer(
+                'ffi_call_time', tags={"function": tag},
+                instance=self)
+        return self._call_timers[tag]
 
     def call(self, name, *args):
-        return getattr(self._cdll, name)(*args)
+        with self._get_call_timer(name).time():
+            return getattr(self._cdll, name)(*args)
 
 
 LIBRARY = Library(ctypes.CDLL)
