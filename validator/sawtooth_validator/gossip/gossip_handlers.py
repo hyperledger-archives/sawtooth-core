@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+from cachetools import cached, LRUCache
+from cachetools.keys import hashkey
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -124,6 +126,8 @@ class GossipMessageDuplicateHandler(Handler):
         self._has_block = has_block
         self._has_batch = has_batch
 
+    # pylint: disable=C0301
+    @cached(cache=LRUCache(maxsize=128), key=lambda self, connection_id, message_content: hashkey(message_content[0].header_signature))  # noqa
     def handle(self, connection_id, message_content):
         obj, tag, _ = message_content
 
