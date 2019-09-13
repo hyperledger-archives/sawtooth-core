@@ -13,12 +13,32 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import ctypes
-from functools import lru_cache
+import weakref
+from functools import lru_cache, wraps
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 from sawtooth_validator import ffi
+
+
+# Wrapper of lru_cache that works for instance methods
+def lru_cached_method(*lru_args, **lru_kwargs):
+    def decorator(wrapped_fn):
+        @wraps(wrapped_fn)
+        def wrapped(self, *args, **kwargs):
+            # Use a weak reference to self; this prevents a self-reference
+            # cycle that fools the garbage collector into thinking the instance
+            # shouldn't be dropped when all external references are dropped.
+            weak_ref_to_self = weakref.ref(self)
+            @wraps(wrapped_fn)
+            @lru_cache(*lru_args, **lru_kwargs)
+            def cached(*args, **kwargs):
+                return wrapped_fn(weak_ref_to_self(), *args, **kwargs)
+            setattr(self, wrapped_fn.__name__, cached)
+            return cached(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 class StateViewFactory:
@@ -86,6 +106,7 @@ class StateView:
         """
         self._tree = tree
 
+    @lru_cached_method()
     def get(self, address):
         """
         Returns:
@@ -93,6 +114,7 @@ class StateView:
         """
         return self._tree.get(address)
 
+    @lru_cached_method()
     def addresses(self):
         """
         Returns:
@@ -100,6 +122,7 @@ class StateView:
         """
         return self._tree.addresses()
 
+    @lru_cached_method()
     def leaves(self, prefix):
         """
         Args:
