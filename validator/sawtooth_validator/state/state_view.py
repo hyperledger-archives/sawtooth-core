@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import ctypes
+from functools import lru_cache
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
@@ -36,6 +37,7 @@ class StateViewFactory:
         """
         self._database = database
 
+    @lru_cache()
     def create_view(self, state_root_hash=None):
         """Creates a StateView for the given state root hash.
 
