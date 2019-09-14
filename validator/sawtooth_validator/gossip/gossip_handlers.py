@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
-from cachetools import cached, LRUCache
-from cachetools.keys import hashkey
+from threading import Lock
+from cachetools import LRUCache
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -125,37 +125,18 @@ class GossipMessageDuplicateHandler(Handler):
         self._completer = completer
         self._has_block = has_block
         self._has_batch = has_batch
+        self._cache = LRUCache(maxsize=4096)
+        self._lock = Lock()
 
-    # pylint: disable=C0301
-    @cached(cache=LRUCache(maxsize=128), key=lambda self, connection_id, message_content: hashkey(message_content[0].header_signature))  # noqa
     def handle(self, connection_id, message_content):
-        obj, tag, _ = message_content
+        with self._lock:
+            obj, _, _ = message_content
 
-        header_signature = obj.header_signature
-
-        if tag == GossipMessage.BLOCK:
-            has_block = False
-            if self._completer.get_block(header_signature) is not None:
-                has_block = True
-
-            if not has_block and self._has_block(header_signature):
-                has_block = True
-
-            if has_block:
+            if obj.header_signature in self._cache:
                 return HandlerResult(HandlerStatus.DROP)
 
-        if tag == GossipMessage.BATCH:
-            has_batch = False
-            if self._completer.get_batch(header_signature) is not None:
-                has_batch = True
-
-            if not has_batch and self._has_batch(header_signature):
-                has_batch = True
-
-            if has_batch:
-                return HandlerResult(HandlerStatus.DROP)
-
-        return HandlerResult(HandlerStatus.PASS)
+            self._cache[obj.header_signature] = True
+            return HandlerResult(HandlerStatus.PASS)
 
 
 class GossipBlockResponseHandler(Handler):

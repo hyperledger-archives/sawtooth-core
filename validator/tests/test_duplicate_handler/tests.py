@@ -36,8 +36,8 @@ class TestDuplicateHandler(unittest.TestCase):
 
     def test_no_block(self):
         """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
+        Test that if the block has not been received recently,
+        the gossip message is passed.
         """
         block = Block(header_signature="Block1")
         handler_status = self.handler.handle(
@@ -46,54 +46,34 @@ class TestDuplicateHandler(unittest.TestCase):
 
     def test_no_batch(self):
         """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
+        Test that if the batch has not been received recently,
+        the gossip message is passed.
         """
         batch = Batch(header_signature="Batch1")
         handler_status = self.handler.handle(
             "connection_id", (batch, GossipMessage.BATCH, 2))
         self.assertEqual(handler_status.status, HandlerStatus.PASS)
 
-    def test_completer_has_block(self):
+    def test_recent_block(self):
         """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
+        Test that if the block has been received recently,
+        the gossip message is dropped.
         """
         block = Block(header_signature="Block1")
-        self.completer.add_block("Block1")
+        handler_status = self.handler.handle(
+            "connection_id", (block, GossipMessage.BLOCK, 2))
         handler_status = self.handler.handle(
             "connection_id", (block, GossipMessage.BLOCK, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
 
-    def test_completer_has_batch(self):
+    def test_recent_batch(self):
         """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
+        Test that if the batch has been received recently,
+        the gossip message is dropped.
         """
         batch = Batch(header_signature="Batch1")
-        self.completer.add_batch("Batch1")
         handler_status = self.handler.handle(
             "connection_id", (batch, GossipMessage.BATCH, 2))
-        self.assertEqual(handler_status.status, HandlerStatus.DROP)
-
-    def test_chain_has_block(self):
-        """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
-        """
-        block = Block(header_signature="Block1")
-        self.chain.add_block("Block1")
-        handler_status = self.handler.handle(
-            "connection_id", (block, GossipMessage.BLOCK, 2))
-        self.assertEqual(handler_status.status, HandlerStatus.DROP)
-
-    def test_publisher_has_block(self):
-        """
-        Test that if the block does not exist yet in the completer or the
-        chain controller, the gossip message is passed.
-        """
-        batch = Batch(header_signature="Batch1")
-        self.publisher.add_batch("Batch1")
         handler_status = self.handler.handle(
             "connection_id", (batch, GossipMessage.BATCH, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
