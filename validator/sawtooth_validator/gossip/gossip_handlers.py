@@ -225,6 +225,8 @@ class GossipBroadcastHandler(Handler):
     def __init__(self, gossip, completer):
         self._gossip = gossip
         self._completer = completer
+        self._cache = LRUCache(maxsize=4096)
+        self._lock = Lock()
 
     def handle(self, connection_id, message_content):
         obj, tag, ttl = message_content
@@ -237,19 +239,22 @@ class GossipBroadcastHandler(Handler):
             # Do not forward message if it has reached its time to live limit
             return HandlerResult(status=HandlerStatus.PASS)
 
+        with self._lock:
+            if obj.header_signature in self._cache:
+                return HandlerResult(status=HandlerStatus.PASS)
+
+            self._cache[obj.header_signature] = True
+
         if tag == GossipMessage.BATCH:
-            # If we already have this batch, don't forward it
-            if not self._completer.get_batch(obj.header_signature):
-                self._gossip.broadcast_batch(obj, exclude, time_to_live=ttl)
+            self._gossip.broadcast_batch(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.BLOCK:
-            # If we already have this block, don't forward it
-            if not self._completer.get_block(obj.header_signature):
-                self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
+            self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.CONSENSUS:
-            # We do not want to forward consensus messages
             pass
         else:
-            LOGGER.info("received %s, not BATCH or BLOCK or CONSENSUS", tag)
+            LOGGER.info("received %s, not BATCH or "
+                        "BLOCK or CONSENSUS", tag)
+
         return HandlerResult(status=HandlerStatus.PASS)
 
 
