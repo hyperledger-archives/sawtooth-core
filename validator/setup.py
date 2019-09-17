@@ -53,6 +53,7 @@ setup(
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
     install_requires=[
+        "cachetools",
         "cbor>=0.1.23",
         "colorlog",
         "protobuf",
