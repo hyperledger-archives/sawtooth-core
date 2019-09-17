@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+from threading import Lock
+from cachetools import LRUCache
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -119,39 +121,19 @@ class PeerUnregisterHandler(Handler):
 
 
 class GossipMessageDuplicateHandler(Handler):
-    def __init__(self, completer, has_block, has_batch):
-        self._completer = completer
-        self._has_block = has_block
-        self._has_batch = has_batch
+    def __init__(self):
+        self._cache = LRUCache(maxsize=4096)
+        self._lock = Lock()
 
     def handle(self, connection_id, message_content):
-        obj, tag, _ = message_content
+        with self._lock:
+            obj, _, _ = message_content
 
-        header_signature = obj.header_signature
-
-        if tag == GossipMessage.BLOCK:
-            has_block = False
-            if self._completer.get_block(header_signature) is not None:
-                has_block = True
-
-            if not has_block and self._has_block(header_signature):
-                has_block = True
-
-            if has_block:
+            if obj.header_signature in self._cache:
                 return HandlerResult(HandlerStatus.DROP)
 
-        if tag == GossipMessage.BATCH:
-            has_batch = False
-            if self._completer.get_batch(header_signature) is not None:
-                has_batch = True
-
-            if not has_batch and self._has_batch(header_signature):
-                has_batch = True
-
-            if has_batch:
-                return HandlerResult(HandlerStatus.DROP)
-
-        return HandlerResult(HandlerStatus.PASS)
+            self._cache[obj.header_signature] = True
+            return HandlerResult(HandlerStatus.PASS)
 
 
 class GossipBlockResponseHandler(Handler):
