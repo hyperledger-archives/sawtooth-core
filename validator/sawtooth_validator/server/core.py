@@ -263,8 +263,7 @@ class Validator:
         gossip = Gossip(
             network_service,
             settings_cache,
-            lambda: block_store.chain_head,
-            block_store.chain_head_state_root,
+            self.get_chain_head_state_root_hash,
             consensus_notifier,
             endpoint=endpoint,
             peering_mode=peering,
@@ -361,6 +360,7 @@ class Validator:
             ])
 
         completer.set_get_chain_head(lambda: chain_controller.chain_head)
+        gossip.set_get_chain_head(lambda: chain_controller.chain_head)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
