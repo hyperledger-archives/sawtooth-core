@@ -72,12 +72,21 @@ class PermissionVerifier:
             state_root_func = self._current_root_func
             from_state = False
             if not self._chain_head_set:
-                if self._current_root_func() == INIT_ROOT_KEY:
+                try:
+                    cur_root = self._current_root_func()
+                except AttributeError:
                     if not self._log_guard.chain_head_not_yet_set:
                         LOGGER.debug("Chain head is not set yet. Permit all.")
                         self._log_guard.chain_head_not_yet_set = True
                     return True
-                self._chain_head_set = True
+                else:
+                    if cur_root == INIT_ROOT_KEY:
+                        if not self._log_guard.chain_head_not_yet_set:
+                            LOGGER.debug("Chain head is not "
+                                         "set yet. Permit all.")
+                            self._log_guard.chain_head_not_yet_set = True
+                        return True
+                    self._chain_head_set = True
         else:
             def state_root_func():
                 return state_root
@@ -292,12 +301,19 @@ class PermissionVerifier:
                 public_key (string): The public key belonging to a node on the
                     network
         """
-        state_root = self._current_root_func()
-        if state_root == INIT_ROOT_KEY:
+        try:
+            state_root = self._current_root_func()
+        except AttributeError:
             if not self._log_guard.chain_head_not_yet_set:
                 LOGGER.debug("Chain head is not set yet. Permit all.")
                 self._log_guard.chain_head_not_yet_set = True
             return True
+        else:
+            if state_root == INIT_ROOT_KEY:
+                if not self._log_guard.chain_head_not_yet_set:
+                    LOGGER.debug("Chain head is not set yet. Permit all.")
+                    self._log_guard.chain_head_not_yet_set = True
+                return True
 
         self._cache.update_view(state_root)
         role = self._cache.get_role("network", self._current_root_func, True)

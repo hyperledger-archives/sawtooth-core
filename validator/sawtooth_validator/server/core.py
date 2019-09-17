@@ -302,7 +302,7 @@ class Validator:
         # -- Setup Permissioning -- #
         permission_verifier = PermissionVerifier(
             permissions,
-            block_store.chain_head_state_root,
+            self.get_chain_head_state_root_hash,
             id_cache)
 
         identity_observer = IdentityObserver(
