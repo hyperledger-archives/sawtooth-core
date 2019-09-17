@@ -48,6 +48,7 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly bionic univers
     python3-aiohttp \
     python3-async-timeout \
     python3-bitcoin \
+    python3-cachetools \
     python3-cbor \
     python3-cchardet \
     python3-colorlog \

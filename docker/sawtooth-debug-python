@@ -39,6 +39,7 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/ci bionic universe" >>
     python3-aiopg \
     python3-async-timeout \
     python3-bitcoin \
+    python3-cachetools \
     python3-cbor \
     python3-cchardet \
     python3-colorlog \
