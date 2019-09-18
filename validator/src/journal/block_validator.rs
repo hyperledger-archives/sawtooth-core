@@ -675,7 +675,7 @@ impl BlockValidation for PermissionValidation {
                         format!("During permission check of block ({}, {}), unable to read permissions: {}",
                             &block.header_signature, block.block_num, err))
                     })? {
-                    return Err(ValidationError::BlockValidationError(
+                    return Err(ValidationError::BlockValidationFailure(
                             format!("Block {} failed permission verification: batch {} signer is not authorized",
                             &block.header_signature,
                             batch_id)));
