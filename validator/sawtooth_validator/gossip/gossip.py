@@ -77,7 +77,6 @@ NETWORK_PROTOCOL_VERSION = 1
 class Gossip:
     def __init__(self, network,
                  settings_cache,
-                 current_chain_head_func,
                  current_root_func,
                  consensus_notifier,
                  endpoint=None,
@@ -96,7 +95,6 @@ class Gossip:
                 outbound network connections.
             settings_cache (state.SettingsCache): A cache for on chain
                 settings.
-            current_chain_head_func (function): returns the current chain head.
             current_root_func (function): returns the current state root hash
                 for the current chain root.
             consensus_notifier (consensus.ConsensusNotifier): A proxy for
@@ -143,12 +141,15 @@ class Gossip:
         self._topology_check_frequency = topology_check_frequency
         self._settings_cache = settings_cache
 
-        self._current_chain_head_func = current_chain_head_func
+        self._current_chain_head_func = None
         self._current_root_func = current_root_func
         self._consensus_notifier = consensus_notifier
 
         self._topology = None
         self._peers = {}
+
+    def set_get_chain_head(self, get_chain_head):
+        self._current_chain_head_func = get_chain_head
 
     def send_peers(self, connection_id):
         """Sends a message containing our peers to the

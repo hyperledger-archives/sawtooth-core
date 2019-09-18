@@ -48,6 +48,7 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.settings_cache import SettingsObserver
 from sawtooth_validator.state.settings_cache import SettingsCache
@@ -263,8 +264,7 @@ class Validator:
         gossip = Gossip(
             network_service,
             settings_cache,
-            lambda: block_store.chain_head,
-            block_store.chain_head_state_root,
+            self.chain_head_state_root,
             consensus_notifier,
             endpoint=endpoint,
             peering_mode=peering,
@@ -302,7 +302,7 @@ class Validator:
         # -- Setup Permissioning -- #
         permission_verifier = PermissionVerifier(
             permissions,
-            block_store.chain_head_state_root,
+            self.chain_head_state_root,
             id_cache)
 
         identity_observer = IdentityObserver(
@@ -361,6 +361,7 @@ class Validator:
             ])
 
         completer.set_get_chain_head(lambda: chain_controller.chain_head)
+        gossip.set_get_chain_head(lambda: chain_controller.chain_head)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
@@ -391,7 +392,7 @@ class Validator:
         component_handlers.add(
             component_dispatcher, gossip, context_manager,
             transaction_executor, completer, block_store, batch_tracker,
-            global_state_db, self.get_chain_head_state_root_hash,
+            global_state_db, self.chain_head_state_root,
             receipt_store, event_broadcaster, permission_verifier,
             component_thread_pool, client_thread_pool,
             sig_pool, block_publisher,
@@ -528,8 +529,16 @@ class Validator:
 
         return False
 
-    def get_chain_head_state_root_hash(self):
-        return self._chain_controller.chain_head.state_root_hash
+    def chain_head_state_root(self):
+        # pylint: disable=lost-exception
+        try:
+            root_hash = self._chain_controller.chain_head.state_root_hash
+        except AttributeError:
+            root_hash = None
+        finally:
+            if root_hash is not None:
+                return root_hash
+            return INIT_ROOT_KEY
 
 
 def unwrap_if_not_none(blkw):
