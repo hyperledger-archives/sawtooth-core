@@ -245,14 +245,14 @@ impl ChainControllerState {
 }
 
 #[derive(Clone)]
-pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> {
+pub struct ChainController<TEP: ExecutionPlatform + Clone> {
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
     consensus_notifier: Arc<ConsensusNotifier>,
     consensus_registry: Arc<ConsensusRegistry>,
     state_view_factory: StateViewFactory,
-    block_validator: BlockValidator<TEP, PV>,
+    block_validator: BlockValidator<TEP>,
     block_validation_results: BlockValidationResultStore,
 
     // Queues
@@ -264,14 +264,12 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
     chain_head_lock: ChainHeadLock,
 }
 
-impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 'static>
-    ChainController<TEP, PV>
-{
-    #![allow(too_many_arguments)]
+impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
-        block_validator: BlockValidator<TEP, PV>,
-        chain_reader: Box<ChainReader>,
+        block_validator: BlockValidator<TEP>,
+        chain_reader: Box<dyn ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
         consensus_notifier: Box<ConsensusNotifier>,
@@ -1118,8 +1116,8 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     }
 }
 
-struct ChainThread<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> {
-    chain_controller: ChainController<TEP, PV>,
+struct ChainThread<TEP: ExecutionPlatform + Clone> {
+    chain_controller: ChainController<TEP>,
     block_queue: Receiver<String>,
     exit: Arc<AtomicBool>,
 }
@@ -1128,11 +1126,9 @@ trait StopHandle: Clone {
     fn stop(&self);
 }
 
-impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 'static>
-    ChainThread<TEP, PV>
-{
+impl<TEP: ExecutionPlatform + Clone + 'static> ChainThread<TEP> {
     fn new(
-        chain_controller: ChainController<TEP, PV>,
+        chain_controller: ChainController<TEP>,
         block_queue: Receiver<String>,
         exit_flag: Arc<AtomicBool>,
     ) -> Self {

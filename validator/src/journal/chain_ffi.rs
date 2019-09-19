@@ -100,8 +100,7 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let py = Python::assume_gil_acquired();
 
-    let block_validator =
-        (*(block_validator as *const BlockValidator<PyExecutor, PyPermissionVerifier>)).clone();
+    let block_validator = (*(block_validator as *const BlockValidator<PyExecutor>)).clone();
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
@@ -158,7 +157,7 @@ pub unsafe extern "C" fn chain_controller_new(
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    Box::from_raw(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>);
+    Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
     ErrorCode::Success
 }
 
@@ -166,7 +165,7 @@ pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) ->
 pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).start();
+    (*(chain_controller as *mut ChainController<PyExecutor>)).start();
 
     ErrorCode::Success
 }
@@ -182,8 +181,7 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    let status = match (*(chain_controller
-        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
+    let status = match (*(chain_controller as *mut ChainController<PyExecutor>))
         .block_validation_result(block_id)
     {
         Some(r) => r.status,
@@ -197,7 +195,7 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
 pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).stop();
+    (*(chain_controller as *mut ChainController<PyExecutor>)).stop();
 
     ErrorCode::Success
 }
@@ -224,7 +222,7 @@ macro_rules! chain_controller_block_ffi {
                 proto_block.into()
             };
 
-            (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).$cc_fn_name($($block_args)*);
+            (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
 
             ErrorCode::Success
         }
@@ -253,8 +251,7 @@ pub unsafe extern "C" fn chain_controller_queue_block(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>))
-        .queue_block(block_id);
+    (*(chain_controller as *mut ChainController<PyExecutor>)).queue_block(block_id);
 
     ErrorCode::Success
 }
@@ -273,9 +270,8 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    if let Err(err) = (*(chain_controller
-        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
-        .on_block_received(block_id)
+    if let Err(err) =
+        (*(chain_controller as *mut ChainController<PyExecutor>)).on_block_received(block_id)
     {
         error!("ChainController.on_block_received error: {:?}", err);
         return ErrorCode::Unknown;
@@ -293,9 +289,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
 ) -> ErrorCode {
     check_null!(chain_controller);
 
-    let controller = (*(chain_controller
-        as *mut ChainController<PyExecutor, PyPermissionVerifier>))
-        .light_clone();
+    let controller = (*(chain_controller as *mut ChainController<PyExecutor>)).light_clone();
 
     if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
         match chain_head.write_to_bytes() {

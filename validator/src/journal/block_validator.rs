@@ -20,16 +20,6 @@
 use batch::Batch;
 use block::Block;
 use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
-use gossip::permission_verifier::PermissionVerifier;
-use journal::block_scheduler::BlockScheduler;
-use journal::chain_commit_state::{
-    validate_no_duplicate_batches, validate_no_duplicate_transactions,
-    validate_transaction_dependencies, ChainCommitStateError,
-};
-use journal::validation_rule_enforcer::enforce_validation_rules;
-use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
-use scheduler::TxnExecutionResult;
-use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
@@ -37,7 +27,21 @@ use std::sync::{
 };
 use std::thread;
 use std::time::Duration;
+
 use uluru;
+
+use journal::block_scheduler::BlockScheduler;
+use journal::chain_commit_state::{
+    validate_no_duplicate_batches, validate_no_duplicate_transactions,
+    validate_transaction_dependencies, ChainCommitStateError,
+};
+use journal::validation_rule_enforcer::enforce_validation_rules;
+use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
+use permissions::verifier::PermissionVerifier;
+use scheduler::TxnExecutionResult;
+use state::{
+    identity_view::IdentityView, settings_view::SettingsView, state_view_factory::StateViewFactory,
+};
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
@@ -162,7 +166,7 @@ impl BlockValidationResult {
 type InternalSender = Sender<(Block, Sender<BlockValidationResult>)>;
 type InternalReceiver = Receiver<(Block, Sender<BlockValidationResult>)>;
 
-pub struct BlockValidator<TEP: ExecutionPlatform, PV: PermissionVerifier> {
+pub struct BlockValidator<TEP: ExecutionPlatform> {
     channels: Vec<(InternalSender, Option<InternalReceiver>)>,
     index: Arc<AtomicUsize>,
     validation_thread_exit: Arc<AtomicBool>,
@@ -171,20 +175,17 @@ pub struct BlockValidator<TEP: ExecutionPlatform, PV: PermissionVerifier> {
     block_manager: BlockManager,
     transaction_executor: TEP,
     view_factory: StateViewFactory,
-    permission_verifier: PV,
 }
 
-impl<TEP: ExecutionPlatform + 'static, PV: PermissionVerifier + 'static> BlockValidator<TEP, PV>
+impl<TEP: ExecutionPlatform + 'static> BlockValidator<TEP>
 where
     TEP: Clone,
-    PV: Clone,
 {
     #[allow(too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: TEP,
         block_status_store: BlockValidationResultStore,
-        permission_verifier: PV,
         view_factory: StateViewFactory,
     ) -> Self {
         let mut channels = vec![];
@@ -201,7 +202,6 @@ where
             block_status_store,
             block_manager,
             view_factory,
-            permission_verifier,
         }
     }
 
@@ -223,8 +223,8 @@ where
         let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(PermissionValidation::new(self.permission_verifier.clone()));
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
+            Box::new(PermissionValidation::new(self.view_factory.clone()));
 
         let validations = vec![validation1, validation2, validation3];
 
@@ -355,8 +355,8 @@ where
         let validation2: Box<BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
-            Box::new(PermissionValidation::new(self.permission_verifier.clone()));
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
+            Box::new(PermissionValidation::new(self.view_factory.clone()));
 
         let validations = vec![validation1, validation2, validation3];
 
@@ -375,9 +375,7 @@ where
     }
 }
 
-impl<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> Clone
-    for BlockValidator<TEP, PV>
-{
+impl<TEP: ExecutionPlatform + Clone> Clone for BlockValidator<TEP> {
     fn clone(&self) -> Self {
         let transaction_executor = self.transaction_executor.clone();
         let validation_thread_exit = Arc::clone(&self.validation_thread_exit);
@@ -398,7 +396,6 @@ impl<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> Clone
             block_scheduler: self.block_scheduler.clone(),
             block_status_store: self.block_status_store.clone(),
             block_manager: self.block_manager.clone(),
-            permission_verifier: self.permission_verifier.clone(),
             view_factory: self.view_factory.clone(),
         }
     }
@@ -638,19 +635,17 @@ impl BlockValidation for DuplicatesAndDependenciesValidation {
     }
 }
 
-struct PermissionValidation<PV: PermissionVerifier> {
-    permission_verifier: PV,
+struct PermissionValidation {
+    state_view_factory: StateViewFactory,
 }
 
-impl<PV: PermissionVerifier> PermissionValidation<PV> {
-    fn new(permission_verifier: PV) -> Self {
-        PermissionValidation {
-            permission_verifier,
-        }
+impl PermissionValidation {
+    fn new(state_view_factory: StateViewFactory) -> Self {
+        Self { state_view_factory }
     }
 }
 
-impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
+impl BlockValidation for PermissionValidation {
     type ReturnValue = ();
 
     fn validate_block(
@@ -664,12 +659,22 @@ impl<PV: PermissionVerifier> BlockValidation for PermissionValidation<PV> {
                         format!("During permission check of block {} block_num is {} but missing a previous state root",
                             &block.header_signature, block.block_num))
             })?;
+
+            let identity_view: IdentityView = self.state_view_factory.create_view(state_root)
+                .map_err(|err| {
+                ValidationError::BlockValidationError(
+                        format!("During permission check of block ({}, {}) state root was not found in state: {}",
+                            &block.header_signature, block.block_num, err))
+            })?;
+            let permission_verifier = PermissionVerifier::new(Box::new(identity_view));
             for batch in &block.batches {
                 let batch_id = &batch.header_signature;
-                if !self
-                    .permission_verifier
-                    .is_batch_signer_authorized(batch, state_root)
-                {
+                if !permission_verifier.is_batch_signer_authorized(batch)
+                    .map_err(|err| {
+                ValidationError::BlockValidationError(
+                        format!("During permission check of block ({}, {}), unable to read permissions: {}",
+                            &block.header_signature, block.block_num, err))
+                    })? {
                     return Err(ValidationError::BlockValidationError(
                             format!("Block {} failed permission verification: batch {} signer is not authorized",
                             &block.header_signature,
