@@ -31,6 +31,7 @@ use block::Block;
 use transaction::Transaction;
 
 use journal::chain_commit_state::TransactionCommitCache;
+use journal::commit_store::CommitStore;
 use journal::validation_rule_enforcer;
 use state::settings_view::SettingsView;
 
@@ -53,8 +54,7 @@ pub struct FinalizeBlockResult {
 
 pub struct CandidateBlock {
     previous_block: Block,
-    batch_committed: cpython::PyObject,
-    transaction_committed: cpython::PyObject,
+    commit_store: CommitStore,
     scheduler: Box<Scheduler>,
     max_batches: usize,
     block_builder: cpython::PyObject,
@@ -77,8 +77,7 @@ impl CandidateBlock {
     #![allow(too_many_arguments)]
     pub fn new(
         previous_block: Block,
-        batch_committed: cpython::PyObject,
-        transaction_committed: cpython::PyObject,
+        commit_store: CommitStore,
         scheduler: Box<Scheduler>,
         committed_txn_cache: TransactionCommitCache,
         block_builder: cpython::PyObject,
@@ -89,8 +88,7 @@ impl CandidateBlock {
     ) -> Self {
         CandidateBlock {
             previous_block,
-            batch_committed,
-            transaction_committed,
+            commit_store,
             scheduler,
             max_batches,
             committed_txn_cache,
@@ -180,29 +178,20 @@ impl CandidateBlock {
         txn: &Transaction,
         committed_txn_cache: &TransactionCommitCache,
     ) -> bool {
-        committed_txn_cache.contains(txn.header_signature.as_str()) || {
-            let gil = cpython::Python::acquire_gil();
-            let py = gil.python();
-            self.transaction_committed
-                .call(py, (txn.header_signature.as_str(),), None)
-                .expect("Call to determine if transaction is committed failed")
-                .extract::<bool>(py)
-                .unwrap()
-        }
+        committed_txn_cache.contains(txn.header_signature.as_str())
+            || self
+                .commit_store
+                .contains_transaction(txn.header_signature.as_str())
+                .expect("Couldn't check for txn")
     }
 
     fn batch_is_already_committed(&self, batch: &Batch) -> bool {
         self.pending_batch_ids
             .contains(batch.header_signature.as_str())
-            || {
-                let gil = cpython::Python::acquire_gil();
-                let py = gil.python();
-                self.batch_committed
-                    .call(py, (batch.header_signature.as_str(),), None)
-                    .expect("Call to determine if batch is committed failed")
-                    .extract::<bool>(py)
-                    .unwrap()
-            }
+            || self
+                .commit_store
+                .contains_batch(batch.header_signature.as_str())
+                .expect("Couldn't check for batch")
     }
 
     fn poll_injectors<F: Fn(&cpython::PyObject) -> Vec<cpython::PyObject>>(
@@ -350,11 +339,7 @@ impl CandidateBlock {
         self.scheduler.finalize(true).unwrap();
         let execution_results = self.scheduler.complete(true).unwrap().unwrap();
 
-        let mut committed_txn_cache = {
-            let gil = cpython::Python::acquire_gil();
-            let py = gil.python();
-            TransactionCommitCache::new(self.transaction_committed.clone_ref(py))
-        };
+        let mut committed_txn_cache = TransactionCommitCache::new(self.commit_store.clone());
 
         let batches_w_no_results: Vec<String> = execution_results
             .batch_results
