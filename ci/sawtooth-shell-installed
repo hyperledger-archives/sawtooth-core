@@ -32,6 +32,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
     openssl \
     pkg-config \
     python3 \
+    python3-cachetools \
     python3-dev \
     python3-grpcio \
     python3-grpcio-tools \

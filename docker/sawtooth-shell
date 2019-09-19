@@ -37,6 +37,7 @@ RUN apt-get install -y -q \
     python3-protobuf
 
 RUN apt-get install -y -q \
+    python3-cachetools \
     python3-cbor \
     python3-colorlog \
     python3-sawtooth-intkey \

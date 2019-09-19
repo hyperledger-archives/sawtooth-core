@@ -207,7 +207,7 @@ def add(
 
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipMessageDuplicateHandler(completer, has_block, has_batch),
+        GossipMessageDuplicateHandler(),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Verify Network Permissions
@@ -258,7 +258,7 @@ def add(
     # should occur
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipBroadcastHandler(gossip=gossip, completer=completer),
+        GossipBroadcastHandler(gossip=gossip),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Send message to completer
