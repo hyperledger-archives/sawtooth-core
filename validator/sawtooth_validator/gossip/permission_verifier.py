@@ -83,7 +83,11 @@ class PermissionVerifier:
                 return state_root
             from_state = True
 
-        self._cache.update_view(state_root_func())
+        root_hash = state_root_func()
+        LOGGER.debug("batch permission check state root: %s",
+                     root_hash)
+
+        self._cache.update_view(root_hash)
 
         header = BatchHeader()
         header.ParseFromString(batch.header)
@@ -500,14 +504,20 @@ class IdentityCache():
             if self._identity_view is None:
                 self.update_view(state_root_func())
             value = self._identity_view.get_role(item)
+            LOGGER.debug("permission verifier from state "
+                         "get_role value: %s", value)
             return value
 
         value = self._cache.get(item)
+        LOGGER.debug("permission verifier cached "
+                     "get_role value: %s", value)
         if value is None:
             if self._identity_view is None:
                 self.update_view(state_root_func())
             value = self._identity_view.get_role(item)
             self._cache[item] = value
+            LOGGER.debug("permission verifier not cached "
+                         "get_role value: %s", value)
         return value
 
     def get_policy(self, item, state_root_func, from_state=False):
@@ -526,21 +536,28 @@ class IdentityCache():
             if self._identity_view is None:
                 self.update_view(state_root_func())
             value = self._identity_view.get_policy(item)
+            LOGGER.debug("permission verifier from state"
+                         "get_policy value: %s", value)
             return value
 
         if item in self._cache:
             value = self._cache.get(item)
+            LOGGER.debug("permission verifier cached "
+                         "get_policy value: %s", value)
         else:
             if self._identity_view is None:
                 self.update_view(state_root_func())
             value = self._identity_view.get_policy(item)
             self._cache[item] = value
+            LOGGER.debug("permission verifier not cached "
+                         "get_policy value: %s", value)
         return value
 
     def forked(self):
         self._cache = {}
 
     def invalidate(self, item):
+        LOGGER.debug("Invalidating permission cache item: %s", item)
         if item in self._cache:
             del self._cache[item]
 
