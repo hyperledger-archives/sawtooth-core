@@ -83,15 +83,10 @@ pub unsafe extern "C" fn block_validator_new(
     let py_transaction_executor =
         PyExecutor::new(ex).expect("The PyExecutor could not be created from a PyObject");
 
-    let py_permission_verifier: PyPermissionVerifier = PyPermissionVerifier::new(
-        cpython::PyObject::from_borrowed_ptr(py, permission_verifier),
-    );
-
     let block_validator = BlockValidator::new(
         block_manager,
         py_transaction_executor,
         block_status_store,
-        py_permission_verifier,
         view_factory,
     );
 
@@ -104,7 +99,7 @@ pub unsafe extern "C" fn block_validator_new(
 pub unsafe extern "C" fn block_validator_start(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
 
-    (*(block_validator_ptr as *mut BlockValidator<PyExecutor, PyPermissionVerifier>)).start();
+    (*(block_validator_ptr as *mut BlockValidator<PyExecutor>)).start();
 
     ErrorCode::Success
 }
@@ -112,7 +107,7 @@ pub unsafe extern "C" fn block_validator_start(block_validator_ptr: *mut c_void)
 #[no_mangle]
 pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
-    (*(block_validator_ptr as *mut BlockValidator<PyExecutor, PyPermissionVerifier>)).stop();
+    (*(block_validator_ptr as *mut BlockValidator<PyExecutor>)).stop();
 
     ErrorCode::Success
 }
@@ -121,7 +116,7 @@ pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) 
 pub unsafe extern "C" fn block_validator_drop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
 
-    Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor, PyPermissionVerifier>);
+    Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor>);
 
     ErrorCode::Success
 }
