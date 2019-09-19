@@ -23,7 +23,6 @@ use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
-use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_validator::{BlockValidationResultStore, BlockValidator};
 use journal::block_wrapper::BlockStatus;

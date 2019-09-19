@@ -35,7 +35,6 @@ extern crate uluru;
 pub mod consensus;
 pub mod database;
 pub mod execution;
-pub mod gossip;
 pub mod hashlib;
 pub mod journal;
 mod metrics;
