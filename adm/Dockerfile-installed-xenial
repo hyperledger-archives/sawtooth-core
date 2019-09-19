@@ -50,8 +50,8 @@ RUN export VERSION=$(../bin/get_version) \
 # -------------=== admin tools docker build ===-------------
 FROM ubuntu:xenial
 
-COPY --from=adm-builder /project/adm/target/debian/sawadm_*.deb /tmp
+COPY --from=adm-builder /project/adm/target/debian/sawtooth-sawadm_*.deb /tmp
 
 RUN apt-get update \
- && dpkg -i /tmp/sawadm_*.deb || true \
+ && dpkg -i /tmp/sawtooth-sawadm_*.deb || true \
  && apt-get -f -y install
