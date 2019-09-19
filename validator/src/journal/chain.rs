@@ -41,7 +41,6 @@ use block::Block;
 use consensus::notifier::ConsensusNotifier;
 use consensus::registry::ConsensusRegistry;
 use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
 use journal;
 use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
