@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 pub mod error;
+mod state_source;
 pub mod verifier;
 
 pub use self::error::IdentityError;
