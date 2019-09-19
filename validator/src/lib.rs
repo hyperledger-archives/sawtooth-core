@@ -35,7 +35,6 @@ extern crate uluru;
 pub(crate) mod consensus;
 pub(crate) mod database;
 pub(crate) mod execution;
-pub(crate) mod gossip;
 pub(crate) mod journal;
 mod metrics;
 pub(crate) mod permissions;
