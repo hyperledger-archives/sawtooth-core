@@ -25,5 +25,5 @@ use scheduler::Scheduler;
 pub const NULL_STATE_HASH: &str = "";
 
 pub trait ExecutionPlatform: Sync + Send {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr>;
+    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
 }

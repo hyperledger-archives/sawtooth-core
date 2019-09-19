@@ -32,14 +32,14 @@ const POLICY_DEFAULT: &str = "default";
 const ANY_KEY: &str = "*";
 
 pub struct PermissionVerifier {
-    on_chain_identities: Box<IdentitySource>,
-    local_identities: Box<IdentitySource>,
+    on_chain_identities: Box<dyn IdentitySource>,
+    local_identities: Box<dyn IdentitySource>,
 }
 
 impl PermissionVerifier {
     pub fn new(
-        on_chain_identities: Box<IdentitySource>,
-        local_identities: Box<IdentitySource>,
+        on_chain_identities: Box<dyn IdentitySource>,
+        local_identities: Box<dyn IdentitySource>,
     ) -> Self {
         PermissionVerifier {
             on_chain_identities,
@@ -47,7 +47,7 @@ impl PermissionVerifier {
         }
     }
 
-    pub fn with_on_chain_only(on_chain_identities: Box<IdentitySource>) -> Self {
+    pub fn with_on_chain_only(on_chain_identities: Box<dyn IdentitySource>) -> Self {
         PermissionVerifier {
             on_chain_identities,
             local_identities: Box::new(EmptyIdentitySource {}),
@@ -108,7 +108,7 @@ impl PermissionVerifier {
     }
 
     fn is_batch_allowed(
-        identity_source: &IdentitySource,
+        identity_source: &dyn IdentitySource,
         batch: &Batch,
         default_policy: Option<&str>,
     ) -> Result<bool, IdentityError> {
@@ -157,7 +157,7 @@ impl PermissionVerifier {
     /// The first role that is set will be the one used to enforce if the
     /// transaction signer is allowed.
     fn is_transaction_allowed(
-        identity_source: &IdentitySource,
+        identity_source: &dyn IdentitySource,
         transactions: &[Transaction],
         default_policy: Option<&str>,
     ) -> Result<bool, IdentityError> {

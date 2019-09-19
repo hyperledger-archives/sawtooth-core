@@ -31,13 +31,13 @@ pub trait BlockStore: Sync + Send {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError>;
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
 pub trait BatchIndex: Sync + Send {
@@ -79,7 +79,7 @@ impl BlockStore for InMemoryBlockStore {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         let block_ids_owned = block_ids.into_iter().map(|id| (*id).into()).collect();
         Ok(Box::new(InMemoryGetBlockIterator::new(
             self.clone(),
@@ -101,7 +101,7 @@ impl BlockStore for InMemoryBlockStore {
             .put(blocks)
     }
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         let chain_head = self
             .state
             .lock()

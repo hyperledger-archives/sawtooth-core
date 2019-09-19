@@ -108,7 +108,7 @@ pub unsafe extern "C" fn chain_controller_new(
     let py_consensus_registry = PyObject::from_borrowed_ptr(py, consensus_registry);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));

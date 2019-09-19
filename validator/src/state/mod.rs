@@ -25,7 +25,7 @@ pub mod state_view_factory;
 pub mod state_view_ffi;
 
 use state::error::StateDatabaseError;
-pub type StateIter = Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>;
+pub type StateIter = dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>;
 
 pub trait StateReader: Send + Sync {
     /// Returns true if the given address exists in State; false, otherwise.
