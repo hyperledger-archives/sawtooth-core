@@ -29,17 +29,29 @@
 /cli/**/__pycache__/
 
 /families/**/__pycache__/
+/families/block_info/rust/sawtooth_block_info/bin
+/families/block_info/rust/sawtooth_block_info/src/block_info.rs
+/families/block_info/rust/sawtooth_block_info/target
+/families/block_info/rust/sawtooth_block_info/Cargo.lock
+/families/block_info/sawtooth_block_info/protobuf
+/families/block_info/sawtooth_block_info/bin
+/families/block_info/sawtooth_block_info/src/block_info.rs
+/families/block_info/sawtooth_block_info/target
+/families/block_info/sawtooth_block_info/Cargo.lock
 /families/settings/sawtooth_settings/target/
 /families/settings/sawtooth_settings/bin/
 /families/settings/sawtooth_settings/Cargo.lock
 /families/settings/tests/sawtooth_settings_test/protobuf/
-/families/block_info/python/sawtooth_block_info/protobuf
-/families/identity/sawtooth_identity/protobuf
 /families/smallbank/smallbank_rust/target/
 /families/smallbank/smallbank_rust/Cargo.lock
 /families/smallbank/smallbank_rust/bin/
-/families/smallbank/smallbank_rust/src/smallbank.rs
-/families/battleship/target/
+/families/identity/python/sawtooth_identity/protobuf/
+/families/identity/sawtooth_identity/bin/
+/families/identity/sawtooth_identity/target/
+/families/identity/sawtooth_identity/Cargo.lock
+/families/identity/sawtooth_identity/protobuf/
+/families/battleship/target
+/families/battleship/Cargo.lock
 
 /coverage
 /coverage/html
@@ -56,19 +68,6 @@
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
 
-/sdk/javascript/node_modules
-/sdk/javascript/package-lock.json
-/sdk/javascript/protobuf/protobuf_bundle.json
-/sdk/examples/xo_javascript/node_modules/
-/sdk/examples/xo_javascript/package-lock.json
-/sdk/examples/intkey_javascript/node_modules/
-/sdk/examples/intkey_javascript/package-lock.json
-/sdk/examples/intkey_java/dependency-reduced-pom.xml
-/sdk/examples/intkey_java/target/
-/sdk/examples/xo_java/dependency-reduced-pom.xml
-/sdk/examples/xo_java/target/
-/sdk/java/target/
-
 /validator/build/
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/
@@ -77,15 +76,11 @@
 /validator/Cargo.lock
 /validator/bin/
 /validator/lib/
-/validator/src/proto
-
-/sdk/cxx/build/
 
 /perf/sawtooth_perf/Cargo.lock
 /perf/sawtooth_perf/target/
 /perf/sawtooth_workload/Cargo.lock
 /perf/sawtooth_workload/target/
-/perf/smallbank_workload/src/smallbank.rs
 /perf/smallbank_workload/Cargo.lock
 /perf/smallbank_workload/target/
 /perf/smallbank_workload/bin/
