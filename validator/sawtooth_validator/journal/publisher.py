@@ -64,7 +64,7 @@ class IncomingBatchSender(OwnedPointer):
         self._ptr = sender_ptr
 
     def send(self, item):
-        res = PY_LIBRARY.call(
+        res = LIBRARY.call(
             "incoming_batch_sender_send",
             self._ptr,
             ctypes.py_object(item))
@@ -302,7 +302,7 @@ class BlockPublisher(OwnedPointer):
         return has
 
     def initialize_block(self, block):
-        self._py_call('initialize_block', ctypes.py_object(block))
+        self._call('initialize_block', ctypes.py_object(block))
 
     def summarize_block(self, force=False):
         (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
