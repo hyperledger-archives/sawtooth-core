@@ -36,6 +36,7 @@ use journal::block_manager::{BlockManager, BlockRef};
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
+use journal::commit_store::CommitStore;
 use metrics;
 use state::settings_view::SettingsView;
 use state::state_view_factory::StateViewFactory;
@@ -122,10 +123,9 @@ impl BlockPublisherState {
 pub struct SyncBlockPublisher {
     pub state: Arc<RwLock<BlockPublisherState>>,
 
+    commit_store: CommitStore,
     block_manager: BlockManager,
     batch_injector_factory: PyObject,
-    batch_committed: PyObject,
-    transaction_committed: PyObject,
     state_view_factory: StateViewFactory,
     block_sender: PyObject,
     batch_publisher: PyObject,
@@ -146,10 +146,9 @@ impl Clone for SyncBlockPublisher {
 
         SyncBlockPublisher {
             state,
+            commit_store: self.commit_store.clone(),
             block_manager: self.block_manager.clone(),
             batch_injector_factory: self.batch_injector_factory.clone_ref(py),
-            batch_committed: self.batch_committed.clone_ref(py),
-            transaction_committed: self.transaction_committed.clone_ref(py),
             state_view_factory: self.state_view_factory.clone(),
             block_sender: self.block_sender.clone_ref(py),
             batch_publisher: self.batch_publisher.clone_ref(py),
@@ -289,13 +288,11 @@ impl SyncBlockPublisher {
                 .create_scheduler(&previous_block.state_root_hash)
                 .expect("Failed to create new scheduler");
 
-            let committed_txn_cache =
-                TransactionCommitCache::new(self.transaction_committed.clone_ref(py));
+            let committed_txn_cache = TransactionCommitCache::new(self.commit_store.clone());
 
             CandidateBlock::new(
                 previous_block.clone(),
-                self.batch_committed.clone_ref(py),
-                self.transaction_committed.clone_ref(py),
+                self.commit_store.clone(),
                 scheduler,
                 committed_txn_cache,
                 block_builder,
@@ -470,28 +467,23 @@ impl SyncBlockPublisher {
         let mut state = self.state.write().expect("Lock should not be poisoned");
 
         // Batch can be added if the signer is authorized and the batch isn't already committed
-        let can_add_batch = {
+        let permission_check = {
             let gil = Python::acquire_gil();
             let py = gil.python();
 
-            let permission_check = self
-                .permission_verifier
+            self.permission_verifier
                 .call_method(py, "is_batch_signer_authorized", (batch.clone(),), None)
                 .expect("PermissionVerifier has no method is_batch_signer_authorized")
                 .extract(py)
-                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool");
-
-            let batch_already_committed: bool = self
-                .batch_committed
-                .call(py, (batch.header_signature.clone(),), None)
-                .expect("batch_committed could not be called")
-                .extract(py)
-                .expect("batch_committed did not return bool");
-
-            permission_check && !batch_already_committed
+                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
         };
 
-        if can_add_batch {
+        let batch_already_committed = self
+            .commit_store
+            .contains_batch(batch.header_signature.as_str())
+            .expect("Couldn't check for batch");
+
+        if permission_check && !batch_already_committed {
             // If the batch is already in the pending queue, don't do anything further
             if state.pending_batches.append(batch.clone()) {
                 // Notify observers
@@ -538,10 +530,9 @@ pub struct BlockPublisher {
 impl BlockPublisher {
     #![allow(too_many_arguments)]
     pub fn new(
+        commit_store: CommitStore,
         block_manager: BlockManager,
         transaction_executor: Box<ExecutionPlatform>,
-        batch_committed: PyObject,
-        transaction_committed: PyObject,
         state_view_factory: StateViewFactory,
         block_sender: PyObject,
         batch_publisher: PyObject,
@@ -563,9 +554,8 @@ impl BlockPublisher {
 
         let publisher = SyncBlockPublisher {
             state,
+            commit_store,
             block_manager,
-            batch_committed,
-            transaction_committed,
             state_view_factory,
             block_sender,
             batch_publisher,
