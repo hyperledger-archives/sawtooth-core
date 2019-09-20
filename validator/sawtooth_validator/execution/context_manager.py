@@ -22,6 +22,7 @@ from queue import Queue
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.state_view import StateViewFactory
 
 from sawtooth_validator.execution.execution_context \
     import AuthorizationException
@@ -63,7 +64,10 @@ class ContextManager:
 
         self._inflated_addresses = Queue()
 
-        self._context_reader = _ContextReader(database, self._address_queue,
+        self._state_view_factory = StateViewFactory(database)
+        self._context_reader = _ContextReader(database,
+                                              self._state_view_factory,
+                                              self._address_queue,
                                               self._inflated_addresses)
         self._context_reader.start()
 
@@ -312,7 +316,8 @@ class ContextManager:
             values_list.extend(address_values)
 
             if reads:
-                tree = MerkleDatabase(self._database, context.merkle_root)
+                tree = self._state_view_factory.create_view(
+                    context.merkle_root)
                 add_values = []
                 for add in reads:
                     value = None
@@ -477,9 +482,11 @@ class _ContextReader(InstrumentedThread):
                                           (context_id, [(address, value), ...
     """
 
-    def __init__(self, database, address_queue, inflated_addresses):
+    def __init__(self, database, state_view_factory,
+                 address_queue, inflated_addresses):
         super(_ContextReader, self).__init__(name='_ContextReader')
         self._database = database
+        self._state_view_factory = state_view_factory
         self._addresses = address_queue
         self._inflated_addresses = inflated_addresses
 
@@ -489,7 +496,8 @@ class _ContextReader(InstrumentedThread):
             if context_state_addresslist_tuple is _SHUTDOWN_SENTINEL:
                 break
             c_id, state_hash, address_list = context_state_addresslist_tuple
-            tree = MerkleDatabase(self._database, state_hash)
+            tree = self._state_view_factory.create_view(
+                state_hash)
             return_values = []
             for address in address_list:
                 value = None
