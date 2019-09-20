@@ -40,6 +40,7 @@ RUN apt-get install -y -q \
     openssl \
     pkg-config \
     python3-aiohttp \
+    python3-cachetools \
     python3-cbor \
     python3-colorlog \
     python3-cryptography-vectors \

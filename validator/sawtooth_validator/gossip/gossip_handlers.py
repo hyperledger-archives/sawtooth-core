@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+from threading import Lock
+from cachetools import LRUCache
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -119,39 +121,19 @@ class PeerUnregisterHandler(Handler):
 
 
 class GossipMessageDuplicateHandler(Handler):
-    def __init__(self, completer, has_block, has_batch):
-        self._completer = completer
-        self._has_block = has_block
-        self._has_batch = has_batch
+    def __init__(self):
+        self._cache = LRUCache(maxsize=4096)
+        self._lock = Lock()
 
     def handle(self, connection_id, message_content):
-        obj, tag, _ = message_content
+        with self._lock:
+            obj, _, _ = message_content
 
-        header_signature = obj.header_signature
-
-        if tag == GossipMessage.BLOCK:
-            has_block = False
-            if self._completer.get_block(header_signature) is not None:
-                has_block = True
-
-            if not has_block and self._has_block(header_signature):
-                has_block = True
-
-            if has_block:
+            if obj.header_signature in self._cache:
                 return HandlerResult(HandlerStatus.DROP)
 
-        if tag == GossipMessage.BATCH:
-            has_batch = False
-            if self._completer.get_batch(header_signature) is not None:
-                has_batch = True
-
-            if not has_batch and self._has_batch(header_signature):
-                has_batch = True
-
-            if has_batch:
-                return HandlerResult(HandlerStatus.DROP)
-
-        return HandlerResult(HandlerStatus.PASS)
+            self._cache[obj.header_signature] = True
+            return HandlerResult(HandlerStatus.PASS)
 
 
 class GossipBlockResponseHandler(Handler):
@@ -237,9 +219,10 @@ class GossipConsensusHandler(Handler):
 
 
 class GossipBroadcastHandler(Handler):
-    def __init__(self, gossip, completer):
+    def __init__(self, gossip):
         self._gossip = gossip
-        self._completer = completer
+        self._cache = LRUCache(maxsize=4096)
+        self._lock = Lock()
 
     def handle(self, connection_id, message_content):
         obj, tag, ttl = message_content
@@ -252,19 +235,22 @@ class GossipBroadcastHandler(Handler):
             # Do not forward message if it has reached its time to live limit
             return HandlerResult(status=HandlerStatus.PASS)
 
+        with self._lock:
+            if obj.header_signature in self._cache:
+                return HandlerResult(status=HandlerStatus.PASS)
+
+            self._cache[obj.header_signature] = True
+
         if tag == GossipMessage.BATCH:
-            # If we already have this batch, don't forward it
-            if not self._completer.get_batch(obj.header_signature):
-                self._gossip.broadcast_batch(obj, exclude, time_to_live=ttl)
+            self._gossip.broadcast_batch(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.BLOCK:
-            # If we already have this block, don't forward it
-            if not self._completer.get_block(obj.header_signature):
-                self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
+            self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
         elif tag == GossipMessage.CONSENSUS:
-            # We do not want to forward consensus messages
             pass
         else:
-            LOGGER.info("received %s, not BATCH or BLOCK or CONSENSUS", tag)
+            LOGGER.info("received %s, not BATCH or "
+                        "BLOCK or CONSENSUS", tag)
+
         return HandlerResult(status=HandlerStatus.PASS)
 
 
