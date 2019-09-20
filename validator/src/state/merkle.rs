@@ -469,6 +469,49 @@ impl StateReader for MerkleDatabase {
     }
 }
 
+pub fn decode_cbor_value(cbor_bytes: &[u8]) -> Result<Vec<u8>, StateDatabaseError> {
+    let input = Cursor::new(cbor_bytes);
+    let mut decoder = GenericDecoder::new(cbor::Config::default(), input);
+    let decoded_value = decoder.value()?;
+
+    match decoded_value {
+        Value::Bytes(Bytes::Bytes(bytes)) => Ok(bytes),
+        _ => Err(StateDatabaseError::InvalidRecord),
+    }
+}
+
+pub struct DecodedMerkleStateReader {
+    merkle_database: MerkleDatabase,
+}
+
+impl DecodedMerkleStateReader {
+    pub fn new(merkle_database: MerkleDatabase) -> Self {
+        Self { merkle_database }
+    }
+}
+
+impl StateReader for DecodedMerkleStateReader {
+    fn contains(&self, address: &str) -> Result<bool, StateDatabaseError> {
+        self.merkle_database.contains(address)
+    }
+
+    fn get(&self, address: &str) -> Result<Option<Vec<u8>>, StateDatabaseError> {
+        Ok(match self.merkle_database.get(address)? {
+            Some(bytes) => Some(decode_cbor_value(&bytes)?),
+            None => None,
+        })
+    }
+    fn leaves(&self, prefix: Option<&str>) -> Result<Box<StateIter>, StateDatabaseError> {
+        Ok(Box::new(self.merkle_database.leaves(prefix)?.map(
+            |value| {
+                value.and_then(|(address, bytes)| {
+                    decode_cbor_value(&bytes).map(|new_bytes| (address, new_bytes))
+                })
+            },
+        )))
+    }
+}
+
 /// A MerkleLeafIterator is fixed to iterate over the state address/value pairs
 /// the merkle root hash at the time of its creation.
 pub struct MerkleLeafIterator {
