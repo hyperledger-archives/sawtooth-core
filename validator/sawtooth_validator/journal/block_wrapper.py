@@ -23,11 +23,16 @@ class BlockStatus(IntEnum):
     """
         The status of a block as the journal is concerned.
     """
-    Unknown = 0  # Block is present but not yet validated
-    Invalid = 1  # Block failed block validation.
-    Valid = 2  # Block has been validated and id valid to appear in a chain.
-    Missing = 3  # we know about the block, possibly by a successor, but
-    # we do not have it.
+    # Block is present but not yet validated
+    Unknown = 0
+    # Block failed block validation.
+    Invalid = 1
+    # Block has been validated and id valid to appear in a chain.
+    Valid = 2
+    # We know about the block, possibly by a successor, but we do not have it.
+    Missing = 3
+    # The block is currently being validated
+    InValidation = 4
 
 
 class BlockWrapper:

@@ -372,6 +372,16 @@ class ConsensusCheckBlocksNotifier(Handler):
                 self._consensus_notifier.notify_block_valid(block_id)
             elif block_status == BlockStatus.Invalid:
                 self._consensus_notifier.notify_block_invalid(block_id)
+            elif block_status == BlockStatus.Unknown:
+                # No need to worry about unknown block, this is checked in the
+                # previous handler.
+                self._proxy.validate_block(block_id)
+            elif block_status == BlockStatus.Missing:
+                LOGGER.error("Missing block: %s", block_id)
+            elif block_status == BlockStatus.InValidation:
+                # Block is already being validated, notification will be sent
+                # when it's complete
+                pass
 
         return HandlerResult(status=HandlerStatus.PASS)
 
