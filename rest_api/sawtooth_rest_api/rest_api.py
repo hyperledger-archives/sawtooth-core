@@ -207,7 +207,9 @@ def main():
         init_console_logging(verbose_level=opts.verbose)
 
         try:
-            host, port = rest_api_config.bind[0].split(":")
+            host, port = rest_api_config.bind[0].rsplit(":", 1)
+            # If we have an ipv6 address
+            host = host.replace("[", "").replace("]", "")
             port = int(port)
         except ValueError as e:
             print("Unable to parse binding {}: Must be in the format"
