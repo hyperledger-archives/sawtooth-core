@@ -23,6 +23,7 @@ MODULE_LIST="
     settings
     identity
     block_info
+    ipv6
     battleship
     validator
     rust_sdk
@@ -144,6 +145,9 @@ main() {
                 integration)
                     test_integration
                     ;;
+                ipv6)
+                    test_ipv6
+                    ;;
                 deployment)
                     test_deployment
                     ;;
@@ -178,6 +182,11 @@ test_settings() {
 test_identity() {
   run_docker_test ./families/identity/tests/test_tp_identity.yaml
   copy_coverage .coverage.identity
+}
+
+test_ipv6() {
+    run_docker_test ./integration/sawtooth_integration/docker/test_ipv6.yaml
+    copy_coverage .coverage.ipv6
 }
 
 test_block_info() {
