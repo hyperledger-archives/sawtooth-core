@@ -53,10 +53,14 @@ class TestConfigBatchlist(unittest.TestCase):
             return output
 
     def test_set_value_creates_batch_list(self):
-        subprocess.run(shlex.split(
-            'sawset proposal create -k {} -o {} x=1 y=1'.format(
-                self._priv_file,
-                os.path.join(self._temp_dir, 'myconfig.batch'))))
+        subprocess.run(
+            shlex.split(
+                'sawset proposal create -k {} -o {} x=1 y=1'.format(
+                    self._priv_file,
+                    os.path.join(self._temp_dir, 'myconfig.batch')
+                )
+            ), check=True
+        )
 
         batch_list = self._read_target_file_as(BatchList)
 
