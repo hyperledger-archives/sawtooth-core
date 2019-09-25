@@ -129,7 +129,7 @@ class TestIPv6(unittest.TestCase):
 
         # run `sawnet peers graph`, but don't verify output
         subprocess.run(shlex.split(
-            'sawnet peers graph {}'.format(http_addresses)))
+            'sawnet peers graph -o peers-ipv6.dot {}'.format(http_addresses)))
 
 
 def _get_peers(node_number, fmt='json'):
