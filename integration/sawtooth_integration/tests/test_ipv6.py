@@ -133,7 +133,7 @@ class TestIPv6(unittest.TestCase):
         # run `sawnet peers graph`, but don't verify output
         subprocess.run(
             shlex.split(
-                'sawnet peers graph -o peers-ipv6.dot {}'.format(
+                'sawnet peers graph -o peers-ipv6.dot --force {}'.format(
                     http_addresses)
             ), check=True
         )
