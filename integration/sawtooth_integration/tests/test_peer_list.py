@@ -114,8 +114,11 @@ class TestPeerList(unittest.TestCase):
         ])
 
         # make sure pretty-print option works
-        subprocess.run(shlex.split(
-            'sawnet peers list {} --pretty'.format(http_addresses)))
+        subprocess.run(
+            shlex.split(
+                'sawnet peers list {} --pretty'.format(http_addresses)
+            ), check=True
+        )
 
         sawnet_peers_output = json.loads(
             _run_peer_command(
@@ -128,8 +131,11 @@ class TestPeerList(unittest.TestCase):
             peers_list_expected)
 
         # run `sawnet peers graph`, but don't verify output
-        subprocess.run(shlex.split(
-            'sawnet peers graph {}'.format(http_addresses)))
+        subprocess.run(
+            shlex.split(
+                'sawnet peers graph {}'.format(http_addresses)
+            ), check=True
+        )
 
 
 def _get_peers(node_number, fmt='json'):
