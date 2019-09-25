@@ -133,7 +133,7 @@ class TestPeerList(unittest.TestCase):
         # run `sawnet peers graph`, but don't verify output
         subprocess.run(
             shlex.split(
-                'sawnet peers graph {}'.format(http_addresses)
+                'sawnet peers graph --force {}'.format(http_addresses)
             ), check=True
         )
 
