@@ -236,5 +236,4 @@ mod tests {
         header.merge_from_bytes(header_bytes).unwrap();
         header
     }
-
 }
