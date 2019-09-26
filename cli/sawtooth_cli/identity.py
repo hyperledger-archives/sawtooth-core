@@ -289,7 +289,7 @@ def _do_identity_policy_create(args):
             print('{:128.128}  {}'.format(
                 batch_id,
                 statuses[0]['status']))
-            exit(1)
+            sys.exit(1)
     else:
         raise AssertionError('No target for create set.')
 
@@ -406,7 +406,7 @@ def _do_identity_role_create(args):
             print('{:128.128}  {}'.format(
                 batch_id,
                 statuses[0]['status']))
-            exit(1)
+            sys.exit(1)
     else:
         raise AssertionError('No target for create set.')
 
