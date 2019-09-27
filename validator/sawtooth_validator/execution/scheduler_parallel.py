@@ -653,12 +653,12 @@ class ParallelScheduler(Scheduler):
                 if not result.is_valid:
                     batch_is_valid = False
                     break
-                else:
-                    txn_id = txn.header_signature
-                    if txn_id not in txns_added_predecessors:
-                        txns_added_predecessors.append(
-                            self._txn_predecessors[txn_id])
-                        contexts_from_batch.append(result.context_id)
+
+                txn_id = txn.header_signature
+                if txn_id not in txns_added_predecessors:
+                    txns_added_predecessors.append(
+                        self._txn_predecessors[txn_id])
+                    contexts_from_batch.append(result.context_id)
             if batch_is_valid:
                 contexts.extend(contexts_from_batch)
 
