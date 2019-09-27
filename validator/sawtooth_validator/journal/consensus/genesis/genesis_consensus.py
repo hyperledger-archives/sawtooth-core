@@ -27,6 +27,8 @@ class BlockPublisher(BlockPublisherInterface):
     `'Genesis'` and finalized as such.
     """
 
+    # pylint: disable=useless-super-delegation
+
     def __init__(self,
                  block_cache,
                  state_view_factory,
