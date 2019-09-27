@@ -107,10 +107,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
             for key, hashed in random.sample(key_hashes.items(), 50)
         }
         values.update(set_items)
-        delete_items = {
-            hashed
-            for hashed in random.sample(list(key_hashes.values()), 50)
-        }
+        delete_items = set(random.sample(list(key_hashes.values()), 50))
 
         # make sure there are no sets and deletes of the same key
         delete_items = delete_items - set_items.keys()
@@ -163,11 +160,11 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
             [("010101", {"my_data": 1}),
              ("010202", {"my_data": 2}),
              ("010303", {"my_data": 3})],
-            [entry for entry in iter(self.trie)])
+            list(iter(self.trie)))
 
         # Test prefixed iteration
         self.assertEqual([("010202", {"my_data": 2})],
-                         [entry for entry in self.trie.leaves('0102')])
+                         list(iter(self.trie.leaves('0102'))))
 
     # assertions
     def assert_value_at_address(self, address, value, ishash=False):

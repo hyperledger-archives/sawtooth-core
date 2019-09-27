@@ -970,7 +970,7 @@ class BatchListRequest(_ClientRequestHandler):
             head_id,
             request.batch_ids,
             self._block_store.get_batch,
-            lambda block: [a for a in block.batches])
+            lambda block: list(block.batches))
 
         if self.is_reverse(request.sorting, self._status.INVALID_SORT):
             batches.reverse()

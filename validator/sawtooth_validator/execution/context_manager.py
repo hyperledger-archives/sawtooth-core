@@ -534,7 +534,7 @@ class _ContextWriter(InstrumentedThread):
             if context_id_list_tuple is _SHUTDOWN_SENTINEL:
                 break
             c_id, inflated_address_list = context_id_list_tuple
-            inflated_value_map = {k: v for k, v in inflated_address_list}
+            inflated_value_map = dict(inflated_address_list)
             if c_id in self._contexts:
                 self._contexts[c_id].set_from_tree(inflated_value_map)
 

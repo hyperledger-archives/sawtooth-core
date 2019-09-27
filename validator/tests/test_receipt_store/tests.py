@@ -116,7 +116,7 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
         self.assertEqual(ClientReceiptGetResponse.OK,
                          response.message_out.status)
 
-        self.assertEqual([receipt], [r for r in response.message_out.receipts])
+        self.assertEqual([receipt], list(response.message_out.receipts))
 
         request = ClientReceiptGetRequest(
             transaction_ids=['unknown']).SerializeToString()
