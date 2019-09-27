@@ -292,5 +292,4 @@ mod test {
 
         assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
     }
-
 }
