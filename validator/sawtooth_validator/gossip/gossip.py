@@ -670,15 +670,15 @@ class ConnectionManager(InstrumentedThread):
                             # Unable to peer with endpoint
                             to_remove.append(endpoint)
                             continue
-                        else:
-                            # At maximum retry threashold, increment count
-                            self._static_peer_status[endpoint] = \
-                                StaticPeerInfo(
-                                    time=time.time(),
-                                    retry_threshold=min(
-                                        static_peer_info.retry_threshold * 2,
-                                        MAXIMUM_STATIC_RETRY_FREQUENCY),
-                                    count=static_peer_info.count + 1)
+
+                        # At maximum retry threashold, increment count
+                        self._static_peer_status[endpoint] = \
+                            StaticPeerInfo(
+                                time=time.time(),
+                                retry_threshold=min(
+                                    static_peer_info.retry_threshold * 2,
+                                    MAXIMUM_STATIC_RETRY_FREQUENCY),
+                                count=static_peer_info.count + 1)
                     else:
                         self._static_peer_status[endpoint] = \
                             StaticPeerInfo(
@@ -814,22 +814,22 @@ class ConnectionManager(InstrumentedThread):
                     # has not finished the authorization (trust/challenge)
                     # process yet.
                     continue
-                elif conn_id in peers:
+                if conn_id in peers:
                     # connected and peered - we've already sent peer request
                     continue
-                else:
-                    # connected but not peered
-                    if endpoint in self._temp_endpoints:
-                        # Endpoint is not yet authorized, do not request peers
-                        continue
 
-                    try:
-                        self._network.send(
-                            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                            get_peers_request.SerializeToString(),
-                            conn_id)
-                    except ValueError:
-                        LOGGER.debug("Connection disconnected: %s", conn_id)
+                # connected but not peered
+                if endpoint in self._temp_endpoints:
+                    # Endpoint is not yet authorized, do not request peers
+                    continue
+
+                try:
+                    self._network.send(
+                        validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                        get_peers_request.SerializeToString(),
+                        conn_id)
+                except ValueError:
+                    LOGGER.debug("Connection disconnected: %s", conn_id)
 
     def _attempt_to_peer_with_endpoint(self, endpoint):
         LOGGER.debug("Attempting to connect/peer with %s", endpoint)
