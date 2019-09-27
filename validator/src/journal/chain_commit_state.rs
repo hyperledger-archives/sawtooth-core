@@ -686,5 +686,4 @@ mod test {
 
         block_manager
     }
-
 }
