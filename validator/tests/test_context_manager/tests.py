@@ -707,15 +707,14 @@ class TestContextManager(unittest.TestCase):
         )
         self.assertEqual(
             address_values,
-            [(a, v) for a, v in zip(test_addresses.writes, values1)]
+            list(zip(test_addresses.writes, values1))
         )
 
         # 3)
         values2 = [bytes(v.encode()) for v in test_addresses.outputs]
         self.context_manager.set(
             context_id=context_a,
-            address_value_list=[{a: v} for
-                                a, v in zip(test_addresses.outputs, values2)])
+            address_value_list=[dict(zip(test_addresses.outputs, values2))])
 
         # 4)
         context_id_a1 = self.context_manager.create_context(
@@ -730,9 +729,10 @@ class TestContextManager(unittest.TestCase):
             context_id=context_id_a1,
             address_list=list(test_addresses.outputs)
         )
+
         self.assertEqual(
             c_ida1_address_values,
-            [(a, v) for a, v in zip(test_addresses.outputs, values2)]
+            list(zip(test_addresses.outputs, values2))
         )
 
         # 6)
@@ -764,9 +764,9 @@ class TestContextManager(unittest.TestCase):
                 context_id_b,
                 list(test_addresses2.writes + test_addresses.outputs)
             ),
-            [(a, v) for a, v in zip(
+            list(zip(
                 test_addresses2.writes + test_addresses.outputs,
-                values3 + values2)]
+                values3 + values2))
         )
 
     def test_state_root_after_parallel_ctx(self):
@@ -1066,9 +1066,8 @@ class TestContextManager(unittest.TestCase):
 
         tree = MerkleDatabase(self.database_results)
         state_hash_from_1 = tree.update(
-            set_items={a: v for a, v in zip(outputs_1,
-                                            [bytes(i)
-                                             for i in range(len(outputs_1))])},
+            set_items=dict(zip(outputs_1,
+                               [bytes(i) for i in range(len(outputs_1))])),
             virtual=False)
 
         self.assertEqual(state_hash_from_1, sh1,

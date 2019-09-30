@@ -113,7 +113,7 @@ def do_state(args):
         elif args.format == 'json' or args.format == 'yaml':
             state_data = {
                 'head': head,
-                'data': [{k: d for k, d in zip(keys, parse_leaf_row(l, False))}
+                'data': [dict(zip(keys, parse_leaf_row(l, False)))
                          for l in leaves]}
 
             if args.format == 'yaml':
