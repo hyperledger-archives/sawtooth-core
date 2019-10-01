@@ -325,5 +325,4 @@ mod tests {
             Ok(Box::new(iterable.into_iter()))
         }
     }
-
 }
