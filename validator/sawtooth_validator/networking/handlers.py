@@ -204,7 +204,7 @@ class DisconnectHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class PingHandler(Handler):
+class PingRequestHandler(Handler):
     def __init__(self, network, allowed_frequency=10):
         self._network = network
         self._last_message = TimedCache()
