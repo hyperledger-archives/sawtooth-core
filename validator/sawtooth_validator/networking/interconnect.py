@@ -548,8 +548,7 @@ class _SendReceive:
             self._close_sockets()
             raise
 
-        if self._heartbeat:
-            asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
+        asyncio.ensure_future(self._do_heartbeat(), loop=self._event_loop)
 
         # Put a 'complete with the setup tasks' sentinel on the queue.
         complete_or_error_queue.put_nowait(_STARTUP_COMPLETE_SENTINEL)
