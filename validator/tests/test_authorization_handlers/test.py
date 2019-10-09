@@ -33,7 +33,7 @@ from sawtooth_validator.networking.handlers import \
 from sawtooth_validator.networking.handlers import \
     AuthorizationChallengeSubmitHandler
 from sawtooth_validator.networking.handlers import \
-    PingHandler
+    PingRequestHandler
 
 from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
@@ -143,7 +143,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
     def test_ping_handler(self):
         """
-        Test the PingHandler returns a NetworkAck if the connection has
+        Test the PingRequestHandler returns a NetworkAck if the connection has
         has finished authorization.
         """
         ping = PingRequest()
@@ -152,7 +152,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
             connection_status={
                 "connection_id": ConnectionStatus.CONNECTED
             })
-        handler = PingHandler(network)
+        handler = PingRequestHandler(network)
         handler_status = handler.handle("connection_id",
                                         ping.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.RETURN)
@@ -162,7 +162,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
     def test_ping_rate_limiting(self):
         """
-        Test the PingHandler allows a ping from a connection who has not
+        Test the PingRequestHandler allows a ping from a connection who has not
         finished authorization and returns a PingResponse. Also test that
         if that connection sends another ping in a short time period, the
         connection is deemed malicious, an AuthorizationViolation is returned,
@@ -172,7 +172,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         network = MockNetwork({},
                               connection_status={"connection_id":
                                                  None})
-        handler = PingHandler(network)
+        handler = PingRequestHandler(network)
         handler_status = handler.handle("connection_id",
                                         ping.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.RETURN)
