@@ -94,7 +94,7 @@ class _SendReceive:
     def __init__(self, connection, address, futures, connections,
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
-                 heartbeat=False, heartbeat_interval=10,
+                 reap=False, heartbeat_interval=10,
                  connection_timeout=60, monitor=False):
         """
         Constructor for _SendReceive.
@@ -119,7 +119,8 @@ class _SendReceive:
             server_private_key (bytes): A private key corresponding to
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
-            heartbeat (bool): Whether or not to send ping messages.
+            reap (bool): Whether or not to remove connections that do not
+                respond to pings.
             heartbeat_interval (int): Number of seconds between ping
                 messages on an otherwise quiet connection.
             connection_timeout (int): Number of seconds after which a
@@ -133,7 +134,7 @@ class _SendReceive:
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
-        self._heartbeat = heartbeat
+        self._reap = reap
         self._heartbeat_interval = heartbeat_interval
         self._connection_timeout = connection_timeout
 
@@ -240,7 +241,7 @@ class _SendReceive:
              if check_time - timestamp > self._heartbeat_interval]
         for zmq_identity, elapsed in expired:
             if self._is_connection_lost(
-                    self._last_message_times[zmq_identity]):
+                    self._last_message_times[zmq_identity]) and self._reap:
                 LOGGER.info("No response from %s in %s seconds"
                             " - removing connection.",
                             self._identity_to_connection_id(
@@ -264,12 +265,14 @@ class _SendReceive:
                     content=b'',
                     message_type=validator_pb2.Message.PING_REQUEST
                 )
-                fut = future.Future(
-                    message.correlation_id,
-                    message.content,
-                    timeout=self._connection_timeout,
-                )
-                self._futures.put(fut)
+
+                if self._reap:
+                    fut = future.Future(
+                        message.correlation_id,
+                        message.content,
+                        timeout=self._connection_timeout,
+                    )
+                    self._futures.put(fut)
                 message_frame = [
                     bytes(zmq_identity),
                     message.SerializeToString()
@@ -576,7 +579,6 @@ class _SendReceive:
             self._close_sockets()
             raise
 
-
         task = asyncio.ensure_future(self._do_heartbeat(),
                                      loop=self._event_loop)
         self._cancellable_tasks.append(task)
@@ -671,7 +673,7 @@ class Interconnect:
                  secured=False,
                  server_public_key=None,
                  server_private_key=None,
-                 heartbeat=False,
+                 reap=False,
                  public_endpoint=None,
                  connection_timeout=60,
                  max_incoming_connections=100,
@@ -692,7 +694,8 @@ class Interconnect:
             server_private_key (bytes): A private key corresponding to
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
-            heartbeat (bool): Whether or not to send ping messages.
+            reap (bool): Whether or not to remove connections that do not
+                respond to pings
             max_future_callback_workers (int): max number of workers for future
                 callbacks, defaults to 10
             signer (:obj:`Signer`): cryptographic signer for the validator
@@ -709,7 +712,7 @@ class Interconnect:
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
-        self._heartbeat = heartbeat
+        self._reap = reap
         self._connection_timeout = connection_timeout
         self._connections_lock = Lock()
         self._connections = {}
@@ -739,7 +742,7 @@ class Interconnect:
             secured=secured,
             server_public_key=server_public_key,
             server_private_key=server_private_key,
-            heartbeat=heartbeat,
+            reap=reap,
             connection_timeout=connection_timeout,
             monitor=monitor)
 
@@ -852,7 +855,7 @@ class Interconnect:
             server_public_key=self._server_public_key,
             server_private_key=self._server_private_key,
             future_callback_threadpool=self._future_callback_threadpool,
-            heartbeat=True,
+            reap=True,
             connection_timeout=self._connection_timeout)
 
         self.outbound_connections[uri] = conn
@@ -1288,7 +1291,7 @@ class OutboundConnection:
                  server_public_key,
                  server_private_key,
                  future_callback_threadpool,
-                 heartbeat=True,
+                 reap=True,
                  connection_timeout=60):
         self._futures = future.FutureCollection(
             resolving_threadpool=future_callback_threadpool)
@@ -1298,7 +1301,7 @@ class OutboundConnection:
         self._secured = secured
         self._server_public_key = server_public_key
         self._server_private_key = server_private_key
-        self._heartbeat = heartbeat
+        self._reap = reap
         self._connection_timeout = connection_timeout
         self._connection_id = None
 
@@ -1312,7 +1315,7 @@ class OutboundConnection:
             secured=secured,
             server_public_key=server_public_key,
             server_private_key=server_private_key,
-            heartbeat=heartbeat,
+            reap=reap,
             connection_timeout=connection_timeout)
 
         self._thread = None
