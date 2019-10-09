@@ -112,7 +112,7 @@ def verify_state(global_state_db, blockstore, bind_component, scheduler_type):
         bind_component,
         component_dispatcher,
         secured=False,
-        heartbeat=False,
+        reap=False,
         max_incoming_connections=20,
         monitor=True,
         max_future_callback_workers=10)
