@@ -32,6 +32,8 @@ from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 
+from sawtooth_validator.networking.handlers import PingResponseHandler
+
 from sawtooth_validator.server.events.handlers import \
     ClientEventsGetRequestHandler
 from sawtooth_validator.server.events.handlers \
@@ -256,4 +258,11 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_STATUS_GET_REQUEST,
         client_handlers.StatusGetRequest(gossip),
+        thread_pool)
+
+    # Ping
+
+    dispatcher.add_handler(
+        validator_pb2.Message.PING_RESPONSE,
+        PingResponseHandler(),
         thread_pool)
