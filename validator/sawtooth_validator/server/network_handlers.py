@@ -56,7 +56,8 @@ from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersRequestHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
 from sawtooth_validator.networking.dispatch import Priority
-from sawtooth_validator.networking.handlers import PingHandler
+from sawtooth_validator.networking.handlers import PingRequestHandler
+from sawtooth_validator.networking.handlers import PingResponseHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator.networking.handlers import DisconnectHandler
 from sawtooth_validator.networking.handlers import \
@@ -89,9 +90,14 @@ def add(
     # -- Basic Networking -- #
     dispatcher.add_handler(
         validator_pb2.Message.PING_REQUEST,
-        PingHandler(network=interconnect),
+        PingRequestHandler(network=interconnect),
         thread_pool,
         priority=Priority.HIGH)
+
+    dispatcher.add_handler(
+        validator_pb2.Message.PING_RESPONSE,
+        PingResponseHandler(),
+        thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.NETWORK_CONNECT,

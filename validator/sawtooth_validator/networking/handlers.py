@@ -204,7 +204,7 @@ class DisconnectHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class PingHandler(Handler):
+class PingRequestHandler(Handler):
     def __init__(self, network, allowed_frequency=10):
         self._network = network
         self._last_message = TimedCache()
@@ -250,6 +250,19 @@ class PingHandler(Handler):
             HandlerStatus.RETURN,
             message_out=ack,
             message_type=validator_pb2.Message.PING_RESPONSE)
+
+
+class PingResponseHandler(Handler):
+    def __init__(self):
+        pass
+
+    def handle(self, connection_id, message_content):
+        """
+        If a PingResponse is received and there is not a future to resolve, the
+        message is dropped. Interconnect will have already updated the last
+        message time for the connection.
+        """
+        return HandlerResult(HandlerStatus.DROP)
 
 
 class AuthorizationTrustRequestHandler(Handler):
