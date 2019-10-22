@@ -184,7 +184,7 @@ class Validator:
             bind_component,
             component_dispatcher,
             secured=False,
-            heartbeat=False,
+            reap=False,
             max_incoming_connections=20,
             monitor=True,
             max_future_callback_workers=10)
@@ -203,7 +203,7 @@ class Validator:
             secured=secure,
             server_public_key=network_public_key,
             server_private_key=network_private_key,
-            heartbeat=True,
+            reap=True,
             public_endpoint=endpoint,
             connection_timeout=120,
             max_incoming_connections=100,
@@ -243,7 +243,7 @@ class Validator:
             bind_consensus,
             consensus_dispatcher,
             secured=False,
-            heartbeat=False,
+            reap=False,
             max_incoming_connections=20,
             max_future_callback_workers=10)
 
