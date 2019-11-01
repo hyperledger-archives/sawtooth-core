@@ -21,5 +21,6 @@ license = "Apache-2.0"
 
 [features]
 default = []
-experimental = ["stores"]
+experimental = ["btree-store", "stores"]
+btree-store = ["stores"]
 stores = []
