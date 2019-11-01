@@ -19,8 +19,12 @@ authors = ["Cargill Incorporated"]
 edition = "2018"
 license = "Apache-2.0"
 
+[dependencies]
+transact = "0.1"
+
 [features]
 default = []
-experimental = ["btree-store", "stores"]
+experimental = ["btree-store", "receipt-store", "stores"]
 btree-store = ["stores"]
+receipt-store = ["stores"]
 stores = []
