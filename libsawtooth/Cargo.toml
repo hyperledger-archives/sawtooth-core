@@ -21,4 +21,5 @@ license = "Apache-2.0"
 
 [features]
 default = []
-experimental = []
+experimental = ["stores"]
+stores = []
