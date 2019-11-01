@@ -64,6 +64,9 @@
 
 /integration/**/__pycache__/
 
+/libsawtooth/target/
+/libsawtooth/Cargo.lock
+
 /rest_api/build/
 /rest_api/sawtooth_rest_api/protobuf/
 /rest_api/**/__pycache__/
