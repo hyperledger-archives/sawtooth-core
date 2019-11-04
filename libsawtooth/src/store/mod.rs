@@ -17,6 +17,8 @@ pub mod btree;
 mod error;
 #[cfg(feature = "receipt-store")]
 pub mod receipt_store;
+#[cfg(feature = "redis-store")]
+pub mod redis;
 
 pub use error::OrderedStoreError;
 
