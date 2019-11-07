@@ -20,13 +20,15 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+lmdb-zero = { version = "0.4", optional = true }
 redis = { version = "0.13.0", default-features = false, optional = true }
 transact = "0.1"
 
 [features]
 default = []
-experimental = ["btree-store", "receipt-store", "redis-store", "stores"]
+experimental = ["btree-store", "lmdb-store", "receipt-store", "redis-store", "stores"]
 btree-store = ["stores"]
+lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]
 redis-store = ["redis", "stores"]
 stores = []

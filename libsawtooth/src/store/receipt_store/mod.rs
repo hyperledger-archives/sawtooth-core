@@ -224,4 +224,20 @@ mod tests {
             crate::store::btree::BTreeOrderedStore::new(),
         )))
     }
+
+    /// Test that an LMDB-backed receipt store works properly.
+    #[cfg(feature = "lmdb-store")]
+    #[test]
+    fn lmdb_receipt_store() {
+        let mut temp_db_path = std::env::temp_dir();
+        let thread_id = std::thread::current().id();
+        temp_db_path.push(format!("store-{:?}.lmdb", thread_id));
+
+        test_receipt_store(TransactionReceiptStore::new(Box::new(
+            crate::store::lmdb::LmdbOrderedStore::new(temp_db_path.as_path(), Some(1024 * 1024))
+                .expect("Failed to create LMDB ordered store"),
+        )));
+
+        std::fs::remove_file(temp_db_path.as_path()).expect("Failed to remove temp DB file");
+    }
 }

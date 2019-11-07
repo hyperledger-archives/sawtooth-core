@@ -15,6 +15,8 @@
 #[cfg(feature = "btree-store")]
 pub mod btree;
 mod error;
+#[cfg(feature = "lmdb-store")]
+pub mod lmdb;
 #[cfg(feature = "receipt-store")]
 pub mod receipt_store;
 #[cfg(feature = "redis-store")]
