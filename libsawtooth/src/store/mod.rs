@@ -20,6 +20,8 @@ pub mod receipt_store;
 #[cfg(feature = "redis-store")]
 pub mod redis;
 
+use std::convert::TryInto;
+
 pub use error::OrderedStoreError;
 
 /// A key/vaue store that is indexed by a type with total ordering
@@ -45,6 +47,60 @@ pub trait OrderedStore<K, V, I: Ord> {
 
     /// Remove the value corresponding to the key and return the valu,index pair if it exists.
     fn remove_by_key(&mut self, key: &K) -> Result<Option<(V, I)>, OrderedStoreError>;
+}
+
+/// Trait used by some `OrderedStore` implementations that require converting a key, value, or
+/// index to bytes for storage.
+pub trait AsBytes {
+    fn as_bytes(&self) -> Vec<u8>;
+}
+
+impl AsBytes for String {
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+}
+
+impl AsBytes for u8 {
+    fn as_bytes(&self) -> Vec<u8> {
+        self.to_ne_bytes().to_vec()
+    }
+}
+
+impl AsBytes for u64 {
+    fn as_bytes(&self) -> Vec<u8> {
+        self.to_ne_bytes().to_vec()
+    }
+}
+
+/// Trait used by some `OrderedStore` implementations that store a key, value, or index as bytes,
+/// and therefore must convert back to the native type.
+pub trait FromBytes: Sized {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String>;
+}
+
+impl FromBytes for String {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        String::from_utf8(bytes.to_vec()).map_err(|err| err.to_string())
+    }
+}
+
+impl FromBytes for u8 {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        bytes
+            .try_into()
+            .map(u8::from_ne_bytes)
+            .map_err(|err| err.to_string())
+    }
+}
+
+impl FromBytes for u64 {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        bytes
+            .try_into()
+            .map(u64::from_ne_bytes)
+            .map_err(|err| err.to_string())
+    }
 }
 
 #[cfg(test)]

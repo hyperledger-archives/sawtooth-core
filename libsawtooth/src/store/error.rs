@@ -17,6 +17,7 @@ use std::fmt::Debug;
 
 #[derive(Debug)]
 pub enum OrderedStoreError {
+    BytesParsingFailed(String),
     InitializationFailed(String),
     Internal(Box<dyn Error>),
     StoreCorrupted(String),
@@ -27,6 +28,7 @@ pub enum OrderedStoreError {
 impl Error for OrderedStoreError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::BytesParsingFailed(_) => None,
             Self::InitializationFailed(_) => None,
             Self::Internal(err) => Some(&**err),
             Self::StoreCorrupted(_) => None,
@@ -39,6 +41,7 @@ impl Error for OrderedStoreError {
 impl std::fmt::Display for OrderedStoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Self::BytesParsingFailed(err) => write!(f, "failed to parse from bytes: {}", err),
             Self::InitializationFailed(err) => {
                 write!(f, "failed to initialize ordered store: {}", err)
             }

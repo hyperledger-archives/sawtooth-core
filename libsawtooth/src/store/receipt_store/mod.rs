@@ -15,10 +15,26 @@
 mod error;
 
 use transact::protocol::receipt::TransactionReceipt;
+use transact::protos::{FromBytes as ReceiptFromBytes, IntoBytes};
 
-use crate::store::OrderedStore;
+use crate::store::{AsBytes, FromBytes, OrderedStore};
 
 pub use self::error::TransactionReceiptStoreError;
+
+impl AsBytes for TransactionReceipt {
+    fn as_bytes(&self) -> Vec<u8> {
+        self.clone()
+            .into_bytes()
+            .expect("failed to serialize transaction receipt")
+    }
+}
+
+impl FromBytes for TransactionReceipt {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        <TransactionReceipt as ReceiptFromBytes<TransactionReceipt>>::from_bytes(bytes)
+            .map_err(|err| err.to_string())
+    }
+}
 
 /// `TransactionReceiptStore` is a wrapper around an `OrderedStore` that stores
 /// `TransactionReceipt`s keyed by transaction IDs (`String`s) and indexed by `u64`s to provide
