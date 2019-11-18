@@ -18,6 +18,10 @@ version = "0.1.0"
 authors = ["Cargill Incorporated"]
 edition = "2018"
 license = "Apache-2.0"
+description = """\
+    Hyperledger Sawtooth is an enterprise blockchain platform for building \
+    distributed ledger applications and networks.
+"""
 
 [dependencies]
 lmdb-zero = { version = "0.4", optional = true }
