@@ -339,11 +339,15 @@ mod tests {
         let thread_id = std::thread::current().id();
         temp_db_path.push(format!("store-{:?}.lmdb", thread_id));
 
-        test_u8_ordered_store(Box::new(
-            LmdbOrderedStore::new(temp_db_path.as_path(), Some(1024 * 1024))
-                .expect("Failed to create LMDB ordered store"),
-        ));
+        let test_result = std::panic::catch_unwind(|| {
+            test_u8_ordered_store(Box::new(
+                LmdbOrderedStore::new(temp_db_path.as_path(), Some(1024 * 1024))
+                    .expect("Failed to create LMDB ordered store"),
+            ))
+        });
 
         std::fs::remove_file(temp_db_path.as_path()).expect("Failed to remove temp DB file");
+
+        assert!(test_result.is_ok());
     }
 }
