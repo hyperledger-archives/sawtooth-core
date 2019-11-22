@@ -69,9 +69,10 @@ impl TransactionReceiptStore {
     }
 
     /// Get an iterator over all `TransactionReceipt`s in order.
-    pub fn iter(
-        &self,
-    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt>>, TransactionReceiptStoreError> {
+    pub fn iter<'a>(
+        &'a self,
+    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
+    {
         Ok(self.0.iter()?)
     }
 
@@ -156,10 +157,13 @@ mod tests {
             None
         );
 
-        let mut iter = receipt_store.iter().expect("Failed to get iter");
-        assert_eq!(iter.next(), Some(receipt1.clone()));
-        assert_eq!(iter.next(), Some(receipt2.clone()));
-        assert_eq!(iter.next(), None);
+        assert_eq!(
+            receipt_store
+                .iter()
+                .expect("Failed to get iter")
+                .collect::<Vec<_>>(),
+            vec![receipt1.clone(), receipt2.clone()]
+        );
 
         assert_eq!(
             receipt_store
