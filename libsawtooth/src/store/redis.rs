@@ -76,6 +76,10 @@ impl<
             .hget(MAIN_STORE, key.to_redis_args())?)
     }
 
+    fn get_index_by_key(&self, _key: &K) -> Result<Option<I>, OrderedStoreError> {
+        unimplemented!()
+    }
+
     fn count(&self) -> Result<u64, OrderedStoreError> {
         Ok(self
             .conn

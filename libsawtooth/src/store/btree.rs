@@ -77,6 +77,17 @@ impl<
             .cloned())
     }
 
+    fn get_index_by_key(&self, key: &K) -> Result<Option<I>, OrderedStoreError> {
+        Ok(self
+            .internal
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
+            .main_store
+            .get(key)
+            .map(|(_, idx)| idx)
+            .cloned())
+    }
+
     fn count(&self) -> Result<u64, OrderedStoreError> {
         Ok(self
             .internal
