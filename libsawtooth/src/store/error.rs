@@ -20,6 +20,7 @@ pub enum OrderedStoreError {
     BytesParsingFailed(String),
     InitializationFailed(String),
     Internal(Box<dyn Error>),
+    LockPoisoned(String),
     StoreCorrupted(String),
     ValueAlreadyExistsAtIndex(Box<dyn Debug>),
     ValueAlreadyExistsForKey(Box<dyn Debug>),
@@ -31,6 +32,7 @@ impl Error for OrderedStoreError {
             Self::BytesParsingFailed(_) => None,
             Self::InitializationFailed(_) => None,
             Self::Internal(err) => Some(&**err),
+            Self::LockPoisoned(_) => None,
             Self::StoreCorrupted(_) => None,
             Self::ValueAlreadyExistsForKey(_) => None,
             Self::ValueAlreadyExistsAtIndex(_) => None,
@@ -46,6 +48,7 @@ impl std::fmt::Display for OrderedStoreError {
                 write!(f, "failed to initialize ordered store: {}", err)
             }
             Self::Internal(err) => write!(f, "internal error occurred: {}", err),
+            Self::LockPoisoned(err) => write!(f, "a lock was poisoned: {}", err),
             Self::StoreCorrupted(err) => write!(f, "ordered store is corrupted: {}", err),
             Self::ValueAlreadyExistsForKey(key) => {
                 write!(f, "value already exists for key: {:?}", key)

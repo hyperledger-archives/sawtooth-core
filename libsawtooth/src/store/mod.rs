@@ -23,11 +23,12 @@ pub mod receipt_store;
 pub mod redis;
 
 use std::convert::TryInto;
+use std::ops::{Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 
 pub use error::OrderedStoreError;
 
 /// A key/vaue store that is indexed by a type with total ordering
-pub trait OrderedStore<K, V, I: Ord> {
+pub trait OrderedStore<K, V, I: Ord>: Sync + Send {
     /// Get the value at the index if it exists.
     fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError>;
 
@@ -38,7 +39,7 @@ pub trait OrderedStore<K, V, I: Ord> {
     fn count(&self) -> Result<u64, OrderedStoreError>;
 
     /// Get an iterator of all values in the store.
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError>;
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
 
     /// Insert the key,value pair at the index. If a value already exists for the key or index, an
     /// error is returned.
@@ -105,6 +106,93 @@ impl FromBytes for u64 {
     }
 }
 
+/// A range describing the start and end bounds for a range iterator on an OrderedStore.
+///
+/// This struct is similar to the various implementations of the RangeBounds trait in the standard
+/// library, but is necessary for implementing the most generic set of bounds while still allowing
+/// OrderedStore to be used in a boxed-dyn context.
+pub struct OrderedStoreRange<I> {
+    pub start: Bound<I>,
+    pub end: Bound<I>,
+}
+
+impl<I: PartialOrd> OrderedStoreRange<I> {
+    fn contains(&self, item: &I) -> bool {
+        let lower = match &self.start {
+            Bound::Included(start_idx) => item >= start_idx,
+            Bound::Excluded(start_idx) => item > start_idx,
+            Bound::Unbounded => true,
+        };
+        let upper = match &self.end {
+            Bound::Included(end_idx) => item <= end_idx,
+            Bound::Excluded(end_idx) => item < end_idx,
+            Bound::Unbounded => true,
+        };
+        lower && upper
+    }
+}
+
+impl<I> From<Range<I>> for OrderedStoreRange<I> {
+    fn from(range: Range<I>) -> Self {
+        Self {
+            start: Bound::Included(range.start),
+            end: Bound::Excluded(range.end),
+        }
+    }
+}
+
+impl<I> From<RangeInclusive<I>> for OrderedStoreRange<I> {
+    fn from(range: RangeInclusive<I>) -> Self {
+        let (start, end) = range.into_inner();
+        Self {
+            start: Bound::Included(start),
+            end: Bound::Included(end),
+        }
+    }
+}
+
+impl<I> From<RangeFull> for OrderedStoreRange<I> {
+    fn from(_: RangeFull) -> Self {
+        Self {
+            start: Bound::Unbounded,
+            end: Bound::Unbounded,
+        }
+    }
+}
+
+impl<I> From<RangeFrom<I>> for OrderedStoreRange<I> {
+    fn from(range: RangeFrom<I>) -> Self {
+        Self {
+            start: Bound::Included(range.start),
+            end: Bound::Unbounded,
+        }
+    }
+}
+
+impl<I> From<RangeTo<I>> for OrderedStoreRange<I> {
+    fn from(range: RangeTo<I>) -> Self {
+        Self {
+            start: Bound::Unbounded,
+            end: Bound::Excluded(range.end),
+        }
+    }
+}
+
+impl<I> From<RangeToInclusive<I>> for OrderedStoreRange<I> {
+    fn from(range: RangeToInclusive<I>) -> Self {
+        Self {
+            start: Bound::Unbounded,
+            end: Bound::Included(range.end),
+        }
+    }
+}
+
+impl<I> From<(Bound<I>, Bound<I>)> for OrderedStoreRange<I> {
+    fn from((start, end): (Bound<I>, Bound<I>)) -> Self {
+        Self { start, end }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,10 +218,13 @@ mod tests {
         assert_eq!(store.get_by_key(&1).expect("Failed to get by key"), Some(1));
         assert_eq!(store.get_by_key(&2).expect("Failed to get by key"), None);
 
-        let mut iter = store.iter().expect("Failed to get iter");
-        assert_eq!(iter.next(), Some(0));
-        assert_eq!(iter.next(), Some(1));
-        assert_eq!(iter.next(), None);
+        assert_eq!(
+            store
+                .iter()
+                .expect("Failed to get iter")
+                .collect::<Vec<_>>(),
+            vec![0, 1]
+        );
 
         assert!(store.insert(0, 2, 2).is_err());
         assert!(store.insert(2, 2, 0).is_err());
@@ -173,5 +264,30 @@ mod tests {
         );
         assert_eq!(store.get_by_key(&0).expect("Failed to get by key"), None);
         assert_eq!(store.count().expect("Failed to get count"), 0);
+    }
+
+    /// Test that the `OrderedStoreRange` properly determines if a value is within the range.
+    #[test]
+    fn ordered_store_range() {
+        let unbounded_range: OrderedStoreRange<u8> = (..).into();
+        assert!(unbounded_range.contains(&std::u8::MIN));
+        assert!(unbounded_range.contains(&std::u8::MAX));
+
+        let inclusive_range: OrderedStoreRange<u8> = RangeInclusive::new(1, 3).into();
+        assert!(!inclusive_range.contains(&0));
+        assert!(inclusive_range.contains(&1));
+        assert!(inclusive_range.contains(&2));
+        assert!(inclusive_range.contains(&3));
+        assert!(!inclusive_range.contains(&4));
+
+        let exclusive_range = OrderedStoreRange {
+            start: Bound::Excluded(1),
+            end: Bound::Excluded(3),
+        };
+        assert!(!exclusive_range.contains(&0));
+        assert!(!exclusive_range.contains(&1));
+        assert!(exclusive_range.contains(&2));
+        assert!(!exclusive_range.contains(&3));
+        assert!(!exclusive_range.contains(&4));
     }
 }
