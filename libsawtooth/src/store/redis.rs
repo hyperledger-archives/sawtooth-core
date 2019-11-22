@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cell::RefCell;
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 use redis::{Client, Commands, Connection, FromRedisValue, RedisError, ToRedisArgs};
 
@@ -29,17 +29,17 @@ impl From<RedisError> for OrderedStoreError {
 }
 
 pub struct RedisOrderedStore {
-    conn: RefCell<Connection>,
+    conn: Arc<Mutex<Connection>>,
 }
 
 impl RedisOrderedStore {
     pub fn new(url: &str) -> Result<Self, OrderedStoreError> {
-        let conn = RefCell::new(
+        let conn = Arc::new(Mutex::new(
             Client::open(url)
                 .map_err(|err| OrderedStoreError::InitializationFailed(err.to_string()))?
                 .get_connection()
                 .map_err(|err| OrderedStoreError::InitializationFailed(err.to_string()))?,
-        );
+        ));
         Ok(Self { conn })
     }
 }
@@ -54,10 +54,15 @@ impl<
         Ok(
             match self
                 .conn
-                .borrow_mut()
+                .lock()
+                .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
                 .hget::<_, _, Option<K>>(INDEX_STORE, idx.to_redis_args())?
             {
-                Some(key) => self.conn.borrow_mut().hget(MAIN_STORE, key)?,
+                Some(key) => self
+                    .conn
+                    .lock()
+                    .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
+                    .hget(MAIN_STORE, key)?,
                 None => None,
             },
         )
@@ -66,16 +71,24 @@ impl<
     fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         Ok(self
             .conn
-            .borrow_mut()
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
             .hget(MAIN_STORE, key.to_redis_args())?)
     }
 
     fn count(&self) -> Result<u64, OrderedStoreError> {
-        Ok(self.conn.borrow_mut().hlen(MAIN_STORE)?)
+        Ok(self
+            .conn
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
+            .hlen(MAIN_STORE)?)
     }
 
     fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
-        let mut conn = self.conn.borrow_mut();
+        let mut conn = self
+            .conn
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?;
 
         Ok(Box::new(
             conn.hgetall::<_, Vec<K>>(INDEX_STORE)?
@@ -92,23 +105,29 @@ impl<
     fn insert(&mut self, key: K, value: V, idx: I) -> Result<(), OrderedStoreError> {
         if self
             .conn
-            .borrow_mut()
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
             .hexists(MAIN_STORE, key.to_redis_args())?
         {
             return Err(OrderedStoreError::ValueAlreadyExistsForKey(Box::new(key)));
         }
         if self
             .conn
-            .borrow_mut()
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
             .hexists(INDEX_STORE, idx.to_redis_args())?
         {
             return Err(OrderedStoreError::ValueAlreadyExistsAtIndex(Box::new(idx)));
         }
 
         self.conn
-            .borrow_mut()
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
             .hset(INDEX_STORE, idx.to_redis_args(), key.to_redis_args())?;
-        self.conn.borrow_mut().hset(MAIN_STORE, key, (value, idx))?;
+        self.conn
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
+            .hset(MAIN_STORE, key, (value, idx))?;
 
         Ok(())
     }
@@ -117,12 +136,14 @@ impl<
         Ok(
             if let Some(key) = self
                 .conn
-                .borrow_mut()
+                .lock()
+                .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
                 .hdel::<_, _, Option<K>>(INDEX_STORE, idx.to_redis_args())?
             {
                 let val = self
                     .conn
-                    .borrow_mut()
+                    .lock()
+                    .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
                     .hdel::<_, _, Option<V>>(MAIN_STORE, key.to_redis_args())?
                     .ok_or_else(|| {
                         OrderedStoreError::StoreCorrupted("value missing from main store".into())
@@ -138,11 +159,13 @@ impl<
         Ok(
             if let Some((val, idx)) = self
                 .conn
-                .borrow_mut()
+                .lock()
+                .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
                 .hdel::<_, _, Option<(V, I)>>(MAIN_STORE, key.to_redis_args())?
             {
                 self.conn
-                    .borrow_mut()
+                    .lock()
+                    .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
                     .hdel(INDEX_STORE, idx.to_redis_args())?;
                 Some((val, idx))
             } else {

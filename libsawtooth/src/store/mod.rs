@@ -28,7 +28,7 @@ use std::ops::{Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, Rang
 pub use error::OrderedStoreError;
 
 /// A key/vaue store that is indexed by a type with total ordering
-pub trait OrderedStore<K, V, I: Ord> {
+pub trait OrderedStore<K, V, I: Ord>: Sync + Send {
     /// Get the value at the index if it exists.
     fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError>;
 
