@@ -52,7 +52,7 @@ impl TransactionReceiptStore {
         &self,
         id: String,
     ) -> Result<Option<TransactionReceipt>, TransactionReceiptStoreError> {
-        Ok(self.0.get_by_key(&id)?)
+        Ok(self.0.get_value_by_key(&id)?)
     }
 
     /// Get the `TransactionReceipt` at the given index.
@@ -60,7 +60,7 @@ impl TransactionReceiptStore {
         &self,
         idx: u64,
     ) -> Result<Option<TransactionReceipt>, TransactionReceiptStoreError> {
-        Ok(self.0.get_by_index(&idx)?)
+        Ok(self.0.get_value_by_index(&idx)?)
     }
 
     /// Get the number of `TransactionReceipt`s in the store.

@@ -135,7 +135,7 @@ impl<
         I: Clone + Debug + Ord + AsBytes + FromBytes + 'static,
     > OrderedStore<K, V, I> for LmdbOrderedStore
 {
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
         let txn = lmdb::ReadTransaction::new(self.env.clone())?;
         let access = txn.access();
 
@@ -155,7 +155,7 @@ impl<
         )
     }
 
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         let txn = lmdb::ReadTransaction::new(self.env.clone())?;
         let access = txn.access();
 

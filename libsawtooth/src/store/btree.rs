@@ -55,7 +55,7 @@ impl<
         I: Ord + Clone + Debug + Sync + Send + 'static,
     > OrderedStore<K, V, I> for BTreeOrderedStore<K, V, I>
 {
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
         let internal = self
             .internal
             .lock()
@@ -66,7 +66,7 @@ impl<
             .and_then(|key| internal.main_store.get(key).map(|(val, _)| val).cloned()))
     }
 
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         Ok(self
             .internal
             .lock()

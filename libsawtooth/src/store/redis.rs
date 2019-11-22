@@ -50,7 +50,7 @@ impl<
         I: Debug + Ord + FromRedisValue + ToRedisArgs + 'static,
     > OrderedStore<K, V, I> for RedisOrderedStore
 {
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
         Ok(
             match self
                 .conn
@@ -68,7 +68,7 @@ impl<
         )
     }
 
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         Ok(self
             .conn
             .lock()
