@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use redis::{Client, Commands, Connection, FromRedisValue, RedisError, ToRedisArgs};
 
-use super::{OrderedStore, OrderedStoreError};
+use super::{OrderedStore, OrderedStoreError, OrderedStoreRange};
 
 const MAIN_STORE: &str = "main";
 const INDEX_STORE: &str = "index";
@@ -100,6 +100,13 @@ impl<
                 })?
                 .into_iter(),
         ))
+    }
+
+    fn range_iter(
+        &self,
+        _range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+        unimplemented!()
     }
 
     fn insert(&mut self, key: K, value: V, idx: I) -> Result<(), OrderedStoreError> {

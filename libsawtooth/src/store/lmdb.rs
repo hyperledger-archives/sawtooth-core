@@ -186,6 +186,20 @@ impl<
         Ok(Box::new(iter))
     }
 
+    fn range_iter(
+        &self,
+        range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+        let iter: LmdbOrderedStoreIter<V, I> = LmdbOrderedStoreIter::new(
+            self.env.clone(),
+            self.index_to_key_db.clone(),
+            self.main_db.clone(),
+            Some(range),
+        )?;
+
+        Ok(Box::new(iter))
+    }
+
     fn insert(&mut self, key: K, value: V, idx: I) -> Result<(), OrderedStoreError> {
         let txn = lmdb::WriteTransaction::new(self.env.clone())?;
 

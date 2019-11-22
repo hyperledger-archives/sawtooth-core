@@ -41,6 +41,12 @@ pub trait OrderedStore<K, V, I: Ord>: Sync + Send {
     /// Get an iterator of all values in the store.
     fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
 
+    /// Get an iterator over a range of values in the store.
+    fn range_iter<'a>(
+        &'a self,
+        range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
+
     /// Insert the key,value pair at the index. If a value already exists for the key or index, an
     /// error is returned.
     fn insert(&mut self, key: K, value: V, idx: I) -> Result<(), OrderedStoreError>;
@@ -224,6 +230,22 @@ mod tests {
                 .expect("Failed to get iter")
                 .collect::<Vec<_>>(),
             vec![0, 1]
+        );
+
+        assert_eq!(
+            store
+                .range_iter((1..).into())
+                .expect("Failed to get iter from 1")
+                .collect::<Vec<_>>(),
+            vec![1]
+        );
+
+        assert_eq!(
+            store
+                .range_iter((..1).into())
+                .expect("Failed to get iter up to 1")
+                .collect::<Vec<_>>(),
+            vec![0]
         );
 
         assert!(store.insert(0, 2, 2).is_err());
