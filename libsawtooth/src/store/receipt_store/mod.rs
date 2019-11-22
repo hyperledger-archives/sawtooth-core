@@ -14,6 +14,8 @@
 
 mod error;
 
+use std::ops::Bound;
+
 use transact::protocol::receipt::TransactionReceipt;
 use transact::protos::{FromBytes as ReceiptFromBytes, IntoBytes};
 
@@ -76,12 +78,20 @@ impl TransactionReceiptStore {
         Ok(self.0.iter()?)
     }
 
-    /// Get an iterator over a range of `TransactionReceipt`s.
-    pub fn range_iter<'a>(
+    /// Get an iterator over all `TransactionReceipt`s since the one with the given ID.
+    pub fn iter_since_id<'a>(
         &'a self,
-        range: OrderedStoreRange<u64>,
+        id: String,
     ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
     {
+        let idx = self
+            .0
+            .get_index_by_key(&id)?
+            .ok_or_else(|| TransactionReceiptStoreError::IdNotFound)?;
+        let range = OrderedStoreRange {
+            start: Bound::Excluded(idx),
+            end: Bound::Unbounded,
+        };
         Ok(self.0.range_iter(range)?)
     }
 
@@ -176,18 +186,10 @@ mod tests {
 
         assert_eq!(
             receipt_store
-                .range_iter((1..).into())
-                .expect("Failed to get iter from 1")
+                .iter_since_id(receipt1.transaction_id.clone())
+                .expect("Failed to get iter of receipts after 1")
                 .collect::<Vec<_>>(),
             vec![receipt2.clone()]
-        );
-
-        assert_eq!(
-            receipt_store
-                .range_iter((..1).into())
-                .expect("Failed to get iter up to 1")
-                .collect::<Vec<_>>(),
-            vec![receipt1.clone()]
         );
 
         assert_eq!(
