@@ -17,7 +17,7 @@ mod error;
 use transact::protocol::receipt::TransactionReceipt;
 use transact::protos::{FromBytes as ReceiptFromBytes, IntoBytes};
 
-use crate::store::{AsBytes, FromBytes, OrderedStore};
+use crate::store::{AsBytes, FromBytes, OrderedStore, OrderedStoreRange};
 
 pub use self::error::TransactionReceiptStoreError;
 
@@ -74,6 +74,15 @@ impl TransactionReceiptStore {
     ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
     {
         Ok(self.0.iter()?)
+    }
+
+    /// Get an iterator over a range of `TransactionReceipt`s.
+    pub fn range_iter<'a>(
+        &'a self,
+        range: OrderedStoreRange<u64>,
+    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
+    {
+        Ok(self.0.range_iter(range)?)
     }
 
     /// Add receipts to the end of the store.
@@ -163,6 +172,22 @@ mod tests {
                 .expect("Failed to get iter")
                 .collect::<Vec<_>>(),
             vec![receipt1.clone(), receipt2.clone()]
+        );
+
+        assert_eq!(
+            receipt_store
+                .range_iter((1..).into())
+                .expect("Failed to get iter from 1")
+                .collect::<Vec<_>>(),
+            vec![receipt2.clone()]
+        );
+
+        assert_eq!(
+            receipt_store
+                .range_iter((..1).into())
+                .expect("Failed to get iter up to 1")
+                .collect::<Vec<_>>(),
+            vec![receipt1.clone()]
         );
 
         assert_eq!(
