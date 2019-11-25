@@ -41,11 +41,11 @@ impl FromBytes for TransactionReceipt {
 /// `TransactionReceiptStore` is a wrapper around an `OrderedStore` that stores
 /// `TransactionReceipt`s keyed by transaction IDs (`String`s) and indexed by `u64`s to provide
 /// ordering of transactions.
-pub struct TransactionReceiptStore(Box<dyn OrderedStore<String, TransactionReceipt, u64> + Send>);
+pub struct TransactionReceiptStore(Box<dyn OrderedStore<String, TransactionReceipt, u64>>);
 
 impl TransactionReceiptStore {
     /// Create a new `TransactionReceiptStore` that is backed by the given `OrderedStore`.
-    pub fn new(store: Box<dyn OrderedStore<String, TransactionReceipt, u64> + Send>) -> Self {
+    pub fn new(store: Box<dyn OrderedStore<String, TransactionReceipt, u64>>) -> Self {
         Self(store)
     }
 
