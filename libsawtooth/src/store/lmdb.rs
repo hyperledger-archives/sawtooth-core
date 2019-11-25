@@ -131,8 +131,8 @@ impl LmdbOrderedStore {
 
 impl<
         K: Clone + Debug + AsBytes + FromBytes + 'static,
-        V: Clone + AsBytes + FromBytes + 'static,
-        I: Clone + Debug + Ord + AsBytes + FromBytes + 'static,
+        V: Clone + Send + AsBytes + FromBytes + 'static,
+        I: Clone + Debug + Ord + Send + AsBytes + FromBytes + 'static,
     > OrderedStore<K, V, I> for LmdbOrderedStore
 {
     fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
@@ -187,7 +187,7 @@ impl<
             .map_err(|err| OrderedStoreError::Internal(Box::new(err)))?)
     }
 
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    fn iter(&self) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let iter: LmdbOrderedStoreIter<V, I> = LmdbOrderedStoreIter::new(
             self.env.clone(),
             self.index_to_key_db.clone(),
@@ -201,7 +201,7 @@ impl<
     fn range_iter(
         &self,
         range: OrderedStoreRange<I>,
-    ) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let iter: LmdbOrderedStoreIter<V, I> = LmdbOrderedStoreIter::new(
             self.env.clone(),
             self.index_to_key_db.clone(),
@@ -342,7 +342,7 @@ impl<
 /// An optional `OrderedStoreRange` may be provided to get only a subset of entries from the
 /// database.
 struct LmdbOrderedStoreIter<V, I> {
-    txn: Arc<lmdb::ReadTransaction<'static>>,
+    env: Arc<lmdb::Environment>,
     index_to_key_db: Arc<lmdb::Database<'static>>,
     main_db: Arc<lmdb::Database<'static>>,
 
@@ -358,7 +358,7 @@ impl<V: FromBytes, I: AsBytes + FromBytes + PartialEq + PartialOrd> LmdbOrderedS
         range: Option<OrderedStoreRange<I>>,
     ) -> Result<Self, OrderedStoreError> {
         let mut iter = Self {
-            txn: Arc::new(lmdb::ReadTransaction::new(env)?),
+            env,
             index_to_key_db,
             main_db,
             cache: VecDeque::new(),
@@ -374,9 +374,9 @@ impl<V: FromBytes, I: AsBytes + FromBytes + PartialEq + PartialOrd> LmdbOrderedS
     }
 
     fn reload_cache(&mut self) -> Result<(), String> {
-        let access = self.txn.access();
-        let mut index_cursor = self
-            .txn
+        let txn = lmdb::ReadTransaction::new(self.env.clone()).map_err(|err| err.to_string())?;
+        let access = txn.access();
+        let mut index_cursor = txn
             .cursor(self.index_to_key_db.clone())
             .map_err(|err| err.to_string())?;
 

@@ -73,8 +73,10 @@ impl TransactionReceiptStore {
     /// Get an iterator over all `TransactionReceipt`s in order.
     pub fn iter<'a>(
         &'a self,
-    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
-    {
+    ) -> Result<
+        Box<dyn Iterator<Item = TransactionReceipt> + 'a + Send>,
+        TransactionReceiptStoreError,
+    > {
         Ok(self.0.iter()?)
     }
 
@@ -82,8 +84,10 @@ impl TransactionReceiptStore {
     pub fn iter_since_id<'a>(
         &'a self,
         id: String,
-    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
-    {
+    ) -> Result<
+        Box<dyn Iterator<Item = TransactionReceipt> + 'a + Send>,
+        TransactionReceiptStoreError,
+    > {
         let idx = self
             .0
             .get_index_by_key(&id)?

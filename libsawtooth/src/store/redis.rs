@@ -46,7 +46,7 @@ impl RedisOrderedStore {
 
 impl<
         K: Debug + FromRedisValue + ToRedisArgs + 'static,
-        V: FromRedisValue + ToRedisArgs + 'static,
+        V: Send + FromRedisValue + ToRedisArgs + 'static,
         I: Debug + Ord + FromRedisValue + ToRedisArgs + 'static,
     > OrderedStore<K, V, I> for RedisOrderedStore
 {
@@ -88,7 +88,7 @@ impl<
             .hlen(MAIN_STORE)?)
     }
 
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    fn iter(&self) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let mut conn = self
             .conn
             .lock()
@@ -109,7 +109,7 @@ impl<
     fn range_iter(
         &self,
         _range: OrderedStoreRange<I>,
-    ) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         unimplemented!()
     }
 

@@ -42,13 +42,13 @@ pub trait OrderedStore<K, V, I: Ord>: Sync + Send {
     fn count(&self) -> Result<u64, OrderedStoreError>;
 
     /// Get an iterator of all values in the store.
-    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a + Send>, OrderedStoreError>;
 
     /// Get an iterator over a range of values in the store.
     fn range_iter<'a>(
         &'a self,
         range: OrderedStoreRange<I>,
-    ) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
+    ) -> Result<Box<dyn Iterator<Item = V> + 'a + Send>, OrderedStoreError>;
 
     /// Insert the key,value pair at the index. If a value already exists for the key or index, an
     /// error is returned.

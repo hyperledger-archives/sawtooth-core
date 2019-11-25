@@ -100,7 +100,7 @@ impl<
             .map_err(|err| OrderedStoreError::Internal(Box::new(err)))?)
     }
 
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    fn iter(&self) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let internal = self
             .internal
             .lock()
@@ -121,7 +121,7 @@ impl<
     fn range_iter(
         &self,
         range: OrderedStoreRange<I>,
-    ) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let internal = self
             .internal
             .lock()
