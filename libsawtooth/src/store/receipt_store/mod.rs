@@ -14,10 +14,12 @@
 
 mod error;
 
+use std::ops::Bound;
+
 use transact::protocol::receipt::TransactionReceipt;
 use transact::protos::{FromBytes as ReceiptFromBytes, IntoBytes};
 
-use crate::store::{AsBytes, FromBytes, OrderedStore};
+use crate::store::{AsBytes, FromBytes, OrderedStore, OrderedStoreRange};
 
 pub use self::error::TransactionReceiptStoreError;
 
@@ -39,11 +41,11 @@ impl FromBytes for TransactionReceipt {
 /// `TransactionReceiptStore` is a wrapper around an `OrderedStore` that stores
 /// `TransactionReceipt`s keyed by transaction IDs (`String`s) and indexed by `u64`s to provide
 /// ordering of transactions.
-pub struct TransactionReceiptStore(Box<dyn OrderedStore<String, TransactionReceipt, u64> + Send>);
+pub struct TransactionReceiptStore(Box<dyn OrderedStore<String, TransactionReceipt, u64>>);
 
 impl TransactionReceiptStore {
     /// Create a new `TransactionReceiptStore` that is backed by the given `OrderedStore`.
-    pub fn new(store: Box<dyn OrderedStore<String, TransactionReceipt, u64> + Send>) -> Self {
+    pub fn new(store: Box<dyn OrderedStore<String, TransactionReceipt, u64>>) -> Self {
         Self(store)
     }
 
@@ -52,7 +54,7 @@ impl TransactionReceiptStore {
         &self,
         id: String,
     ) -> Result<Option<TransactionReceipt>, TransactionReceiptStoreError> {
-        Ok(self.0.get_by_key(&id)?)
+        Ok(self.0.get_value_by_key(&id)?)
     }
 
     /// Get the `TransactionReceipt` at the given index.
@@ -60,7 +62,7 @@ impl TransactionReceiptStore {
         &self,
         idx: u64,
     ) -> Result<Option<TransactionReceipt>, TransactionReceiptStoreError> {
-        Ok(self.0.get_by_index(&idx)?)
+        Ok(self.0.get_value_by_index(&idx)?)
     }
 
     /// Get the number of `TransactionReceipt`s in the store.
@@ -71,9 +73,30 @@ impl TransactionReceiptStore {
     /// Get an iterator over all `TransactionReceipt`s in order.
     pub fn iter<'a>(
         &'a self,
-    ) -> Result<Box<dyn Iterator<Item = TransactionReceipt> + 'a>, TransactionReceiptStoreError>
-    {
+    ) -> Result<
+        Box<dyn Iterator<Item = TransactionReceipt> + 'a + Send>,
+        TransactionReceiptStoreError,
+    > {
         Ok(self.0.iter()?)
+    }
+
+    /// Get an iterator over all `TransactionReceipt`s since the one with the given ID.
+    pub fn iter_since_id<'a>(
+        &'a self,
+        id: String,
+    ) -> Result<
+        Box<dyn Iterator<Item = TransactionReceipt> + 'a + Send>,
+        TransactionReceiptStoreError,
+    > {
+        let idx = self
+            .0
+            .get_index_by_key(&id)?
+            .ok_or_else(|| TransactionReceiptStoreError::IdNotFound)?;
+        let range = OrderedStoreRange {
+            start: Bound::Excluded(idx),
+            end: Bound::Unbounded,
+        };
+        Ok(self.0.range_iter(range)?)
     }
 
     /// Add receipts to the end of the store.
@@ -163,6 +186,14 @@ mod tests {
                 .expect("Failed to get iter")
                 .collect::<Vec<_>>(),
             vec![receipt1.clone(), receipt2.clone()]
+        );
+
+        assert_eq!(
+            receipt_store
+                .iter_since_id(receipt1.transaction_id.clone())
+                .expect("Failed to get iter of receipts after 1")
+                .collect::<Vec<_>>(),
+            vec![receipt2.clone()]
         );
 
         assert_eq!(

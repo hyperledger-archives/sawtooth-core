@@ -17,22 +17,31 @@ use std::error::Error;
 use crate::store::OrderedStoreError;
 
 #[derive(Debug)]
-pub struct TransactionReceiptStoreError(OrderedStoreError);
+pub enum TransactionReceiptStoreError {
+    IdNotFound, // used by the `iter_since_id` method if the given ID is not in the store
+    Internal(OrderedStoreError),
+}
 
 impl Error for TransactionReceiptStoreError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&self.0)
+        match self {
+            Self::IdNotFound => None,
+            Self::Internal(err) => Some(err),
+        }
     }
 }
 
 impl std::fmt::Display for TransactionReceiptStoreError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "error in transaction receipt store: {}", self.0)
+        match self {
+            Self::IdNotFound => write!(f, "id not found in the store"),
+            Self::Internal(err) => write!(f, "an internal error occurred: {}", err),
+        }
     }
 }
 
 impl From<OrderedStoreError> for TransactionReceiptStoreError {
     fn from(err: OrderedStoreError) -> Self {
-        Self(err)
+        Self::Internal(err)
     }
 }

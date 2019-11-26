@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use redis::{Client, Commands, Connection, FromRedisValue, RedisError, ToRedisArgs};
 
-use super::{OrderedStore, OrderedStoreError};
+use super::{OrderedStore, OrderedStoreError, OrderedStoreRange};
 
 const MAIN_STORE: &str = "main";
 const INDEX_STORE: &str = "index";
@@ -46,11 +46,11 @@ impl RedisOrderedStore {
 
 impl<
         K: Debug + FromRedisValue + ToRedisArgs + 'static,
-        V: FromRedisValue + ToRedisArgs + 'static,
+        V: Send + FromRedisValue + ToRedisArgs + 'static,
         I: Debug + Ord + FromRedisValue + ToRedisArgs + 'static,
     > OrderedStore<K, V, I> for RedisOrderedStore
 {
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
         Ok(
             match self
                 .conn
@@ -68,12 +68,16 @@ impl<
         )
     }
 
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         Ok(self
             .conn
             .lock()
             .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
             .hget(MAIN_STORE, key.to_redis_args())?)
+    }
+
+    fn get_index_by_key(&self, _key: &K) -> Result<Option<I>, OrderedStoreError> {
+        unimplemented!()
     }
 
     fn count(&self) -> Result<u64, OrderedStoreError> {
@@ -84,7 +88,7 @@ impl<
             .hlen(MAIN_STORE)?)
     }
 
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    fn iter(&self) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let mut conn = self
             .conn
             .lock()
@@ -100,6 +104,13 @@ impl<
                 })?
                 .into_iter(),
         ))
+    }
+
+    fn range_iter(
+        &self,
+        _range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
+        unimplemented!()
     }
 
     fn insert(&mut self, key: K, value: V, idx: I) -> Result<(), OrderedStoreError> {

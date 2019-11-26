@@ -30,16 +30,25 @@ pub use error::OrderedStoreError;
 /// A key/vaue store that is indexed by a type with total ordering
 pub trait OrderedStore<K, V, I: Ord>: Sync + Send {
     /// Get the value at the index if it exists.
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError>;
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError>;
 
     /// Get the value by the specified key if it exists.
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError>;
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError>;
+
+    /// Get the index of the entry with the specified key if it exists.
+    fn get_index_by_key(&self, key: &K) -> Result<Option<I>, OrderedStoreError>;
 
     /// Get the number of entries in the store.
     fn count(&self) -> Result<u64, OrderedStoreError>;
 
     /// Get an iterator of all values in the store.
-    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a>, OrderedStoreError>;
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = V> + 'a + Send>, OrderedStoreError>;
+
+    /// Get an iterator over a range of values in the store.
+    fn range_iter<'a>(
+        &'a self,
+        range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V> + 'a + Send>, OrderedStoreError>;
 
     /// Insert the key,value pair at the index. If a value already exists for the key or index, an
     /// error is returned.
@@ -207,16 +216,43 @@ mod tests {
         assert_eq!(store.count().expect("Failed to get count"), 2);
 
         assert_eq!(
-            store.get_by_index(&0).expect("Failed to get by index"),
+            store
+                .get_value_by_index(&0)
+                .expect("Failed to get value by index"),
             Some(0)
         );
         assert_eq!(
-            store.get_by_index(&2).expect("Failed to get by index"),
+            store
+                .get_value_by_index(&2)
+                .expect("Failed to get value by index"),
             None
         );
 
-        assert_eq!(store.get_by_key(&1).expect("Failed to get by key"), Some(1));
-        assert_eq!(store.get_by_key(&2).expect("Failed to get by key"), None);
+        assert_eq!(
+            store
+                .get_value_by_key(&1)
+                .expect("Failed to get value by key"),
+            Some(1)
+        );
+        assert_eq!(
+            store
+                .get_value_by_key(&2)
+                .expect("Failed to get value by key"),
+            None
+        );
+
+        assert_eq!(
+            store
+                .get_index_by_key(&1)
+                .expect("Failed to get index by key"),
+            Some(1)
+        );
+        assert_eq!(
+            store
+                .get_index_by_key(&2)
+                .expect("Failed to get index by key"),
+            None
+        );
 
         assert_eq!(
             store
@@ -224,6 +260,22 @@ mod tests {
                 .expect("Failed to get iter")
                 .collect::<Vec<_>>(),
             vec![0, 1]
+        );
+
+        assert_eq!(
+            store
+                .range_iter((1..).into())
+                .expect("Failed to get iter from 1")
+                .collect::<Vec<_>>(),
+            vec![1]
+        );
+
+        assert_eq!(
+            store
+                .range_iter((..1).into())
+                .expect("Failed to get iter up to 1")
+                .collect::<Vec<_>>(),
+            vec![0]
         );
 
         assert!(store.insert(0, 2, 2).is_err());
@@ -243,10 +295,23 @@ mod tests {
             Some((1, 1))
         );
         assert_eq!(
-            store.get_by_index(&1).expect("Failed to get by index"),
+            store
+                .get_value_by_index(&1)
+                .expect("Failed to get value by index"),
             None
         );
-        assert_eq!(store.get_by_key(&1).expect("Failed to get by key"), None);
+        assert_eq!(
+            store
+                .get_value_by_key(&1)
+                .expect("Failed to get value by key"),
+            None
+        );
+        assert_eq!(
+            store
+                .get_index_by_key(&1)
+                .expect("Failed to get index by key"),
+            None
+        );
         assert_eq!(store.count().expect("Failed to get count"), 1);
 
         assert_eq!(
@@ -259,10 +324,23 @@ mod tests {
             Some((0, 0))
         );
         assert_eq!(
-            store.get_by_index(&0).expect("Failed to get by index"),
+            store
+                .get_value_by_index(&0)
+                .expect("Failed to get value by index"),
             None
         );
-        assert_eq!(store.get_by_key(&0).expect("Failed to get by key"), None);
+        assert_eq!(
+            store
+                .get_value_by_key(&0)
+                .expect("Failed to get value by key"),
+            None
+        );
+        assert_eq!(
+            store
+                .get_index_by_key(&0)
+                .expect("Failed to get index by key"),
+            None
+        );
         assert_eq!(store.count().expect("Failed to get count"), 0);
     }
 

@@ -17,7 +17,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-use super::{OrderedStore, OrderedStoreError};
+use super::{OrderedStore, OrderedStoreError, OrderedStoreRange};
 
 struct BTreeOrderedStoreInternal<K, V, I> {
     // The main store contains the index of the entry so it can be mapped back to the index store
@@ -55,7 +55,7 @@ impl<
         I: Ord + Clone + Debug + Sync + Send + 'static,
     > OrderedStore<K, V, I> for BTreeOrderedStore<K, V, I>
 {
-    fn get_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_index(&self, idx: &I) -> Result<Option<V>, OrderedStoreError> {
         let internal = self
             .internal
             .lock()
@@ -66,7 +66,7 @@ impl<
             .and_then(|key| internal.main_store.get(key).map(|(val, _)| val).cloned()))
     }
 
-    fn get_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
+    fn get_value_by_key(&self, key: &K) -> Result<Option<V>, OrderedStoreError> {
         Ok(self
             .internal
             .lock()
@@ -74,6 +74,17 @@ impl<
             .main_store
             .get(key)
             .map(|(val, _)| val)
+            .cloned())
+    }
+
+    fn get_index_by_key(&self, key: &K) -> Result<Option<I>, OrderedStoreError> {
+        Ok(self
+            .internal
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?
+            .main_store
+            .get(key)
+            .map(|(_, idx)| idx)
             .cloned())
     }
 
@@ -89,7 +100,7 @@ impl<
             .map_err(|err| OrderedStoreError::Internal(Box::new(err)))?)
     }
 
-    fn iter(&self) -> Result<Box<dyn Iterator<Item = V>>, OrderedStoreError> {
+    fn iter(&self) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
         let internal = self
             .internal
             .lock()
@@ -98,6 +109,27 @@ impl<
             internal
                 .index_store
                 .iter()
+                .map(|(_, key)| internal.main_store.get(key).map(|(val, _)| val).cloned())
+                .collect::<Option<Vec<_>>>()
+                .ok_or_else(|| {
+                    OrderedStoreError::StoreCorrupted("value missing from main store".into())
+                })?
+                .into_iter(),
+        ))
+    }
+
+    fn range_iter(
+        &self,
+        range: OrderedStoreRange<I>,
+    ) -> Result<Box<dyn Iterator<Item = V> + Send>, OrderedStoreError> {
+        let internal = self
+            .internal
+            .lock()
+            .map_err(|err| OrderedStoreError::LockPoisoned(err.to_string()))?;
+        Ok(Box::new(
+            internal
+                .index_store
+                .range((range.start, range.end))
                 .map(|(_, key)| internal.main_store.get(key).map(|(val, _)| val).cloned())
                 .collect::<Option<Vec<_>>>()
                 .ok_or_else(|| {
