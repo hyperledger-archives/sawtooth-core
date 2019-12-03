@@ -34,7 +34,7 @@ impl PyExecutor {
 }
 
 impl ExecutionPlatform for PyExecutor {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr> {
+    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
         let scheduler = self

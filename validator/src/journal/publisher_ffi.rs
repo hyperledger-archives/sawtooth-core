@@ -119,7 +119,7 @@ pub unsafe extern "C" fn block_publisher_new(
     };
 
     let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));

@@ -45,7 +45,7 @@ impl CommitStore {
     // Get
 
     fn read_proto_block_from_main(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         block_id: &[u8],
     ) -> Result<ProtoBlock, DatabaseError> {
         let packed = reader.get(&block_id).ok_or_else(|| {
@@ -61,7 +61,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_batch_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         batch_id: &[u8],
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -74,7 +74,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_transaction_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         transaction_id: &[u8],
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -90,7 +90,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_block_num_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         block_num: u64,
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -106,7 +106,7 @@ impl CommitStore {
     }
 
     fn read_chain_head_id_from_block_num_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
     ) -> Result<Vec<u8>, DatabaseError> {
         let mut cursor = reader.index_cursor("index_block_num")?;
         let (_, val) = cursor
@@ -415,7 +415,7 @@ impl BlockStore for CommitStore {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         Ok(Box::new(CommitStoreGetIterator {
             store: self.clone(),
             block_ids: block_ids.into_iter().map(|id| (*id).into()).collect(),
@@ -438,7 +438,7 @@ impl BlockStore for CommitStore {
         })
     }
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         match self.get_chain_head() {
             Ok(head) => Ok(Box::new(self.get_block_by_height_iter(
                 Some(head.block_num),

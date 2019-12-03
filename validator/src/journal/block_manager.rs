@@ -150,7 +150,7 @@ enum BlockLocation {
 struct BlockManagerState {
     block_by_block_id: RwLock<HashMap<String, Block>>,
 
-    blockstore_by_name: RwLock<HashMap<String, Box<IndexedBlockStore>>>,
+    blockstore_by_name: RwLock<HashMap<String, Box<dyn IndexedBlockStore>>>,
 
     references_by_block_id: RwLock<HashMap<String, RefCount>>,
 }
@@ -158,7 +158,7 @@ struct BlockManagerState {
 impl BlockManagerState {
     fn contains(
         references_block_id: &HashMap<String, RefCount>,
-        blockstore_by_name: &HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
     ) -> Result<bool, BlockManagerError> {
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
@@ -479,7 +479,7 @@ impl BlockManagerState {
     fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         let mut references_by_block_id = self
             .references_by_block_id
@@ -531,7 +531,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn transaction_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -555,7 +555,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn batch_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -681,9 +681,9 @@ impl BlockManager {
 
     fn persisted_branch_contains_block<'a>(
         &self,
-        blockstore_by_name: &'a HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &'a HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
-    ) -> Result<Option<&'a IndexedBlockStore>, BlockManagerError> {
+    ) -> Result<Option<&'a dyn IndexedBlockStore>, BlockManagerError> {
         if let Some((_, store)) = blockstore_by_name
             .iter()
             .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
@@ -696,7 +696,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_transactions(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -710,7 +710,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_batches(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -751,7 +751,7 @@ impl BlockManager {
         self.state.put(branch)
     }
 
-    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Option<Block>>> {
+    pub fn get(&self, block_ids: &[&str]) -> Box<dyn Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
@@ -763,7 +763,7 @@ impl BlockManager {
         self.state.get_block_from_blockstore(block_id, store_name)
     }
 
-    pub fn branch(&self, tip: &str) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    pub fn branch(&self, tip: &str) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchIterator::new(
             Arc::clone(&self.state),
             tip.into(),
@@ -774,7 +774,7 @@ impl BlockManager {
         &self,
         tip: &str,
         exclude: &str,
-    ) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    ) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchDiffIterator::new(
             Arc::clone(&self.state),
             tip,
@@ -797,7 +797,7 @@ impl BlockManager {
     pub fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         self.state.add_store(store_name, store)
     }
@@ -815,7 +815,7 @@ impl BlockManager {
                 .blockstore_by_name
                 .write()
                 .expect("Acquiring blockstore write lock; lock poisoned");
-            let mut blockstore = blockstore_by_name
+            let blockstore = blockstore_by_name
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 
@@ -1369,7 +1369,7 @@ mod tests {
         block_manager.persist("B", "commit").unwrap();
 
         {
-            let d_ref = block_manager.ref_block("D").unwrap();
+            let _d_ref = block_manager.ref_block("D").unwrap();
 
             block_manager.persist("C", "commit").unwrap();
             block_manager.unref_block("B").unwrap();
@@ -1414,7 +1414,7 @@ mod tests {
         // Ext. Ref. = 1
 
         {
-            let d_ref = blockman.ref_block("D").unwrap();
+            let _d_ref = blockman.ref_block("D").unwrap();
             // Ext. Ref. = 2
 
             blockman

@@ -153,10 +153,10 @@ struct ForkResolutionError(String);
 struct ChainControllerState {
     block_manager: BlockManager,
     block_references: HashMap<String, BlockRef>,
-    chain_reader: Box<ChainReader>,
+    chain_reader: Box<dyn ChainReader>,
     chain_head: Option<BlockRef>,
     chain_id_manager: ChainIdManager,
-    observers: Vec<Box<ChainObserver>>,
+    observers: Vec<Box<dyn ChainObserver>>,
     state_pruning_manager: StatePruningManager,
     fork_cache: ForkCache,
 }
@@ -249,8 +249,8 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
-    consensus_notifier: Arc<ConsensusNotifier>,
-    consensus_registry: Arc<ConsensusRegistry>,
+    consensus_notifier: Arc<dyn ConsensusNotifier>,
+    consensus_registry: Arc<dyn ConsensusRegistry>,
     state_view_factory: StateViewFactory,
     block_validator: BlockValidator<TEP, PV>,
     block_validation_results: BlockValidationResultStore,
@@ -271,15 +271,15 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV>,
-        chain_reader: Box<ChainReader>,
+        chain_reader: Box<dyn ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
-        consensus_notifier: Box<ConsensusNotifier>,
-        consensus_registry: Box<ConsensusRegistry>,
+        consensus_notifier: Box<dyn ConsensusNotifier>,
+        consensus_registry: Box<dyn ConsensusRegistry>,
         state_view_factory: StateViewFactory,
         data_dir: String,
         state_pruning_block_depth: u32,
-        observers: Vec<Box<ChainObserver>>,
+        observers: Vec<Box<dyn ChainObserver>>,
         state_pruning_manager: StatePruningManager,
         fork_cache_keep_time: Duration,
     ) -> Self {

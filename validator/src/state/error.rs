@@ -79,7 +79,7 @@ impl Error for StateDatabaseError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             StateDatabaseError::NotFound(_) => None,
             StateDatabaseError::DeserializationError(ref err) => Some(err),
