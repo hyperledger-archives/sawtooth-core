@@ -524,7 +524,7 @@ mod test {
         CommitStore::new(db)
     }
 
-    fn get_chain_head(store: &BlockStore) -> Option<Block> {
+    fn get_chain_head(store: &dyn BlockStore) -> Option<Block> {
         store.iter().expect("Failed to get BlockStore iter").next()
     }
 
