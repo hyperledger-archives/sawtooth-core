@@ -69,10 +69,6 @@ impl ForkCache {
         expired.into_iter().map(|(key, _)| key).collect()
     }
 
-    pub fn forks(&self) -> Vec<&String> {
-        self.cache.keys().collect()
-    }
-
     // Private helper methods
 
     fn insert_new_fork(&mut self, head: &str) {

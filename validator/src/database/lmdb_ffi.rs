@@ -27,6 +27,7 @@ pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,
     InvalidFilePath = 0x02,
+    #[allow(dead_code)]
     InvalidIndexString = 0x03,
 
     InitializeContextError = 0x11,

@@ -31,9 +31,9 @@ pub enum StateDatabaseError {
     ChangeLogEncodingError(String),
     InvalidRecord,
     InvalidHash(String),
+    #[allow(dead_code)]
     InvalidChangeLogIndex(String),
     DatabaseError(DatabaseError),
-    UnknownError,
 }
 
 impl fmt::Display for StateDatabaseError {
@@ -59,7 +59,6 @@ impl fmt::Display for StateDatabaseError {
             StateDatabaseError::DatabaseError(ref err) => {
                 write!(f, "A database error occurred: {}", err)
             }
-            StateDatabaseError::UnknownError => write!(f, "An unknown error occurred"),
         }
     }
 }
@@ -75,7 +74,6 @@ impl Error for StateDatabaseError {
             StateDatabaseError::InvalidHash(ref msg) => &msg,
             StateDatabaseError::InvalidChangeLogIndex(ref msg) => &msg,
             StateDatabaseError::DatabaseError(ref err) => err.description(),
-            StateDatabaseError::UnknownError => "Unknown Error",
         }
     }
 
@@ -89,7 +87,6 @@ impl Error for StateDatabaseError {
             StateDatabaseError::InvalidHash(_) => None,
             StateDatabaseError::InvalidChangeLogIndex(_) => None,
             StateDatabaseError::DatabaseError(ref err) => Some(err),
-            StateDatabaseError::UnknownError => None,
         }
     }
 }

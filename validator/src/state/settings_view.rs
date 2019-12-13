@@ -36,9 +36,7 @@ pub enum SettingsViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),
 
-    ParseError(String),
     ParseIntError(ParseIntError),
-    UnknownError,
 }
 
 impl From<StateDatabaseError> for SettingsViewError {

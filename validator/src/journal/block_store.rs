@@ -60,10 +60,6 @@ pub struct InMemoryBlockStore {
 }
 
 impl InMemoryBlockStore {
-    pub fn new() -> Self {
-        InMemoryBlockStore::default()
-    }
-
     fn get_block_by_block_id(&self, block_id: &str) -> Option<Block> {
         self.state
             .lock()
@@ -270,7 +266,7 @@ mod test {
 
     #[test]
     fn test_block_store() {
-        let mut store = InMemoryBlockStore::new();
+        let mut store = InMemoryBlockStore::default();
 
         let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
         let block_b = create_block("B", 2, "A");

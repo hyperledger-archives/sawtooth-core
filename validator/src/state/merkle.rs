@@ -49,7 +49,6 @@ const TOKEN_SIZE: usize = 2;
 
 pub const CHANGE_LOG_INDEX: &str = "change_log";
 pub const DUPLICATE_LOG_INDEX: &str = "duplicate_log";
-pub const INDEXES: [&str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
 
 type StateHash = Vec<u8>;
 
@@ -794,6 +793,8 @@ mod tests {
     use std::path::Path;
     use std::str::from_utf8;
     use std::thread;
+
+    const INDEXES: [&str; 2] = [CHANGE_LOG_INDEX, DUPLICATE_LOG_INDEX];
 
     #[test]
     fn node_serialize() {

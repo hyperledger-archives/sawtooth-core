@@ -31,7 +31,9 @@ use std::os::raw::c_void;
 pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,
+    #[allow(dead_code)]
     ValidationFailure = 0x02,
+    #[allow(dead_code)]
     ValidationError = 0x03,
 }
 

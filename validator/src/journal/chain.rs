@@ -77,7 +77,6 @@ pub enum ChainControllerError {
     BlockValidationError(ValidationError),
     BrokenQueue,
     ConsensusError(String),
-    UnknownBlock(String),
 }
 
 impl From<RecvError> for ChainControllerError {
@@ -582,49 +581,6 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 &block.header_signature
             ),
         }
-    }
-
-    // Returns all blocks in forks not on the chain with the given head. If head is None, uses the
-    // current chain head. If head is not found, returns None.
-    pub fn forks(&self, head: &str) -> Option<Vec<Block>> {
-        let state = self
-            .state
-            .read()
-            .expect("No lock holder should have poisoned the lock");
-
-        let block_ref = match state.block_manager.ref_block(head) {
-            Ok(block_ref) => Some(block_ref),
-            Err(BlockManagerError::UnknownBlock) => None,
-            Err(err) => {
-                error!("Unexpected error occurred: {:?}", err);
-                None
-            }
-        };
-
-        if block_ref.is_none() {
-            return None;
-        }
-
-        let mut forks: Vec<Block> = state
-            .fork_cache
-            .forks()
-            .into_iter()
-            .flat_map(|fork_head: &String| {
-                state
-                    .block_manager
-                    .branch_diff(fork_head, head)
-                    .expect("Fork not found, but should be referenced")
-            })
-            .collect();
-
-        forks.sort_by(|left, right| {
-            left.block_num
-                .cmp(&right.block_num)
-                .then(left.header_signature.cmp(&right.header_signature))
-        });
-        forks.dedup_by(|left, right| left.header_signature == right.header_signature);
-
-        Some(forks)
     }
 
     fn set_block_validation_result(&self, result: BlockValidationResult) {
