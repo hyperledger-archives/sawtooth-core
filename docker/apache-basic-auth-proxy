@@ -1,0 +1,85 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# Description:
+#   Builds an image to be used in testing REST API behavior behind a proxy with
+#   Basic Authentication. Redirects from 'basic_auth_proxy/sawtooth' to
+#   'rest-api:8008' with both HTTP and HTTPS.
+#
+# Build:
+#   $ cd sawtooth-core/docker
+#   $ docker build . \
+#     -f apache-basic-auth-proxy \
+#     -t apache-basic-auth-proxy
+#
+# Run:
+#   $ cd sawtooth-core
+#   $ docker run -v $(pwd):/project/sawtooth-core \
+#     -v /var/run/docker.sock:/var/run/docker.sock \
+#     apache-basic-auth-proxy
+
+FROM ubuntu:bionic
+
+RUN apt-get update \
+    && apt-get install -y apache2 \
+    && a2enmod proxy_http \
+    && a2enmod headers \
+    && a2enmod ssl
+
+RUN openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
+    -keyout /tmp/.ssl.key -out /tmp/.ssl.crt \
+    -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=basic-auth-proxy
+
+RUN echo "sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr." >/tmp/.password
+
+RUN echo "\
+\n\
+ServerName basic-auth-proxy\n\
+ServerAdmin sawtooth@sawtooth\n\
+DocumentRoot /var/www/html\n\
+\n\
+" >>/etc/apache2/apache2.conf
+
+RUN echo "\
+<VirtualHost *:80>\n\
+</VirtualHost>\n\
+\n\
+<VirtualHost *:443>\n\
+        SSLEngine on\n\
+        SSLCertificateFile /tmp/.ssl.crt\n\
+        SSLCertificateKeyFile /tmp/.ssl.key\n\
+        RequestHeader set X-Forwarded-Proto \"https\"\n\
+</VirtualHost>\n\
+\n\
+<Location />\n\
+        Options Indexes FollowSymLinks\n\
+        AuthType Basic\n\
+        AuthName \"Enter password\"\n\
+        AuthUserFile \"/tmp/.password\"\n\
+        Require user sawtooth\n\
+        Require all denied\n\
+</Location>\n\
+\n\
+ProxyPass /sawtooth http://rest-api:8008\n\
+ProxyPassReverse /sawtooth http://rest-api:8008\n\
+RequestHeader set X-Forwarded-Path \"/sawtooth\"\n\
+\n\
+" >/etc/apache2/sites-enabled/000-default.conf
+
+EXPOSE 80
+EXPOSE 443
+EXPOSE 8008
+
+CMD ["apachectl start"]

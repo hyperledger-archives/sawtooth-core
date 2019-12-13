@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+import os
+import tempfile
+from glob import glob
+import re
+import subprocess
+import sys
+
+
+try:
+    from grpc.tools.protoc import main as _protoc
+except ImportError:
+    print("Error: grpc.tools.protoc not found")
+    exit(1)
+
+
+JOIN = os.path.join
+TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+    # Generate and distribute top-level protos
+    proto_dir = JOIN(TOP_DIR, "protos")
+
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
+    protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
+    protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
+    protoc(proto_dir, "families/settings/tests", "sawtooth_settings_test/protobuf")
+    protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
+    protoc(proto_dir, "families/block_info", "python/sawtooth_block_info/protobuf")
+
+    # Generate config protos
+    proto_dir = JOIN(TOP_DIR, "families/settings/protos")
+    protoc(proto_dir, "families/settings/tests", "sawtooth_settings_test/protobuf")
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
+
+    # Generate identity protos
+    proto_dir = JOIN(TOP_DIR, "families/identity/protos")
+    protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
+
+
+def protoc(src_dir, base_dir, pkg, language="python"):
+    if language == "python":
+        protoc_python(src_dir, base_dir, pkg)
+
+
+def protoc_python(src_dir, base_dir, pkg):
+    # 1. Create output package directory
+    pkg_dir = JOIN(TOP_DIR, base_dir, pkg)
+    os.makedirs(pkg_dir, exist_ok=True)
+
+    # 2. 'touch' the __init__.py file if the output directory exists
+    init_py = JOIN(pkg_dir, "__init__.py")
+    if not os.path.exists(init_py):
+        with open(init_py, "w") as fd:
+            pass  # Just need it to exist
+
+    # 3. Create a temp directory for building
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_pkg_dir = JOIN(tmp_dir, pkg)
+        os.makedirs(tmp_pkg_dir)
+
+        # 4. Get a list of all .proto files to build
+        cwd = os.getcwd()
+        os.chdir(src_dir)
+        proto_files = glob("*.proto")
+        os.chdir(cwd)
+
+        # 5. Copy protos to temp dir and fix imports
+        for proto in proto_files:
+            src = JOIN(src_dir, proto)
+            dst = JOIN(tmp_pkg_dir, proto)
+            with open(src, encoding='utf-8') as fin:
+                with open(dst, "w", encoding='utf-8') as fout:
+                    src_contents = fin.read()
+                    fixed_contents = fix_import(src_contents, pkg)
+                    fout.write(fixed_contents)
+
+        # 6. Compile protobuf files
+        _protoc([
+            __file__,
+            "-I=%s" % tmp_dir,
+            "--python_out=%s" % JOIN(TOP_DIR, base_dir),
+        ] + glob("%s/*.proto" % tmp_pkg_dir))
+
+
+def fix_import(contents, pkg, sub_dir=False):
+    pattern = r'^import "(.*)\.proto\"'
+    if sub_dir:
+        template = r'import "%s/\1_pb2/\1.proto"'
+    else:
+        template = r'import "%s/\1.proto"'
+
+    return re.sub(
+        pattern,
+        lambda match: match.expand(template) % pkg,
+        contents,
+        flags=re.MULTILINE)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit(1)

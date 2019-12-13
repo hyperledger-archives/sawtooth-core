@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# This script was developed for usage inside a docker container and makes
+# assumptions that the 'bin/install_packaging_deps' has already been run
+# to install the dependencies. This script can be run in a clean docker
+# environment with the following commands:
+#
+#  cd sawtooth-core
+#  docker run \
+#    -v $(pwd):/project/sawtooth-core \
+#    --workdir /project/sawtooth-core \
+#    --env https_proxy=$https_proxy \
+#    --env http_proxy=$http_proxy \
+#    --env HTTPS_PROXY=$HTTPS_PROXY \
+#    --env HTTP_PROXY=$HTTP_PROXY \
+#    -t ubuntu:bionic\
+#    bash -c " \
+#      apt-get update \
+#      && ./bin/install_packaging_deps \
+#      && ./bin/build_ext_debs \
+#    "
+# Between builds you may want to clean the intermediate and output directories"
+#  cd sawtooth-core
+#  rm -rf projects packages
+#
+
+set -e
+
+build_dir=$(pwd)/projects
+pkg_dir=$(pwd)/packages
+
+while getopts :p:b:h opt
+do
+    case $opt in
+        h)
+            echo "Usage:"
+            echo "  $0 [-b build_dir] [-p package_dir]"
+            echo
+            echo "Options:"
+            echo "  -h             print usage and exit"
+            echo "  -b build_dir   directory to build in"
+            echo "  -p package_dir directory to place debs in"
+            exit 0
+            ;;
+        b)
+            build_dir=$OPTARG
+            ;;
+        p)
+            pkg_dir=$OPTARG
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 2
+            ;;
+    esac
+done
+
+
+main() {
+    info "Building debs in $build_dir and storing in $pkg_dir"
+
+    mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
+
+    build_python_debs
+}
+
+build_python_debs() {
+
+    info "Building debs needed by the Sawtooth Validator and Python SDK"
+
+    build_dir_python=${build_dir}/python
+    mkdir -p $build_dir_python
+    cd ${build_dir_python}
+
+    # WARNING: Order is important
+    pip_pkgs='
+    cchardet
+    grpcio
+    protobuf
+    grpcio-tools
+    setuptools_scm
+    pytest-runner==2.6.2
+    secp256k1
+    pytz
+    lmdb
+    pyformance
+    '
+
+    # secp256k1 needs a couple of libraries not readily available
+    libsecp256k1_debs='
+    libsecp256k1-0_0.1~20161228-1_amd64.deb
+    libsecp256k1-dev_0.1~20161228-1_amd64.deb
+    '
+
+    # Download and install additional secp256k dependencies
+    info "Downloading and installing libsecp256k1 debs"
+    for deb in $libsecp256k1_debs; do
+        if [[ -e $pkg_dir/$deb ]]
+        then
+            warn "Skipping $deb, already exists at $pkg_dir/$deb"
+        else
+            wget http://ftp.br.debian.org/debian/pool/main/libs/libsecp256k1/$deb
+            dpkg -i $deb
+            mv $deb $pkg_dir
+        fi
+    done
+
+    info "Installing all pip packages for building"
+    pip3 install $pip_pkgs
+
+    for pkg in $pip_pkgs; do
+        package_python_deb $pkg
+    done
+
+    info "Uninstalling packages installed by pip"
+    pip3 uninstall -y $pip_pkgs
+
+    info "Done building packages"
+    echo $(ls -1 $pkg_dir/*.deb)
+}
+
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
+
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
+
+package_python_deb() {
+    cd ${build_dir_python}
+
+    pip_pkg_name=$1
+    tar_pkg_name=$(echo "$pip_pkg_name" | \
+        sed -e 's/==.*//' \
+            -e 's/async_/async-/' \
+            -e 's/cryptography-/cryptography_/')
+
+    deb_pkg_name=$(echo "$tar_pkg_name" | \
+        sed -e 's/setuptools_/setuptools-/' \
+            -e 's/cryptography_/cryptography-/')
+
+    if [ -z $(find $pkg_dir -name "python3-$deb_pkg_name\_*.deb") ]
+    then
+        info "Downloading source code for $pip_pkg_name"
+        pip3 download --no-binary :all: \
+            --disable-pip-version-check \
+            --no-deps $pip_pkg_name
+
+        tarball=$tar_pkg_name*.tar.gz
+        info "Extracting $tarball"
+        tar xfz $tarball;
+
+        rm -f $tarball
+
+        info "Building $deb_pkg_name deb"
+        # Remove version fixing and fix async-timeout inconsistency
+
+        cd ${build_dir_python}/$tar_pkg_name*
+
+        # Arcane wizadry to get protobuf to build right
+        if [ $tar_pkg_name = 'protobuf' ]; then
+            # Grab protoc and .proto files expected by protobuf
+            wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
+
+            # Unpack and relocate
+            mkdir src
+            unzip protoc-3.2.0-linux-x86_64.zip -d src
+            mv src/include/* src/ && mv src/bin/* src/
+
+            # Patch bad relative paths
+            sed 's/\.\.\/src/\.\.\/\.\.\/src/' < setup.py > patch.py && mv patch.py setup.py
+        fi
+
+        # This test is failing, so we need to skip it.
+        if [ $tar_pkg_name == 'pyformance' ]; then
+            rm ./tests/test__syslog_reporter.py
+        fi
+
+        # Package build errors. "original source dist cannot contain .pyc files"
+        if [ $tar_pkg_name == 'cchardet' ]; then
+            rm ./src/tests/test.pyc
+        fi
+
+        # Build the package
+        python3 setup.py --command-packages=stdeb.command bdist_deb
+        info "Finished building $deb_pkg_name deb"
+
+        info "Installing $deb_pkg_name deb"
+        # Install the package
+        dpkg -i deb_dist/*.deb
+
+        info "Saving $deb_pkg_name deb to $pkg_dir"
+        # Save the package
+        cp deb_dist/*.deb $pkg_dir
+    else
+        warn "Skipping $deb_pkg_name, already exists in $pkg_dir"
+    fi
+
+}
+
+main

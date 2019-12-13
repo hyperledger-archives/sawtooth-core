@@ -1,0 +1,73 @@
+// Copyright 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "transaction_pb2";
+
+message TransactionHeader {
+    // Public key for the client who added this transaction to a batch
+    string batcher_public_key = 1;
+
+    // A list of transaction signatures that describe the transactions that
+    // must be processed before this transaction can be valid
+    repeated string dependencies = 2;
+
+    // The family name correlates to the transaction processor's family name
+    // that this transaction can be processed on, for example 'intkey'
+    string family_name = 3;
+
+    // The family version correlates to the transaction processor's family
+    // version that this transaction can be processed on, for example "1.0"
+    string family_version = 4;
+
+    // A list of addresses that are given to the context manager and control
+    // what addresses the transaction processor is allowed to read from.
+    repeated string inputs = 5;
+
+    // A random string that provides uniqueness for transactions with
+    // otherwise identical fields.
+    string nonce = 6;
+
+    // A list of addresses that are given to the context manager and control
+    // what addresses the transaction processor is allowed to write to.
+    repeated string outputs = 7;
+
+    //The sha512 hash of the encoded payload
+    string payload_sha512 = 9;
+
+    // Public key for the client that signed the TransactionHeader
+    string signer_public_key = 10;
+}
+
+message Transaction {
+    // The serialized version of the TransactionHeader
+    bytes header = 1;
+
+    // The signature derived from signing the header
+    string header_signature = 2;
+
+    // The payload is the encoded family specific information of the
+    // transaction. Example cbor({'Verb': verb, 'Name': name,'Value': value})
+    bytes payload = 3;
+}
+
+// A simple list of transactions that needs to be serialized before
+// it can be transmitted to a batcher.
+message TransactionList {
+    repeated Transaction transactions = 1;
+}

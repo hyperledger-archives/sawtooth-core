@@ -1,0 +1,20 @@
+[package]
+name = "sawtooth-intkey-workload"
+version = "0.1.0"
+authors = ["Intel Corporation"]
+description = "Workload generator for Sawtooth Intkey"
+
+[[bin]]
+name = "intkey-workload"
+path = "./src/main.rs"
+
+[dependencies]
+cbor-codec = "0.7.1"
+clap = "2.30"
+log = "0.4"
+protobuf = "2.0"
+rand = "0.6"
+rust-crypto = "^0.2"
+sawtooth_perf = { path = "../sawtooth_perf" }
+sawtooth-sdk = "0.3"
+simplelog = "0.5"

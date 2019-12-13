@@ -1,0 +1,234 @@
+#!/bin/bash
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# MODULE_LIST determines the order in which modules are run.
+# Quicker tests should run before slower ones.
+MODULE_LIST="
+    cli
+    rest_api
+    settings
+    identity
+    block_info
+    ipv6
+    battleship
+    validator
+    rust_sdk
+    integration
+"
+
+usage() {
+    echo "Usage:"
+    echo "  $0 [-m Module] [-x Module] [-i Module]"
+    echo "  (-m, -x and -i can be passed multiple times)"
+    echo ""
+    echo "Options:"
+    echo "  -h          print usage and exit"
+    echo "  -m Module   only run tests of specified module"
+    echo "  -x Module   exclude the tests of specified module"
+    echo "  -i Module   include the tests of specified module"
+    echo ""
+    echo "Current modules: $MODULE_LIST"
+}
+
+# Exit on non-zero exit code from subcommand
+set -e
+# Set sawtooth-core project directory relative to this file
+PROJECT_DIR=$(cd $(dirname $(dirname $0)) && pwd)
+
+# Make sawtooth scripts accessible
+PATH=$PROJECT_DIR/bin:$PATH
+
+if [ ! -d "$PROJECT_DIR/coverage" ]; then
+  mkdir $PROJECT_DIR/coverage
+fi
+
+# Default args
+MODULES=""
+EXCLUDE=""
+INCLUDE=""
+
+while getopts i:x:m:h opt
+do
+    case $opt in
+        h)
+            usage
+            exit 0
+            ;;
+        m)
+            MODULES="$MODULES $OPTARG"
+            ;;
+        x)
+            EXCLUDE="$EXCLUDE $OPTARG"
+            ;;
+        i)
+            INCLUDE="$INCLUDE $OPTARG"
+            ;;
+
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 2
+            ;;
+    esac
+done
+
+# If no '-m' flags are passed, run these modules
+if [[ $MODULES = "" ]]
+then
+    MODULES=$MODULE_LIST
+fi
+
+MODULES="$INCLUDE $MODULES"
+
+main() {
+
+# Start in project directory
+    cd $PROJECT_DIR
+
+    for module in $MODULES
+    do
+
+# Check if we are skipping this module
+        skip=0
+        for exclude in $EXCLUDE
+        do
+            if [[ $module == $exclude ]]
+            then
+                skip=1
+                break
+            fi
+        done
+
+        if [[ $skip == 1 ]]
+        then
+            echo "[---Skipping $module tests---]"
+        else
+            echo "[---Running $module tests---]"
+            case $module in
+                cli)
+                    test_cli
+                    ;;
+                rest_api)
+                    test_rest_api
+                    ;;
+                settings)
+                    test_settings
+                    ;;
+                identity)
+                    test_identity
+                    ;;
+                block_info)
+                    test_block_info
+                    ;;
+                battleship)
+                    test_battleship
+                    ;;
+                validator)
+                    test_validator
+                    ;;
+                rust_sdk)
+                    test_rust_sdk
+                    ;;
+                integration)
+                    test_integration
+                    ;;
+                ipv6)
+                    test_ipv6
+                    ;;
+                deployment)
+                    test_deployment
+                    ;;
+                *)
+                    echo "Module '$module' not found."
+                    ;;
+            esac
+        fi
+    done
+}
+
+test_cli() {
+    run_docker_test ./cli/tests/unit_cli.yaml
+    copy_coverage .coverage.cli
+    run_docker_test test_peer_list
+    copy_coverage .coverage.peer_list
+    run_docker_test ./adm/unit_sawadm.yaml
+}
+
+test_rest_api() {
+    run_docker_test ./rest_api/tests/unit_rest_api.yaml
+    copy_coverage .coverage.rest_api
+}
+
+test_settings() {
+    run_docker_test ./families/settings/tests/test_tp_settings.yaml
+    copy_coverage .coverage.config
+    run_docker_test test_config_smoke
+    copy_coverage .coverage.test_config_smoke
+}
+
+test_identity() {
+  run_docker_test ./families/identity/tests/test_tp_identity.yaml
+  copy_coverage .coverage.identity
+}
+
+test_ipv6() {
+    run_docker_test ./integration/sawtooth_integration/docker/test_ipv6.yaml
+    copy_coverage .coverage.ipv6
+}
+
+test_block_info() {
+  run_docker_test test_block_info_injector
+  copy_coverage .coverage.block_info_injector
+}
+
+test_battleship() {
+  run_docker_test ./families/battleship/tests/test_tp_battleship.yaml
+}
+
+test_validator() {
+    run_docker_test ./validator/tests/unit_validator.yaml
+    copy_coverage .coverage.validator
+    run_docker_test test_two_families
+    copy_coverage .coverage.test_two_families
+    run_docker_test test_namespace_restriction
+    copy_coverage .coverage.namespace_restriction
+    run_docker_test test_state_verifier --timeout 30
+    run_docker_test ./validator/tests/unit_rust_validator.yaml
+}
+
+test_rust_sdk() {
+    run_docker_test ./perf/sawtooth_workload/unit_perf_workload.yaml
+    run_docker_test ./perf/intkey_workload/unit_intkey_workload.yaml
+    run_docker_test ./perf/smallbank_workload/unit_smallbank_workload.yaml
+    run_docker_test ./perf/sawtooth_perf/unit_sawtooth_perf.yaml
+}
+
+test_integration() {
+    run_docker_test test_basic_auth_proxy
+    copy_coverage .coverage.test_basic_auth_proxy
+    run_docker_test test_transactor_permissioning
+    copy_coverage .coverage.test_transactor_permissioning
+}
+
+test_deployment() {
+    run_docker_test test_systemd_services
+}
+
+copy_coverage() {
+    mv -f .coverage $PROJECT_DIR/coverage/$1
+}
+
+main

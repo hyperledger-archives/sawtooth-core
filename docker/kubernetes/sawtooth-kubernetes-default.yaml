@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: List
+
+items:
+
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: sawtooth-0
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          name: sawtooth-0
+      spec:
+        containers:
+          - name: sawtooth-devmode-engine
+            image: hyperledger/sawtooth-devmode-engine-rust:nightly
+            command:
+              - bash
+            args:
+              - -c
+              - "devmode-engine-rust -C tcp://$HOSTNAME:5050"
+
+          - name: sawtooth-settings-tp
+            image: hyperledger/sawtooth-settings-tp:nightly
+            command:
+              - bash
+            args:
+              - -c
+              - "settings-tp -vv -C tcp://$HOSTNAME:4004"
+
+          - name: sawtooth-intkey-tp-python
+            image: hyperledger/sawtooth-intkey-tp-python:nightly
+            command:
+              - bash
+            args:
+              - -c
+              - "intkey-tp-python -vv -C tcp://$HOSTNAME:4004"
+
+          - name: sawtooth-xo-tp-python
+            image: hyperledger/sawtooth-xo-tp-python:nightly
+            command:
+              - bash
+            args:
+              - -c
+              - "xo-tp-python -vv -C tcp://$HOSTNAME:4004"
+
+          - name: sawtooth-validator
+            image: hyperledger/sawtooth-validator:nightly
+            ports:
+              - name: tp
+                containerPort: 4004
+              - name: consensus
+                containerPort: 5050
+              - name: validators
+                containerPort: 8800
+            command:
+              - bash
+            args:
+              - -c
+              - "sawadm keygen \
+              && sawtooth keygen my_key \
+              && sawset genesis -k /root/.sawtooth/keys/my_key.priv \
+              && sawset proposal create \
+                -k /root/.sawtooth/keys/my_key.priv \
+                sawtooth.consensus.algorithm.name=Devmode \
+                sawtooth.consensus.algorithm.version=0.1 \
+                -o config.batch \
+              && sawadm genesis config-genesis.batch config.batch \
+              && sawtooth-validator -vv \
+                  --endpoint tcp://$SAWTOOTH_0_SERVICE_HOST:8800 \
+                  --bind component:tcp://eth0:4004 \
+                  --bind consensus:tcp://eth0:5050 \
+                  --bind network:tcp://eth0:8800"
+
+          - name: sawtooth-rest-api
+            image: hyperledger/sawtooth-rest-api:nightly
+            ports:
+              - name: api
+                containerPort: 8008
+            command:
+              - bash
+            args:
+              - -c
+              - "sawtooth-rest-api -C tcp://$HOSTNAME:4004"
+
+          - name: sawtooth-shell
+            image: hyperledger/sawtooth-shell:nightly
+            command:
+              - bash
+            args:
+              - -c
+              - "sawtooth keygen && tail -f /dev/null"
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: sawtooth-0
+  spec:
+    type: ClusterIP
+    selector:
+      name: sawtooth-0
+    ports:
+      - name: "4004"
+        protocol: TCP
+        port: 4004
+        targetPort: 4004
+      - name: "5050"
+        protocol: TCP
+        port: 5050
+        targetPort: 5050
+      - name: "8008"
+        protocol: TCP
+        port: 8008
+        targetPort: 8008
+      - name: "8800"
+        protocol: TCP
+        port: 8800
+        targetPort: 8800

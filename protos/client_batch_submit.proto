@@ -1,0 +1,104 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_batch_submit_pb2";
+
+import "batch.proto";
+
+
+// Information about the status of a batch submitted to the validator.
+//
+// Attributes:
+//     batch_id: The id (header_signature) of the batch
+//     status: The committed status of the batch
+//     invalid_transactions: Info for transactions that failed, if any
+//
+// Statuses:
+//     COMMITTED - the batch was accepted and has been committed to the chain
+//     INVALID - the batch failed validation, it should be resubmitted
+//     PENDING - the batch is still being processed
+//     UNKNOWN - no status for the batch could be found (possibly invalid)
+message ClientBatchStatus {
+    enum Status {
+        STATUS_UNSET = 0;
+        COMMITTED = 1;
+        INVALID = 2;
+        PENDING = 3;
+        UNKNOWN = 4;
+    }
+    message InvalidTransaction {
+        string transaction_id = 1;
+        string message = 2;
+        bytes extended_data = 3;
+    }
+    string batch_id = 1;
+    Status status = 2;
+    repeated InvalidTransaction invalid_transactions = 3;
+}
+
+// Submits a list of Batches to be added to the blockchain.
+message ClientBatchSubmitRequest {
+    repeated Batch batches = 1;
+}
+
+// This is a response to a submission of one or more Batches.
+// Statuses:
+//   * OK - everything with the request worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * INVALID_BATCH - the batch failed validation, likely due to a bad signature
+//   * QUEUE_FULL - the batch is unable to be queued for processing, due to
+//        a full processing queue.  The batch may be submitted again.
+message ClientBatchSubmitResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        INVALID_BATCH = 3;
+        QUEUE_FULL = 4;
+    }
+    Status status = 1;
+}
+
+// A request for the status of one or more batches, specified by id.
+// If `wait` is set to true, the validator will wait to respond until all
+// batches are committed, or until the specified `timeout` in seconds has
+// elapsed. Defaults to 300.
+message ClientBatchStatusRequest {
+    repeated string batch_ids = 1;
+    bool wait = 2;
+    uint32 timeout = 3;
+}
+
+// This is a response to a request for the status of specific batches.
+// Statuses:
+//   * OK - everything with the request worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NO_RESOURCE - the response contains no data, likely because
+//     no ids were specified in the request
+message ClientBatchStatusResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NO_RESOURCE = 5;
+        INVALID_ID = 8;
+    }
+    Status status = 1;
+    repeated ClientBatchStatus batch_statuses = 2;
+}

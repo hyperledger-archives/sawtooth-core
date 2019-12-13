@@ -1,0 +1,12 @@
+
+python setup.py install \
+    --single-version-externally-managed \
+    -O1 \
+    --root=$RPM_BUILD_ROOT \
+    --record=INSTALLED_FILES
+
+find $RPM_BUILD_ROOT -name \*.py -exec rm {} \;
+
+cat INSTALLED_FILES | grep -v .py$ > INSTALLED_FILES.new
+mv INSTALLED_FILES.new INSTALLED_FILES
+

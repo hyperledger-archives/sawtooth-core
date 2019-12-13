@@ -1,0 +1,108 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_state_pb2";
+
+import "client_list_control.proto";
+
+
+// A request to list every entry in global state. Defaults to the most current
+// tree, but can fetch older state by specifying a state root. Results can be
+// further filtered by specifying a subtree with a partial address.
+message ClientStateListRequest {
+    string state_root = 1;
+    string address = 3;
+    ClientPagingControls paging = 4;
+    repeated ClientSortControls sorting = 5;
+}
+
+// A response that lists the data Entries from global state, filtered by state
+// root or subtree address according to the request. Returns the state root
+// used to facilitate future requests.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NOT_READY - the validator does not yet have a genesis block
+//   * NO_ROOT - the head block or merkle_root specified was not found
+//   * NO_RESOURCE - the head/root specified is valid, but contains no data
+//   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
+
+message ClientStateListResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_PAGING = 6;
+        INVALID_SORT = 7;
+        INVALID_ADDRESS = 8;
+        INVALID_ROOT = 9;
+    }
+
+    // An entry in the State
+    message Entry {
+        string address = 1;
+        bytes data = 2;
+    }
+
+    Status status = 1;
+    repeated Entry entries = 2;
+    string state_root = 3;
+    ClientPagingResponse paging = 4;
+}
+
+// A request from a client for a particular entry in global state.
+// Like State List, it defaults to the newest state, but a state root
+// can be used to specify older data. Unlike State List the request must be
+// provided with a full address that corresponds to a single entry.
+message ClientStateGetRequest {
+    string state_root = 1;
+    string address = 3;
+}
+
+// The response to a State Get Request from the client. Sends back just
+// the data stored at the entry, not the address. Also sends back the
+// head block id used to facilitate further requests.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NOT_READY - the validator does not yet have a genesis block
+//   * NO_ROOT - the state_root specified was not found
+//   * NO_RESOURCE - the address specified doesn't exist
+//   * INVALID_ADDRESS - address isn't a valid, i.e. it's a subtree (truncated)
+message ClientStateGetResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_ADDRESS = 6;
+        INVALID_ROOT = 7;
+    }
+    Status status = 1;
+    bytes value = 2;
+    string state_root = 3;
+}

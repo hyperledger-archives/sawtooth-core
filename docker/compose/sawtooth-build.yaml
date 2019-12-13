@@ -1,0 +1,117 @@
+# Copyright 2018 Cargill Incorporated
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: '3.6'
+
+services:
+
+  validator:
+    build:
+      context: ../../
+      dockerfile: ./validator/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-validator-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  adm:
+    build:
+      context: ../../
+      dockerfile: ./adm/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-adm-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  settings-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/settings/Dockerfile
+      args:
+      - http_proxy
+      - https_proxy
+      - no_proxy
+    image: sawtooth-settings-tp-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  smallbank-rust-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/smallbank/smallbank_rust/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: smallbank-rust-tp-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  smallbank-workload:
+    build:
+      context: ../../
+      dockerfile: ./perf/smallbank_workload/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: smallbank-workload-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  cli:
+    build:
+      context: ../../
+      dockerfile: ./cli/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-cli-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  rest-api:
+    build:
+      context: ../../
+      dockerfile: ./rest_api/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-rest-api-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core
+
+  block-info-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/block_info/Dockerfile
+    image: block-info-tp-local:${ISOLATION_ID}
+    volumes:
+        - ../../:/project/sawtooth-core
+
+  identity-rust-tp:
+    build:
+      context: ../../
+      dockerfile: ./families/identity/Dockerfile
+    image: identity-rust-tp-local:${ISOLATION_ID}
+    volumes:
+      - ../../:/project/sawtooth-core

@@ -1,0 +1,86 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_transaction_pb2";
+
+import "transaction.proto";
+import "client_list_control.proto";
+
+
+// A request to return a list of txns from the validator. May include the id
+// of a particular block to be the `head` of the chain being requested. In that
+// case the list will include the txns from that block, and all txns
+// previous to that block on the chain. Filter with specific `transaction_ids`.
+message ClientTransactionListRequest {
+    string head_id = 1;
+    repeated string transaction_ids = 2;
+    ClientPagingControls paging = 3;
+    repeated ClientSortControls sorting = 4;
+}
+
+// A response that lists transactions from newest to oldest.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NOT_READY - the validator does not yet have a genesis block
+//   * NO_ROOT - the head block specified was not found
+//   * NO_RESOURCE - no txns were found with the parameters specified
+//   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
+message ClientTransactionListResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_PAGING = 6;
+        INVALID_SORT = 7;
+        INVALID_ID = 8;
+    }
+    Status status = 1;
+    repeated Transaction transactions = 2;
+    string head_id = 3;
+    ClientPagingResponse paging = 4;
+}
+
+// Fetches a specific txn by its id (header_signature) from the blockchain.
+message ClientTransactionGetRequest {
+    string transaction_id = 1;
+}
+
+// A response that returns the txn specified by a ClientTransactionGetRequest.
+//
+// Statuses:
+//   * OK - everything worked as expected, txn has been fetched
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NO_RESOURCE - no txn with the specified id exists
+message ClientTransactionGetResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NO_RESOURCE = 5;
+        INVALID_ID = 8;
+    }
+    Status status = 1;
+    Transaction transaction = 2;
+}

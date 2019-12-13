@@ -1,0 +1,59 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  identity-tp:
+    build:
+      context: ../../..
+      dockerfile: ./families/identity/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: identity-tp -vv -C tcp://test-tp-identity:4004
+    stop_signal: SIGKILL
+
+  test-tp-identity:
+    build:
+      context: ../../..
+      dockerfile: families/identity/tests/identity-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: identity-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: nose2-3
+        -c /project/sawtooth-core/families/identity/nose2.cfg
+        -v
+        -s /project/sawtooth-core/families/identity/tests
+        test_tp_identity
+    stop_signal: SIGKILL
+    environment:
+        TEST_BIND: "tcp://eth0:4004"
+        PYTHONPATH: "/project/sawtooth-core/families/identity:\
+            /project/sawtooth-core/families/identity/tests:\
+            /project/sawtooth-core/integration"

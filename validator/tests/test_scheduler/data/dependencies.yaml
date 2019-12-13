@@ -1,0 +1,260 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+
+
+# This yaml file has many txns with dependencies, and one txn with a
+# dependency outside the scheduler.
+
+
+
+---
+- #--------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - b:sha
+      - a:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+  -
+    inputs:
+      - b:sha
+      - e:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    valid: False
+    name: morrison
+- #---------------------- Batch 2
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    dependencies:
+      - morrison
+- #----------------------- Batch 3
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - b:sha :
+      - c:sha :
+      - d:sha :
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    name: manzarek
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+    valid: False
+
+- # ---------------------- Batch 4
+  -
+    inputs:
+      - q:sha
+    outputs:
+      - q:sha
+    addresses_to_set:
+      - q:sha :
+- # --------------------- Batch 5
+  -
+    inputs:
+      - z:sha
+    outputs:
+      - z:sha
+    addresses_to_set:
+      - z:sha :
+    dependencies:
+      - manzarek
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - z:sha :
+      - g:sha :
+    name: krieger
+- #--------------------- Batch 6
+  -
+    inputs:
+      - k:sha
+    outputs:
+      - k:sha
+    addresses_to_set:
+      - k:sha :
+  -
+    inputs:
+      - l:sha
+    outputs:
+      - l:sha
+    addresses_to_set:
+      - l:sha :
+- # ------------------ Batch 7
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+    name: densmore
+    valid: False
+- # ------------------ Batch 8
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_set:
+      - h:sha :
+    dependencies:
+      - krieger
+      - densmore
+- # ----------------- Batch 9
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - densmore
+- # ---------------- Batch 10
+  -
+    inputs:
+      - d:sha
+      - h:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - krieger
+- #------------------- Batch 11
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+- # ---------------------- Batch 12
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    name: helm
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+    valid: False
+- #----------------------- Batch 13
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+    dependencies:
+      - helm
+- # ---------------------- Batch 14
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+- # ------------------------ Batch 15
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+    dependencies:
+      - foooooooooooooooooooooooooooooooooooooooooooooooooooooo

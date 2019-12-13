@@ -1,0 +1,62 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.identity.protobuf";
+
+message Policy {
+
+  enum EntryType {
+    ENTRY_TYPE_UNSET = 0;
+    PERMIT_KEY = 1;
+    DENY_KEY = 2;
+  }
+
+  message Entry {
+    // Whether this is a Permit_KEY or Deny_KEY entry
+    EntryType type = 1;
+
+    // This should be a public key or * to refer to all participants.
+    string  key = 2;
+  }
+
+  // name of the policy, this should be unique.
+  string name = 1;
+
+  // list of Entries
+  // The entries will be processed in order from first to last.
+  repeated Entry entries = 2;
+}
+
+// Policy will be stored in a Policy list to account for state collisions
+message PolicyList {
+  repeated Policy policies = 1;
+}
+
+
+message Role {
+  // Role name
+  string name = 1;
+
+  // Name of corresponding policy
+  string policy_name = 2;
+}
+
+// Roles will be stored in a RoleList to account for state collisions
+message RoleList {
+  repeated Role roles = 1;
+}

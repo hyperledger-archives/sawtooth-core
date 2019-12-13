@@ -1,0 +1,396 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+
+
+  # This test repeatedly has batches with a txn that has a "" address as
+  # an output. Because of the way the Predecessor Tree works this txn becomes
+  # a predecessor of all later txns until another txn with a "" address as an
+  # output. These txn that are depended on by all other txns fail in this
+  # yaml file, which exercises the state finding process.
+
+
+---
+- # --------------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+- # ------------------------- Batch 2
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - c:sha :
+    valid: False
+- # ------------------------ Batch 3
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+- # ------------------------ Batch 4
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - c:sha :
+      - b:sha :
+    valid: False
+- # ------------------------ Batch 5
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+- # -------------------------- Batch 6
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - g:sha :
+      - k:sha :
+      - a:sha :
+      - b:sha :
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+    valid: False
+- # -------------------------- Batch 7
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+    valid: False
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+- # --------------------------- Batch 8
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+- # --------------------------- Batch 9
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - q:sha :
+      - a:sha :
+      - b:sha :
+      - c:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+    valid: False
+- # -------------------------- Batch 10
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+- # ------------------------- Batch 11
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - g:sha :
+      - e:sha :
+      - k:sha :
+      - i:sha :
+      - m:sha :
+  -
+    inputs:
+      - k:sha
+    outputs:
+      - k:sha
+    addresses_to_set:
+      - k:sha :
+    valid: False
+- #-------------------------- Batch 12
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+      - j:sha:20
+    addresses_to_set:
+      - h:sha :
+      - j:sha :
+    name: simmons
+  -
+    inputs:
+      - g:sha
+      - e:sha
+      - i:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - z:sha :
+      - w:sha :
+      - x:sha :
+      - y:sha :
+    valid: False
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+    name: mcdaniels
+  -
+    inputs:
+      - w:sha
+      - x:sha
+      - y:sha
+      - z:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - e:sha :
+      - f:sha :
+      - g:sha :
+      - h:sha :
+- #-------------------------- Batch 13
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+    name: mizell
+  -
+    inputs:
+      - s:sha
+    outputs:
+      - s:sha
+    addresses_to_set:
+      - s:sha :
+- #--------------------------- Batch 14
+  -
+    inputs:
+      - g:sha
+      - h:sha
+    outputs:
+      - g:sha
+      - h:sha
+    addresses_to_set:
+      - g:sha :
+      - h:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - mizell
+      - mcdaniels
+  -
+    inputs:
+      - ""
+    outputs:
+      - r:sha
+    addresses_to_set:
+      - r:sha :
+    name: dmc
+- # -------------------------- Batch 15
+  -
+    inputs:
+      - n:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+    valid: False
+  -
+    inputs:
+      - o:sha
+    outputs:
+      - o:sha
+    addresses_to_set:
+      - o:sha :
+    dependencies:
+      - mcdaniels
+  -
+    inputs:
+      - p:sha
+    outputs:
+      - p:sha
+    addresses_to_set:
+      - p:sha :
+    dependencies:
+      - dmc
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - e:sha :
+      - f:sha :
+      - g:sha :
+      - h:sha :
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    dependencies:
+      - simmons
+- # -------------------------- Batch 16
+  -
+    inputs:
+      - p:sha
+    outputs:
+      - p:sha
+    addresses_to_set:
+      - p:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    dependencies:
+      - simmons

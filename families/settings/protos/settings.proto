@@ -1,0 +1,100 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.settings.protobuf";
+
+// Setting Payload
+// - Contains either a proposal or a vote.
+message SettingsPayload {
+    // The action indicates data is contained within this payload
+    enum Action {
+        ACTION_UNSET = 0;
+
+        // A proposal action - data will be a SettingProposal
+        PROPOSE = 1;
+
+        // A vote action - data will be a SettingVote
+        VOTE = 2;
+    }
+    // The action of this payload
+    Action action = 1;
+
+    // The content of this payload
+    bytes data = 2;
+}
+
+// Setting Proposal
+//
+// This message proposes a change in a setting value.
+message SettingProposal {
+    // The setting key.  E.g. sawtooth.config.authorization_type
+    string setting = 1;
+
+    // The setting value. E.g. 'ballot'
+    string value = 2;
+
+    // allow duplicate proposals with different hashes
+    // randomly created by the client
+    string nonce = 3;
+}
+
+// Setting Vote
+//
+// In ballot mode, a proposal must be voted on.  This message indicates an
+// acceptance or rejection of a proposal, where the proposal is identified
+// by its id.
+message SettingVote {
+    enum Vote {
+        VOTE_UNSET = 0;
+        ACCEPT = 1;
+        REJECT = 2;
+    }
+
+    // The id of the proposal, as found in the
+    // sawtooth.config.vote.proposals setting field
+    string proposal_id = 1;
+
+    Vote vote = 2;
+}
+
+// Contains the vote counts for a given proposal.
+message SettingCandidate {
+    // An individual vote record
+    message VoteRecord {
+        // The public key of the voter
+        string public_key = 1;
+
+        // The voter's actual vote
+        SettingVote.Vote vote = 2;
+
+    }
+
+    // The proposal id, a hash of the original proposal
+    string proposal_id = 1;
+
+    // The active proposal
+    SettingProposal proposal = 2;
+
+    // list of votes
+    repeated VoteRecord votes = 3;
+}
+
+// Contains all the setting candiates up for vote.
+message SettingCandidates {
+    repeated SettingCandidate candidates = 1;
+}

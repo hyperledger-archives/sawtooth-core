@@ -1,0 +1,145 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  settings-tp:
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: settings-tp -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
+  validator:
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+    command: "bash -c \"\
+        sawadm keygen && \
+        sawset genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
+          -o config.batch && \
+        sawadm genesis \
+          config-genesis.batch config.batch && \
+        sawtooth-validator -v \
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
+    \""
+    stop_signal: SIGKILL
+
+  devmode:
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
+    command: devmode-engine-rust --connect tcp://validator:5005 -v
+    stop_signal: SIGKILL
+
+  rest-api:
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8008
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+    stop_signal: SIGKILL
+
+  basic-auth-proxy:
+    build:
+      context: ../../..
+      dockerfile: ./docker/apache-basic-auth-proxy
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: apache-basic-auth-proxy:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 80
+      - 443
+      - 8008
+    depends_on:
+      - validator
+      - rest-api
+    command: "bash -c \"\
+        apachectl start && \
+        tail -f /dev/null \
+        \""
+    stop_signal: SIGKILL
+
+  test-basic-auth-proxy:
+    build:
+      context: ../../..
+      dockerfile: ./integration/sawtooth_integration/docker/integration-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: integration-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 80
+      - 443
+    depends_on:
+      - validator
+      - rest-api
+      - basic-auth-proxy
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_basic_auth_proxy.TestBasicAuth
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/integration:"

@@ -1,0 +1,113 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+FROM ubuntu:bionic
+
+RUN apt-get update \
+ && apt-get install gnupg -y
+
+RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/ci bionic universe" >> /etc/apt/sources.list \
+ && echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/debug/ bionic universe" >> /etc/apt/sources.list \
+ && (apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 \
+     --recv-keys 8AA7AF1F1091A5FD 44FC67F19B2466EA \
+ || apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 \
+     --recv-keys 8AA7AF1F1091A5FD 44FC67F19B2466EA) \
+ && apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    inetutils-ping \
+    libffi-dev \
+    libssl-dev \
+    python3-aiodns \
+    python3-aiohttp \
+    python3-aiopg \
+    python3-async-timeout \
+    python3-bitcoin \
+    python3-cachetools \
+    python3-cbor \
+    python3-cchardet \
+    python3-colorlog \
+    python3-cov-core \
+    python3-cryptography-vectors \
+    python3-cryptography \
+    python3-dev \
+    python3-grpcio-tools \
+    python3-grpcio \
+    python3-lmdb \
+    python3-multidict \
+    python3-netifaces \
+    python3-nose2 \
+    python3-pip \
+    python3-protobuf \
+    python3-psycopg2 \
+    python3-pycares \
+    python3-pyformance \
+    python3-pytest-runner \
+    python3-pytest \
+    python3-pytz \
+    python3-requests \
+    python3-secp256k1 \
+    python3-setuptools-scm \
+    python3-six \
+    python3-toml \
+    python3-yaml \
+    python3-yarl \
+    python3-zmq \
+    software-properties-common \
+    gdb \
+    python3-all-dbg \
+    python3-zmq-dbg \
+    python3-cffi-backend-dbg python3-apt-dbg \
+    python3-netifaces-dbg \
+    libzmq-dbg python3-cchardet-dbg \
+    python3-grpcio-dbg \
+    python3-lmdb-dbg python3-pycares-dbg \
+    python3-secp256k1-dbg \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip3 install \
+    pylint \
+    pycodestyle \
+    bandit \
+    coverage --upgrade
+
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+ && add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) \
+         stable"
+
+RUN apt-get update && apt-get install -y -q \
+    docker-ce \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# EXPOSE 4004/tcp
+# EXPOSE 8008
+
+RUN mkdir -p /project/sawtooth-core/ \
+ && mkdir -p /var/log/sawtooth \
+ && mkdir -p /var/lib/sawtooth \
+ && mkdir -p /etc/sawtooth \
+ && mkdir -p /etc/sawtooth/keys
+
+ENV PATH=$PATH:/project/sawtooth-core/bin
+
+WORKDIR /project/sawtooth-core
+CMD build_python

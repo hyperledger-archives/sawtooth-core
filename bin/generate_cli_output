@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+if [ ! -e source/conf.py ]; then
+    echo "Must be run from the sawtooth-core repo docs directory." 1>&2
+    exit 1
+fi
+
+function save_usage() {
+   safe_string=$(echo "$*" | sed -e 's/[^A-Za-z0-9-]/_/g')
+   filename="source/cli/output/${safe_string}_usage.out"
+   if ! output=$("$@" -h); then
+       exit 1
+   fi
+   echo "Generating: $filename"
+   echo "$output" > "$filename"
+}
+
+export PATH=$PATH:$(pwd)/../bin
+mkdir -p source/cli/output
+
+save_usage sawtooth
+
+save_usage sawtooth batch
+save_usage sawtooth batch list
+save_usage sawtooth batch show
+save_usage sawtooth batch status
+save_usage sawtooth batch submit
+
+save_usage sawtooth block
+save_usage sawtooth block list
+save_usage sawtooth block show
+
+save_usage sawtooth keygen
+
+save_usage sawtooth identity
+save_usage sawtooth identity policy
+save_usage sawtooth identity policy create
+save_usage sawtooth identity policy list
+save_usage sawtooth identity role
+save_usage sawtooth identity role create
+save_usage sawtooth identity role list
+
+save_usage sawtooth peer
+save_usage sawtooth peer list
+
+save_usage sawtooth settings
+save_usage sawtooth settings list
+
+save_usage sawtooth state
+save_usage sawtooth state list
+save_usage sawtooth state show
+save_usage sawtooth transaction
+
+save_usage sawtooth status
+save_usage sawtooth status show
+
+save_usage sawtooth transaction list
+save_usage sawtooth transaction show
+
+save_usage sawset
+save_usage sawset genesis
+save_usage sawset proposal
+save_usage sawset proposal create
+save_usage sawset proposal list
+save_usage sawset proposal vote
+
+save_usage sawadm
+save_usage sawadm genesis
+save_usage sawadm keygen
+
+save_usage sawnet
+save_usage sawnet peers
+save_usage sawnet peers list
+save_usage sawnet peers graph
+save_usage sawnet compare-chains
+
+save_usage sawtooth-validator
+save_usage sawtooth-rest-api
+save_usage settings-tp
+save_usage identity-tp
+
+save_usage intkey
+save_usage intkey set
+save_usage intkey inc
+save_usage intkey dec
+save_usage intkey show
+save_usage intkey list
+save_usage intkey generate
+save_usage intkey load
+save_usage intkey populate
+save_usage intkey create_batch
+save_usage intkey workload
+save_usage intkey-tp-python
+
+save_usage xo
+save_usage xo create
+save_usage xo list
+save_usage xo show
+save_usage xo take
+save_usage xo delete
+save_usage xo-tp-python

@@ -1,0 +1,494 @@
+#!/usr/bin/env python3
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import subprocess
+import os
+import argparse
+import time
+import logging
+import yaml
+
+
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
+
+
+DEFAULT_TIMEOUT = 600
+COMPOSE_DOWN_RETRY_TIMEOUT = 60
+DOCKER_PS_TIMEOUT = 30
+
+
+class RunDockerTestError(BaseException):
+    pass
+
+
+class Timer:
+    def __init__(self, duration):
+        self._duration = duration
+        self._start = 0
+
+    def start(self):
+        self._start = time.time()
+
+    def remaining(self):
+        elapsed = time.time() - self._start
+        return max(self._duration - elapsed, 0)
+
+
+def main():
+    args = parse_args()
+
+    # Search for compose file passed
+    compose_file = _get_compose_file(args.compose_file)
+    test_service = _get_test_service(compose_file)
+
+    # Load isolation id if it is set and validate
+    isolation_id = _get_isolation_id()
+    _setup_environ(isolation_id)
+
+    # Construct commands
+    compose = [
+        'docker-compose',
+        '-p', isolation_id,
+        '-f', compose_file
+    ]
+
+    # Search for extra compose files and add them to the compose command
+    if args.extra_file:
+        for file in args.extra_file:
+            extra_file = _get_compose_file(file)
+            compose = compose + [
+            '-f', extra_file
+            ]
+
+    compose_up = compose + [
+        'up', '--abort-on-container-exit'
+    ]
+
+    compose_down = compose + ['down', '--remove-orphans', '--volumes']
+
+    scrape = [
+        'docker', 'ps', '-a',
+        '--format={{.Names}},{{.Image}},{{.Label "install-type"}}',
+    ]
+
+    inspect = [
+        'docker', 'inspect',
+        '-f', "{{.State.ExitCode}}",
+        "{}_{}_1".format(
+            isolation_id,
+            test_service)
+    ]
+
+    compose_dict = load_compose_file(compose_file)
+    _validate_compose_dict(compose_dict, test_service, compose_file)
+
+    test_service_image = _get_test_service_image(
+        compose_dict, test_service, compose_file)
+
+    if not args.clean:
+        _check_for_existing_containers(
+            compose_file, compose_dict, isolation_id)
+
+    for service in compose_dict['services']:
+        scrape += [
+            '--filter', 'name={}_{}_1'.format(isolation_id, service),
+        ]
+
+    timer = Timer(args.timeout)
+
+    # Run tests
+    try:
+        if not args.clean:
+            exit_status = 0
+
+            if not _check_for_existing_image(test_service_image, isolation_id):
+                _build_test_service_image(test_service, compose)
+
+            timer.start()
+
+            test_service_uppercase = test_service.upper()
+
+            LOGGER.info('Starting test %s', test_service_uppercase)
+
+            LOGGER.info("Bringing up with %s", str(compose_up))
+
+            try:
+                # 1. Run the tests
+                subprocess.run(
+                    compose_up,
+                    check=True,
+                    timeout=timer.remaining())
+
+            except FileNotFoundError as err:
+                LOGGER.error("Bad docker-compose up command")
+                LOGGER.exception(err)
+                exit(1)
+
+            except subprocess.CalledProcessError as err:
+                LOGGER.error("Test error in %s", test_service_uppercase)
+                LOGGER.exception(err)
+                exit_status = 1
+
+            except subprocess.TimeoutExpired as err:
+                LOGGER.error("Test %s timed out.", test_service_uppercase)
+                LOGGER.exception(err)
+                exit_status = 1
+
+            if exit_status == 0:
+                LOGGER.info("Getting result with: %s", str(inspect))
+                try:
+                    # 2. Get the exit code of the test container
+                    exit_status = int(subprocess.run(
+                        inspect, stdout=subprocess.PIPE,
+                        timeout=timer.remaining(), check=True
+                    ).stdout.decode().strip())
+
+                except FileNotFoundError as err:
+                    LOGGER.error("Bad docker inspect or ps command")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+                except subprocess.CalledProcessError as err:
+                    LOGGER.error("Failed to retrieve exit status of test.")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+                except subprocess.TimeoutExpired as err:
+                    LOGGER.error("Retrieving exit status timed out.")
+                    LOGGER.exception(err)
+                    exit_status = 1
+
+            try:
+                info = subprocess.run(
+                    scrape, stdout=subprocess.PIPE,
+                    timeout=timer.remaining(), check=True
+                ).stdout.decode().strip()
+
+                for line in info.split('\n'):
+                    container, image, install_type = line.split(',')
+                    LOGGER.info(
+                        "Container %s ran image %s with install-type %s",
+                        container, image, install_type
+                    )
+
+            except BaseException:
+                LOGGER.error("Could not gather information about image used.")
+
+        else:  # cleaning
+            exit_status = 0
+
+        LOGGER.info("Shutting down with: %s", str(compose_down))
+
+        shutdown_success = False
+        for _ in range(2):
+            if not shutdown_success:
+
+                # Always give compose down time to cleanup
+                timeout = max(timer.remaining(), COMPOSE_DOWN_RETRY_TIMEOUT)
+                try:
+                    # 3. Cleanup after the test
+                    subprocess.run(compose_down, check=True, timeout=timeout)
+                    shutdown_success = True
+
+                except FileNotFoundError as err:
+                    LOGGER.error("Bad docker-compose down command.\n")
+                    LOGGER.exception(err)
+
+                except subprocess.CalledProcessError as err:
+                    LOGGER.error("Failed to cleanup after test.")
+                    LOGGER.exception(err)
+
+                except subprocess.TimeoutExpired as err:
+                    LOGGER.error("Shutting down the test timed out.")
+                    LOGGER.exception(err)
+
+        if not shutdown_success:
+            LOGGER.critical(
+                "There are residual containers on the host that need to be"
+                " cleaned up! Do `docker ps -a` and `docker newtork list` to"
+                " see what was left behind or use `run_docker_test --clean`!"
+            )
+
+        if exit_status != 0:
+            LOGGER.error('Test %s failed', test_service_uppercase)
+
+        exit(exit_status)
+
+    except KeyboardInterrupt:
+        subprocess.run(
+            compose_down,
+            check=True,
+            timeout=COMPOSE_DOWN_RETRY_TIMEOUT)
+        exit(1)
+
+
+def load_compose_file(compose_file):
+
+    try:
+        with open(compose_file) as fd:
+            contents = fd.read()
+        compose = yaml.load(contents)
+        return compose
+
+    except OSError:
+        raise RunDockerTestError(
+            "Docker compose file '{}' could not be opened. Make sure it "
+            "exists and is readable.".format(compose_file))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "compose_file",
+        help="docker-compose.yaml file that contains the test")
+
+    parser.add_argument(
+        "-e", "--extra-file",
+        help="extra compose file with additional components. can be specified \
+              more than once",
+        action='append')
+
+    parser.add_argument(
+        "-c", "--clean",
+        help="don't run the test, just cleanup a previous run",
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
+        "-n", "--no-build",
+        help="don't build docker images",
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
+        "-t", "--timeout",
+        help="how long to wait before timing out",
+        type=int,
+        default=DEFAULT_TIMEOUT)
+
+    return parser.parse_args()
+
+
+def _build_test_service_image(test_service, compose):
+    cmd = compose + ['build', test_service]
+    try:
+        build = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE)
+
+        for line in build.stdout:
+            print("build_test_image  | " + line.decode().strip())
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to build image for {}".format(test_service))
+        LOGGER.exception(err)
+        raise
+
+
+def _get_test_service(compose_file):
+    return os.path.basename(
+        compose_file
+    ).replace('.yaml', '').replace('_', '-')
+
+
+def _get_test_service_image(compose_dict, test_service, compose_file):
+    if "image" not in compose_dict['services'][test_service]:
+        raise RunDockerTestError(
+            "Test service '{}' does not have an image specified: '{}'".format(
+                test_service, compose_file))
+    else:
+        return compose_dict['services'][test_service]['image'].split(":")[0]
+
+
+def _validate_compose_dict(compose_dict, test_service, compose_file):
+    if test_service not in compose_dict['services']:
+        raise RunDockerTestError(
+            "Test service '{}' does not exist in compose file: '{}'".format(
+                test_service, compose_file))
+
+
+def _check_for_existing_containers(compose_file, compose_dict, isolation_id):
+    containers = _get_existing_containers()
+    for service in compose_dict['services'].keys():
+        container_name_to_create = "{}_{}_1".format(isolation_id, service)
+        for existing_container_name in containers:
+            if container_name_to_create == existing_container_name:
+                raise RunDockerTestError(
+                    "The container '{}' which would be created by this test"
+                    " already exists!\nDo:\n`run_docker_test --clean {}`\nto"
+                    " remove the container, or use docker manually.".format(
+                        container_name_to_create, compose_file
+                    )
+                )
+
+
+def _check_for_existing_image(test_service, isolation_id):
+    images = _get_existing_images()
+    image_to_create = '{}:{}'.format(test_service, isolation_id)
+    if image_to_create in images:
+        return True
+
+
+def _check_for_existing_network(isolation_id, compose_file):
+    networks = _get_existing_networks()
+    network_to_create = '{}_default'.format(isolation_id)
+    if network_to_create in networks:
+        raise RunDockerTestError(
+            "The network '{}' which would be created by this test already"
+            " exists!\nDo:\n`run_docker_test --clean {}`\nto remove the"
+            " network, or use docker manually.".format(
+                network_to_create, compose_file
+            )
+        )
+
+
+def _get_existing_containers():
+    cmd = ['docker', 'ps', '-a', '--format={{.Names}}']
+    success = False
+    try:
+        containers = subprocess.run(
+            cmd, stdout=subprocess.PIPE, check=True, timeout=DOCKER_PS_TIMEOUT
+        ).stdout.decode().strip().split('\n')
+        success = True
+
+    except FileNotFoundError as err:
+        LOGGER.error("Bad docker ps command")
+        LOGGER.exception(err)
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to retrieve exit status of test.")
+        LOGGER.exception(err)
+
+    except subprocess.TimeoutExpired as err:
+        LOGGER.error("Retrieving exit status timed out.")
+        LOGGER.exception(err)
+
+    if not success:
+        raise RunDockerTestError("Failed to get list of docker containers.")
+
+    return containers
+
+
+def _get_existing_images():
+    cmd = ['docker', 'images', '--format={{.Repository}}:{{.Tag}}']
+    success = False
+    try:
+        images = subprocess.run(
+            cmd, stdout=subprocess.PIPE, check=True, timeout=DOCKER_PS_TIMEOUT
+        ).stdout.decode().strip()
+        success = True
+
+    except FileNotFoundError as err:
+        LOGGER.error("Bad docker images command")
+        LOGGER.exception(err)
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to retrieve image list.")
+        LOGGER.exception(err)
+
+    except subprocess.TimeoutExpired as err:
+        LOGGER.error("Retrieving image list timed out.")
+        LOGGER.exception(err)
+
+    if not success:
+        raise RunDockerTestError("Failed to get list of docker images.")
+
+    return images
+
+
+def _get_existing_networks():
+    cmd = ['docker', 'network', 'ls', '--format={{.Name}}']
+    success = False
+
+    try:
+        networks = subprocess.run(
+            cmd, stdout=subprocess.PIPE, check=True, timeout=DOCKER_PS_TIMEOUT
+        ).stdout.decode().strip().split('\n')
+        success = True
+
+    except FileNotFoundError as err:
+        LOGGER.error("Bad docker network ls command")
+        LOGGER.exception(err)
+
+    except subprocess.CalledProcessError as err:
+        LOGGER.error("Failed to retrieve network list.")
+        LOGGER.exception(err)
+
+    except subprocess.TimeoutExpired as err:
+        LOGGER.error("Retrieving network list timed out.")
+        LOGGER.exception(err)
+
+    if not success:
+        raise RunDockerTestError("Failed to get list of docker networks.")
+
+    return networks
+
+
+def _get_isolation_id():
+    if 'ISOLATION_ID' in os.environ:
+        isolation_id = os.environ['ISOLATION_ID']
+    else:
+        isolation_id = 'latest'
+
+    if not isolation_id.isalnum():
+        raise RunDockerTestError("ISOLATION_ID must be alphanumeric")
+
+    return isolation_id
+
+
+def _setup_environ(isolation_id):
+    os.environ['ISOLATION_ID'] = isolation_id
+    os.environ['SAWTOOTH_CORE'] = os.path.dirname(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        )
+    )
+    print(os.environ['SAWTOOTH_CORE'])
+
+
+def _get_compose_dir():
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        "integration", "sawtooth_integration", "docker"
+    )
+
+
+def _get_compose_file(compose_file):
+    # Try "as given"
+    if not os.path.exists(compose_file):
+        # If not, try in integration docker directory
+        compose_file = os.path.join(_get_compose_dir(), compose_file)
+    if not os.path.exists(compose_file):
+        # If not, try appending .yaml
+        compose_file = os.path.join(
+            _get_compose_dir(),
+            "{}.yaml".format(compose_file)
+        )
+    if not os.path.exists(compose_file):
+        raise RunDockerTestError(
+            "Docker compose file '{}' does not exist.".format(compose_file))
+
+    return compose_file
+
+
+if __name__ == "__main__":
+    try:
+        main()
+
+    except RunDockerTestError as err:
+        LOGGER.error(err)
+        exit(1)

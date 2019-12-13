@@ -1,0 +1,115 @@
+// Copyright 2016, 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "network_pb2";
+
+// The disconnect message from a client to the server
+message DisconnectMessage {
+}
+
+// The registration request from a peer to the validator
+message PeerRegisterRequest {
+    string endpoint = 1;
+    // The current version of the network protocol that is being used by the
+    // sender.  This version is an increasing value.
+    uint32 protocol_version = 2;
+}
+
+// The unregistration request from a peer to the validator
+message PeerUnregisterRequest {
+}
+
+message GetPeersRequest {
+}
+
+message GetPeersResponse {
+    repeated string peer_endpoints = 1;
+}
+
+message PingRequest {
+}
+
+message PingResponse{
+}
+
+message GossipMessage {
+    enum ContentType{
+        CONTENT_TYPE_UNSET = 0;
+        BLOCK = 1;
+        BATCH = 2;
+        CONSENSUS = 3;
+    }
+    bytes content = 1;
+    ContentType content_type = 2;
+    uint32 time_to_live = 3;
+}
+
+// A response sent from the validator to the peer acknowledging message
+// receipt
+message NetworkAcknowledgement {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
+    }
+
+    Status status = 1;
+}
+
+message GossipBlockRequest {
+    // The id of the block that is being requested
+    string block_id = 1;
+
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 2;
+    uint32 time_to_live = 3;
+
+}
+
+message GossipBlockResponse {
+    // The block
+    bytes content = 1;
+}
+
+message GossipBatchResponse {
+    //The batch
+    bytes content = 1;
+}
+
+message GossipBatchByBatchIdRequest {
+    // The id of the batch that is being requested
+    string id = 1;
+
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 2;
+    uint32 time_to_live = 3;
+
+}
+
+message GossipBatchByTransactionIdRequest {
+    // The id's of the transaction that are in the batches requested
+    repeated string ids = 1;
+
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 2;
+    uint32 time_to_live = 3;
+
+}

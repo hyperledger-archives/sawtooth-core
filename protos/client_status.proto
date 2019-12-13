@@ -1,0 +1,44 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_status";
+
+// A request to get miscellaneous information about the validator
+message ClientStatusGetRequest{
+}
+
+message ClientStatusGetResponse {
+  // The status of the response message, not the validator's status
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  // Information about the validator's peers
+  message Peer {
+    // The peer's public network endpoint
+    string endpoint = 1;
+  }
+
+  Status status = 1;
+  repeated Peer peers = 2;
+  // The validator's public network endpoint
+  string endpoint = 3;
+}

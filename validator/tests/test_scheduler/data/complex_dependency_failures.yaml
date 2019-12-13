@@ -1,0 +1,556 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+---
+-  #------------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    valid: False
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    valid: False # Duplicate invalid txn in a batch exercises the
+                 # txn replay process.
+- #---------------------------- Batch 2
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+- #------------------------ Batch 3
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - a:sha :
+      - b:sha :
+      - c:sha :
+      - d:sha :
+      - e:sha :
+      - f:sha :
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+    valid: False
+- #--------------------------- Batch 4
+  -
+    inputs:
+      - r:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - a:sha :
+      - c:sha :
+      - e:sha :
+      - d:sha :
+    valid: False  # Second writer at the "" namespace with both being in
+                  # invalid batches exercises the state finding process.
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+    name: born
+- #---------------------- Batch 5
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_delete:
+      - b:sha
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_delete:
+      - d:sha
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_delete:
+      - f:sha
+    valid: False
+- #----------------------------- Batch 6
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - g:sha :
+      - h:sha :
+      - i:sha :
+      - j:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+- #----------------------------- Batch 7
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha                   # Valid batch that reads and writes to the
+    addresses_to_set:           # same addresses as Batch 2 with multiple
+      - a:sha :                 # failures in between.
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+    name: heisenberg
+- #------------------------- Batch 8
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - n:sha
+    addresses_to_set:
+      - n:sha :
+    dependencies:
+      - born         # Dependency on a txn from an invalid batch
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+- #------------------------- Batch 9
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_delete:
+      - c:sha
+    dependencies:
+      - heisenberg
+- #------------------------- Batch 10
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    dependencies:
+      - born
+    name: poincare         # Dependency on a txn from an invalid batch
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_delete:
+      - h:sha
+    valid: False          # Second invalid txn in a batch. This txn was
+                          # invalidated by set_transaction_execution_result
+                          # whereas the prior one was invalidated by
+                          # dependency.
+- #------------------------ Batch 11
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - ""
+    addresses_to_set:     # Writer at the "" namespace in an invalid batch
+      - z:sha :           # exercises the state finding process
+      - y:sha :
+      - x:sha :
+      - w:sha :
+      - v:sha :
+  -
+    inputs:
+      - ""
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    dependencies:
+      - poincare
+- # ------------------------ Batch 12
+  -
+    inputs:
+      - l:sha:10
+    outputs:
+      - l:sha:20
+    addresses_to_set:
+      - l:sha :
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+    dependencies:
+      - poincare             # Chain of dependencies on a txn from an invalid
+    name: shannon            # batch. born <--- poincare <----- shannon
+- #-------------------------- Batch 13
+  -
+    inputs:
+      - i:sha
+    outputs:
+      - i:sha
+    addresses_to_set:
+      - i:sha :
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_set:
+      - h:sha :
+  -
+    inputs:
+      - h:sha:10
+    outputs:
+      - j:sha:20
+    addresses_to_set:
+      - j:sha :
+- #--------------------------- Batch 14
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha:10
+    addresses_to_set:
+      - e:sha :
+    dependencies:
+      - shannon                    # Invalid batch
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+  -
+    inputs:
+      - ""
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+- #---------------------------- Batch 15
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_delete:
+      - a:sha
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:           # Invalid batch
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    dependencies:
+      - shannon
+- # --------------------------- Batch 16
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - q:sha                # Invalid batch
+    outputs:
+      - q:sha
+    addresses_to_set:
+      - q:sha :
+    dependencies:
+      - poincare
+- # -------------------------- Batch 17
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha            # Predecessor in batch 9 with multiple failures
+    addresses_to_set:    # in between
+      - c:sha :
+  -
+    inputs:               # Many invalid predecessors
+      - d:sha
+    outputs:              # Valid batch
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+- # ------------------------- Batch 18
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+  -
+    inputs:
+      - v:sha
+    outputs:                   # Invalid batch
+      - v:sha
+    addresses_to_set:
+      - v:sha :
+  -
+    inputs:
+      - w:sha
+    outputs:
+      - w:sha
+    addresses_to_set:
+      - w:sha :
+    dependencies:
+      - born
+      - heisenberg
+- #-------------------------- batch 19
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:                   # Invalid batch
+      - c:sha:10
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - poincare
+- # -------------------------- Batch 20
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - c:sha :
+      - d:sha :
+      - m:sha :
+      - n:sha :                # Invalid batch
+      - o:sha :
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    dependencies:
+      - shannon
+- # ---------------------- Batch 21
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_delete:
+      - a:sha
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""                    # Invalid batch
+    addresses_to_set:
+      - m:sha :
+      - l:sha :
+      - p:sha :
+      - t:sha :
+    dependencies:
+      - born
+- # ------------------------- Batch 22
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - a:sha :
+      - b:sha :
+      - c:sha :
+      - d:sha :                # Invalid batch
+    dependencies:
+      - shannon
+- # ------------------- Batch 23
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_set:
+      - h:sha :
+  -
+    inputs:
+      - i:sha
+    outputs:
+      - i:sha:20
+    addresses_to_set:
+      - i:sha :
+  -
+    inputs:
+      - a:b:sha
+      - b:b:sha
+    outputs:
+      - a:b:sha
+      - b:b:sha
+    addresses_to_set:
+      - a:b:sha :
+      - b:b:sha :
+  -
+    inputs:
+      - c:a:sha
+    outputs:
+      - c:a:sha
+    addresses_to_set:
+      - c:a:sha :
+- # --------------------------- batch 24
+  -
+    inputs:
+      - a:a:sha
+    outputs:
+      - a:a:sha
+    addresses_to_set:
+      - a:a:sha :
+  -
+    inputs:
+      - c:a:sha
+    outputs:
+      - b:b:sha
+    addresses_to_delete:
+      - b:b:sha                 # Invalid batch with 2 txns that make it
+    valid: False                # it invalid.
+  -
+    inputs:
+      - e:a:sha
+    outputs:
+      - e:a:sha
+    addresses_to_set:
+      - e:a:sha :
+    dependencies:
+      - shannon
+

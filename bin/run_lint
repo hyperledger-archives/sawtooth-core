@@ -1,0 +1,191 @@
+#!/bin/bash
+#
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+set -e
+
+find_packages() {
+    topdir=$1
+    since=$2
+
+    (
+    if [ "$since" != "" ]; then
+        git ls-files -mo "$topdir/*.py" -x build
+        git diff --name-only $since "$topdir/*.py"
+    else
+        find $topdir -name \*.py
+    fi
+    ) \
+        | sort \
+        | uniq \
+        | git check-ignore --stdin --non-matching --verbose \
+        | grep ^:: \
+        | sed -e 's/^::\s//' \
+        | grep -v /setup.py$ \
+        | grep -v /setup_tests.py$ \
+        | grep -v _pb2\.py$
+}
+
+lint() {
+    top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+    cd $top_dir
+    subdir=$1
+    since=$2
+
+    pylintrc=.pylintrc
+    pylint_bin="python3 -m pylint"
+
+    error=0
+
+    packages=$(find_packages "$subdir" "$since")
+
+    if [ "$packages" != "" ]; then
+        [ $VERBOSE = 0 ] && echo "$subdir"
+
+        [ $VERBOSE = 0 ] && echo "-- pycodestyle"
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Running pycodestyle in $subdir..."
+        )
+
+        pycodestyle --config=$top_dir/.pycodestyle $packages || error=1
+
+        [ $VERBOSE = 0 ] && echo "-- pylint"
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Running $pylint_bin $pylintrc in $subdir..."
+        )
+
+        $pylint_bin \
+            --rcfile=$pylintrc \
+            --reports=no \
+            --score=no \
+            --persistent=no \
+            $packages || error=1
+
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Checking for CRLF in $subdir..."
+        )
+
+        file $packages | grep CRLF && error=1
+
+    else
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Skipping pep8 and pylint $pylintrc in $subdir. (Nothing to do.)"
+        )
+    fi
+
+    return $error
+}
+
+usage() {
+    echo "Usage:"
+    echo "  $0 [-s BRANCH] [-n] [-h]"
+    echo
+    echo "Options:"
+    echo "  -h          print usage and exit"
+    echo "  -n          dry-run, only prints files that would be linted"
+    echo "  -s BRANCH   only lint files changed since BRANCH"
+    echo "  -v          increase verbosity"
+}
+
+
+DRY_RUN=0
+VERBOSE=0
+SINCE=""
+while getopts :s:nhv opt
+do
+    case $opt in
+      h)
+        usage
+        exit 0
+        ;;
+      n)
+        DRY_RUN=1
+        ;;
+      s)
+        SINCE=$OPTARG
+        ;;
+      v)
+        if [ "$VERBOSE" = "1" ]; then
+            set -x
+        fi
+        VERBOSE=1
+        ;;
+      \?)
+        echo "Invalid option: -$OPTARG" >&2
+        exit 2
+        ;;
+    esac
+done
+
+echo "pycodestyle $(pycodestyle --version)"
+echo "$(pylint --version)"
+
+if [ "$DRY_RUN" = "1" ]; then
+    for dir in validator
+    do
+        for package in $(find_packages "$dir" "$SINCE")
+        do
+            echo $package
+        done
+    done
+    exit 0
+fi
+
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+retval=0
+
+# Modules should be ranked in decreasing likelihood of having lint
+# errors. It would be nice if there was a more convenient way of
+# organizing these.
+
+# validator
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+export PYTHONPATH
+lint validator "$SINCE" || retval=1
+
+# integration
+PYTHONPATH=$PYTHONPATH:$top_dir/cli
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/integration
+PYTHONPATH=$PYTHONPATH:$top_dir/families/block_info
+export PYTHONPATH
+lint integration "$SINCE" || retval=1
+
+# cli
+PYTHONPATH=$top_dir/cli
+export PYTHONPATH
+lint cli "$SINCE" || retval=1
+
+
+# rest api
+PYTHONPATH=$PYTHONPATH:$top_dir/cli
+export PYTHONPATH
+lint rest_api "$SINCE" || retval=1
+
+# settings
+PYTHONPATH=$top_dir/families/settings/tests
+export PYTHONPATH
+lint families/settings "$SINCE" || retval=1
+
+exit $retval

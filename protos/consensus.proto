@@ -1,0 +1,546 @@
+// Copyright 2018 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+// --== Data Structures ==--
+
+message ConsensusPeerMessageHeader {
+  // Public key for the component internal to the validator that
+  // signed the message
+  bytes signer_id = 1;
+
+  // The sha512 hash of the encoded message
+  bytes content_sha512 = 2;
+  // Interpretation is left to the consensus engine implementation
+  string message_type = 5;
+
+  // Used to identify the consensus engine that produced this message
+  string name = 3;
+  string version = 4;
+}
+
+// A consensus-related message sent between peers
+message ConsensusPeerMessage {
+  // The serialized version of the ConsensusPeerMessageHeader
+  bytes header = 1;
+
+  // The signature derived from signing the header
+  bytes header_signature = 3;
+
+  // The opaque payload to send to other nodes
+  bytes content = 2;
+}
+
+// All information about a block that is relevant to consensus
+message ConsensusBlock {
+  bytes block_id = 1;
+  bytes previous_id = 2;
+  // The id of peer that signed this block
+  bytes signer_id = 3;
+  uint64 block_num = 4;
+  bytes payload = 5;
+  // A summary of the contents of the block
+  bytes summary = 6;
+}
+
+// Information about a peer that is relevant to consensus
+message ConsensusPeerInfo {
+  // The unique id for this peer. This can be correlated with the signer id
+  // on consensus blocks.
+  bytes peer_id = 1;
+}
+
+// A settings key-value pair
+message ConsensusSettingsEntry {
+  string key = 1;
+  string value = 2;
+}
+
+// A state key-value pair
+message ConsensusStateEntry {
+  string address = 1;
+  bytes data = 2;
+}
+
+// --== Registration ==--
+
+// Sent to connect with the validator
+message ConsensusRegisterRequest {
+  message Protocol {
+    string name = 1;
+    string version = 2;
+  }
+
+  // The name of this consensus engine
+  string name = 1;
+  // The version of this consensus engine
+  string version = 2;
+  // Any additional name/version pairs the consensus engine supports
+  repeated Protocol additional_protocols = 3;
+}
+
+message ConsensusRegisterResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+  }
+
+  Status status = 1;
+
+  // Startup Info
+  ConsensusBlock chain_head = 2;
+  repeated ConsensusPeerInfo peers = 3;
+  ConsensusPeerInfo local_peer_info = 4;
+}
+
+// --== Notifications ==--
+
+// The following are notifications provided by the validator to the consensus
+// engine. An ack should be sent in response to all notifications.
+
+// - P2P -
+
+// A new peer was added
+message ConsensusNotifyPeerConnected {
+  ConsensusPeerInfo peer_info = 1;
+}
+
+// An existing peer was dropped
+message ConsensusNotifyPeerDisconnected {
+  bytes peer_id = 1;
+}
+
+// A new message was received from a peer
+message ConsensusNotifyPeerMessage {
+  // The message sent
+  ConsensusPeerMessage message = 1;
+  // The node that sent the message, not necessarily the node that created it
+  bytes sender_id = 2;
+}
+
+// - Blocks -
+
+// A new block was received and passed initial consensus validation
+message ConsensusNotifyBlockNew {
+  ConsensusBlock block = 1;
+}
+
+// This block can be committed successfully
+message ConsensusNotifyBlockValid {
+  bytes block_id = 1;
+}
+
+// This block cannot be committed successfully
+message ConsensusNotifyBlockInvalid {
+  bytes block_id = 1;
+}
+
+// This block has been committed
+message ConsensusNotifyBlockCommit {
+  bytes block_id = 1;
+}
+
+// The engine has been activated
+message ConsensusNotifyEngineActivated {
+  // Startup Info
+  ConsensusBlock chain_head = 1;
+  repeated ConsensusPeerInfo peers = 2;
+  ConsensusPeerInfo local_peer_info = 3;
+}
+
+// The engine has been deactivated
+message ConsensusNotifyEngineDeactivated {}
+
+// Confirm that the notification was received. The validator message
+// correlation id is used to determine which notification this is an ack for.
+message ConsensusNotifyAck {}
+
+// --== Services Provided ==--
+
+// The following are services provided by the validator to the consensus
+// engine. All service messages have at a minimum the following possible return
+// statuses:
+//
+//    STATUS_UNSET
+//        No status was set by the validator, this should never happen
+//    OK
+//        The request was completed successfully
+//    BAD_REQUEST
+//        The request was malformed in some way
+//    SERVICE_ERROR
+//        The validator failed to perform the request
+//    NOT_READY
+//        The validator is not accepting requests, usually because it is still
+//        starting up
+//    NOT_ACTIVE_ENGINE
+//        The consensus engine making the request is not the active engine
+//
+// Additionally, messages may have the following additional return statuses:
+//
+//    INVALID_STATE
+//        The request is not valid given the current state of the validator
+//    UNKNOWN_BLOCK
+//        No block with the given id could be found
+//    UNKNOWN_PEER
+//        No peer with the given id could be found
+
+// - P2P Messaging -
+
+// Send a consensus message to a specific, connected peer
+message ConsensusSendToRequest {
+  // Payload to send to peer
+  //
+  // NOTE: This payload will be wrapped up in a ConsensusPeerMessage struct,
+  // which includes computing its SHA-512 digest, inserting this engine's
+  // registration info, and the validator's public key, and signing everything
+  // with the validator's private key.
+  bytes content = 1;
+  string message_type = 3;
+
+  // Peer that this message is destined for
+  bytes receiver_id = 2;
+}
+
+message ConsensusSendToResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_PEER = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+  Status status = 1;
+}
+
+// Broadcast a consensus message to all peers
+message ConsensusBroadcastRequest {
+  // Payload to broadcast peers
+  //
+  // NOTE: This payload will be wrapped up in a ConsensusPeerMessage struct,
+  // which includes computing its SHA-512 digest, inserting this engine's
+  // registration info, and the validator's public key, and signing everything
+  // with the validator's private key.
+  bytes content = 1;
+  string message_type = 2;
+}
+
+message ConsensusBroadcastResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+    NOT_ACTIVE_ENGINE = 5;
+  }
+  Status status = 1;
+}
+
+// - Block Creation -
+
+// Initialize a new block built on the block with the given previous id and
+// begin adding batches to it. If no previous id is specified, the current
+// head will be used.
+message ConsensusInitializeBlockRequest {
+  bytes previous_id = 1;
+}
+
+message ConsensusInitializeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    INVALID_STATE = 5;
+    UNKNOWN_BLOCK = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
+  }
+  Status status = 1;
+}
+
+// Stop adding batches to the current block and return a summary of its
+// contents.
+message ConsensusSummarizeBlockRequest {}
+
+message ConsensusSummarizeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    INVALID_STATE = 5;
+    BLOCK_NOT_READY = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
+  }
+  Status status = 1;
+
+  // A summary of the block contents
+  bytes summary = 2;
+}
+
+// Insert the given consensus data into the block and sign it. If this call is
+// successful, the consensus engine will receive the block afterwards.
+message ConsensusFinalizeBlockRequest {
+  // The consensus data to include in the finalized block
+  bytes data = 1;
+}
+
+message ConsensusFinalizeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    INVALID_STATE = 5;
+    BLOCK_NOT_READY = 6;
+
+    NOT_ACTIVE_ENGINE = 7;
+  }
+  Status status = 1;
+
+  // The block id of the newly created block
+  bytes block_id = 2;
+}
+
+// Stop adding batches to the current block and abandon it.
+message ConsensusCancelBlockRequest {}
+
+message ConsensusCancelBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    INVALID_STATE = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+}
+
+// - Block Directives -
+
+// Request that, for each block block in order, the block is checked to
+// determine whether the block can be committed successfully or not. Blocks
+// may be checked in parallel. If a new request arrives, it overrides the
+// previous request allowing the engine to reprioritize the list of blocks to
+// check.
+//
+// NOTE: OK does not mean the blocks will all commit successfully, only that
+// the directive was received successfully. The engine must listen for
+// notifications from the consuming component to learn if the blocks would
+// commit or not.
+message ConsensusCheckBlocksRequest {
+  repeated bytes block_ids = 1;
+}
+
+message ConsensusCheckBlocksResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+}
+
+// Request that the block be committed. This request fails if the block has
+// not already been checked.
+//
+// NOTE: OK does not mean the block has been committed, only that the directive
+// was received successfully. The engine must listen for notifications from the
+// consuming component to learn when the block commits.
+message ConsensusCommitBlockRequest {
+  bytes block_id = 1;
+}
+
+message ConsensusCommitBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+}
+
+// Inform the consuming component that this block is no longer being considered
+// and can be held or freed as needed.
+message ConsensusIgnoreBlockRequest {
+  bytes block_id = 1;
+}
+
+message ConsensusIgnoreBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+}
+
+// Fail this block and any of its descendants and purge them as needed.
+message ConsensusFailBlockRequest {
+  bytes block_id = 1;
+}
+
+message ConsensusFailBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+}
+
+// - Queries -
+
+// Retrieve consensus-related information about blocks. If some blocks could
+// not be found, only the blocks that could be found will be returned.
+message ConsensusBlocksGetRequest {
+  repeated bytes block_ids = 1;
+}
+
+message ConsensusBlocksGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+  repeated ConsensusBlock blocks = 2;
+}
+
+// Retrieve consensus-related information about the chain head.
+message ConsensusChainHeadGetRequest {}
+
+message ConsensusChainHeadGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    NO_CHAIN_HEAD = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+  ConsensusBlock block = 2;
+}
+
+// Read the values of these settings from state as of the given block. If some
+// values settings keys cannot be found, the keys that were found will be
+// returned.
+message ConsensusSettingsGetRequest {
+  bytes block_id = 1;
+  repeated string keys = 2;
+}
+
+message ConsensusSettingsGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+  repeated ConsensusSettingsEntry entries = 2;
+}
+
+// Read the data at these addresses from state as of the given block. If some
+// addresses cannot be found, state at the addresses that were found will be
+// returned.
+message ConsensusStateGetRequest {
+  bytes block_id = 1;
+  repeated string addresses = 2;
+}
+
+message ConsensusStateGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    BAD_REQUEST = 2;
+    SERVICE_ERROR = 3;
+    NOT_READY = 4;
+
+    UNKNOWN_BLOCK = 5;
+
+    NOT_ACTIVE_ENGINE = 6;
+  }
+
+  Status status = 1;
+  repeated ConsensusStateEntry entries = 2;
+}

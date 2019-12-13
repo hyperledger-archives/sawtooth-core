@@ -1,0 +1,126 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option go_package = "smallbank_pb2";
+
+message Account {
+    // Customer ID
+    uint32 customer_id = 1;
+
+    // Customer Name
+    string customer_name = 2;
+
+    // Savings Balance (in cents to avoid float)
+    uint32 savings_balance = 3;
+
+    // Checking Balance (in cents to avoid float)
+    uint32 checking_balance = 4;
+}
+
+message SmallbankTransactionPayload {
+    message CreateAccountTransactionData {
+        // The CreateAccountTransaction creates an account
+
+        // Customer ID
+        uint32 customer_id = 1;
+
+        // Customer Name
+        string customer_name = 2;
+
+        // Initial Savings Balance (in cents to avoid float)
+        uint32 initial_savings_balance = 3;
+
+        // Initial Checking Balance (in cents to avoid float)
+        uint32 initial_checking_balance = 4;
+    }
+
+    message DepositCheckingTransactionData {
+        // The DepositCheckingTransction adds an amount to the customer's
+        // checking account.
+
+        // Customer ID
+        uint32 customer_id = 1;
+
+        // Amount
+        uint32 amount = 2;
+    }
+
+    message WriteCheckTransactionData {
+        // The WriteCheckTransaction removes an amount from the customer's
+        // checking account.
+
+        // Customer ID
+        uint32 customer_id = 1;
+
+        // Amount
+        uint32 amount = 2;
+    }
+
+    message TransactSavingsTransactionData {
+        // The TransactSavingsTransaction adds an amount to the customer's
+        // savings account. Amount may be a negative number.
+
+        // Customer ID
+        uint32 customer_id = 1;
+
+        // Amount
+        int32 amount = 2;
+    }
+
+    message SendPaymentTransactionData {
+        // The SendPaymentTransaction transfers an amount from one customer's
+        // checking account to another customer's checking account.
+
+        // Source Customer ID
+        uint32 source_customer_id = 1;
+
+        // Destination Customer ID
+        uint32 dest_customer_id = 2;
+
+        // Amount
+        uint32 amount = 3;
+    }
+
+    message AmalgamateTransactionData {
+        // The AmalgamateTransaction transfers the entire contents of one
+        // customer's savings account into another customer's checking
+        // account.
+
+        // Source Customer ID
+        uint32 source_customer_id = 1;
+
+        // Destination Customer ID
+        uint32 dest_customer_id = 2;
+    }
+
+    enum PayloadType {
+        PAYLOAD_TYPE_UNSET = 0;
+        CREATE_ACCOUNT = 1;
+        DEPOSIT_CHECKING = 2;
+        WRITE_CHECK = 3;
+        TRANSACT_SAVINGS = 4;
+        SEND_PAYMENT = 5;
+        AMALGAMATE = 6;
+    }
+
+    PayloadType payload_type = 1;
+    CreateAccountTransactionData create_account = 2;
+    DepositCheckingTransactionData deposit_checking = 3;
+    WriteCheckTransactionData write_check = 4;
+    TransactSavingsTransactionData transact_savings = 5;
+    SendPaymentTransactionData send_payment = 6;
+    AmalgamateTransactionData amalgamate = 7;
+}

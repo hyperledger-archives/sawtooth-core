@@ -1,0 +1,107 @@
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+#
+# Sawtooth -- Validator Configuration
+#
+
+# This file should exist in the defined config directory and allows
+# validators to be configured without the need for command line options.
+
+# The following is a possible example.
+
+# Bind is used to set the network and component endpoints. It should be a list
+# of strings in the format "option:endpoint", where the options are currently
+# network and component.
+bind = [
+  "network:tcp://127.0.0.1:8800",
+  "component:tcp://127.0.0.1:4004",
+  "consensus:tcp://127.0.0.1:5050"
+]
+
+# The type of peering approach the validator should take. Choices are 'static'
+# which only attempts to peer with candidates provided with the peers option,
+# and 'dynamic' which will do topology buildouts. If 'dynamic' is provided,
+# any static peers will be processed first, prior to the topology buildout
+# starting.
+peering = "static"
+
+# Advertised network endpoint URL.
+endpoint = "tcp://127.0.0.1:8800"
+
+# Uri(s) to connect to in order to initially connect to the validator network,
+# in the format tcp://hostname:port. This is not needed in static peering mode
+# and defaults to None. Replace host1 with the seed's hostname or IP address.
+# seeds = ["tcp://host1:8800"]
+
+# A list of peers to attempt to connect to in the format tcp://hostname:port.
+# It defaults to None. Replace host1 with the peer's hostname or IP address.
+# peers = ["tcp://host1:8800"]
+
+# The type of scheduler to use. The choices are 'serial' or 'parallel'.
+scheduler = 'parallel'
+
+# A Curve ZMQ key pair are used to create a secured network based on side-band
+# sharing of a single network key pair to all participating nodes.
+# Note if the config file does not exist or these are not set, the network
+# will default to being insecure.
+network_public_key = 'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)'
+network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
+
+# The minimum number of peers required before stopping peer search.
+minimum_peer_connectivity = 3
+
+# The maximum number of peers that will be accepted.
+maximum_peer_connectivity = 10
+
+# The following settings are for tuning the thread allocation in several of the
+# thread pools used by the validator.  These settings should be modified by
+# advanced users only.
+
+# The maximum number of threads in the component worker pool
+# component_thread_pool_workers = 10
+
+# The maximum number of threads in the network worker pool
+# network_thread_pool_workers = 10
+
+# The maximum number of threads in the signature verification worker pool
+# signature_thread_pool_workers = 3
+
+# The host and port for Open TSDB database used for metrics
+# opentsdb_url = ""
+
+# The name of the database used for storing metrics
+# opentsdb_db = ""
+
+# opentsdb_username = ""
+
+# opentsdb_password = ""
+
+# The type of authorization that must be performed for the different type of
+# roles on the network. The different supported authorization types are "trust"
+# and "challenge". The default is "trust".
+
+# [roles]
+# network = "trust"
+
+# Any off-chain transactor permission roles. The roles should match the roles
+# stored in state for transactor permissioning. Due to the roles having . in the
+# key, the key must be wrapped in quotes so toml can process it. The value
+# should be the file name of a policy stored in the policy_dir.
+
+# [permissions]
+# transactor = "policy.example"
+# "transactor.transaction_signer" = "policy.example"

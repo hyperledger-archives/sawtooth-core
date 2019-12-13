@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+directories="
+    build
+    cli/build
+    cli/tests
+    families/settings/tests
+    integration
+    integration/sawtooth_integration/tests/*
+    rest_api/build
+    rest_api/tests
+    validator/build
+    validator/tests
+    validator/tests/test_config/*
+"
+
+if [ ! -d "$top_dir/build" ]; then
+  mkdir $top_dir/build
+fi
+
+for dir in $directories
+do
+    if [ -z $ignore ]
+    then
+        ignore="$top_dir/$dir"
+    else
+        ignore="$ignore,$top_dir/$dir"
+    fi
+done
+
+bandit -ll -r --ignore-nosec $top_dir \
+    --exclude $ignore \
+    -f html \
+    -o /project/sawtooth-core/build/bandit.html

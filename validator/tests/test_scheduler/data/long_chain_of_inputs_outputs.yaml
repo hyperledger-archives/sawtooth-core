@@ -1,0 +1,122 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+# Tests that transactions are sorted correctly in _sort_txn_ids_in_reverse
+# by making it very unlikely that they will be sorted correctly by chance if
+# the sorting is not working correctly. The key part of this test is that
+# inputs and outputs contain the addresses alternating between one and two
+# addresses.
+
+---
+- # ----------------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : one
+- # ----------------------------- Batch 2
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha : two
+- # ----------------------------- Batch 3
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : three
+- # ----------------------------- Batch 4
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha : four
+- # ----------------------------- Batch 5
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : five
+- # ----------------------------- Batch 6
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha : six
+- # ----------------------------- Batch 7
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : seven
+- # ----------------------------- Batch 8
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha : eight
+- # ----------------------------- Batch 9
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : nine
+- # ----------------------------- Batch 10
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha : ten
+- # ----------------------------- Batch 11
+  -
+    inputs:
+      - a:sha
+      - b:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha : eleven

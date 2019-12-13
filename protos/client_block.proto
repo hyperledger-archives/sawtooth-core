@@ -1,0 +1,109 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_block_pb2";
+
+import "block.proto";
+import "client_list_control.proto";
+
+
+// A request to return a list of blocks from the validator. May include the id
+// of a particular block to be the `head` of the chain being requested. In that
+// case the list will include that block (if found), and all blocks previous
+// to it on the chain. Can be filtered using specific `block_ids`.
+message ClientBlockListRequest {
+    string head_id = 1;
+    repeated string block_ids = 2;
+    ClientPagingControls paging = 3;
+    repeated ClientSortControls sorting = 4;
+}
+
+// A response that lists a chain of blocks with the newest at the beginning,
+// and the oldest (genesis) block at the end.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NOT_READY - the validator does not yet have a genesis block
+//   * NO_ROOT - the head block specified was not found
+//   * NO_RESOURCE - no blocks were found with the parameters specified
+//   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
+message ClientBlockListResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_PAGING = 6;
+        INVALID_SORT = 7;
+        INVALID_ID = 8;
+    }
+    Status status = 1;
+    repeated Block blocks = 2;
+    string head_id = 3;
+    ClientPagingResponse paging = 4;
+}
+
+// A request to return a specific block from the validator. The block must be
+// specified by its unique id, in this case the block's header signature
+message ClientBlockGetByIdRequest {
+    string block_id = 1;
+}
+
+// A request to return a specific block from the validator. The block must be
+// specified by its block number
+message ClientBlockGetByNumRequest {
+    uint64 block_num = 1;
+}
+
+// A request to return a specific block from the validator. The block
+// containing the given transaction is returned. If no block on the current
+// chain contains the transaction, NO_RESOURCE is returned.
+message ClientBlockGetByTransactionIdRequest {
+    string transaction_id = 1;
+}
+
+// A request to return a specific block from the validator. The block
+// containing the given batch is returned. If no block on the current chain
+// contains the batch, NO_RESOURCE is returned.
+message ClientBlockGetByBatchIdRequest {
+    string batch_id = 1;
+}
+
+// A response that returns the block specified by a ClientBlockGetByIdRequest
+// or  ClientBlockGetByNumRequest.
+//
+// Statuses:
+//   * OK - everything worked as expected
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NO_RESOURCE - no block with the specified id exists
+message ClientBlockGetResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NO_RESOURCE = 5;
+        INVALID_ID = 8;
+    }
+    Status status = 1;
+    Block block = 2;
+}

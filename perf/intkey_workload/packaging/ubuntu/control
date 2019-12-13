@@ -1,0 +1,11 @@
+Source: intkey_workload
+Maintainer: Hyperledger Sawtooth <unknown@unknown>
+Section: rust
+Priority: optional
+Standards-Version: 3.9.6
+Homepage: https://github.com/hyperledger/sawtooth-core
+Package: intkey-workload
+Architecture: amd64
+Depends: libssl1.0.0 (>= 1.0.2g), libzmq5 (>= 4.1.4)
+Description: intkey workload tool for Sawtooth
+Version: @VERSION@

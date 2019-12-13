@@ -1,0 +1,46 @@
+{#
+ # Licensed under Creative Commons Attribution 4.0 International License
+ # https://creativecommons.org/licenses/by/4.0/
+ #}
+
+{%- extends "layout.html" %}
+{% set title = 'Overview' %}
+{% block body %}
+
+  <h1>Hyperledger Sawtooth documentation</h1>
+
+  <p><select id="version_switcher"></select></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("introduction") }}">{% trans %}Introduction{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}learn about Hyperledger Sawtooth{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("app_developers_guide") }}">{% trans %}Application Developer's Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}create applications using the Sawtooth platform{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("architecture") }}">{% trans %}Architecture Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}read high-level architecture and design topics{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("transaction_family_specifications") }}">{% trans %}Transaction Family Specifications{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}dive into the design of existing transaction families{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("sysadmin_guide") }}">{% trans %}System Administrator's Guide{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}perform installation, configuration, and maintenance{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("api_references") }}">{% trans %}SDK and API References{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}explore the Sawtooth SDK and API reference guides{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("cli") }}">{% trans %}CLI Command Reference{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}learn about Sawtooth commands{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("community") }}">{% trans %}Community{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}join the conversation{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("glossary") }}">{% trans %}Glossary{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}understand Sawtooth terminology{% endtrans %}</span></p>
+
+  <p class="biglink"><a class="biglink" href="{{ pathto("contents") }}">{% trans %}Table of Contents{% endtrans %}</a><br/>
+    <span class="linkdescr">{% trans %}view the detailed list of documentation sections{% endtrans %}</span></p>
+
+<script src="_static/version_switcher.js">
+
+{% endblock %}

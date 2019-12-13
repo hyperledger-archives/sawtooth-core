@@ -1,0 +1,2 @@
+include etc/systemd/sawtooth-validator.service
+include etc/default/sawtooth-validator

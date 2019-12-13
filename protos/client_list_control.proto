@@ -1,0 +1,51 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_list_control_pb2";
+
+// Paging controls to be sent with List requests.
+// Attributes:
+//     start: The id of a resource to start the page with
+//     limit: The number of results per page, defaults to 100 and maxes out at 1000
+message ClientPagingControls {
+    string start = 1;
+    int32 limit = 2;
+}
+
+// Information about the pagination used, sent back with List responses.
+// Attributes:
+//     next: The id of the first resource in the next page
+//     start: The id of the first resource in the returned page
+//     limit: The number of results per page, defaults to 100 and maxes out at 1000
+message ClientPagingResponse {
+    string next = 1;
+    string start = 2;
+    int32 limit = 3;
+
+}
+
+// Sorting controls to be sent with List requests. More than one can be sent.
+// If so, the first is used, and additional controls are tie-breakers.
+// Attributes:
+//     keys: Nested set of keys to sort by (i.e. ['default, block_num'])
+//     reverse: Whether or not to reverse the sort (i.e. descending order)
+message ClientSortControls {
+    repeated string keys = 1;
+    bool reverse = 2;
+}

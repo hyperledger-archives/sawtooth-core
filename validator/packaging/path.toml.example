@@ -1,0 +1,84 @@
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+#
+# Sawtooth -- Path Configuration
+#
+
+
+# Important!
+#
+# Configuration using this file is usually unnecessary.  For non-standard
+# directory paths, use of the SAWTOOTH_HOME environment variable is preferred
+# over use of this configuration file.
+#
+# This file should be used when installing on an operating system distribution
+# and the default paths are not appropriate.  For example, some Unix-based
+# operating systems do not use /var/lib, and therefore configuring data_dir
+# to the natural operating system default path for application data would be
+# appropriate.
+
+
+# This file allows for setting the following:
+#   key_dir   -  the directory path to use when loading key files
+#   data_dir  -  the directory path to store data files such as the block store
+#   log_dir   -  the directory path to write log files
+#   policy_dir - the directory path to store policies
+#
+# In addition, the default path examples below include the following path which
+# may not be modified using this file:
+#   conf_dir  -  the directory path containing configuration files
+
+
+# When the SAWTOOTH_HOME environment variable is set, the default paths are as
+# follows:
+#
+#   conf_dir = SAWTOOTH_HOME/etc/
+#   key_dir  = SAWTOOTH_HOME/keys/
+#   data_dir = SAWTOOTH_HOME/data/
+#   log_dir  = SAWTOOTH_HOME/logs/
+#   policy_dir  = SAWTOOTH_HOME/policy/
+#
+# So, for example if SAWTOOTH_HOME is set to a value of /tmp/testing, then the
+# default for data_dir will be /tmp/testing/data/.
+#
+# When the SAWTOOTH_HOME environment variable is not set, then the operating
+# system defaults are used.
+
+
+# On Windows, the path is relative to the CLI command being run.  The directory
+# one level up from the command is the 'base_dir'; the command generally being
+# installed within base_dir/bin/.  The rest of the directories are relative to
+# base_dir:
+#   conf_dir = base_dir\conf\
+#   key_dir  = base_dir\conf\keys\
+#   data_dir = base_dir\data\
+#   log_dir  = base_dir\logs\
+#   policy_dir  = base_dir\policy\
+
+#
+# For example, if Sawtooth is installed in C:\sawtooth\, the validator
+# executable would be C:\sawtooth\bin\validator.exe and the data directory
+# would be C:\sawtooth\data\.
+
+
+# On Linux, the default path settings are:
+#
+#   conf_dir = "/etc/sawtooth"
+#   key_dir  = "/etc/sawtooth/keys"
+#   data_dir = "/var/lib/sawtooth"
+#   log_dir  = "/var/log/sawtooth"
+#   policy_dir  = "/etc/sawtooth/policy"

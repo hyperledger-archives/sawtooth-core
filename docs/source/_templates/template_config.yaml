@@ -1,0 +1,72 @@
+# This configuration file is used by the `make_templated_docs` script to
+# determine which files to generate.
+#
+# Add target files to generate to the `targets` property, with a `template`
+# property specifying the template to use, and any `args` to pass to the
+# template.
+# -----------------------------------------------------------------------------
+
+targets:
+
+  txn_submit_tutorial:
+    template: txn_submit_tutorial.rst
+
+  sdk_submit_tutorial_js:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: JavaScript
+
+  sdk_submit_tutorial_python:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: Python 3
+
+  sdk_submit_tutorial_go:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: Go
+
+  sdk_submit_tutorial_rust:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: Rust
+
+  sdk_TP_tutorial_python:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Python
+
+  sdk_TP_tutorial_rust:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Rust
+
+  sdk_TP_tutorial_js:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: JavaScript
+
+  sdk_TP_tutorial_go:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Go
+
+  sdk_overview_tutorial_python:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Python
+
+  sdk_overview_tutorial_rust:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Rust
+
+  sdk_overview_tutorial_js:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: JavaScript
+
+  sdk_overview_tutorial_go:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Go

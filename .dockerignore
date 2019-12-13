@@ -1,0 +1,99 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# Exclude IDE and Editor files
+/.idea/
+*.sublime*
+
+# Everything else
+/adm/Cargo.lock
+/adm/target/
+/adm/bin/
+
+/build/
+
+/cli/build/
+/cli/sawtooth_cli/protobuf/
+/cli/**/__pycache__/
+
+/families/**/__pycache__/
+/families/settings/sawtooth_settings/target/
+/families/settings/sawtooth_settings/bin/
+/families/settings/sawtooth_settings/Cargo.lock
+/families/settings/tests/sawtooth_settings_test/protobuf/
+/families/block_info/python/sawtooth_block_info/protobuf
+/families/identity/sawtooth_identity/protobuf
+/families/smallbank/smallbank_rust/target/
+/families/smallbank/smallbank_rust/Cargo.lock
+/families/smallbank/smallbank_rust/bin/
+/families/smallbank/smallbank_rust/src/smallbank.rs
+/families/battleship/target/
+
+/coverage
+/coverage/html
+/**/.coverage
+
+/docs/build/
+/docs/source/_autogen/
+/docs/source/cli/output/
+/docs/source/sdks/
+
+/integration/**/__pycache__/
+
+/rest_api/build/
+/rest_api/sawtooth_rest_api/protobuf/
+/rest_api/**/__pycache__/
+
+/sdk/javascript/node_modules
+/sdk/javascript/package-lock.json
+/sdk/javascript/protobuf/protobuf_bundle.json
+/sdk/examples/xo_javascript/node_modules/
+/sdk/examples/xo_javascript/package-lock.json
+/sdk/examples/intkey_javascript/node_modules/
+/sdk/examples/intkey_javascript/package-lock.json
+/sdk/examples/intkey_java/dependency-reduced-pom.xml
+/sdk/examples/intkey_java/target/
+/sdk/examples/xo_java/dependency-reduced-pom.xml
+/sdk/examples/xo_java/target/
+/sdk/java/target/
+
+/validator/build/
+/validator/sawtooth_validator.egg-info/
+/validator/sawtooth_validator/protobuf/
+/validator/**/__pycache__/
+/validator/target/
+/validator/Cargo.lock
+/validator/bin/
+/validator/lib/
+/validator/src/proto
+
+/sdk/cxx/build/
+
+/perf/sawtooth_perf/Cargo.lock
+/perf/sawtooth_perf/target/
+/perf/sawtooth_workload/Cargo.lock
+/perf/sawtooth_workload/target/
+/perf/smallbank_workload/src/smallbank.rs
+/perf/smallbank_workload/Cargo.lock
+/perf/smallbank_workload/target/
+/perf/smallbank_workload/bin/
+/perf/smallbank_workload/smallbank.batches
+/perf/smallbank_workload/smallbank.playlist
+/perf/smallbank_workload/smallbank.txns
+/perf/intkey_workload/Cargo.lock
+/perf/intkey_workload/target
+/perf/intkey_workload/bin
+
+*.batch

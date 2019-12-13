@@ -1,0 +1,159 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  settings-tp:
+    build:
+      context: ../../..
+      dockerfile: ./families/settings/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: settings-tp -vv -C tcp://validator:4004
+
+  identity-tp:
+    build:
+      context: ../../..
+      dockerfile: ./families/identity/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: identity-tp -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
+  intkey-tp-python:
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: intkey-tp-python -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
+  xo-tp-python:
+    image: hyperledger/sawtooth-xo-tp-python:nightly
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: xo-tp-python -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
+  #
+  # This validator depends on test_transactor_permissioning.sh which runs
+  # before the validator starts up. This script makes policy files and
+  # adds the names of these files to the 'permissions' section of
+  # the validator.toml config file.
+  #
+  validator:
+    build:
+      context: ../../..
+      dockerfile: ./validator/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-validator$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - /root/.sawtooth/keys
+    expose:
+      - 4004
+      - 8800
+    command: "
+      bash -c \"\
+        /project/sawtooth-core/integration/sawtooth_integration/tests/scripts_for_permissioning_tests/test_transactor_permissioning.sh && \
+        sawadm keygen && \
+        sawset genesis -k /root/.sawtooth/keys/walter.priv -o config-genesis.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
+        sawtooth-validator -vv \
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5005 \
+            \"
+      "
+    stop_signal: SIGKILL
+
+  devmode:
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
+    command: devmode-engine-rust --connect tcp://validator:5005 -v
+    stop_signal: SIGKILL
+
+  rest-api:
+    build:
+      context: ../../..
+      dockerfile: ./rest_api/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-rest-api$INSTALL_TYPE:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8008
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -vv --connect tcp://validator:4004 --bind rest-api:8008
+    stop_signal: SIGKILL
+
+  test-transactor-permissioning:
+    build:
+      context: ../../..
+      dockerfile: ./integration/sawtooth_integration/docker/integration-tests.dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: integration-tests:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8008
+    depends_on:
+      - validator
+      - rest-api
+    volumes_from:
+      - validator
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -vv --log-capture
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_transactor_permissioning.TestTransactorPermissioning
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/cli:\
+        /project/sawtooth-core/integration"

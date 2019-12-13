@@ -1,0 +1,103 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "authorization_pb2";
+
+message ConnectionRequest {
+  // This is the first message that must be sent to start off authorization.
+  // The endpoint of the connection.
+  string endpoint = 1;
+}
+
+enum RoleType {
+  ROLE_TYPE_UNSET = 0;
+
+  // A shorthand request for asking for all allowed roles.
+  ALL = 1;
+
+  // Role defining validator to validator communication
+  NETWORK = 2;
+}
+
+message ConnectionResponse {
+  // Whether the connection can participate in authorization
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
+  }
+
+  //Authorization Type required for the authorization procedure
+  enum AuthorizationType {
+    AUTHORIZATION_TYPE_UNSET = 0;
+    TRUST = 1;
+    CHALLENGE = 2;
+  }
+
+  message RoleEntry {
+    // The role type for this role entry
+    RoleType role = 1;
+
+    // The Authorization Type required for the above role
+    AuthorizationType auth_type = 2;
+  }
+
+  repeated RoleEntry roles = 1;
+  Status status = 2;
+}
+
+message AuthorizationTrustRequest {
+  // A set of requested RoleTypes
+  repeated RoleType roles = 1;
+  string public_key = 2;
+}
+
+message AuthorizationTrustResponse {
+  // The actual set the requester has access to
+  repeated RoleType roles = 1;
+}
+
+message AuthorizationViolation {
+  // The Role the requester did not have access to
+  RoleType violation = 1;
+}
+
+message AuthorizationChallengeRequest {
+  // Empty message sent to request a payload to sign
+}
+
+message AuthorizationChallengeResponse {
+  // Random payload that the connecting node must sign
+  bytes payload = 1;
+}
+
+message AuthorizationChallengeSubmit {
+  // public key of node
+  string public_key = 1;
+
+  // signature derived from signing the challenge payload
+  string signature = 3;
+
+  // A set of requested Roles
+  repeated RoleType roles = 4;
+}
+
+message AuthorizationChallengeResult {
+  // The approved roles for that connection
+  repeated RoleType roles = 1;
+}

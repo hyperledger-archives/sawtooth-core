@@ -1,0 +1,37 @@
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+#
+# Sawtooth -- REST API Configuration
+#
+
+# The port and host for the api to run on
+#   bind = ["127.0.0.1:8008"]
+
+# The url to connect to a running Validator
+#   connect = "tcp://localhost:4004"
+
+# Seconds to wait for a validator response
+#   timeout = 300
+
+# The host and port for Open TSDB database used for metrics
+# opentsdb_url = ""
+
+# The name of the database used for storing metrics
+# opentsdb_db = ""
+
+# opentsdb_username = ""
+# opentsdb_password = ""

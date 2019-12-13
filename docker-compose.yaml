@@ -1,0 +1,171 @@
+# Copyright 2018 Cargill Incorporated
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: '3.6'
+
+services:
+
+  settings-tp:
+    build:
+      context: .
+      dockerfile: families/settings/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-settings-tp-local:${ISOLATION_ID}
+    volumes:
+      - ./:/project/sawtooth-core
+    container_name: sawtooth-settings-tp-local
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        cd families/settings/sawtooth_settings
+        cargo build --release
+        mkdir -p bin
+        cp target/release/settings-tp bin/settings-tp
+        settings-tp -vv -C tcp://validator:4004
+      "
+    stop_signal: SIGKILL
+
+
+  client:
+    build:
+      context: .
+      dockerfile: docker/sawtooth-shell
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-shell-local:${ISOLATION_ID}
+    volumes:
+      - ./:/project/sawtooth-core
+    container_name: sawtooth-shell-local
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        sawtooth keygen &&
+        tail -f /dev/null
+      "
+    stop_signal: SIGKILL
+
+
+  validator:
+    build:
+      context: .
+      dockerfile: validator/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-validator-local:${ISOLATION_ID}
+    volumes:
+      - ./:/project/sawtooth-core
+    container_name: sawtooth-validator-local
+    expose:
+      - 4004
+      - 8800
+      - 5050
+    ports:
+      - "4004:4004"
+    # start the validator with an empty genesis batch
+    command: |
+      bash -c "
+        bin/protogen
+        cd validator
+        python3 setup.py clean --all
+        python3 setup.py build
+        mkdir -p bin
+        mkdir -p lib
+        cargo build --release
+        cp ./target/release/sawtooth-validator bin/sawtooth-validator
+        cp ./target/release/libsawtooth_validator.so lib/libsawtooth_validator.so
+        sawadm keygen
+        sawset genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
+          -o config.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
+        sawtooth-validator -vv \
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            --bind consensus:tcp://eth0:5050 \
+      "
+    stop_signal: SIGKILL
+
+
+  rest-api:
+    build:
+      context: .
+      dockerfile: rest_api/Dockerfile
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: sawtooth-rest-api-local:${ISOLATION_ID}
+    volumes:
+      - ./:/project/sawtooth-core
+    container_name: sawtooth-rest-api-local
+    ports:
+      - "8008:8008"
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        bin/protogen
+        cd rest_api
+        python3 setup.py clean --all
+        python3 setup.py build
+        sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+      "
+    stop_signal: SIGKILL
+
+
+  devmode-rust:
+    image: hyperledger/sawtooth-devmode-engine-rust:nightly
+    container_name: sawtooth-devmode-engine-rust
+    depends_on:
+      - validator
+    command: |
+        devmode-engine-rust -v --connect tcp://validator:5050
+    stop_signal: SIGKILL
+
+  intkey-tp-python:
+    image: hyperledger/sawtooth-intkey-tp-python:nightly
+    container_name: sawtooth-intkey-tp-python
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        intkey-tp-python -vv -C tcp://validator:4004
+      "
+    stop_signal: SIGKILL
+
+  xo-tp-python:
+    image: hyperledger/sawtooth-xo-tp-python:nightly
+    container_name: sawtooth-xo-tp-python
+    depends_on:
+      - validator
+    command: |
+      bash -c "
+        xo-tp-python -vv -C tcp://validator:4004
+      "
+    stop_signal: SIGKILL

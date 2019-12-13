@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+set -x
+set -e
+
+for pkg in cli validator docs families rest_api \
+    consensus/poet/cli consensus/poet/core consensus/poet/common consensus/poet/families consensus/poet/simulator
+do
+    cd $top_dir/$pkg
+    find . -depth -name \*.pyc -exec rm {} \;
+    find . -depth -name \*.egg-info -exec rm -rf {} \;
+    find . -depth -name __pycache__ -exec rm -rf {} \;
+
+    # Remove empty directories
+    find . -depth -type d -empty -exec rmdir {} \;
+
+    rm -f .coverage
+    rm -f nose2-junit.xml
+    rm -rf build/
+    rm -rf htmlcov/
+    rm -rf dist/
+done
+
+cd $top_dir
+rm -rf build/
+rm -rf cli/sawtooth_cli/protobuf/
+rm -rf consensus/poet/commont/sawtooth_poet_common/protobuf/
+rm -rf rest_api/sawtooth_rest_api/protobuf/
+rm -rf validator/sawtooth_validator/protobuf/
+rm -rf tools/ubuntu-xenial-16.04-cloudimg-console.log
+rm -rf tools/cache/

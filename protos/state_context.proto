@@ -1,0 +1,116 @@
+// Copyright 2016 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "state_context_pb2";
+
+import "events.proto";
+
+// An entry in the State
+message TpStateEntry {
+    string address = 1;
+    bytes data = 2;
+}
+
+// A request from a handler/tp for the values at a series of addresses
+message TpStateGetRequest {
+    // The context id that references a context in the contextmanager
+    string context_id = 1;
+    repeated string addresses = 2;
+}
+
+// A response from the contextmanager/validator with a series of State entries
+message TpStateGetResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
+    }
+
+    repeated TpStateEntry entries = 1;
+    Status status = 2;
+}
+
+// A request from the handler/tp to put entries in the state of a context
+message TpStateSetRequest {
+    string context_id = 1;
+    repeated TpStateEntry entries = 2;
+}
+
+// A response from the contextmanager/validator with the addresses that were set
+message TpStateSetResponse {
+  enum Status {
+      STATUS_UNSET = 0;
+      OK = 1;
+      AUTHORIZATION_ERROR = 2;
+  }
+
+    repeated string addresses = 1;
+    Status status = 2;
+}
+
+// A request from the handler/tp to delete state entries at an collection of addresses
+message TpStateDeleteRequest {
+    string context_id = 1;
+    repeated string addresses = 2;
+}
+
+// A response form the contextmanager/validator with the addresses that were deleted
+message TpStateDeleteResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
+    }
+
+    repeated string addresses = 1;
+    Status status = 2;
+}
+
+// The request from the transaction processor to the validator append data
+// to a transaction receipt
+message TpReceiptAddDataRequest {
+    // The context id that references a context in the context manager
+    string context_id = 1;
+    bytes data = 3;
+}
+
+// The response from the validator to the transaction processor to verify that
+// data has been appended to a transaction receipt
+message TpReceiptAddDataResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
+    }
+
+    Status status = 2;
+}
+
+message TpEventAddRequest {
+    string context_id = 1;
+    Event event = 2;
+}
+
+message TpEventAddResponse {
+    enum Status {
+      STATUS_UNSET = 0;
+      OK = 1;
+      ERROR = 2;
+    }
+    Status status = 2;
+}

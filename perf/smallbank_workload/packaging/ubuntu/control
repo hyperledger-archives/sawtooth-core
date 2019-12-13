@@ -1,0 +1,11 @@
+Source: smallbank_workload
+Maintainer: Hyperledger Sawtooth <unknown@unknown>
+Section: rust
+Priority: optional
+Standards-Version: 3.9.6
+Homepage: https://github.com/hyperledger/sawtooth-core
+Package: smallbank-workload
+Architecture: all
+Depends: libssl1.0.0 (>= 1.0.2g), libzmq5 (>= 4.1.4)
+Description: Smallbank workload tool for Sawtooth
+Version: @VERSION@
