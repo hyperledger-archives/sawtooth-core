@@ -59,7 +59,7 @@ For example, in Python the address could be constructed with:
 
 .. code-block:: pycon
 
-  >>> '00b10c00' + hex(block_num)[2:].zfill(62))
+  >>> '00b10c00' + hex(block_num)[2:].zfill(62)
 
 BlockInfo
 ---------
