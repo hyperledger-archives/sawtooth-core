@@ -1362,7 +1362,7 @@ mod tests {
             .unwrap();
         block_manager.put(vec![f.clone()]).unwrap();
 
-        let blockstore = Box::new(InMemoryBlockStore::new());
+        let blockstore = Box::new(InMemoryBlockStore::default());
         block_manager.add_store("commit", blockstore).unwrap();
 
         block_manager.persist("C", "commit").unwrap();

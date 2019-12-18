@@ -27,7 +27,6 @@ pub enum ChainCommitStateError {
     MissingDependency(String),
     DuplicateTransaction(String),
     DuplicateBatch(String),
-    BlockStoreUpdated,
     Error(String),
 }
 
@@ -679,7 +678,7 @@ mod test {
                 .put(branch)
                 .expect("The branches were created to be `put` in the block manager without error");
         }
-        let block_store = Box::new(InMemoryBlockStore::new());
+        let block_store = Box::new(InMemoryBlockStore::default());
         block_manager
             .add_store("commit", block_store.clone())
             .expect("The block manager failed to add a blockstore");

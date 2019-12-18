@@ -32,22 +32,22 @@ extern crate rand;
 extern crate uluru;
 
 // exported modules
-pub mod consensus;
-pub mod database;
-pub mod execution;
-pub mod gossip;
-pub mod hashlib;
-pub mod journal;
+pub(crate) mod consensus;
+pub(crate) mod database;
+pub(crate) mod execution;
+pub(crate) mod gossip;
+pub(crate) mod hashlib;
+pub(crate) mod journal;
 mod metrics;
-pub mod proto;
-pub mod pylogger;
-pub mod scheduler;
-pub mod state;
+pub(crate) mod proto;
+pub(crate) mod pylogger;
+pub(crate) mod scheduler;
+pub(crate) mod state;
 
-pub mod batch;
+pub(crate) mod batch;
 mod batch_ffi;
-pub mod block;
+pub(crate) mod block;
 mod block_ffi;
-pub mod transaction;
+pub(crate) mod transaction;
 
-pub mod ffi;
+pub(crate) mod ffi;

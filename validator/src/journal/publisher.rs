@@ -74,11 +74,6 @@ pub enum FinalizeBlockError {
 }
 
 #[derive(Debug)]
-pub enum StartError {
-    Disconnected,
-}
-
-#[derive(Debug)]
 pub enum BlockPublisherError {
     UnknownBlock(String),
 }
@@ -112,11 +107,6 @@ impl BlockPublisherState {
             pending_batches,
             block_references: HashMap::new(),
         }
-    }
-
-    pub fn get_previous_block_id(&self) -> Option<String> {
-        let candidate_block = self.candidate_block.as_ref();
-        candidate_block.map(|cb| cb.previous_block_id())
     }
 }
 
@@ -734,7 +724,6 @@ impl IncomingBatchSender {
 pub enum BatchQueueError {
     SenderError(SendError<Batch>),
     Timeout,
-    MutexPoisonError(String),
 }
 
 impl From<SendError<Batch>> for BatchQueueError {
@@ -769,10 +758,6 @@ impl PendingBatchesPool {
 
     pub fn len(&self) -> usize {
         self.batches.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     pub fn iter(&self) -> Iter<Batch> {

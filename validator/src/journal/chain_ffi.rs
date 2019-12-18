@@ -54,6 +54,7 @@ pub enum ErrorCode {
     InvalidDataDir = 0x02,
     InvalidPythonObject = 0x03,
     InvalidBlockId = 0x04,
+    #[allow(dead_code)]
     UnknownBlock = 0x05,
 
     Unknown = 0xff,

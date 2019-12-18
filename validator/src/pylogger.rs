@@ -22,6 +22,7 @@ use cpython::{
 use log;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
+#[allow(dead_code)]
 pub fn set_up_logger(verbosity: u64, py: Python) {
     let verbosity_level: Level = determine_log_level(verbosity);
 

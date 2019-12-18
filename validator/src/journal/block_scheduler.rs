@@ -65,13 +65,6 @@ impl<B: BlockStatusStore> BlockScheduler<B> {
             .expect("The BlockScheduler Mutex was poisoned")
             .done(block_id)
     }
-
-    pub fn contains(&self, block_id: &str) -> bool {
-        self.state
-            .lock()
-            .expect("The BlockScheduler Mutex was poisoned")
-            .contains(block_id)
-    }
 }
 
 struct BlockSchedulerState<B: BlockStatusStore> {
@@ -206,10 +199,6 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 
         self.update_gauges();
         ready
-    }
-
-    fn contains(&self, block_id: &str) -> bool {
-        self.pending.contains(block_id) || self.processing.contains(block_id)
     }
 
     fn add_block_to_pending(&mut self, block: Block) {

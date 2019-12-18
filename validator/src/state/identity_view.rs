@@ -37,8 +37,6 @@ const MAX_KEY_PARTS: usize = 4;
 pub enum IdentityViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),
-
-    UnknownError,
 }
 
 impl From<StateDatabaseError> for IdentityViewError {
@@ -67,21 +65,25 @@ impl IdentityView {
     }
 
     /// Returns a single Role by name, if it exists.
+    #[allow(dead_code)]
     pub fn get_role(&self, name: &str) -> Result<Option<Role>, IdentityViewError> {
         self.get_identity_value::<Role, RoleList>(name, &role_address(name))
     }
 
     /// Returns all of the Roles under the Identity namespace
+    #[allow(dead_code)]
     pub fn get_roles(&self) -> Result<Vec<Role>, IdentityViewError> {
         self.get_identity_value_list::<Role, RoleList>(ROLE_NS)
     }
 
     /// Returns a single Policy by name, if it exists.
+    #[allow(dead_code)]
     pub fn get_policy(&self, name: &str) -> Result<Option<Policy>, IdentityViewError> {
         self.get_identity_value::<Policy, PolicyList>(name, &policy_address(name))
     }
 
     /// Returns all of the Policies under the Identity namespace
+    #[allow(dead_code)]
     pub fn get_policies(&self) -> Result<Vec<Policy>, IdentityViewError> {
         self.get_identity_value_list::<Policy, PolicyList>(POLICY_NS)
     }

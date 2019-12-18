@@ -24,6 +24,7 @@ use state::state_view_factory::StateViewFactory;
 pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 1,
+    #[allow(dead_code)]
     Unknown = 0xFF,
 }
 

@@ -49,7 +49,6 @@ const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
 pub enum ValidationError {
     BlockValidationFailure(String),
     BlockValidationError(String),
-    BlockStoreUpdated,
 }
 
 type BlockValidationResultCache =
@@ -125,7 +124,6 @@ impl From<ChainCommitStateError> for ValidationError {
                 ))
             }
             ChainCommitStateError::Error(reason) => ValidationError::BlockValidationError(reason),
-            ChainCommitStateError::BlockStoreUpdated => ValidationError::BlockStoreUpdated,
         }
     }
 }
@@ -305,10 +303,6 @@ where
         for (rx, tx) in channels {
             self.setup_thread(rx, tx);
         }
-    }
-
-    pub fn has_block(&self, block_id: &str) -> bool {
-        self.block_scheduler.contains(block_id)
     }
 
     fn return_sender(&self) -> InternalSender {
