@@ -20,16 +20,19 @@ items:
 
 # --------------------------=== pod 0 ===--------------------------
 
-- apiVersion: extensions/v1beta1
+- apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: pbft-0
   spec:
+    selector:
+      matchLabels:
+        app: pbft-0
     replicas: 1
     template:
       metadata:
         labels:
-          name: pbft-0
+          app: pbft-0
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
@@ -180,16 +183,19 @@ items:
 
 # --------------------------=== pod 1 ===--------------------------
 
-- apiVersion: extensions/v1beta1
+- apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: pbft-1
   spec:
+    selector:
+      matchLabels:
+        app: pbft-1
     replicas: 1
     template:
       metadata:
         labels:
-          name: pbft-1
+          app: pbft-1
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
@@ -329,16 +335,19 @@ items:
 
 # --------------------------=== pod 2 ===--------------------------
 
-- apiVersion: extensions/v1beta1
+- apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: pbft-2
   spec:
+    selector:
+      matchLabels:
+        app: pbft-2
     replicas: 1
     template:
       metadata:
         labels:
-          name: pbft-2
+          app: pbft-2
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
@@ -480,16 +489,19 @@ items:
 
 # --------------------------=== pod 3 ===--------------------------
 
-- apiVersion: extensions/v1beta1
+- apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: pbft-3
   spec:
+    selector:
+      matchLabels:
+        app: pbft-3
     replicas: 1
     template:
       metadata:
         labels:
-          name: pbft-3
+          app: pbft-3
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
@@ -632,16 +644,19 @@ items:
 
 # --------------------------=== pod 4 ===--------------------------
 
-- apiVersion: extensions/v1beta1
+- apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: pbft-4
   spec:
+    selector:
+      matchLabels:
+        app: pbft-4
     replicas: 1
     template:
       metadata:
         labels:
-          name: pbft-4
+          app: pbft-4
       spec:
         containers:
           - name: sawtooth-intkey-tp-python
