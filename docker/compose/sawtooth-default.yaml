@@ -88,3 +88,18 @@ services:
         sawtooth keygen && \
         tail -f /dev/null \
         \""
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger-ui
+    ports:
+      - "8009:8080"
+    environment:
+      SWAGGER_JSON: /tmp/openapi.yaml
+    command: "sh -c \"\
+        wget \
+          -q -O /tmp/openapi.yaml \
+          https://raw.githubusercontent.com/hyperledger/sawtooth-core/master/rest_api/openapi.yaml && \
+        /usr/share/nginx/run.sh \
+        \""
+
