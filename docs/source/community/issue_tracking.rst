@@ -21,7 +21,7 @@ issues that will help you get involved right away. Log into
 `Linux Foundation Account <https://identity.linuxfoundation.org/>`_)
 and see the Sawtooth "help-wanted" list:
 
-https://jira.hyperledger.org/issues/?filter=10612
+https://jira.hyperledger.org/issues/?jql=labels+%3D+help-wanted
 
 
 How to Report an Issue
