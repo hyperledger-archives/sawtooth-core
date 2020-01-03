@@ -87,3 +87,13 @@ services:
         sawtooth keygen && \
         tail -f /dev/null \
         \""
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger-ui-local
+    volumes:
+      - ../../:/project/sawtooth-core
+    ports:
+      - "8009:8080"
+    environment:
+      SWAGGER_JSON: /project/sawtooth-core/rest_api/openapi.yaml
