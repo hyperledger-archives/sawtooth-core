@@ -13,7 +13,7 @@ An event is “in a subscription” if the event’s ``event_type`` field matche
 subscription’s ``event_type`` field, and the event matches any filters that are
 in the event subscription. If multiple filters are included in a single
 subscription, only events that pass *all* filters will be received.
-Note, however, that you can have have multiple subscriptions at a time, so you
+Note, however, that you can have multiple subscriptions at a time, so you
 will receive all events that pass the filter or filters in each subscription.
 
 
