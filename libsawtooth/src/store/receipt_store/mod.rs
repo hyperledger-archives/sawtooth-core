@@ -132,22 +132,22 @@ impl TransactionReceiptStore {
 mod tests {
     use super::*;
 
+    use transact::protocol::receipt::TransactionReceiptBuilder;
+
     /// Test that a receipt store works properly.
     fn test_receipt_store(mut receipt_store: TransactionReceiptStore) {
         assert_eq!(receipt_store.count().expect("Failed to get count"), 0);
 
-        let receipt1 = TransactionReceipt {
-            state_changes: vec![],
-            events: vec![],
-            data: vec![],
-            transaction_id: "ab".into(),
-        };
-        let receipt2 = TransactionReceipt {
-            state_changes: vec![],
-            events: vec![],
-            data: vec![],
-            transaction_id: "cd".into(),
-        };
+        let receipt1 = TransactionReceiptBuilder::new()
+            .valid()
+            .with_transaction_id("ab".into())
+            .build()
+            .expect("failed to build receipt1");
+        let receipt2 = TransactionReceiptBuilder::new()
+            .invalid()
+            .with_transaction_id("cd".into())
+            .build()
+            .expect("failed to build receipt2");
 
         receipt_store
             .append(vec![receipt1.clone(), receipt2.clone()])
