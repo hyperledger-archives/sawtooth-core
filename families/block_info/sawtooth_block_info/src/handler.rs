@@ -41,10 +41,10 @@ fn validate_timestamp(timestamp: u64, tolerance: u64) -> Result<(), ApplyError> 
         .duration_since(UNIX_EPOCH)
         .expect("System time is before Unix epoch.")
         .as_secs();
-    if timestamp < (now - tolerance) || (now + tolerance) < timestamp {
+    if now + tolerance < timestamp {
         let warning_string = format!(
-            "Timestamp must be less than local time. Expected {0} in ({1}-{2}, {1}+{2})",
-            timestamp, now, tolerance
+            "Timestamp must be less than local time. Expected {0} + {1} < {2}",
+            now, tolerance, timestamp
         );
         warn!("Invalid Transaction: {}", &warning_string);
         return Err(ApplyError::InvalidTransaction(warning_string));
