@@ -411,19 +411,16 @@ impl<V: FromBytes, I: AsBytes + FromBytes + PartialEq + PartialOrd> LmdbOrderedS
                 .unwrap_or_else(|| index_cursor.next::<[u8], [u8]>(&access));
             match next_entry {
                 Ok((idx, key)) => {
-                    let idx = I::from_bytes(idx).map_err(|err| err.to_string())?;
+                    let idx = I::from_bytes(idx)?;
                     // If this index is in the range, add the value to the cache; otherwise, exit.
                     if !self.range.contains(&idx) {
                         break;
                     } else {
-                        self.cache.push_back(
-                            V::from_bytes(
-                                access
-                                    .get::<_, [u8]>(&self.main_db, key)
-                                    .map_err(|err| err.to_string())?,
-                            )
-                            .map_err(|err| err.to_string())?,
-                        );
+                        self.cache.push_back(V::from_bytes(
+                            access
+                                .get::<_, [u8]>(&self.main_db, key)
+                                .map_err(|err| err.to_string())?,
+                        )?);
                         // Update the range start to reflect only what's left
                         self.range.start = Bound::Excluded(idx);
                     }

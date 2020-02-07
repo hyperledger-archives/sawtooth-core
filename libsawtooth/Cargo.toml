@@ -27,7 +27,7 @@ description = """\
 log = "0.4"
 lmdb-zero = { version = "0.4", optional = true }
 redis = { version = "0.13.0", default-features = false, optional = true }
-transact = "0.1"
+transact = "0.2"
 
 [features]
 default = []
