@@ -1,8 +1,8 @@
 
 ![Hyperledger Sawtooth](images/sawtooth_logo_light_blue-small.png)
 
-Hyperledger Sawtooth Core Developer's Setup Guide
-=============
+# Hyperledger Sawtooth Core Developer's Setup Guide
+
 
 If you are planning to contribute code to the Sawtooth project, please review
 the [contributing guide](CONTRIBUTING.md)
@@ -17,8 +17,8 @@ the guest operating system.
 is not strictly required as the command shell, many of the scripts in the build
 system are Bash scripts and require Bash to execute.
 
-Step One: Install Docker
--------------
+## Prerequisites
+
 The Sawtooth core requirements are:
 - Docker Community Edition (version 17.05.0-ce or newer)
 - Docker Compose (version 1.13.0 or newer)
@@ -54,8 +54,130 @@ $ sudo adduser $USER docker
 
 You will need to log out and log back in to your system for the change in group membership to take effect.
 
-Step Two: Configure Proxy (Optional)
--------------
+
+## Clone the Repository
+
+
+**Note:** You must have `git` installed in order to clone the Sawtooth source
+code repository. You can find up-to-date installation instructions
+at "Getting Started - Installing Git": <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>.
+
+Open a terminal and run the following commands:
+
+```bash
+   $ cd $HOME
+   $ mkdir sawtooth
+   $ cd sawtooth
+   $ git clone https://github.com/hyperledger/sawtooth-core.git
+```
+
+## Build Docker Images
+
+
+The Sawtooth build and test infrastructure requires that the dependencies be built.
+These dependencies include the protocol buffers definitions (under the ``protos``
+directory) for the target languages and a set of docker images with
+the required build and runtime dependencies installed.
+
+To build all the dependencies for running the full test-suite, run:
+
+  ```bash
+    $ docker-compose -f docker/compose/sawtooth-build.yaml up
+  ```
+
+**Note:** the `sawtooth-build` step above is a dependency for the automated test suite defined below.
+
+To build the requirements to run a validator network, run this command:
+
+  ```bash
+    $ docker-compose build
+  ```
+
+This will build docker images suitable for running a validator, rest api,
+settings transaction processor, intkey and xo python transaction processors,
+and a client to interact with the network.
+
+**Tip:** If you see `Host not found` errors in the output, see the
+[Docker DNS(Optional)](#Docker-DNS-(Optional)) section above.
+
+**Note:** This build environment uses Docker to virtualize the build and
+to execute the code in the development directory. This allows you to
+build and test the changes made to the local source without installing local
+dependencies on your machine.
+
+If you wish to configure your development machine to do compilation
+directly on the host without Docker virtualization, see the `Dockerfile` in
+any component directory. For example, the file
+`sawtooth-core/validator/Dockerfile` describes the configuration and components
+needed to build and run the validator on a system.
+
+Also provided is a docker-compose file which builds a full set of images
+with Sawtooth installed, and only the run-time dependencies installed.
+
+  ```bash
+    $ docker-compose -f docker-compose-installed.yaml build
+  ```
+
+These installed images also generate .deb artifacts during build. They can be found
+in the `/tmp` dir in any of the images.
+
+**Note:** Internet connection speeds vary. This build step may take some time. 
+
+**Tip:** There are also possible errors during Docker builds, like transient
+ issues for downloads. An example is the protobuf download from Github step.
+ If the download results in an incomplete/corrupt archive, the build process 
+ will exit `non-zero code: 9`.
+
+## Start a Validator Node
+
+
+To run a full validator node from the local source:
+
+```bash
+  $ docker-compose up
+```
+
+This command starts a validator with the following components attached to it:
+
+  - REST API (available on host port 8008)
+  - IntKey transaction processor (Python implementation)
+  - Settings transaction processor
+  - XO transaction processor (Python implementation)
+  - Shell (for running Sawtooth commands)
+
+From another console window, you can access the shell with this command:
+
+```bash
+  $ docker-compose exec client bash
+```
+
+This command uses Docker Compose and the development Docker images. These
+images have the runtime dependencies installed, but run Sawtooth
+from the source in your workspace. You can inspect
+`docker-compose.yaml` to see how the various components are
+launched and connected.
+
+## Run Automated Tests
+
+
+**Note:** The automated tests rely on Docker to ensure reproducibility.
+You must have Docker images that were built with the
+`docker-compose -f docker/compose/sawtooth-build.yaml up` command
+as described above.
+
+To run the automated tests for Python components, while excluding
+Rust components:
+
+```bash
+  $ bin/run_tests -x rust_sdk
+```
+
+**Note:** The `run_tests` command provides the ``-x`` flag to allow you to exclude
+various components from the tests. You can also specify which tests to run
+with the ``-m`` flag. Run the command `run_tests -h` for help.
+
+## Configure Proxy (Optional)
+
 
 If you are behind a network proxy, follow these steps before continuing.
 
@@ -138,123 +260,3 @@ For example, to use Google's public DNS servers:
     nameserver 8.8.4.4
 ```
 
-Step Three: Clone the Repository
--------------
-
-**Note:** You must have `git` installed in order to clone the Sawtooth source
-code repository. You can find up-to-date installation instructions
-at "Getting Started - Installing Git": <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>.
-
-Open a terminal and run the following commands:
-
-```bash
-   $ cd $HOME
-   $ mkdir sawtooth
-   $ cd sawtooth
-   $ git clone https://github.com/hyperledger/sawtooth-core.git
-```
-
-Step Four: Build Docker Images
--------------
-
-The Sawtooth build and test infrastructure requires that the dependencies be built.
-These dependencies include the protocol buffers definitions (under the ``protos``
-directory) for the target languages and a set of docker images with
-the required build and runtime dependencies installed.
-
-To build all the dependencies for running the full test-suite, run:
-
-  ```bash
-    $ docker-compose -f docker/compose/sawtooth-build.yaml up
-  ```
-
-**Note:** the `sawtooth-build` step above is a dependency for the automated test suite defined below.
-
-To build the requirements to run a validator network, run this command:
-
-  ```bash
-    $ docker-compose build
-  ```
-
-This will build docker images suitable for running a validator, rest api,
-settings transaction processor, intkey and xo python transaction processors,
-and a client to interact with the network.
-
-**Tip:** If you see `Host not found` errors in the output, see the
-[Docker DNS(Optional)](#Docker-DNS-(Optional)) section above.
-
-**Note:** This build environment uses Docker to virtualize the build and
-to execute the code in the development directory. This allows you to
-build and test the changes made to the local source without installing local
-dependencies on your machine.
-
-If you wish to configure your development machine to do compilation
-directly on the host without Docker virtualization, see the `Dockerfile` in
-any component directory. For example, the file
-`sawtooth-core/validator/Dockerfile` describes the configuration and components
-needed to build and run the validator on a system.
-
-Also provided is a docker-compose file which builds a full set of images
-with Sawtooth installed, and only the run-time dependencies installed.
-
-  ```bash
-    $ docker-compose -f docker-compose-installed.yaml build
-  ```
-
-These installed images also generate .deb artifacts during build. They can be found
-in the `/tmp` dir in any of the images.
-
-**Note:** Internet connection speeds vary. This build step may take some time. 
-
-**Tip:** There are also possible errors during Docker builds, like transient
- issues for downloads. An example is the protobuf download from Github step.
- If the download results in an incomplete/corrupt archive, the build process 
- will exit `non-zero code: 9`.
-
-Step Five: Start a Validator Node
--------------
-
-To run a full validator node from the local source:
-
-```bash
-  $ docker-compose up
-```
-
-This command starts a validator with the following components attached to it:
-
-  - REST API (available on host port 8008)
-  - IntKey transaction processor (Python implementation)
-  - Settings transaction processor
-  - XO transaction processor (Python implementation)
-  - Shell (for running Sawtooth commands)
-
-From another console window, you can access the shell with this command:
-
-```bash
-  $ docker-compose exec client bash
-```
-
-This command uses Docker Compose and the development Docker images. These
-images have the runtime dependencies installed, but run Sawtooth
-from the source in your workspace. You can inspect
-`docker-compose.yaml` to see how the various components are
-launched and connected.
-
-Step Six: Run Automated Tests
--------------
-
-**Note:** The automated tests rely on Docker to ensure reproducibility.
-You must have Docker images that were built with the
-`docker-compose -f docker/compose/sawtooth-build.yaml up` command
-as described above.
-
-To run the automated tests for Python components, while excluding
-Rust components:
-
-```bash
-  $ bin/run_tests -x rust_sdk
-```
-
-**Note:** The `run_tests` command provides the ``-x`` flag to allow you to exclude
-various components from the tests. You can also specify which tests to run
-with the ``-m`` flag. Run the command `run_tests -h` for help.
