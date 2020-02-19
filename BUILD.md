@@ -1,8 +1,8 @@
 
 ![Hyperledger Sawtooth](images/sawtooth_logo_light_blue-small.png)
 
-Hyperledger Sawtooth Core Developer's Setup Guide
-=============
+# Hyperledger Sawtooth Core Developer's Setup Guide
+
 
 If you are planning to contribute code to the Sawtooth project, please review
 the [contributing guide](CONTRIBUTING.md)
@@ -17,8 +17,8 @@ the guest operating system.
 is not strictly required as the command shell, many of the scripts in the build
 system are Bash scripts and require Bash to execute.
 
-Step One: Install Docker
--------------
+## Prerequisites
+
 The Sawtooth core requirements are:
 - Docker Community Edition (version 17.05.0-ce or newer)
 - Docker Compose (version 1.13.0 or newer)
@@ -36,6 +36,31 @@ Ubuntu:
 
 - Install the latest version of Docker Engine for Linux: <https://docs.docker.com/engine/installation/linux/ubuntu>
 
+- Install Docker Compose: <https://docs.docker.com/compose/install/>
+
+**Note:** The minimum version of Docker Engine necessary is 17.03.0-ce.
+  Linux distributions often ship with older versions of Docker.
+
+Next, add your username to the group `docker` to avoid having to run every
+docker command as a `sudo`. (Otherwise, you will need to prefix each
+command in Step Four, Step Five, and Step Six with `sudo`.)
+Run the following command:
+
+```bash
+$ sudo adduser $USER docker
+```
+
+**Note:** If $USER is not set in the environment on your system, replace $USER in the previous command with your username.
+
+You will need to log out and log back in to your system for the change in group membership to take effect.
+
+
+## Clone the Repository
+
+
+**Note:** You must have `git` installed in order to clone the Sawtooth source
+code repository. You can find up-to-date installation instructions
+at "Getting Started - Installing Git": <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>.
 - Install Docker Compose: <https://docs.docker.com/compose/install/>
 
 **Note:** The minimum version of Docker Engine necessary is 17.03.0-ce.
