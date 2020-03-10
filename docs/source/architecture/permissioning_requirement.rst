@@ -257,7 +257,7 @@ Allow all transaction signers to submit transactions
 |                    |   transaction signer.                                  |
 |                    | - A network operator can configure the                 |
 |                    |   whole Sawtooth network to accept transactions signed |
-|                    |   by any batch signer.                                 |
+|                    |   by any transaction signer.                           |
 +--------------------+--------------------------------------------------------+
 
 Allow only specific transaction signers to submit transactions
@@ -283,8 +283,8 @@ Allow only specific transaction signers to submit transactions
 |                    |   validator to accept transactions signed only by      |
 |                    |   predefined transaction signers.                      |
 |                    | - A network operator can configure the                 |
-|                    |   whole Sawtooth network to accept batches only from   |
-|                    |   specific transaction signers.                        |
+|                    |   whole Sawtooth network to accept transactions only   |
+|                    |   from specific transaction signers.                   |
 +--------------------+--------------------------------------------------------+
 
 Restrict the type of transactions transactors can sign
