@@ -312,13 +312,13 @@ the TransactionReceiptStore after a block is validated.
 
 Transaction receipts will only be stored in this off-chain store and will not
 be included in the block. Note that because a transaction may exist in multiple
-blocks at a time, the transaction receipt is stored by both transaction id and
+blocks at a time, the transaction receipt is stored with both transaction id and
 block state root hash.
 
 .. code-block:: python
 
   class TransactionReceiptStore:
-  	def put_receipt(self, txn_id, receipt):
+  	def put_receipt(self, txn_id, state_root_hash, receipt):
       	"""Add the given transaction receipt to the store. Does not guarantee
          	it has been written to the backing store.
 
@@ -329,7 +329,7 @@ block state root hash.
           	receipt (TransactionReceipt): the receipt object to store.
       	"""
 
-  	def get_receipt(self, txn_id):
+  	def get_receipt(self, txn_id, state_root_hash):
       	"""Returns the TransactionReceipt
 
       	Args:
