@@ -65,7 +65,7 @@ provided by other lottery algorithms. The probability of election
 is proportional to the resources contributed (in this case, resources
 are general purpose processors with a trusted execution environment).
 An attestation of execution provides information for verifying that the
-certificate was created within the enclave (and that the validator waited
+Timer was created within the enclave (and that the validator waited
 the allotted time). Further, the low cost of participation increases the
 likelihood that the population of validators will be large, increasing
 the robustness of the consensus algorithm.
@@ -150,7 +150,7 @@ SealKey
   and ``sgx_unseal_data()`` functions.
 
 PoetSealKey
-  The Poet SGX enclave Seal Key. It must be obtained through the
+  The PoET SGX enclave Seal Key. It must be obtained through the
   SGX SDK ```sgx_get_key()`` function passing a fixed 32 byte constant as
   ``key_id`` argument.
 
@@ -419,7 +419,7 @@ The server side of the validator runs the following sign-up procedure:
    a. Pass sign-up certificate of new participant (OPK, EPID Pseudonym, PPK,
       current :math:`WaitCertId_{n}` to upper layers for registration in EndPoint
       registry.
-   #. Goto 1.
+   #. Goto 1，namely waiting for a join request.
 
 Election Phase
 --------------
@@ -506,13 +506,14 @@ Security Considerations
 -----------------------
 
 1. :math:`T_{WT}` **motivation**: A validator has at most :math:`T_{WT}` seconds
-   to consume a WaitTimer, namely obtain a WaitCertificate on it after the
+   to consume a WaitTimer, namely generate a WaitCertificate on it after the
    WaitTimer itself has expired. This constraint is enforced to avoid that in
    case there are no transactions to build a block for some time several
    validators might hold back after they waited the duration of their WaitTimers
    and generate the WaitCertificate only once enough transactions are available.
    At the point they will all send out their WaitCertificates generating a lot
-   of traffic and possibly inducing forks. The timeout mitigates this problem.
+   of traffic and possibly inducing forks. The :math:`T_{WT}` motivation mitigates
+   this problem.
 
 #. **Enclave compromise:** a compromised SGX platform that is able to
    arbitrarily win elections cannot affect the correctness of the system, but
@@ -546,7 +547,7 @@ Security Considerations
    #. The nonce field in WaitCertificate is set to a random value so that a
       validator does not have control over the resulting :math:`WaitCertId_{n}`.
       A validator winning an election could otherwise try different blockDigest
-      input values to createWaitCertificate and broadcast the WaitCertificate
+      input values to create WaitCertificate and broadcast the WaitCertificate
       whose :math:`WaitCertId_{n}` results in the lowest duration of its
       next WaitTimer.
 
@@ -571,7 +572,7 @@ Security Considerations
       elapses. This again prevents a malicious user from running multiple
       instances of the enclave to create multiple WaitCertificates (each with a
       different nonce) resulting in different WaitCertId digests and selecting
-      the one that would result in the lowest duration for a new WaitTimer.
+      the one that would result in the lowest duration of its next WaitTimer.
 
    #. A monotonic counter with id MCID is created at the same time PPK and PSK
       are generated and the triple (MCID, PPK, PSK) is encrypted using AES-GCM
@@ -594,7 +595,7 @@ providing username and ledgername as input parameters to
 ``generateSignUpData()`` and ``unsealSignUpData()``. Then the sign-up tuple 
 (username, ledgername, PPK, PSK, MCID) is sealed to disk, with username and
 ledgername used to generate the filename. Anytime a user authenticates to the
-service the latter can have the enclave unseal and use the sign-up tuple from
+server the latter can have the enclave unseal and use the sign-up tuple from
 the file corresponding to that user (and ledger).
 
 Population Size and Local Mean Computation
@@ -634,19 +635,19 @@ Assuming :math:`b` is the number of blocks currently claimed, the local mean is 
 z-test
 ======
 
-A z-test is used to test the hypothesis that a validator won elections at a
-higher average rate than expected.
+A z-test is used to test the null hypothesis that a validator won elections
+at a normal average rate.
 
 **Parameters**:
 
-1. zmax: test value, it measures the maximum deviation from the expected mean.
-   It is selected so that the desired confidence interval $\alpha$ is obtained.
+1. zmax: critical value of z, it measures the maximum deviation from the expected mean.
+   It is selected so that the desired Significance Level (also known as Alpha Level) is obtained.
    Example configurations are:
 
-   a. :math:`\textrm{ztest}=1.645 \leftrightarrow \alpha=0.05`
-   #. :math:`\textrm{ztest}=2.325 \rightarrow \alpha=0.01`
-   #. :math:`\textrm{ztest}=2.575 \rightarrow \alpha=0.005`
-   #. :math:`\textrm{ztest}=3.075 \rightarrow \alpha=0.001`
+   a. :math:`\textrm{zmax}=1.645 \leftrightarrow \alpha=0.05`
+   #. :math:`\textrm{zmax}=2.325 \rightarrow \alpha=0.01`
+   #. :math:`\textrm{zmax}=2.575 \rightarrow \alpha=0.005`
+   #. :math:`\textrm{zmax}=3.075 \rightarrow \alpha=0.001`
 
 2. testValidatorId: the validator identifier under test.
 
@@ -654,12 +655,12 @@ higher average rate than expected.
    population size. Each pair represents one published transaction block.
 
 #. minObservedWins: minimum number of election wins that needs to be observed
-   for the identifier under test.
+   for the validator under test.
 
 The z-test is computed as follows::
 
     observedWins = expectedWins = blockCount = 0
-    foreach block = (validatorId, populationEstimate) in blockArray:
+    for each block = (validatorId, populationEstimate) in blockArray:
         blockCount += 1
         expectedWins += 1 / populationEstimate
 
@@ -673,8 +674,9 @@ The z-test is computed as follows::
                     return False
     return True
 
-If the z-test fails (False is returned) then the validator under test won
-elections at a higher average rate than expected.
+If the z-test statistic (z) is more than the critical value of z (zmax), the null hypothesis
+is rejected (False is returned). Then the validator under test won elections at
+a higher average rate than expected.
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
