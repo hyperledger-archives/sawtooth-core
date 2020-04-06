@@ -86,7 +86,7 @@ Validation rules use the following simple syntax:
 The following rules are defined:
 
 NofX
-  Only N transaction of transaction type X may be included in a block. The first
+  Only N transactions of transaction type X may be included in a block. The first
   argument must be an integer. The second argument is the name of a transaction
   family. For example, the string
   ``NofX:2,intkey`` means allow only two IntegerKey transactions per block.
@@ -100,9 +100,9 @@ XatY
   backwards from the last transaction in the block. The first transaction in the
   block has index 0. The last transaction in the block has index -1. If abs(Y)
   is larger than the number of transactions per block, then there would not be
-  a transaction of type X at Y and the block would be invalid. For example, the
-  string ``XatY:intkey,0`` means the first transaction in the block must be an
-  IntegerKey transaction.
+  a transaction of type X at Y and the block would be validated as invalid. For
+  example, the string ``XatY:intkey,0`` means the first transaction in the block 
+  must be an IntegerKey transaction.
 
 local
   A transaction must be signed by the same key as the block. This rule takes a
