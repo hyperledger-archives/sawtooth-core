@@ -193,4 +193,4 @@ class IntkeyTestVerifier:
             in zip(self.verbs, self.initial, self.incdec)
         ]
 
-        return {word: val for word, val in zip(self.valid, expected_values)}
+        return dict(zip(self.valid, expected_values))
