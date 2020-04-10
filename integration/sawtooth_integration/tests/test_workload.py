@@ -50,8 +50,11 @@ class TestWorkload(unittest.TestCase):
         # run workload for WORKLOAD_TIME seconds
         time.sleep(WORKLOAD_TIME)
 
-        subprocess.run(shlex.split(
-            'sawtooth block list --url {}'.format(self.client.url)))
+        subprocess.run(
+            shlex.split(
+                'sawtooth block list --url {}'.format(self.client.url)
+            ), check=True
+        )
 
         blocks = self.client.list_blocks()
 

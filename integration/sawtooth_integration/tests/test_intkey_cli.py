@@ -94,4 +94,6 @@ class TestInkeyCli(unittest.TestCase):
 def _send_command(command):
     return subprocess.run(
         shlex.split(
-            command))
+            command
+        ), check=True
+    )
