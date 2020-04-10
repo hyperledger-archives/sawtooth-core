@@ -267,7 +267,7 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         block_store = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
 
-        self.assertEqual([], [b for b in block_store.get_predecessor_iter()])
+        self.assertEqual([], list(block_store.get_predecessor_iter()))
 
     def _create_chain(self, length):
         chain = []
