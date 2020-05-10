@@ -153,11 +153,11 @@ Create keys for two players to play the game:
 
 .. code-block:: console
 
-    $ sawtooth keygen jack
+    root@client# sawtooth keygen jack
     writing file: /home/ubuntu/.sawtooth/keys/jack.priv
     writing file: /home/ubuntu/.sawtooth/keys/jack.addr
 
-    $ sawtooth keygen jill
+    root@client# sawtooth keygen jill
     writing file: /home/ubuntu/.sawtooth/keys/jill.priv
     writing file: /home/ubuntu/.sawtooth/keys/jill.addr
 
@@ -174,7 +174,7 @@ Create a game named ``my-game`` with the following command:
 
 .. code-block:: console
 
-    $ xo create my-game --username jack
+    root@client# xo create my-game --username jack
 
 .. note::
 
@@ -187,7 +187,7 @@ existing games:
 
 .. code-block:: console
 
-    $ xo list
+    root@client# xo list
     GAME            PLAYER 1        PLAYER 2        BOARD     STATE
     my-game                                         --------- P1-NEXT
 
@@ -203,7 +203,7 @@ Step 6. Take a Space as Player 1
 .. note::
 
    The first player to issue an ``xo take`` command to a newly created game is
-   recorded as ``PLAYER 1`` . The second player to issue a ``take`` command is
+   recorded as ``PLAYER 1`` . The second player to issue a ``xo take`` command is
    recorded by username as ``PLAYER 2``.
 
    The ``--username`` argument determines where the ``xo`` client should look
@@ -217,7 +217,7 @@ example, Jack takes space 5:
 
 .. code-block:: console
 
-    $ xo take my-game 5 --username jack
+    root@client# xo take my-game 5 --username jack
 
 
 This diagram shows the number of each space.
@@ -257,7 +257,7 @@ Jill takes space 1:
 
 .. code-block:: console
 
-    $ xo take my-game 1 --username jill
+    root@client# xo take my-game 1 --username jill
 
 
 Step 8. Show the Current Game Board
@@ -268,7 +268,7 @@ following command:
 
 .. code-block:: console
 
-    $ xo show my-game
+    root@client# xo show my-game
 
 The output includes the game name, the first six characters of each player's
 public key, the game state, and the current board state. This example shows the
