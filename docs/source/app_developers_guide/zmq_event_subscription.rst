@@ -218,7 +218,7 @@ events that have occurred since the creation of a specific block or blocks.
 
 The ``ClientEventsSubscribeRequest`` protobuf message takes a list of block IDs
 (``last_known_block_ids``), which can be used to provide the last block ID that
-a client has seen. If blocks have been committed after that block, the missed
+a client has seen. If blocks have been committed before that block, the missed
 events will be sent in the order they would have occurred.
 
 .. note::
