@@ -57,7 +57,7 @@ The following filter types are supported:
   The filter's regular expression must evaluate to a match for at least one of
   the event's attribute values. For example, this filter type with the match
   string "``ab.``" would succeed for a single event with the following
-  attributes, because it matches the attribute value ``abc``.
+  attributes, because it matches the attribute value ``ab.``.
 
   .. code-block:: none
 
