@@ -486,7 +486,7 @@ or check the status of Sawtooth components in any container.
    .. code-block:: console
 
       CONTAINER ID IMAGE                                     COMMAND               CREATED       STATUS       PORTS                            NAMES
-      76f6731c43a9 hyperledger/sawtooth-all:nightly              "bash -c 'sawtooth k" 7 minutes ago Up 7 minutes 4004/tcp, 8008/tcp               sawtooth-shell-default
+      76f6731c43a9 hyperledger/sawtooth-shell:nightly              "bash -c 'sawtooth k" 7 minutes ago Up 7 minutes 4004/tcp, 8008/tcp               sawtooth-shell-default
       9844faed9e9d hyperledger/sawtooth-intkey-tp-python:nightly "intkey-tp-python -v" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-intkey-tp-python-default
       44db125c2dca hyperledger/sawtooth-settings-tp:nightly      "settings-tp -vv -C " 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-settings-tp-default
       875df9d022d6 hyperledger/sawtooth-xo-tp-python:nightly     "xo-tp-python -vv -C" 7 minutes ago Up 7 minutes 4004/tcp                         sawtooth-xo-tp-python-default
