@@ -192,8 +192,8 @@ An application can subscribe to both ``sawtooth/block-commit`` and
 ``sawtooth/state-delta`` events to match state changes with the block
 in which the changes occurred.
 
-All lists of ``block-commit`` events received from the validator will contain
-only a single ``block-commit`` event for the block that the events came from.
+All lists of ``state-delta`` events received from the validator will contain
+only a single ``block-commit`` event for the block that the ``state-delta`` events came from.
 
 .. important::
 
