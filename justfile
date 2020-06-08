@@ -62,6 +62,20 @@ clean:
         $cmd
     done
 
+fix:
+    #!/usr/bin/env sh
+    set -e
+    for crate in $(echo {{crates}})
+    do
+        for feature in $(echo {{features}})
+        do
+            cmd="cargo fix --manifest-path=$crate/Cargo.toml $feature"
+            echo "\033[1m$cmd\033[0m"
+            $cmd
+        done
+    done
+    echo "\n\033[92mFix Success\033[0m\n"
+
 lint:
     #!/usr/bin/env sh
     set -e
