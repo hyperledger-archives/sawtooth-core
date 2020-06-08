@@ -82,6 +82,14 @@ lint:
     done
     echo "\n\033[92mLint Success\033[0m\n"
 
+
+docker-lint:
+    docker-compose -f docker/compose/run-lint.yaml up \
+        --build \
+        --abort-on-container-exit \
+        --exit-code-from lint-python \
+        lint-python
+
 test:
     #!/usr/bin/env sh
     set -e
