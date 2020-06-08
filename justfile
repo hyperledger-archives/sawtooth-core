@@ -35,6 +35,10 @@ features := '\
     --no-default-features \
     '
 
+docker-build-doc:
+    docker build . -f ci/sawtooth-build-docs -t sawtooth-build-docs
+    docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-docs
+
 build:
     #!/usr/bin/env sh
     set -e
