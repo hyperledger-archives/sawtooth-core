@@ -208,7 +208,7 @@ fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
     Ok(val)
 }
 
-fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let batch_size: usize = args
         .value_of("batch-size")
         .unwrap_or("1")
@@ -296,20 +296,21 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let context = signing::create_context("secp256k1")?;
 
-    let private_key: Result<Box<signing::PrivateKey>, Box<Error>> = match args.value_of("key") {
-        Some(file) => {
-            let mut key_file = File::open(file)?;
-            let mut buf = String::new();
-            key_file.read_to_string(&mut buf)?;
-            buf.pop(); // remove the new line
-            let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
-            Ok(Box::new(private_key))
-        }
-        None => {
-            let private_key = context.new_random_private_key()?;
-            Ok(private_key)
-        }
-    };
+    let private_key: Result<Box<dyn signing::PrivateKey>, Box<dyn Error>> =
+        match args.value_of("key") {
+            Some(file) => {
+                let mut key_file = File::open(file)?;
+                let mut buf = String::new();
+                key_file.read_to_string(&mut buf)?;
+                buf.pop(); // remove the new line
+                let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+                Ok(Box::new(private_key))
+            }
+            None => {
+                let private_key = context.new_random_private_key()?;
+                Ok(private_key)
+            }
+        };
 
     let priv_key = private_key?;
 

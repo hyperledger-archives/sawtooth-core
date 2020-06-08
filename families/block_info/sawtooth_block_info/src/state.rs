@@ -48,10 +48,10 @@ pub struct BlockInfo {
 }
 
 pub struct BlockInfoState<'a> {
-    context: &'a mut TransactionContext,
+    context: &'a mut dyn TransactionContext,
 }
 impl<'a> BlockInfoState<'a> {
-    pub fn new(context: &'a mut TransactionContext) -> BlockInfoState {
+    pub fn new(context: &'a mut dyn TransactionContext) -> BlockInfoState {
         BlockInfoState { context }
     }
 

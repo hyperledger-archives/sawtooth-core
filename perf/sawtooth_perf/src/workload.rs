@@ -83,7 +83,7 @@ impl fmt::Display for WorkloadError {
 }
 
 impl error::Error for WorkloadError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             WorkloadError::HttpError(ref err) => err.cause(),
             WorkloadError::UriError(ref err) => err.cause(),
@@ -207,7 +207,7 @@ pub fn log(
 
 /// Call next on the BatchList Iterator and return the batchlist if no error.
 pub fn get_next_batchlist(
-    batch_list_iter: &mut Iterator<Item = BatchListResult>,
+    batch_list_iter: &mut dyn Iterator<Item = BatchListResult>,
     batch_map: &Rc<RefCell<BatchMap>>,
     batches: &Rc<RefCell<Vec<BatchList>>>,
 ) -> Result<BatchList, WorkloadError> {
