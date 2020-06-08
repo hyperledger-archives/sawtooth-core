@@ -325,7 +325,9 @@ class MockBatchInjector(BatchInjector):
 
 class MockConsensusNotifier(ConsensusNotifier):
     def __init__(self):
-        super().__init__(consensus_service=None)
+        super().__init__(consensus_service=None,
+                         consensus_registry=None,
+                         public_key=None)
         self._new_block = None
         self._committed_block = None
 
