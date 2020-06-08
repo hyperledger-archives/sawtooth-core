@@ -27,3 +27,14 @@ rand = "0.6"
 tokio-core = "0.1"
 tokio-timer = "0.1"
 log = "0.4"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]
