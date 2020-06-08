@@ -46,12 +46,12 @@ a distributed version of the two-player game
 {% if language == 'Python' %}
 
 This tutorial also describes how a client can use the {{ language }} SDK
-to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
+to create transactions and submit them as :term:`Sawtooth batches<batch>`.
 
 {% elif language == 'JavaScript' %}
 
 This tutorial also describes how a client can use the {{ language }} SDK
-to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
+to create transactions and submit them as :term:`Sawtooth batches<batch>`.
 
 {% endif %}
 
