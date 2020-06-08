@@ -35,7 +35,7 @@ where
     T: Message,
 {
     /// Creates a new `LengthDelimitedMessageSource` from a given reader.
-    pub fn new(source: &'a mut Read) -> Self {
+    pub fn new(source: &'a mut dyn Read) -> Self {
         let source = protobuf::CodedInputStream::new(source);
         LengthDelimitedMessageSource {
             source,

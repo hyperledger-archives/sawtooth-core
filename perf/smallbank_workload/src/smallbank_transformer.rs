@@ -95,7 +95,7 @@ impl<'a> SBPayloadTransformer<'a> {
     pub fn payload_to_transaction(
         &mut self,
         payload: &SmallbankTransactionPayload,
-    ) -> Result<Transaction, Box<Error>> {
+    ) -> Result<Transaction, Box<dyn Error>> {
         let mut txn = Transaction::new();
         let mut txn_header = TransactionHeader::new();
 

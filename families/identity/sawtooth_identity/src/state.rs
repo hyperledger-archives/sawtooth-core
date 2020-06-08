@@ -16,11 +16,11 @@ use protobuf;
 use std::iter::repeat;
 
 pub struct IdentityState<'a> {
-    context: &'a mut TransactionContext,
+    context: &'a mut dyn TransactionContext,
 }
 
 impl<'a> IdentityState<'a> {
-    pub fn new(context: &'a mut TransactionContext) -> IdentityState {
+    pub fn new(context: &'a mut dyn TransactionContext) -> IdentityState {
         IdentityState { context }
     }
 

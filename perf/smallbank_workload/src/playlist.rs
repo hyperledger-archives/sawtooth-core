@@ -69,7 +69,7 @@ macro_rules! yaml_map(
 ///
 /// A random seed may be provided to create repeatable, random output.
 pub fn generate_smallbank_playlist(
-    output: &mut Write,
+    output: &mut dyn Write,
     num_accounts: usize,
     num_transactions: usize,
     seed: Option<i32>,
@@ -95,10 +95,10 @@ pub fn generate_smallbank_playlist(
 /// the `generate_smallbank_playlist` function.  All transactions will be
 /// signed with the given `PrivateKey` instance.
 pub fn process_smallbank_playlist(
-    output: &mut Write,
-    playlist_input: &mut Read,
-    signing_context: &signing::Context,
-    signing_key: &signing::PrivateKey,
+    output: &mut dyn Write,
+    playlist_input: &mut dyn Read,
+    signing_context: &dyn signing::Context,
+    signing_key: &dyn signing::PrivateKey,
 ) -> Result<(), PlaylistError> {
     let payloads = try!(read_smallbank_playlist(playlist_input));
 
@@ -199,7 +199,7 @@ pub fn create_smallbank_playlist(
     num_accounts: usize,
     num_transactions: usize,
     seed: Option<i32>,
-) -> Box<Iterator<Item = SmallbankTransactionPayload>> {
+) -> Box<dyn Iterator<Item = SmallbankTransactionPayload>> {
     let rng = match seed {
         Some(seed) => StdRng::seed_from_u64(seed as u64),
         None => StdRng::from_entropy(),
@@ -215,7 +215,7 @@ pub fn create_smallbank_playlist(
 }
 
 pub fn read_smallbank_playlist(
-    input: &mut Read,
+    input: &mut dyn Read,
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
     let buf = try!(read_yaml(input));
@@ -227,7 +227,7 @@ pub fn read_smallbank_playlist(
     Ok(results)
 }
 
-fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
+fn read_yaml(input: &mut dyn Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
     try!(input
         .read_to_string(&mut buf)
@@ -600,7 +600,7 @@ impl error::Error for PlaylistError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             PlaylistError::IoError(ref err) => Some(err),
             PlaylistError::YamlOutputError(_) => None,
@@ -612,11 +612,11 @@ impl error::Error for PlaylistError {
 }
 
 struct FmtWriter<'a> {
-    writer: Box<&'a mut Write>,
+    writer: Box<&'a mut dyn Write>,
 }
 
 impl<'a> FmtWriter<'a> {
-    pub fn new(writer: &'a mut Write) -> Self {
+    pub fn new(writer: &'a mut dyn Write) -> Self {
         FmtWriter {
             writer: Box::new(writer),
         }

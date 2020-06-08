@@ -43,7 +43,7 @@ impl std::error::Error for CliError {
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&dyn std::error::Error> {
         match *self {
             CliError::ArgumentError(_) => None,
             CliError::EnvironmentError(_) => None,

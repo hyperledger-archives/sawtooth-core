@@ -138,7 +138,7 @@ impl TransactionHandler for IdentityTransactionHandler {
     fn apply(
         &self,
         transaction: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         check_allowed_transactor(transaction, context)?;
 
@@ -241,7 +241,7 @@ fn set_role(data: &[u8], state: &mut IdentityState) -> Result<(), ApplyError> {
 
 fn check_allowed_transactor(
     transaction: &TpProcessRequest,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let header = transaction.get_header();
 
@@ -272,7 +272,7 @@ fn check_allowed_transactor(
 
 fn get_state_data(
     address: &str,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
     context.get_state_entry(address).map_err(|err| {
         warn!("Invalid transaction: Failed to load state: {:?}", err);
