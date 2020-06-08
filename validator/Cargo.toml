@@ -30,3 +30,14 @@ crate-type = ["dylib"]
 [[bin]]
 name = "sawtooth-validator"
 path = "src/main.rs"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]

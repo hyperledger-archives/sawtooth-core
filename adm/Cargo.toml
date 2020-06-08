@@ -47,3 +47,14 @@ help create the genesis block when initializing a validator, and manage the bloc
 depends = "$auto"
 section = "admin"
 maintainer-scripts = "packaging/ubuntu"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]

@@ -60,3 +60,14 @@ conf-files = [
     "/lib/systemd/system/sawtooth-identity-tp.service",
     "/etc/default/sawtooth-identity-tp"
 ]
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]

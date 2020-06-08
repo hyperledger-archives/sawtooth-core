@@ -21,3 +21,14 @@ sawtooth-sdk = "0.3"
 sawtooth_perf = { path = "../sawtooth_perf" }
 protobuf = "2.0"
 clap = "2"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]
