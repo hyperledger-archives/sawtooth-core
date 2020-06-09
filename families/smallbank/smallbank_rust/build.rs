@@ -34,16 +34,18 @@ fn main() {
     let proto_src_files = glob_simple("../protos/*.proto");
     println!("{:?}", proto_src_files);
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &dest_path.to_str().unwrap(),
-        input: &proto_src_files
-            .iter()
-            .map(|proto_file| proto_file.as_ref())
-            .collect::<Vec<&str>>(),
-        includes: &["../protos"],
-        customize: Customize::default(),
-    })
-    .expect("Error generating rust files from smallbank protos");
+    protoc_rust::Codegen::new()
+        .out_dir(&dest_path.to_str().unwrap())
+        .inputs(
+            &proto_src_files
+                .iter()
+                .map(|proto_file| proto_file.as_ref())
+                .collect::<Vec<&str>>(),
+        )
+        .includes(&["../protos"])
+        .customize(Customize::default())
+        .run()
+        .expect("Error generating rust files from smallbank protos");
 
     // Create mod.rs accordingly
     let mod_file_content = proto_src_files
