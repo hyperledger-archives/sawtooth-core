@@ -234,7 +234,6 @@ impl CandidateBlock {
                 "Dropping previously committed batch: {}",
                 batch_header_signature.as_str()
             );
-            return;
         } else if self.check_batch_dependencies_add_batch(&batch) {
             let mut batches_to_add = vec![];
 
