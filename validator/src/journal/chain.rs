@@ -266,7 +266,7 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
 impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 'static>
     ChainController<TEP, PV>
 {
-    #![allow(too_many_arguments)]
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV>,
