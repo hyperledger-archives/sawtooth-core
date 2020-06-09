@@ -54,10 +54,10 @@ where
             }
 
             // read the delimited length
-            let next_len = try!(self.source.read_raw_varint32());
-            let buf = try!(self.source.read_raw_bytes(next_len));
+            let next_len = self.source.read_raw_varint32()?;
+            let buf = self.source.read_raw_bytes(next_len)?;
 
-            let msg = try!(protobuf::parse_from_bytes(&buf));
+            let msg = protobuf::parse_from_bytes(&buf)?;
             results.push(msg);
         }
         Ok(results)
