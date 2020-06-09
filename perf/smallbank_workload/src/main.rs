@@ -245,7 +245,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     ) {
         Ok(_) => Ok(()),
         Err(err) => {
-            println!("{}", err.description());
+            println!("{}", err);
             Err(Box::new(err))
         }
     }
@@ -577,12 +577,6 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-        }
-    }
-
     fn cause(&self) -> Option<&dyn Error> {
         match *self {
             CliError::ArgumentError(_) => None,

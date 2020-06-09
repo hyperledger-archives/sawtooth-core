@@ -590,16 +590,6 @@ impl fmt::Display for PlaylistError {
 }
 
 impl error::Error for PlaylistError {
-    fn description(&self) -> &str {
-        match *self {
-            PlaylistError::IoError(ref err) => err.description(),
-            PlaylistError::YamlOutputError(_) => "Yaml Output Error",
-            PlaylistError::YamlInputError(_) => "Yaml Input Error",
-            PlaylistError::MessageError(ref err) => err.description(),
-            PlaylistError::SigningError(ref err) => err.description(),
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             PlaylistError::IoError(ref err) => Some(err),
