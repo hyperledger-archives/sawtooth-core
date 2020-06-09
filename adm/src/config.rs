@@ -37,11 +37,11 @@ pub struct PathConfig {
 pub fn get_path_config() -> PathConfig {
     match env::var("SAWTOOTH_HOME") {
         Ok(prefix) => PathConfig {
-            config_dir: Path::new(&prefix).join("etc").to_path_buf(),
-            log_dir: Path::new(&prefix).join("logs").to_path_buf(),
-            data_dir: Path::new(&prefix).join("data").to_path_buf(),
-            key_dir: Path::new(&prefix).join("keys").to_path_buf(),
-            policy_dir: Path::new(&prefix).join("policy").to_path_buf(),
+            config_dir: Path::new(&prefix).join("etc"),
+            log_dir: Path::new(&prefix).join("logs"),
+            data_dir: Path::new(&prefix).join("data"),
+            key_dir: Path::new(&prefix).join("keys"),
+            policy_dir: Path::new(&prefix).join("policy"),
         },
         Err(_) => PathConfig {
             config_dir: Path::new(DEFAULT_CONFIG_DIR).to_path_buf(),
