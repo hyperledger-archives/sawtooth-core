@@ -94,22 +94,6 @@ impl error::Error for WorkloadError {
             WorkloadError::UnknownRestApiError => Some(&WorkloadError::UnknownRestApiError),
         }
     }
-
-    fn description(&self) -> &str {
-        match *self {
-            WorkloadError::HttpError(ref err) => err.description(),
-            WorkloadError::UriError(ref err) => err.description(),
-            WorkloadError::IoError(ref err) => err.description(),
-            WorkloadError::ProtobufError(ref err) => err.description(),
-            WorkloadError::BatchReadingError(ref err) => err.description(),
-            WorkloadError::NoBatchError => {
-                "There was an error resulting in lacking a batch to submit."
-            }
-            WorkloadError::UnknownRestApiError => {
-                "The rest api produced an error response that we were not expecting."
-            }
-        }
-    }
 }
 
 impl From<BatchReadingError> for WorkloadError {

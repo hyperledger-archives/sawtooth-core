@@ -251,14 +251,6 @@ impl fmt::Display for BatchReadingError {
 }
 
 impl error::Error for BatchReadingError {
-    fn description(&self) -> &str {
-        match *self {
-            BatchReadingError::MessageError(ref err) => err.description(),
-            BatchReadingError::BatchingError(ref err) => err.description(),
-            BatchReadingError::UnknownError => "There was an unknown batch error.",
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             BatchReadingError::MessageError(ref err) => Some(err),

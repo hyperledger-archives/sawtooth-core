@@ -20,7 +20,6 @@ extern crate glob;
 extern crate protoc_rust;
 
 use std::env;
-use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -89,11 +88,7 @@ fn main() {
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
         let mut file = match fs::File::create(&mod_file_path) {
-            Err(err) => panic!(
-                "Unable to create file {}: {}",
-                mod_file_name,
-                err.description()
-            ),
+            Err(err) => panic!("Unable to create file {}: {}", mod_file_name, err,),
             Ok(file) => file,
         };
 
@@ -107,11 +102,7 @@ fn main() {
                 .join("\n")
         );
         match file.write_all(content.as_bytes()) {
-            Err(err) => panic!(
-                "Unable to write to {}: {}",
-                mod_file_name,
-                err.description()
-            ),
+            Err(err) => panic!("Unable to write to {}: {}", mod_file_name, err,),
             Ok(_) => println!("generated {}", mod_file_name),
         }
     } else {
@@ -155,11 +146,7 @@ fn read_last_build_time() -> Duration {
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME).join("mod.rs");
     match fs::File::open(Path::new(&dest_path.to_str().unwrap())) {
         Err(err) => {
-            println!(
-                "unable to open {:?}: {}; defaulting to 0",
-                dest_path,
-                err.description()
-            );
+            println!("unable to open {:?}: {}; defaulting to 0", dest_path, err,);
             Duration::new(0, 0)
         }
         Ok(file) => get_modified_time(file),
