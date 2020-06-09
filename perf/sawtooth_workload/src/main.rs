@@ -60,7 +60,7 @@ fn main() {
 }
 
 #[inline]
-fn arg_error(msg: &str) -> Result<(), Box<Error>> {
+fn arg_error(msg: &str) -> Result<(), Box<dyn Error>> {
     Err(Box::new(CliError::ArgumentError(String::from(msg))))
 }
 
@@ -108,7 +108,7 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -174,7 +174,7 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -237,7 +237,7 @@ impl std::error::Error for CliError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             CliError::ArgumentError(_) => None,
         }

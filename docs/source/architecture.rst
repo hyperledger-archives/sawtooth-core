@@ -10,7 +10,7 @@ an enterprise blockchain platform for building distributed ledger applications
 and networks.
 
 This guide starts by explaining the important concepts of :term:`global state`
-and :term:`Sawtooth batches<Batch>`. Next, it describes key parts of the
+and :term:`Sawtooth batches<batch>`. Next, it describes key parts of the
 :term:`validator` and other core features, including the journal for block
 management, consensus, transaction scheduling, permissioning, and more.
 

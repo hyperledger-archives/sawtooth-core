@@ -84,7 +84,7 @@ fn main() {
 }
 
 #[inline]
-fn arg_error(msg: &str) -> Result<(), Box<Error>> {
+fn arg_error(msg: &str) -> Result<(), Box<dyn Error>> {
     Err(Box::new(CliError::ArgumentError(String::from(msg))))
 }
 
@@ -155,7 +155,7 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("1").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -295,7 +295,7 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -361,7 +361,7 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -486,7 +486,7 @@ fn create_playlist_process_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     match args.subcommand() {
         ("create", Some(args)) => run_playlist_create_command(args),
         ("process", Some(args)) => run_playlist_process_command(args),
@@ -494,7 +494,7 @@ fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     }
 }
 
-fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let num_accounts = match args.value_of("accounts").unwrap().parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -521,7 +521,7 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         None => None,
     };
 
-    let mut output_writer: Box<Write> = match args.value_of("output") {
+    let mut output_writer: Box<dyn Write> = match args.value_of("output") {
         Some(file_name) => try!(File::create(file_name).map(Box::new)),
         None => Box::new(std::io::stdout()),
     };
@@ -536,10 +536,10 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     Ok(())
 }
 
-fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let mut in_file = try!(File::open(args.value_of("input").unwrap()));
 
-    let mut output_writer: Box<Write> = match args.value_of("output") {
+    let mut output_writer: Box<dyn Write> = match args.value_of("output") {
         Some(file_name) => try!(File::create(file_name).map(Box::new)),
         None => Box::new(std::io::stdout()),
     };
@@ -583,7 +583,7 @@ impl std::error::Error for CliError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             CliError::ArgumentError(_) => None,
         }

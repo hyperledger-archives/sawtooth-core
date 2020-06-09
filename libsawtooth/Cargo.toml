@@ -31,7 +31,20 @@ transact = "0.2"
 
 [features]
 default = []
-experimental = ["btree-store", "lmdb-store", "receipt-store", "redis-store", "stores"]
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+    "btree-store",
+    "lmdb-store",
+    "receipt-store",
+    "redis-store",
+    "stores",
+]
+
 btree-store = ["stores"]
 lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]

@@ -183,7 +183,7 @@ impl TransactionHandler for BlockInfoTransactionHandler {
     fn apply(
         &self,
         request: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let payload = BlockInfoPayload::new(request.get_payload())?;
         let mut state = BlockInfoState::new(context);

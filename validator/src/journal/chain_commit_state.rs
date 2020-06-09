@@ -280,7 +280,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B2b0t0".into()]))
             .collect();
 
@@ -299,7 +299,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
             .collect();
 
@@ -318,7 +318,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B3-1b0t0", "B3-1b0t1", "B3-1b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
             .collect();
 
@@ -337,7 +337,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B4-3b0t0".into()]))
             .collect();
 
