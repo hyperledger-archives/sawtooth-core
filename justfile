@@ -93,7 +93,7 @@ lint:
     do
         for feature in $(echo {{features}})
         do
-            cmd="cargo clippy --manifest-path=$crate/Cargo.toml $feature"
+            cmd="cargo clippy --manifest-path=$crate/Cargo.toml $feature -- -D warnings"
             echo "\033[1m$cmd\033[0m"
             $cmd
         done

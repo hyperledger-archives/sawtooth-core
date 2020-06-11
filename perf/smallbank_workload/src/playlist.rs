@@ -82,9 +82,9 @@ pub fn generate_smallbank_playlist(
         .collect();
 
     let final_yaml = Yaml::Array(txn_array);
-    try!(emitter
+    emitter
         .dump(&final_yaml)
-        .map_err(PlaylistError::YamlOutputError));
+        .map_err(PlaylistError::YamlOutputError)?;
 
     Ok(())
 }
@@ -100,13 +100,13 @@ pub fn process_smallbank_playlist(
     signing_context: &dyn signing::Context,
     signing_key: &dyn signing::PrivateKey,
 ) -> Result<(), PlaylistError> {
-    let payloads = try!(read_smallbank_playlist(playlist_input));
+    let payloads = read_smallbank_playlist(playlist_input)?;
 
     let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(signing_context
+    let pub_key = signing_context
         .get_public_key(signing_key)
-        .map_err(PlaylistError::SigningError));
+        .map_err(PlaylistError::SigningError)?;
     let pub_key_hex = pub_key.as_hex();
 
     let start = Instant::now();
@@ -125,9 +125,9 @@ pub fn process_smallbank_playlist(
         txn_header.set_inputs(addresses.clone());
         txn_header.set_outputs(addresses.clone());
 
-        let payload_bytes = try!(payload
+        let payload_bytes = payload
             .write_to_bytes()
-            .map_err(PlaylistError::MessageError));
+            .map_err(PlaylistError::MessageError)?;
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
@@ -138,21 +138,20 @@ pub fn process_smallbank_playlist(
         txn_header.set_signer_public_key(pub_key_hex.clone());
         txn_header.set_batcher_public_key(pub_key_hex.clone());
 
-        let header_bytes = try!(txn_header
+        let header_bytes = txn_header
             .write_to_bytes()
-            .map_err(PlaylistError::MessageError));
+            .map_err(PlaylistError::MessageError)?;
 
-        let signature = try!(signer
+        let signature = signer
             .sign(&header_bytes)
-            .map_err(PlaylistError::SigningError));
+            .map_err(PlaylistError::SigningError)?;
 
         txn.set_header(header_bytes);
         txn.set_header_signature(signature);
         txn.set_payload(payload_bytes);
 
-        try!(txn
-            .write_length_delimited_to_writer(output)
-            .map_err(PlaylistError::MessageError))
+        txn.write_length_delimited_to_writer(output)
+            .map_err(PlaylistError::MessageError)?
     }
 
     Ok(())
@@ -218,8 +217,8 @@ pub fn read_smallbank_playlist(
     input: &mut dyn Read,
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
-    let buf = try!(read_yaml(input));
-    let yaml_array = try!(load_yaml_array(&buf));
+    let buf = read_yaml(input)?;
+    let yaml_array = load_yaml_array(&buf)?;
     for yaml in yaml_array.iter() {
         results.push(SmallbankTransactionPayload::from(yaml));
     }
@@ -229,14 +228,14 @@ pub fn read_smallbank_playlist(
 
 fn read_yaml(input: &mut dyn Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
-    try!(input
+    input
         .read_to_string(&mut buf)
-        .map_err(PlaylistError::IoError));
+        .map_err(PlaylistError::IoError)?;
     Ok(buf.into())
 }
 
 fn load_yaml_array(yaml_str: &str) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
-    let mut yaml = try!(YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError));
+    let mut yaml = YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError)?;
     let element = yaml.remove(0);
     let yaml_array = element.as_vec().cloned().unwrap().clone();
 
@@ -590,16 +589,6 @@ impl fmt::Display for PlaylistError {
 }
 
 impl error::Error for PlaylistError {
-    fn description(&self) -> &str {
-        match *self {
-            PlaylistError::IoError(ref err) => err.description(),
-            PlaylistError::YamlOutputError(_) => "Yaml Output Error",
-            PlaylistError::YamlInputError(_) => "Yaml Input Error",
-            PlaylistError::MessageError(ref err) => err.description(),
-            PlaylistError::SigningError(ref err) => err.description(),
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             PlaylistError::IoError(ref err) => Some(err),

@@ -518,7 +518,7 @@ pub struct BlockPublisher {
 }
 
 impl BlockPublisher {
-    #![allow(too_many_arguments)]
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         commit_store: CommitStore,
         block_manager: BlockManager,

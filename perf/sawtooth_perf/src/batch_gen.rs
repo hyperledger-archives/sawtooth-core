@@ -96,13 +96,6 @@ impl fmt::Display for BatchingError {
 }
 
 impl error::Error for BatchingError {
-    fn description(&self) -> &str {
-        match *self {
-            BatchingError::MessageError(ref err) => err.description(),
-            BatchingError::SigningError(ref err) => err.description(),
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             BatchingError::MessageError(ref err) => Some(err),
