@@ -33,7 +33,6 @@ pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
 mod commit_store;
 pub mod commit_store_ffi;
-mod fork_cache;
 pub mod incoming_batch_queue_ffi;
 pub mod publisher;
 pub mod publisher_ffi;
