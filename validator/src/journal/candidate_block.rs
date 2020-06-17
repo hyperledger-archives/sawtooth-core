@@ -24,7 +24,7 @@ use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
 
-use hashlib::sha256_digest_strs;
+use sawtooth::hashlib::sha256_digest_strs;
 
 use batch::Batch;
 use block::Block;

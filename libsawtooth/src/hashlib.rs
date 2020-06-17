@@ -15,38 +15,22 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate cbor;
-extern crate cpython;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate python3_sys as py_ffi;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate rand;
-extern crate sawtooth;
-extern crate uluru;
+pub fn sha256_digest_str(item: &str) -> String {
+    hex::encode(openssl::sha::sha256(item.as_bytes()))
+}
 
-// exported modules
-pub(crate) mod consensus;
-pub(crate) mod database;
-pub(crate) mod execution;
-pub(crate) mod gossip;
-pub(crate) mod journal;
-mod metrics;
-pub(crate) mod proto;
-pub(crate) mod pylogger;
-pub(crate) mod scheduler;
-pub(crate) mod state;
+pub fn sha256_digest_strs(strs: &[&str]) -> Vec<u8> {
+    let mut hasher = openssl::sha::Sha256::new();
+    for item in strs {
+        hasher.update(item.as_bytes());
+    }
+    let mut bytes = Vec::new();
+    bytes.extend(hasher.finish().iter());
+    bytes
+}
 
-pub(crate) mod batch;
-mod batch_ffi;
-pub(crate) mod block;
-mod block_ffi;
-pub(crate) mod transaction;
-
-pub(crate) mod ffi;
+pub fn sha512_digest_bytes(item: &[u8]) -> Vec<u8> {
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.extend(openssl::sha::sha512(item).iter());
+    bytes
+}

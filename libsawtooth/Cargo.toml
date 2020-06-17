@@ -24,8 +24,10 @@ description = """\
 """
 
 [dependencies]
+hex = { version = "0.4", optional = true }
 log = "0.4"
 lmdb-zero = { version = "0.4", optional = true }
+openssl = { version = "0.10", optional = true }
 redis = { version = "0.13.0", default-features = false, optional = true }
 transact = "0.2"
 
@@ -51,4 +53,4 @@ lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]
 redis-store = ["redis", "stores"]
 stores = []
-validator-internals = []
+validator-internals = ["hex", "openssl"]
