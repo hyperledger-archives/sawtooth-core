@@ -18,11 +18,13 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
+use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+
 use block::Block;
+use journal::block_manager::BlockManager;
 use journal::block_validator::BlockStatusStore;
 use journal::block_wrapper::BlockStatus;
 use journal::chain::COMMIT_STORE;
-use journal::{block_manager::BlockManager, NULL_BLOCK_IDENTIFIER};
 use metrics;
 
 lazy_static! {
@@ -228,8 +230,10 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use journal::NULL_BLOCK_IDENTIFIER;
+
     use std::sync::{Arc, Mutex};
+
+    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     #[test]
     fn test_block_scheduler_simple() {

@@ -173,8 +173,9 @@ mod test {
     use super::*;
     use block::Block;
     use journal::block_store::InMemoryBlockStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
     use transaction::Transaction;
+
+    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     /// Creates Chains of blocks that match this diagram
     /// chain4                    B4-4  - B5-4
@@ -191,7 +192,7 @@ mod test {
     ///  the transactions in b0, are B2-1b0t0, B2'b0t1, and B2-1b0t2
     ///
     fn create_chains_to_put_in_block_manager() -> Vec<Vec<Block>> {
-        let mut previous_block_id = ::journal::NULL_BLOCK_IDENTIFIER;
+        let mut previous_block_id = NULL_BLOCK_IDENTIFIER;
         let mut block_num = 0;
         let chain0 = ["B0", "B1", "B2", "B3", "B4", "B5"]
             .iter()

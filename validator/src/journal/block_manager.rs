@@ -21,9 +21,10 @@ use std::collections::{HashMap, HashSet};
 use std::iter::{FromIterator, Peekable};
 use std::sync::{Arc, RwLock};
 
+use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+
 use block::Block;
 use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
-use journal::NULL_BLOCK_IDENTIFIER;
 use metrics;
 
 lazy_static! {
@@ -1143,7 +1144,8 @@ mod tests {
     use super::{BlockManager, BlockManagerError};
     use block::Block;
     use journal::block_store::InMemoryBlockStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
+
+    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
         Block {

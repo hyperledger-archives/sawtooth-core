@@ -12,5 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
+
 pub mod chain_id_manager;
 pub mod fork_cache;
