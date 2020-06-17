@@ -43,6 +43,7 @@ experimental = [
     "receipt-store",
     "redis-store",
     "stores",
+    "validator-internals",
 ]
 
 btree-store = ["stores"]
@@ -50,3 +51,4 @@ lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]
 redis-store = ["redis", "stores"]
 stores = []
+validator-internals = []
