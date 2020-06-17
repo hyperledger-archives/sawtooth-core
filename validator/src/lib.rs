@@ -29,6 +29,7 @@ extern crate log;
 extern crate openssl;
 #[cfg(test)]
 extern crate rand;
+extern crate sawtooth;
 extern crate uluru;
 
 // exported modules

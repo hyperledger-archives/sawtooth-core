@@ -35,6 +35,7 @@ use std::thread;
 use std::time::Duration;
 
 use protobuf;
+use sawtooth::journal::chain_id_manager::ChainIdManager;
 
 use batch::Batch;
 use block::Block;
@@ -49,7 +50,6 @@ use journal::block_validator::{
 };
 use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
-use journal::chain_id_manager::ChainIdManager;
 use journal::fork_cache::ForkCache;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;

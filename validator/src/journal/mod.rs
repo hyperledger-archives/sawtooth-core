@@ -31,7 +31,6 @@ mod chain_commit_state;
 pub mod chain_ffi;
 pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
-mod chain_id_manager;
 mod commit_store;
 pub mod commit_store_ffi;
 mod fork_cache;
