@@ -21,6 +21,8 @@ pub mod consensus;
 #[cfg(feature = "validator-internals")]
 pub mod execution;
 #[cfg(feature = "validator-internals")]
+pub mod batch;
+#[cfg(feature = "validator-internals")]
 pub mod hashlib;
 #[cfg(feature = "validator-internals")]
 pub mod journal;

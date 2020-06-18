@@ -22,14 +22,15 @@ use std::collections::HashSet;
 use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
+use cpython::PyList;
 use cpython::Python;
 
 use sawtooth::hashlib::sha256_digest_strs;
-use sawtooth::transaction::Transaction;
+use sawtooth::{batch::Batch, transaction::Transaction};
 
-use batch::Batch;
 use block::Block;
 
+use crate::py_object_wrapper::PyObjectWrapper;
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::commit_store::CommitStore;
 use journal::validation_rule_enforcer;
@@ -199,19 +200,15 @@ impl CandidateBlock {
         poller: F,
     ) -> Vec<Batch> {
         let mut batches = vec![];
-        let gil = Python::acquire_gil();
-        let py = gil.python();
         for injector in &self.batch_injectors {
             let inject_list = poller(injector);
             if !inject_list.is_empty() {
                 for b in inject_list {
-                    match b.extract::<Batch>(py) {
-                        Ok(b) => {
-                            self.injected_batch_ids.insert(b.header_signature.clone());
-                            batches.push(b);
-                        }
-                        Err(err) => pylogger::exception(py, "During batch injection", err),
-                    }
+                    let py_wrapper = PyObjectWrapper::new(b);
+                    let batch = Batch::from(py_wrapper);
+                    self.injected_batch_ids
+                        .insert(batch.header_signature.clone());
+                    batches.push(batch);
                 }
             }
         }
@@ -409,8 +406,9 @@ impl CandidateBlock {
                 } else {
                     let gil = Python::acquire_gil();
                     let py = gil.python();
+                    let batch_wrapper = PyObjectWrapper::from(batch.clone());
                     builder
-                        .call_method(py, "add_batch", (batch.clone(),), None)
+                        .call_method(py, "add_batch", (batch_wrapper,), None)
                         .expect("BlockBuilder has no method 'add_batch'");
                     committed_txn_cache.add_batch(&batch.clone());
                 }
@@ -435,11 +433,19 @@ impl CandidateBlock {
             )
             .expect("BlockBuilder has no method 'set_state_hash'");
 
-        let batches = builder
+        let batch_py_objs = builder
             .getattr(py, "batches")
             .expect("BlockBuilder has no attribute 'batches'")
-            .extract::<Vec<Batch>>(py)
-            .expect("Unable to extract PyList of Batches as Vec<Batch>");
+            .extract::<PyList>(py)
+            .expect("Failed to extract PyList from uncommitted_batches")
+            .iter(py)
+            .map(|py_obj| PyObjectWrapper::new(py_obj))
+            .collect::<Vec<PyObjectWrapper>>();
+
+        let batches = batch_py_objs
+            .into_iter()
+            .map(|py_wrap| Batch::from(py_wrap))
+            .collect::<Vec<Batch>>();
 
         let batch_ids: Vec<&str> = batches
             .iter()

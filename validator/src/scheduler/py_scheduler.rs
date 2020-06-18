@@ -19,12 +19,13 @@ use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyResult;
 
-use batch::Batch;
-
 use protobuf::ProtobufError;
+use sawtooth::batch::Batch;
 
 use scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
 use scheduler::{ExecutionResults, Scheduler, SchedulerError};
+
+use crate::py_object_wrapper::PyObjectWrapper;
 
 impl From<ProtobufError> for SchedulerError {
     fn from(other: ProtobufError) -> SchedulerError {
@@ -81,11 +82,13 @@ impl Scheduler for PyScheduler {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
 
+        let batch_wrapper = PyObjectWrapper::from(batch);
+
         self.py_scheduler
             .call_method(
                 py,
                 "add_batch",
-                (batch, expected_state_hash, required),
+                (batch_wrapper, expected_state_hash, required),
                 None,
             )
             .expect("No method add_batch on python scheduler");

@@ -15,9 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::transaction::Transaction;
+use sawtooth::{batch::Batch, transaction::Transaction};
 
-use batch::Batch;
 use state::settings_view::SettingsView;
 
 /// Retrieve the validation rules stored in state and check that the
@@ -231,8 +230,7 @@ fn parse_rule(rule: &str) -> Option<(&str, Vec<&str>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use batch::Batch;
-    use sawtooth::transaction::Transaction;
+    use sawtooth::{batch::Batch, transaction::Transaction};
 
     /// Test that if no validation rules are set, the block is valid.
     #[test]

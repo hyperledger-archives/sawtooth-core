@@ -17,9 +17,8 @@
 
 use std::collections::HashSet;
 
-use sawtooth::transaction::Transaction;
+use sawtooth::{batch::Batch, transaction::Transaction};
 
-use batch::Batch;
 use journal::block_manager::BlockManager;
 use journal::commit_store::CommitStore;
 

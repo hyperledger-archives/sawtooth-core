@@ -20,9 +20,8 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use protobuf;
-use sawtooth::transaction::Transaction;
+use sawtooth::{batch::Batch, transaction::Transaction};
 
-use batch::Batch;
 use block::Block;
 use database::error::DatabaseError;
 use database::lmdb::LmdbDatabase;
