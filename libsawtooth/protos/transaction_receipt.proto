@@ -1,0 +1,53 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "txn_receipt_pb2";
+
+import "events.proto";
+
+
+message TransactionReceipt {
+  // State changes made by this transaction
+  // StateChange is defined in protos/transaction_receipt.proto
+  repeated StateChange state_changes = 1;
+  // Events fired by this transaction
+  repeated Event events = 2;
+  // Transaction family defined data
+  repeated bytes data = 3;
+
+  string transaction_id = 4;
+}
+
+//  StateChange objects have the type of SET, which is either an insert or
+//  update, or DELETE. Items marked as a DELETE will have no byte value.
+message StateChange {
+    enum Type {
+        TYPE_UNSET = 0;
+        SET = 1;
+        DELETE = 2;
+    }
+    string address = 1;
+    bytes value = 2;
+    Type type = 3;
+}
+
+// A collection of state changes.
+message StateChangeList {
+    repeated StateChange state_changes = 1;
+}

@@ -1,0 +1,226 @@
+// Copyright 2016, 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "validator_pb2";
+
+// A list of messages to be transmitted together.
+message MessageList {
+    repeated Message messages = 1;
+}
+
+// The message passed between the validator and client, containing the
+// header fields and content.
+message Message {
+
+    enum MessageType {
+        DEFAULT = 0;
+        // Registration request from the transaction processor to the validator
+        TP_REGISTER_REQUEST = 1;
+        // Registration response from the validator to the
+        // transaction processor
+        TP_REGISTER_RESPONSE = 2;
+        // Tell the validator that the transaction processor
+        // won't take any more transactions
+        TP_UNREGISTER_REQUEST = 3;
+        // Response from the validator to the tp that it won't
+        // send any more transactions
+        TP_UNREGISTER_RESPONSE = 4;
+        // Process Request from the validator/executor to the
+        // transaction processor
+        TP_PROCESS_REQUEST = 5;
+        // Process response from the transaction processor to the validator/executor
+        TP_PROCESS_RESPONSE = 6;
+        // State get request from the transaction processor to validator/context_manager
+        TP_STATE_GET_REQUEST = 7;
+        // State get response from the validator/context_manager to the transaction processor
+        TP_STATE_GET_RESPONSE = 8;
+        // State set request from the transaction processor to the validator/context_manager
+        TP_STATE_SET_REQUEST = 9;
+        // State set response from the validator/context_manager to the transaction processor
+        TP_STATE_SET_RESPONSE = 10;
+        // State delete request from the transaction processor to the validator/context_manager
+        TP_STATE_DELETE_REQUEST = 11;
+        // State delete response from the validator/context_manager to the transaction processor
+        TP_STATE_DELETE_RESPONSE = 12;
+        // Message to append data to a transaction receipt
+        TP_RECEIPT_ADD_DATA_REQUEST = 13;
+        // Response from validator to tell transaction processor that data has been appended
+        TP_RECEIPT_ADD_DATA_RESPONSE = 14;
+        // Message to add event
+        TP_EVENT_ADD_REQUEST = 15;
+        // Response from validator to tell transaction processor that event has been created
+        TP_EVENT_ADD_RESPONSE = 16;
+
+        // Submission of a batchlist from the web api or another client to the validator
+        CLIENT_BATCH_SUBMIT_REQUEST = 100;
+        // Response from the validator to the web api/client that the submission was accepted
+        CLIENT_BATCH_SUBMIT_RESPONSE = 101;
+        // A request to list blocks from the web api/client to the validator
+        CLIENT_BLOCK_LIST_REQUEST = 102;
+        CLIENT_BLOCK_LIST_RESPONSE = 103;
+        CLIENT_BLOCK_GET_BY_ID_REQUEST = 104;
+        CLIENT_BLOCK_GET_RESPONSE = 105;
+        CLIENT_BATCH_LIST_REQUEST = 106;
+        CLIENT_BATCH_LIST_RESPONSE = 107;
+        CLIENT_BATCH_GET_REQUEST = 108;
+        CLIENT_BATCH_GET_RESPONSE = 109;
+        CLIENT_TRANSACTION_LIST_REQUEST = 110;
+        CLIENT_TRANSACTION_LIST_RESPONSE = 111;
+        CLIENT_TRANSACTION_GET_REQUEST = 112;
+        CLIENT_TRANSACTION_GET_RESPONSE = 113;
+        // Client state request of the current state hash to be retrieved from the journal
+        CLIENT_STATE_CURRENT_REQUEST = 114;
+        // Response with the current state hash
+        CLIENT_STATE_CURRENT_RESPONSE = 115;
+        // A request of all the addresses under a particular prefix, for a state hash.
+        CLIENT_STATE_LIST_REQUEST = 116;
+        // The response of the addresses
+        CLIENT_STATE_LIST_RESPONSE = 117;
+        // Get the address:data entry at a particular address
+        CLIENT_STATE_GET_REQUEST = 118;
+        // The response with the entry
+        CLIENT_STATE_GET_RESPONSE = 119;
+        // A request for the status of a batch or batches
+        CLIENT_BATCH_STATUS_REQUEST = 120;
+        // A response with the batch statuses
+        CLIENT_BATCH_STATUS_RESPONSE = 121;
+        // A request for one or more transaction receipts
+        CLIENT_RECEIPT_GET_REQUEST = 122;
+        // A response with the receipts
+        CLIENT_RECEIPT_GET_RESPONSE = 123;
+        CLIENT_BLOCK_GET_BY_NUM_REQUEST = 124;
+        // A request for a validator's peers
+        CLIENT_PEERS_GET_REQUEST = 125;
+        // A response with the validator's peers
+        CLIENT_PEERS_GET_RESPONSE = 126;
+        CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST = 127;
+        CLIENT_BLOCK_GET_BY_BATCH_ID_REQUEST = 128;
+        // A request for a validator's status
+        CLIENT_STATUS_GET_REQUEST = 129;
+        // A response with the validator's status
+        CLIENT_STATUS_GET_RESPONSE = 130;
+
+        // Message types for events
+        CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
+        CLIENT_EVENTS_SUBSCRIBE_RESPONSE = 501;
+        CLIENT_EVENTS_UNSUBSCRIBE_REQUEST = 502;
+        CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE = 503;
+        CLIENT_EVENTS = 504;
+        CLIENT_EVENTS_GET_REQUEST = 505;
+        CLIENT_EVENTS_GET_RESPONSE = 506;
+
+        // Temp message types until a discussion can be had about gossip msg
+        GOSSIP_MESSAGE = 200;
+        GOSSIP_REGISTER = 201;
+        GOSSIP_UNREGISTER = 202;
+        GOSSIP_BLOCK_REQUEST = 205;
+        GOSSIP_BLOCK_RESPONSE = 206;
+        GOSSIP_BATCH_BY_BATCH_ID_REQUEST = 207;
+        GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST = 208;
+        GOSSIP_BATCH_RESPONSE = 209;
+        GOSSIP_GET_PEERS_REQUEST = 210;
+        GOSSIP_GET_PEERS_RESPONSE = 211;
+        GOSSIP_CONSENSUS_MESSAGE = 212;
+
+        NETWORK_ACK = 300;
+        NETWORK_CONNECT = 301;
+        NETWORK_DISCONNECT = 302;
+
+        // Message types for Authorization Types
+        AUTHORIZATION_CONNECTION_RESPONSE = 600;
+        AUTHORIZATION_VIOLATION = 601;
+        AUTHORIZATION_TRUST_REQUEST = 602;
+        AUTHORIZATION_TRUST_RESPONSE = 603;
+        AUTHORIZATION_CHALLENGE_REQUEST = 604;
+        AUTHORIZATION_CHALLENGE_RESPONSE = 605;
+        AUTHORIZATION_CHALLENGE_SUBMIT = 606;
+        AUTHORIZATION_CHALLENGE_RESULT = 607;
+
+        PING_REQUEST = 700;
+        PING_RESPONSE = 701;
+
+        // Consensus service messages
+        CONSENSUS_REGISTER_REQUEST = 800;
+        CONSENSUS_REGISTER_RESPONSE = 801;
+
+        CONSENSUS_SEND_TO_REQUEST = 802;
+        CONSENSUS_SEND_TO_RESPONSE = 803;
+        CONSENSUS_BROADCAST_REQUEST = 804;
+        CONSENSUS_BROADCAST_RESPONSE = 805;
+
+        CONSENSUS_INITIALIZE_BLOCK_REQUEST = 806;
+        CONSENSUS_INITIALIZE_BLOCK_RESPONSE = 807;
+        CONSENSUS_FINALIZE_BLOCK_REQUEST = 808;
+        CONSENSUS_FINALIZE_BLOCK_RESPONSE = 809;
+        CONSENSUS_SUMMARIZE_BLOCK_REQUEST = 828;
+        CONSENSUS_SUMMARIZE_BLOCK_RESPONSE = 829;
+        CONSENSUS_CANCEL_BLOCK_REQUEST = 810;
+        CONSENSUS_CANCEL_BLOCK_RESPONSE = 811;
+
+        CONSENSUS_CHECK_BLOCKS_REQUEST = 812;
+        CONSENSUS_CHECK_BLOCKS_RESPONSE = 813;
+        CONSENSUS_COMMIT_BLOCK_REQUEST = 814;
+        CONSENSUS_COMMIT_BLOCK_RESPONSE = 815;
+        CONSENSUS_IGNORE_BLOCK_REQUEST = 816;
+        CONSENSUS_IGNORE_BLOCK_RESPONSE = 817;
+        CONSENSUS_FAIL_BLOCK_REQUEST = 818;
+        CONSENSUS_FAIL_BLOCK_RESPONSE = 819;
+
+        CONSENSUS_SETTINGS_GET_REQUEST = 820;
+        CONSENSUS_SETTINGS_GET_RESPONSE = 821;
+        CONSENSUS_STATE_GET_REQUEST = 822;
+        CONSENSUS_STATE_GET_RESPONSE = 823;
+        CONSENSUS_BLOCKS_GET_REQUEST = 824;
+        CONSENSUS_BLOCKS_GET_RESPONSE = 825;
+        CONSENSUS_CHAIN_HEAD_GET_REQUEST = 826;
+        CONSENSUS_CHAIN_HEAD_GET_RESPONSE = 827;
+
+        // Consensus notification messages
+        CONSENSUS_NOTIFY_PEER_CONNECTED = 900;
+        CONSENSUS_NOTIFY_PEER_DISCONNECTED = 901;
+        CONSENSUS_NOTIFY_PEER_MESSAGE = 902;
+
+        CONSENSUS_NOTIFY_BLOCK_NEW = 903;
+        CONSENSUS_NOTIFY_BLOCK_VALID = 904;
+        CONSENSUS_NOTIFY_BLOCK_INVALID = 905;
+        CONSENSUS_NOTIFY_BLOCK_COMMIT = 906;
+
+        CONSENSUS_NOTIFY_ENGINE_ACTIVATED = 907;
+        CONSENSUS_NOTIFY_ENGINE_DEACTIVATED = 908;
+
+        CONSENSUS_NOTIFY_ACK = 999;
+    }
+    // The type of message, used to determine how to 'route' the message
+    // to the appropriate handler as well as how to deserialize the
+    // content.
+    MessageType message_type = 1;
+
+    // The identifier used to correlate response messages to their related
+    // request messages.  correlation_id should be set to a random string
+    // for messages which are not responses to previously sent messages.  For
+    // response messages, correlation_id should be set to the same string as
+    // contained in the request message.
+    string correlation_id = 2;
+
+    // The content of the message, defined by message_type.  In many
+    // cases, this data has been serialized with Protocol Buffers or
+    // CBOR.
+    bytes content = 3;
+
+}
