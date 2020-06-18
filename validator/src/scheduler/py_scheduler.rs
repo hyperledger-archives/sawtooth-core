@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::error::Error;
-
 use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyResult;
@@ -30,7 +28,7 @@ use scheduler::{ExecutionResults, Scheduler, SchedulerError};
 
 impl From<ProtobufError> for SchedulerError {
     fn from(other: ProtobufError) -> SchedulerError {
-        SchedulerError::Other(other.description().into())
+        SchedulerError::Other(other.to_string().into())
     }
 }
 

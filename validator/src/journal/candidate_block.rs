@@ -74,7 +74,7 @@ pub struct CandidateBlock {
 }
 
 impl CandidateBlock {
-    #![allow(too_many_arguments)]
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         previous_block: Block,
         commit_store: CommitStore,
@@ -234,7 +234,6 @@ impl CandidateBlock {
                 "Dropping previously committed batch: {}",
                 batch_header_signature.as_str()
             );
-            return;
         } else if self.check_batch_dependencies_add_batch(&batch) {
             let mut batches_to_add = vec![];
 

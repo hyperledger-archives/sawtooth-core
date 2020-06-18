@@ -42,6 +42,7 @@ def lru_cached_method(*lru_args, **lru_kwargs):
             # cycle that fools the garbage collector into thinking the instance
             # shouldn't be dropped when all external references are dropped.
             weak_ref_to_self = weakref.ref(self)
+
             @wraps(wrapped_fn)
             @lru_cache(*lru_args, **lru_kwargs)
             def cached(*args, **kwargs):

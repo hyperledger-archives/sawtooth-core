@@ -60,3 +60,14 @@ log4rs = "0.8"
 protoc-rust = "2.0"
 glob = "0.3"
 cfg-if = "0.1"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]

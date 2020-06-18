@@ -83,31 +83,15 @@ impl fmt::Display for WorkloadError {
 }
 
 impl error::Error for WorkloadError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            WorkloadError::HttpError(ref err) => err.cause(),
-            WorkloadError::UriError(ref err) => err.cause(),
-            WorkloadError::IoError(ref err) => err.cause(),
-            WorkloadError::ProtobufError(ref err) => err.cause(),
-            WorkloadError::BatchReadingError(ref err) => err.cause(),
+            WorkloadError::HttpError(ref err) => Some(err),
+            WorkloadError::UriError(ref err) => Some(err),
+            WorkloadError::IoError(ref err) => Some(err),
+            WorkloadError::ProtobufError(ref err) => Some(err),
+            WorkloadError::BatchReadingError(ref err) => Some(err),
             WorkloadError::NoBatchError => Some(&WorkloadError::NoBatchError),
             WorkloadError::UnknownRestApiError => Some(&WorkloadError::UnknownRestApiError),
-        }
-    }
-
-    fn description(&self) -> &str {
-        match *self {
-            WorkloadError::HttpError(ref err) => err.description(),
-            WorkloadError::UriError(ref err) => err.description(),
-            WorkloadError::IoError(ref err) => err.description(),
-            WorkloadError::ProtobufError(ref err) => err.description(),
-            WorkloadError::BatchReadingError(ref err) => err.description(),
-            WorkloadError::NoBatchError => {
-                "There was an error resulting in lacking a batch to submit."
-            }
-            WorkloadError::UnknownRestApiError => {
-                "The rest api produced an error response that we were not expecting."
-            }
         }
     }
 }
@@ -207,7 +191,7 @@ pub fn log(
 
 /// Call next on the BatchList Iterator and return the batchlist if no error.
 pub fn get_next_batchlist(
-    batch_list_iter: &mut Iterator<Item = BatchListResult>,
+    batch_list_iter: &mut dyn Iterator<Item = BatchListResult>,
     batch_map: &Rc<RefCell<BatchMap>>,
     batches: &Rc<RefCell<Vec<BatchList>>>,
 ) -> Result<BatchList, WorkloadError> {

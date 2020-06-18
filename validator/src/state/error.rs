@@ -65,21 +65,7 @@ impl fmt::Display for StateDatabaseError {
 }
 
 impl Error for StateDatabaseError {
-    fn description(&self) -> &str {
-        match *self {
-            StateDatabaseError::NotFound(ref msg) => &msg,
-            StateDatabaseError::DeserializationError(ref err) => err.description(),
-            StateDatabaseError::SerializationError(ref err) => err.description(),
-            StateDatabaseError::ChangeLogEncodingError(ref msg) => &msg,
-            StateDatabaseError::InvalidRecord => "Invalid record",
-            StateDatabaseError::InvalidHash(ref msg) => &msg,
-            StateDatabaseError::InvalidChangeLogIndex(ref msg) => &msg,
-            StateDatabaseError::DatabaseError(ref err) => err.description(),
-            StateDatabaseError::UnknownError => "Unknown Error",
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             StateDatabaseError::NotFound(_) => None,
             StateDatabaseError::DeserializationError(ref err) => Some(err),

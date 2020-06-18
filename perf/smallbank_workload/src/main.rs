@@ -84,7 +84,7 @@ fn main() {
 }
 
 #[inline]
-fn arg_error(msg: &str) -> Result<(), Box<Error>> {
+fn arg_error(msg: &str) -> Result<(), Box<dyn Error>> {
     Err(Box::new(CliError::ArgumentError(String::from(msg))))
 }
 
@@ -155,7 +155,7 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("1").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -245,7 +245,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     ) {
         Ok(_) => Ok(()),
         Err(err) => {
-            println!("{}", err.description());
+            println!("{}", err);
             Err(Box::new(err))
         }
     }
@@ -295,7 +295,7 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -308,14 +308,14 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let mut in_file = File::open(args.value_of("input").unwrap())?;
     let mut out_file = File::create(args.value_of("output").unwrap())?;
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
-    let context = try!(signing::create_context("secp256k1"));
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+    let context = signing::create_context("secp256k1")?;
 
     if let Err(err) = generate_signed_batches(
         &mut in_file,
@@ -361,7 +361,7 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -486,7 +486,7 @@ fn create_playlist_process_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     match args.subcommand() {
         ("create", Some(args)) => run_playlist_create_command(args),
         ("process", Some(args)) => run_playlist_process_command(args),
@@ -494,7 +494,7 @@ fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     }
 }
 
-fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let num_accounts = match args.value_of("accounts").unwrap().parse() {
         Ok(n) => n,
         Err(_) => 0,
@@ -521,44 +521,44 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         None => None,
     };
 
-    let mut output_writer: Box<Write> = match args.value_of("output") {
-        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+    let mut output_writer: Box<dyn Write> = match args.value_of("output") {
+        Some(file_name) => File::create(file_name).map(Box::new)?,
         None => Box::new(std::io::stdout()),
     };
 
-    try!(generate_smallbank_playlist(
+    generate_smallbank_playlist(
         &mut *output_writer,
         num_accounts,
         num_transactions,
-        random_seed
-    ));
+        random_seed,
+    )?;
 
     Ok(())
 }
 
-fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
-    let mut in_file = try!(File::open(args.value_of("input").unwrap()));
+fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    let mut in_file = File::open(args.value_of("input").unwrap())?;
 
-    let mut output_writer: Box<Write> = match args.value_of("output") {
-        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+    let mut output_writer: Box<dyn Write> = match args.value_of("output") {
+        Some(file_name) => File::create(file_name).map(Box::new)?,
         None => Box::new(std::io::stdout()),
     };
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let context = try!(signing::create_context("secp256k1"));
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
+    let context = signing::create_context("secp256k1")?;
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
 
-    try!(process_smallbank_playlist(
+    process_smallbank_playlist(
         &mut output_writer,
         &mut in_file,
         context.as_ref(),
-        &private_key
-    ));
+        &private_key,
+    )?;
 
     Ok(())
 }
@@ -577,13 +577,7 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             CliError::ArgumentError(_) => None,
         }

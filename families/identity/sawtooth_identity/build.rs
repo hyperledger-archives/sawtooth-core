@@ -37,15 +37,15 @@ fn main() {
         "../../../protos/identity.proto",
     ];
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &dest_path.to_str().unwrap(),
-        input: &proto_src_files,
-        includes: &["../../../protos", "../protos"],
-        customize: Customize {
+    protoc_rust::Codegen::new()
+        .out_dir(&dest_path.to_str().unwrap())
+        .inputs(&proto_src_files)
+        .includes(&["../../../protos", "../protos"])
+        .customize(Customize {
             ..Default::default()
-        },
-    })
-    .expect("Error generating rust files from identity protos");
+        })
+        .run()
+        .expect("Error generating rust files from identity protos");
 
     // Create mod.rs accordingly
     let mod_file_content = proto_src_files

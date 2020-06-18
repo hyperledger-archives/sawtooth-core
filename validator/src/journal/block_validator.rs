@@ -179,7 +179,7 @@ where
     TEP: Clone,
     PV: Clone,
 {
-    #[allow(too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: TEP,

@@ -57,20 +57,24 @@ fn main() {
         .write_all(mod_file_content.as_bytes())
         .expect("Unable to write mod file");
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &dest_path
-            .to_str()
-            .expect("Unable to create 'dest_path' as str"),
-        input: &proto_src_files
-            .iter()
-            .map(|a| a.as_ref())
-            .collect::<Vec<&str>>(),
-        includes: &["../protos", "../../../protos"],
-        customize: Customize {
+    protoc_rust::Codegen::new()
+        .out_dir(
+            &dest_path
+                .to_str()
+                .expect("Unable to create 'dest_path' as str"),
+        )
+        .inputs(
+            &proto_src_files
+                .iter()
+                .map(|a| a.as_ref())
+                .collect::<Vec<&str>>(),
+        )
+        .includes(&["../protos", "../../../protos"])
+        .customize(Customize {
             ..Default::default()
-        },
-    })
-    .expect("Error generating rust files from settings protos");
+        })
+        .run()
+        .expect("Error generating rust files from settings protos");
 }
 
 fn glob_simple(pattern: &str) -> Vec<String> {

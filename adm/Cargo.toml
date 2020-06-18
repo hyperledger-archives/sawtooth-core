@@ -31,3 +31,14 @@ serde_yaml = "0.8"
 [build-dependencies]
 glob = "0.3"
 protoc-rust = "2.0"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]
