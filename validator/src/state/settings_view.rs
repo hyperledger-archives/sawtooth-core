@@ -19,8 +19,8 @@ use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
-use hashlib::sha256_digest_str;
 use protobuf;
+use sawtooth::hashlib::sha256_digest_str;
 
 use state::StateDatabaseError;
 use state::StateReader;

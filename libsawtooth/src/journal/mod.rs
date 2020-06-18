@@ -1,4 +1,4 @@
-// Copyright 2019 Cargill Incorporated
+// Copyright 2020 Cargill Incorporated
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "lmdb-store")]
-#[macro_use]
-extern crate log;
+pub const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
-#[cfg(feature = "validator-internals")]
-pub mod hashlib;
-#[cfg(feature = "validator-internals")]
-pub mod journal;
-#[cfg(feature = "stores")]
-pub mod store;
+pub mod chain_id_manager;
+pub mod fork_cache;

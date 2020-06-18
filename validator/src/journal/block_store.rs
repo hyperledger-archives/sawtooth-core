@@ -248,7 +248,8 @@ impl Iterator for InMemoryIter {
 mod test {
     use super::*;
     use block::Block;
-    use journal::NULL_BLOCK_IDENTIFIER;
+
+    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
         Block {

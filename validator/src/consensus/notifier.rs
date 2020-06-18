@@ -21,9 +21,9 @@ use std::thread;
 
 use block::Block;
 
-use hashlib::sha256_digest_strs;
 use hex;
 use protobuf::{Message, RepeatedField};
+use sawtooth::hashlib::sha256_digest_strs;
 
 use proto::consensus::{
     ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,

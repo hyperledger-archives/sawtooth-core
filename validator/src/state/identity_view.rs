@@ -17,8 +17,8 @@
 
 use std::iter::repeat;
 
-use hashlib::sha256_digest_str;
 use protobuf;
+use sawtooth::hashlib::sha256_digest_str;
 
 use proto::identity::Policy;
 use proto::identity::PolicyList;

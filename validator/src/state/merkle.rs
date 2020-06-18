@@ -29,10 +29,9 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use hashlib::sha512_digest_bytes;
-
 use protobuf;
 use protobuf::Message;
+use sawtooth::hashlib::sha512_digest_bytes;
 
 use database::error::DatabaseError;
 use database::lmdb::DatabaseReader;

@@ -410,10 +410,10 @@ mod test {
     use database::lmdb::{LmdbContext, LmdbDatabase};
     use journal::block_store::BlockStore;
     use journal::commit_store::CommitStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
     use protobuf::Message;
+    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     use std::env;
     use std::fs::remove_file;
