@@ -16,9 +16,8 @@
  */
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-
-use consensus::registry::{ConsensusRegistry, ConsensusRegistryError, EngineInfo};
 use pylogger;
+use sawtooth::consensus::registry::{ConsensusRegistry, ConsensusRegistryError, EngineInfo};
 
 pub struct PyConsensusRegistry {
     py_consensus_registry: PyObject,

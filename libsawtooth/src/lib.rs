@@ -17,6 +17,8 @@
 extern crate log;
 
 #[cfg(feature = "validator-internals")]
+pub mod consensus;
+#[cfg(feature = "validator-internals")]
 pub mod hashlib;
 #[cfg(feature = "validator-internals")]
 pub mod journal;
