@@ -15,10 +15,4 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
-
-use scheduler::Scheduler;
-
-pub trait ExecutionPlatform: Sync + Send {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
-}
+pub mod execution_platform;
