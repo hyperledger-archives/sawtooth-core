@@ -37,7 +37,10 @@ use std::time::Duration;
 use protobuf;
 use sawtooth::{
     consensus::registry::ConsensusRegistry,
-    journal::{chain_id_manager::ChainIdManager, fork_cache::ForkCache, NULL_BLOCK_IDENTIFIER},
+    journal::{
+        chain::COMMIT_STORE, chain_id_manager::ChainIdManager, fork_cache::ForkCache,
+        NULL_BLOCK_IDENTIFIER,
+    },
 };
 
 use batch::Batch;
@@ -59,8 +62,6 @@ use proto::transaction_receipt::TransactionReceipt;
 use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
-
-pub const COMMIT_STORE: &str = "commit_store";
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
