@@ -1,4 +1,5 @@
-use batch::Batch;
+use sawtooth::batch::Batch;
+
 use block::Block;
 use journal::publisher::{BlockPublisherState, SyncBlockPublisher};
 use std::sync::RwLockWriteGuard;

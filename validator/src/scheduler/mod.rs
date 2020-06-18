@@ -15,11 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
+use sawtooth::batch::Batch;
+
 use proto::events::Event;
 use proto::transaction_receipt::StateChange;
 
 mod execution_result_ffi;
-use batch::Batch;
 
 pub mod py_scheduler;
 

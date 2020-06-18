@@ -16,8 +16,9 @@
  */
 
 use cpython::{self, ObjectProtocol, PyClone};
+use sawtooth::batch::Batch;
 
-use batch::Batch;
+use crate::py_object_wrapper::PyObjectWrapper;
 
 pub trait PermissionVerifier: Sync + Send {
     fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str) -> bool;
@@ -38,8 +39,15 @@ impl PermissionVerifier for PyPermissionVerifier {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
 
+        let batch_wrapper = PyObjectWrapper::from(batch.clone());
+
         self.verifier
-            .call_method(py, "is_batch_signer_authorized", (batch, state_root), None)
+            .call_method(
+                py,
+                "is_batch_signer_authorized",
+                (batch_wrapper, state_root),
+                None,
+            )
             .expect("PermissionVerifier has no method `is_batch_signer_authorized`")
             .extract(py)
             .expect("Unable to extract bool from `is_batch_signer_authorized`")

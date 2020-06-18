@@ -15,9 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::transaction::Transaction;
+use sawtooth::{batch::Batch, transaction::Transaction};
 
-use batch::Batch;
 use block::Block;
 use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python, PythonObject, ToPyObject};

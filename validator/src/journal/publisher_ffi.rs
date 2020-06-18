@@ -21,8 +21,9 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
+use sawtooth::batch::Batch;
 
-use batch::Batch;
+use crate::py_object_wrapper::PyObjectWrapper;
 use block::Block;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
@@ -172,11 +173,13 @@ pub unsafe extern "C" fn block_publisher_on_batch_received(
     check_null!(publisher, batch);
     let gil = Python::acquire_gil();
     let py = gil.python();
-    let batch = PyObject::from_borrowed_ptr(py, batch)
-        .extract::<Batch>(py)
-        .unwrap();
+
+    let batch_py_obj = PyObject::from_borrowed_ptr(py, batch);
+    let batch_wrapper = PyObjectWrapper::new(batch_py_obj);
+    let native_batch = Batch::from(batch_wrapper);
+
     let publisher = (*(publisher as *mut BlockPublisher)).clone();
-    py.allow_threads(move || publisher.publisher.on_batch_received(batch));
+    py.allow_threads(move || publisher.publisher.on_batch_received(native_batch));
     ErrorCode::Success
 }
 
@@ -304,26 +307,36 @@ pub unsafe fn convert_on_chain_updated_args(
 ) -> (Block, Vec<Batch>, Vec<Batch>) {
     let chain_head = PyObject::from_borrowed_ptr(py, chain_head_ptr);
     let py_committed_batches = PyObject::from_borrowed_ptr(py, committed_batches_ptr);
+    let py_wrappers_committed: Vec<PyObjectWrapper> = py_committed_batches
+        .extract::<PyList>(py)
+        .expect("Failed to extract PyList from uncommitted_batches")
+        .iter(py)
+        .map(|pyobj| PyObjectWrapper::new(pyobj))
+        .collect::<Vec<PyObjectWrapper>>();
+
     let committed_batches: Vec<Batch> = if py_committed_batches == Python::None(py) {
         Vec::new()
     } else {
-        py_committed_batches
-            .extract::<PyList>(py)
-            .expect("Failed to extract PyList from committed_batches")
-            .iter(py)
-            .map(|pyobj| pyobj.extract::<Batch>(py).unwrap())
-            .collect()
+        py_wrappers_committed
+            .into_iter()
+            .map(|py_wrap| Batch::from(py_wrap))
+            .collect::<Vec<Batch>>()
     };
     let py_uncommitted_batches = PyObject::from_borrowed_ptr(py, uncommitted_batches_ptr);
+    let py_wrappers_uncommitted = py_uncommitted_batches
+        .extract::<PyList>(py)
+        .expect("Failed to extract PyList from uncommitted_batches")
+        .iter(py)
+        .map(|pyobj| PyObjectWrapper::new(pyobj))
+        .collect::<Vec<PyObjectWrapper>>();
+
     let uncommitted_batches: Vec<Batch> = if py_uncommitted_batches == Python::None(py) {
         Vec::new()
     } else {
-        py_uncommitted_batches
-            .extract::<PyList>(py)
-            .expect("Failed to extract PyList from uncommitted_batches")
-            .iter(py)
-            .map(|pyobj| pyobj.extract::<Batch>(py).unwrap())
-            .collect()
+        py_wrappers_uncommitted
+            .into_iter()
+            .map(|py_wrap| Batch::from(py_wrap))
+            .collect::<Vec<Batch>>()
     };
     let chain_head = chain_head
         .extract(py)
@@ -411,8 +424,9 @@ impl BatchObserver for PyBatchObserver {
     fn notify_batch_pending(&self, batch: &Batch) {
         let gil = Python::acquire_gil();
         let py = gil.python();
+        let batch_wrapper = PyObjectWrapper::from(batch.clone());
         self.py_batch_observer
-            .call_method(py, "notify_batch_pending", (batch,), None)
+            .call_method(py, "notify_batch_pending", (batch_wrapper,), None)
             .expect("BatchObserver has no method notify_batch_pending");
     }
 }

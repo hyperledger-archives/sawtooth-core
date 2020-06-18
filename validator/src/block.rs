@@ -15,9 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-use batch::Batch;
 use proto;
 use protobuf;
+use sawtooth::batch::Batch;
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Default)]
