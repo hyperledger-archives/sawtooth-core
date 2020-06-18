@@ -17,9 +17,20 @@
 
 #![allow(unknown_lints)]
 
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
+    Arc, Mutex,
+};
+use std::thread;
+use std::time::Duration;
+
+use sawtooth::execution::execution_platform::NULL_STATE_HASH;
+use uluru;
+
 use batch::Batch;
 use block::Block;
-use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;
 use journal::block_scheduler::BlockScheduler;
 use journal::chain_commit_state::{
@@ -30,14 +41,6 @@ use journal::validation_rule_enforcer::enforce_validation_rules;
 use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
-use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
-    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
-    Arc, Mutex,
-};
-use std::thread;
-use std::time::Duration;
-use uluru;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 

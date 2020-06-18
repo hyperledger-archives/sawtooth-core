@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cargill Incorporated
+ * Copyright 2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-pub mod notifier;
-pub mod notifier_ffi;
-pub mod registry_ffi;
+/// The logical state hash before state has been added to the
+/// merkle database. May not be the actual first state hash due to
+/// implementation details of the merkle database.
+pub const NULL_STATE_HASH: &str = "";

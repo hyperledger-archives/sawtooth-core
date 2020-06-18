@@ -18,13 +18,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+use sawtooth::journal::{chain::COMMIT_STORE, NULL_BLOCK_IDENTIFIER};
 
 use block::Block;
 use journal::block_manager::BlockManager;
 use journal::block_validator::BlockStatusStore;
 use journal::block_wrapper::BlockStatus;
-use journal::chain::COMMIT_STORE;
 use metrics;
 
 lazy_static! {
