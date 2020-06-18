@@ -18,7 +18,7 @@
 use proto;
 use protobuf;
 
-use transaction::Transaction;
+use sawtooth::transaction::Transaction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Batch {

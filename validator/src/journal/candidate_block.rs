@@ -25,10 +25,10 @@ use cpython::PyClone;
 use cpython::Python;
 
 use sawtooth::hashlib::sha256_digest_strs;
+use sawtooth::transaction::Transaction;
 
 use batch::Batch;
 use block::Block;
-use transaction::Transaction;
 
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::commit_store::CommitStore;

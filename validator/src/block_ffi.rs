@@ -14,6 +14,9 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+
+use sawtooth::transaction::Transaction;
+
 use batch::Batch;
 use block::Block;
 use cpython;
@@ -26,7 +29,6 @@ use proto::transaction::Transaction as ProtoTxn;
 use proto::transaction::TransactionHeader;
 use protobuf;
 use protobuf::Message;
-use transaction::Transaction;
 
 impl<'source> FromPyObject<'source> for Block {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {

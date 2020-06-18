@@ -24,6 +24,8 @@ pub mod execution;
 pub mod hashlib;
 #[cfg(feature = "validator-internals")]
 pub mod journal;
+pub mod protos;
 #[cfg(feature = "stores")]
 pub mod store;
-pub mod protos;
+#[cfg(feature = "validator-internals")]
+pub mod transaction;

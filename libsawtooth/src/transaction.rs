@@ -15,13 +15,30 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::transaction::Transaction;
+use protobuf;
 
-use proto;
+use crate::protos;
 
-impl From<Transaction> for proto::transaction::Transaction {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Transaction {
+    pub header_signature: String,
+    pub payload: Vec<u8>,
+    pub batcher_public_key: String,
+    pub dependencies: Vec<String>,
+    pub family_name: String,
+    pub family_version: String,
+    pub inputs: Vec<String>,
+    pub outputs: Vec<String>,
+    pub nonce: String,
+    pub payload_sha512: String,
+    pub signer_public_key: String,
+
+    pub header_bytes: Vec<u8>,
+}
+
+impl From<Transaction> for protos::transaction::Transaction {
     fn from(other: Transaction) -> Self {
-        let mut proto_transaction = proto::transaction::Transaction::new();
+        let mut proto_transaction = protos::transaction::Transaction::new();
         proto_transaction.set_payload(other.payload);
         proto_transaction.set_header_signature(other.header_signature);
         proto_transaction.set_header(other.header_bytes);
@@ -29,9 +46,9 @@ impl From<Transaction> for proto::transaction::Transaction {
     }
 }
 
-impl From<proto::transaction::Transaction> for Transaction {
-    fn from(mut proto_txn: proto::transaction::Transaction) -> Self {
-        let mut txn_header: proto::transaction::TransactionHeader =
+impl From<protos::transaction::Transaction> for Transaction {
+    fn from(mut proto_txn: protos::transaction::Transaction) -> Self {
+        let mut txn_header: protos::transaction::TransactionHeader =
             protobuf::parse_from_bytes(proto_txn.get_header())
                 .expect("Unable to parse TransactionHeader bytes");
 

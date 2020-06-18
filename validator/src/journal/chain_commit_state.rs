@@ -17,10 +17,11 @@
 
 use std::collections::HashSet;
 
+use sawtooth::transaction::Transaction;
+
 use batch::Batch;
 use journal::block_manager::BlockManager;
 use journal::commit_store::CommitStore;
-use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
@@ -173,7 +174,7 @@ mod test {
     use super::*;
     use block::Block;
     use journal::block_store::InMemoryBlockStore;
-    use transaction::Transaction;
+    use sawtooth::transaction::Transaction;
 
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 

@@ -21,10 +21,10 @@ use cpython::ObjectProtocol;
 use cpython::PythonObject;
 use cpython::ToPyObject;
 use protobuf::Message;
+use sawtooth::transaction::Transaction;
 
 use batch::Batch;
 use proto;
-use transaction::Transaction;
 
 impl ToPyObject for Batch {
     type ObjectType = cpython::PyObject;
@@ -122,7 +122,7 @@ mod tests {
     use cpython::ToPyObject;
     use proto;
     use protobuf::Message;
-    use transaction::Transaction;
+    use sawtooth::transaction::Transaction;
 
     fn create_batch() -> Batch {
         let mut batch_header = proto::batch::BatchHeader::new();

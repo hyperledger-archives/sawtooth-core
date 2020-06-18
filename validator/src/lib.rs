@@ -42,11 +42,11 @@ pub(crate) mod proto;
 pub(crate) mod pylogger;
 pub(crate) mod scheduler;
 pub(crate) mod state;
+pub(crate) mod transaction;
 
 pub(crate) mod batch;
 mod batch_ffi;
 pub(crate) mod block;
 mod block_ffi;
-pub(crate) mod transaction;
 
 pub(crate) mod ffi;
