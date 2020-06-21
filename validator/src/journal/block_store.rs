@@ -15,11 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use std::collections::HashMap;
-
-use block::Block;
+use sawtooth::block::Block;
 
 #[derive(Debug)]
 pub enum BlockStoreError {
@@ -247,7 +246,7 @@ impl Iterator for InMemoryIter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
+    use sawtooth::block::Block;
 
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 

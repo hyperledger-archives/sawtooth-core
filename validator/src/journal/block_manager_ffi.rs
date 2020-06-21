@@ -20,7 +20,8 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use block::Block;
+use sawtooth::block::Block;
+
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
@@ -406,11 +407,11 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
     use database::lmdb::{LmdbContext, LmdbDatabase};
     use journal::block_store::BlockStore;
     use journal::commit_store::CommitStore;
     use proto::block::BlockHeader;
+    use sawtooth::block::Block;
 
     use protobuf::Message;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;

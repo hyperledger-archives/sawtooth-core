@@ -18,9 +18,8 @@
 use proto::block::{Block as ProtoBlock, BlockHeader};
 use protobuf;
 use protobuf::Message;
-use sawtooth::{batch::Batch, transaction::Transaction};
+use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
-use block::Block;
 use database::error::DatabaseError;
 use database::lmdb::DatabaseReader;
 use database::lmdb::LmdbDatabase;

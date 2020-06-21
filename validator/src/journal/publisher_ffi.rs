@@ -21,10 +21,9 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
-use sawtooth::batch::Batch;
+use sawtooth::{batch::Batch, block::Block};
 
 use crate::py_object_wrapper::PyObjectWrapper;
-use block::Block;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
@@ -114,9 +113,8 @@ pub unsafe extern "C" fn block_publisher_new(
     let chain_head = if chain_head == Python::None(py) {
         None
     } else {
-        chain_head
-            .extract(py)
-            .expect("Got chain head that wasn't a BlockWrapper")
+        let wrapped_chain_head = PyObjectWrapper::new(chain_head);
+        Some(Block::from(wrapped_chain_head))
     };
 
     let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
@@ -238,9 +236,9 @@ pub unsafe extern "C" fn block_publisher_initialize_block(
 ) -> ErrorCode {
     let gil = Python::acquire_gil();
     let py = gil.python();
-    let block = PyObject::from_borrowed_ptr(py, previous_block)
-        .extract::<Block>(py)
-        .unwrap();
+    let py_obj = PyObject::from_borrowed_ptr(py, previous_block);
+    let wrapper = PyObjectWrapper::new(py_obj);
+    let block = Block::from(wrapper);
 
     let publisher = (*(publisher as *mut BlockPublisher)).clone();
     py.allow_threads(move || match publisher.initialize_block(&block) {
@@ -338,9 +336,8 @@ pub unsafe fn convert_on_chain_updated_args(
             .map(|py_wrap| Batch::from(py_wrap))
             .collect::<Vec<Batch>>()
     };
-    let chain_head = chain_head
-        .extract(py)
-        .expect("Got a new chain head that wasn't a BlockWrapper");
+    let wrapped_chain_head = PyObjectWrapper::new(chain_head);
+    let chain_head = Block::from(wrapped_chain_head);
 
     (chain_head, committed_batches, uncommitted_batches)
 }

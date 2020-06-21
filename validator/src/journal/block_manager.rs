@@ -21,9 +21,8 @@ use std::collections::{HashMap, HashSet};
 use std::iter::{FromIterator, Peekable};
 use std::sync::{Arc, RwLock};
 
-use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+use sawtooth::{block::Block, journal::NULL_BLOCK_IDENTIFIER};
 
-use block::Block;
 use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
 use metrics;
 
@@ -1142,8 +1141,8 @@ impl Iterator for BranchDiffIterator {
 mod tests {
 
     use super::{BlockManager, BlockManagerError};
-    use block::Block;
     use journal::block_store::InMemoryBlockStore;
+    use sawtooth::block::Block;
 
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 

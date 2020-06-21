@@ -19,11 +19,9 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use block::Block;
-
 use hex;
 use protobuf::{Message, RepeatedField};
-use sawtooth::hashlib::sha256_digest_strs;
+use sawtooth::{block::Block, hashlib::sha256_digest_strs};
 
 use proto::consensus::{
     ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,

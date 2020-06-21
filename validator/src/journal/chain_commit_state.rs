@@ -171,8 +171,8 @@ impl TransactionCommitCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
     use journal::block_store::InMemoryBlockStore;
+    use sawtooth::block::Block;
     use sawtooth::transaction::Transaction;
 
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;

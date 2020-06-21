@@ -15,10 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
-use block::Block;
 use std::fmt;
 
 use cpython::{self, ObjectProtocol, PyClone, PyObject};
+use sawtooth::block::Block;
+
+use crate::py_object_wrapper::PyObjectWrapper;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BlockStatus {
@@ -55,11 +57,12 @@ impl BlockWrapper {
     pub fn block(&self) -> Block {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
-        self.py_block_wrapper
+        let py_obj = self
+            .py_block_wrapper
             .getattr(py, "block")
-            .expect("Failed to get BlockWrapper.block")
-            .extract(py)
-            .expect("Failed to extract BlockWrapper.block")
+            .expect("Failed to get BlockWrapper.block");
+        let wrapper = PyObjectWrapper::new(py_obj);
+        Block::from(wrapper)
     }
 }
 

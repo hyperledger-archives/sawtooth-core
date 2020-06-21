@@ -17,7 +17,6 @@
 
 #![allow(unknown_lints)]
 
-use block::Block;
 use consensus::notifier::BackgroundConsensusNotifier;
 use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
@@ -32,6 +31,7 @@ use journal::chain_head_lock::ChainHeadLock;
 use journal::commit_store::CommitStore;
 use py_ffi;
 use pylogger;
+use sawtooth::block::Block;
 use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 use std::ffi::CStr;
@@ -45,6 +45,8 @@ use protobuf::{self, Message};
 
 use proto;
 use proto::transaction_receipt::TransactionReceipt;
+
+use py_object_wrapper::PyObjectWrapper;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -336,8 +338,10 @@ impl ChainObserver for PyChainObserver {
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
 
+        let wrapped_block = PyObjectWrapper::from(block.clone());
+
         self.py_observer
-            .call_method(py, "chain_update", (block, receipts), None)
+            .call_method(py, "chain_update", (wrapped_block, receipts), None)
             .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
