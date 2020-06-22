@@ -15,20 +15,30 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
 use protobuf;
 
-use sawtooth::batch::Batch;
-use sawtooth::transaction::Transaction;
+use crate::protos;
+use crate::transaction::Transaction;
 
-impl From<Batch> for proto::batch::Batch {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Batch {
+    pub header_signature: String,
+    pub transactions: Vec<Transaction>,
+    pub signer_public_key: String,
+    pub transaction_ids: Vec<String>,
+    pub trace: bool,
+
+    pub header_bytes: Vec<u8>,
+}
+
+impl From<Batch> for protos::batch::Batch {
     fn from(batch: Batch) -> Self {
-        let mut proto_batch = proto::batch::Batch::new();
+        let mut proto_batch = protos::batch::Batch::new();
         proto_batch.set_transactions(protobuf::RepeatedField::from_vec(
             batch
                 .transactions
                 .into_iter()
-                .map(proto::transaction::Transaction::from)
+                .map(protos::transaction::Transaction::from)
                 .collect(),
         ));
         proto_batch.set_header_signature(batch.header_signature);
@@ -38,9 +48,9 @@ impl From<Batch> for proto::batch::Batch {
     }
 }
 
-impl From<proto::batch::Batch> for Batch {
-    fn from(mut proto_batch: proto::batch::Batch) -> Batch {
-        let mut batch_header: proto::batch::BatchHeader =
+impl From<protos::batch::Batch> for Batch {
+    fn from(mut proto_batch: protos::batch::Batch) -> Batch {
+        let mut batch_header: protos::batch::BatchHeader =
             protobuf::parse_from_bytes(proto_batch.get_header())
                 .expect("Unable to parse BatchHeader bytes");
 

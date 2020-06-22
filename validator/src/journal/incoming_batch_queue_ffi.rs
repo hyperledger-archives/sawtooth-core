@@ -19,8 +19,9 @@ use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
 use cpython::{PyObject, Python};
+use sawtooth::batch::Batch;
 
-use batch::Batch;
+use crate::py_object_wrapper::PyObjectWrapper;
 use journal::publisher::IncomingBatchSender;
 
 macro_rules! check_null {
@@ -49,13 +50,8 @@ pub unsafe extern "C" fn incoming_batch_sender_send(
     let py = gil.python();
     let batch: Batch = {
         let pyobj = PyObject::from_borrowed_ptr(py, pyobj_ptr);
-
-        match pyobj.extract(py) {
-            Ok(batch) => batch,
-            Err(_) => {
-                return ErrorCode::InvalidInput;
-            }
-        }
+        let py_wrapper = PyObjectWrapper::new(pyobj);
+        Batch::from(py_wrapper)
     };
 
     let mut sender = (*(sender_ptr as *mut IncomingBatchSender)).clone();

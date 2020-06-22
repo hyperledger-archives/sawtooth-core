@@ -25,10 +25,9 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use sawtooth::execution::execution_platform::NULL_STATE_HASH;
+use sawtooth::{batch::Batch, execution::execution_platform::NULL_STATE_HASH};
 use uluru;
 
-use batch::Batch;
 use block::Block;
 use execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;

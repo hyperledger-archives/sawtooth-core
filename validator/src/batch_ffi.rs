@@ -15,44 +15,25 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
-use cpython::FromPyObject;
-use cpython::ObjectProtocol;
-use cpython::PythonObject;
-use cpython::ToPyObject;
+use cpython::{self, ObjectProtocol, Python, PythonObject, ToPyObject};
 use protobuf::Message;
+use sawtooth::{batch::Batch, protos, transaction::Transaction};
 
-use batch::Batch;
-use proto;
-use transaction::Transaction;
+use crate::py_object_wrapper::PyObjectWrapper;
 
-impl ToPyObject for Batch {
-    type ObjectType = cpython::PyObject;
+impl From<Batch> for PyObjectWrapper {
+    fn from(native_batch: Batch) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
 
-    fn to_py_object(&self, py: cpython::Python) -> Self::ObjectType {
-        let mut rust_batch = proto::batch::Batch::new();
-        rust_batch.set_header(self.header_bytes.clone());
-        let proto_txns = self
-            .transactions
-            .iter()
-            .map(|txn| {
-                let mut proto_txn = proto::transaction::Transaction::new();
-                proto_txn.set_header(txn.header_bytes.clone());
-                proto_txn.set_header_signature(txn.header_signature.clone());
-                proto_txn.set_payload(txn.payload.clone());
-                proto_txn
-            })
-            .collect::<Vec<_>>();
-        rust_batch.set_transactions(::protobuf::RepeatedField::from_vec(proto_txns));
-        rust_batch.set_trace(self.trace);
-        rust_batch.set_header_signature(self.header_signature.clone());
-
+        let batch_proto = protos::batch::Batch::from(native_batch);
         let batch_pb2 = py
             .import("sawtooth_validator.protobuf.batch_pb2")
             .expect("unable for python to import sawtooth_validator.protobuf.batch_pb2");
         let batch = batch_pb2
             .call(py, "Batch", cpython::NoArgs, None)
             .expect("No Batch in batch_pb2");
+
         batch
             .call_method(
                 py,
@@ -60,72 +41,60 @@ impl ToPyObject for Batch {
                 cpython::PyTuple::new(
                     py,
                     &[
-                        cpython::PyBytes::new(py, &rust_batch.write_to_bytes().unwrap())
+                        cpython::PyBytes::new(py, &batch_proto.write_to_bytes().unwrap())
                             .into_object(),
                     ],
                 ),
                 None,
             )
             .unwrap();
-        batch
+        PyObjectWrapper::new(batch)
     }
 }
 
-impl<'source> FromPyObject<'source> for Batch {
-    fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        let batch_bytes = obj
+impl From<PyObjectWrapper> for Batch {
+    fn from(py_object_wrapper: PyObjectWrapper) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let py_obj = py_object_wrapper.to_py_object(py);
+
+        let bytes: Vec<u8> = py_obj
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
-            .unwrap()
-            .extract::<Vec<u8>>(py)
-            .unwrap();
-        let mut proto_batch: proto::batch::Batch =
-            ::protobuf::parse_from_bytes(batch_bytes.as_slice()).unwrap();
-        let mut proto_batch_header: proto::batch::BatchHeader =
-            ::protobuf::parse_from_bytes(proto_batch.get_header()).unwrap();
-        Ok(Batch {
+            .expect("Unable to serialize PyObject to string")
+            .extract(py)
+            .expect("Unable to extract bytes from PyObject string");
+
+        let mut proto_batch: protos::batch::Batch = protobuf::parse_from_bytes(&bytes)
+            .expect("Unable to parse protobuf bytes from python protobuf object");
+        let mut batch_header: protos::batch::BatchHeader =
+            protobuf::parse_from_bytes(proto_batch.get_header())
+                .expect("Unable to parse protobuf bytes from python protobuf object");
+
+        Batch {
             header_signature: proto_batch.take_header_signature(),
             header_bytes: proto_batch.take_header(),
-            transactions: proto_batch
-                .transactions
-                .iter_mut()
-                .map(|t| {
-                    let mut proto_header: proto::transaction::TransactionHeader =
-                        ::protobuf::parse_from_bytes(t.get_header()).unwrap();
-                    Ok(Transaction {
-                        header_signature: t.take_header_signature(),
-                        header_bytes: t.take_header(),
-                        payload: t.take_payload(),
-                        batcher_public_key: proto_header.take_batcher_public_key(),
-                        dependencies: proto_header.take_dependencies().to_vec(),
-                        family_name: proto_header.take_family_name(),
-                        family_version: proto_header.take_family_version(),
-                        inputs: proto_header.take_inputs().to_vec(),
-                        outputs: proto_header.take_outputs().to_vec(),
-                        nonce: proto_header.take_nonce(),
-                        payload_sha512: proto_header.take_payload_sha512(),
-                        signer_public_key: proto_header.take_signer_public_key(),
-                    })
-                })
-                .collect::<cpython::PyResult<Vec<_>>>()?,
-            signer_public_key: proto_batch_header.take_signer_public_key(),
-            transaction_ids: proto_batch_header.take_transaction_ids().to_vec(),
+            signer_public_key: batch_header.take_signer_public_key(),
+            transaction_ids: batch_header.take_transaction_ids().into_vec(),
             trace: proto_batch.get_trace(),
-        })
+
+            transactions: proto_batch
+                .take_transactions()
+                .into_iter()
+                .map(Transaction::from)
+                .collect(),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use super::Batch;
-    use cpython;
-    use cpython::ToPyObject;
-    use proto;
     use protobuf::Message;
-    use transaction::Transaction;
+    use py_object_wrapper::PyObjectWrapper;
+    use sawtooth::{batch::Batch, protos, transaction::Transaction};
 
     fn create_batch() -> Batch {
-        let mut batch_header = proto::batch::BatchHeader::new();
+        let mut batch_header = protos::batch::BatchHeader::new();
         batch_header.set_signer_public_key("C".into());
         batch_header.set_transaction_ids(::protobuf::RepeatedField::from_vec(vec!["B".into()]));
         Batch {
@@ -140,7 +109,7 @@ mod tests {
     }
 
     fn create_txn() -> Transaction {
-        let mut txn_header = proto::transaction::TransactionHeader::new();
+        let mut txn_header = protos::transaction::TransactionHeader::new();
         txn_header.set_batcher_public_key("C".into());
         txn_header.set_dependencies(::protobuf::RepeatedField::from_vec(vec!["D".into()]));
         txn_header.set_family_name("test".into());
@@ -170,11 +139,9 @@ mod tests {
 
     #[test]
     fn test_basic() {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-
         let batch = create_batch();
-        let resulting_batch = batch.to_py_object(py).extract::<Batch>(py).unwrap();
-        assert_eq!(batch, resulting_batch);
+        let py_obj_wrapper = PyObjectWrapper::from(batch.clone());
+        let extracted_batch = Batch::from(py_obj_wrapper);
+        assert_eq!(batch, extracted_batch);
     }
 }

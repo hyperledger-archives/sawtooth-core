@@ -39,14 +39,15 @@ pub(crate) mod gossip;
 pub(crate) mod journal;
 mod metrics;
 pub(crate) mod proto;
+pub(crate) mod py_object_wrapper;
 pub(crate) mod pylogger;
 pub(crate) mod scheduler;
 pub(crate) mod state;
+pub(crate) mod transaction;
 
 pub(crate) mod batch;
 mod batch_ffi;
 pub(crate) mod block;
 mod block_ffi;
-pub(crate) mod transaction;
 
 pub(crate) mod ffi;

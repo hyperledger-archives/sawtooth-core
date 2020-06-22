@@ -17,7 +17,6 @@
 
 #![allow(unknown_lints)]
 
-use batch::Batch;
 use block::Block;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
@@ -30,6 +29,9 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
+use sawtooth::batch::Batch;
+
+use crate::py_object_wrapper::PyObjectWrapper;
 use execution::execution_platform::ExecutionPlatform;
 use ffi::py_import_class;
 use journal::block_manager::{BlockManager, BlockRef};
@@ -461,8 +463,10 @@ impl SyncBlockPublisher {
             let gil = Python::acquire_gil();
             let py = gil.python();
 
+            let batch_wrapper = PyObjectWrapper::from(batch.clone());
+
             self.permission_verifier
-                .call_method(py, "is_batch_signer_authorized", (batch.clone(),), None)
+                .call_method(py, "is_batch_signer_authorized", (batch_wrapper,), None)
                 .expect("PermissionVerifier has no method is_batch_signer_authorized")
                 .extract(py)
                 .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
