@@ -331,7 +331,7 @@ impl BlockManagerState {
         let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
             .get(&[block_id])?
-            .nth(0);
+            .next();
         Ok(block)
     }
 
@@ -890,7 +890,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation")
                 .iter()?;
-            block_store_iter.nth(0).map(|b| b.header_signature.clone())
+            block_store_iter.next().map(|b| b.header_signature.clone())
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
