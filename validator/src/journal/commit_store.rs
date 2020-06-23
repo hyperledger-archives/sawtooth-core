@@ -416,7 +416,7 @@ impl BlockStore for CommitStore {
     ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         Ok(Box::new(CommitStoreGetIterator {
             store: self.clone(),
-            block_ids: block_ids.into_iter().map(|id| (*id).into()).collect(),
+            block_ids: block_ids.iter().map(|id| (*id).into()).collect(),
             index: 0,
         }))
     }

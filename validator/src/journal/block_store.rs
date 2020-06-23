@@ -75,7 +75,7 @@ impl BlockStore for InMemoryBlockStore {
         &'a self,
         block_ids: &[&str],
     ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
-        let block_ids_owned = block_ids.into_iter().map(|id| (*id).into()).collect();
+        let block_ids_owned = block_ids.iter().map(|id| (*id).into()).collect();
         Ok(Box::new(InMemoryGetBlockIterator::new(
             self.clone(),
             block_ids_owned,
