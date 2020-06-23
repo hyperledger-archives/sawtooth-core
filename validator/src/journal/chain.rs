@@ -43,6 +43,7 @@ use sawtooth::{
         block_wrapper::BlockStatus, chain::COMMIT_STORE, chain_id_manager::ChainIdManager,
         fork_cache::ForkCache, NULL_BLOCK_IDENTIFIER,
     },
+    scheduler::TxnExecutionResult,
 };
 
 use consensus::notifier::ConsensusNotifier;
@@ -58,7 +59,6 @@ use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
-use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -1064,10 +1064,22 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
         receipt.set_data(protobuf::RepeatedField::from_vec(
             result.data.iter().map(|data| data.clone()).collect(),
         ));
-        receipt.set_state_changes(protobuf::RepeatedField::from_vec(
-            result.state_changes.clone(),
-        ));
-        receipt.set_events(protobuf::RepeatedField::from_vec(result.events.clone()));
+        receipt.set_state_changes(
+            result
+                .state_changes
+                .clone()
+                .into_iter()
+                .map(|state_change| state_change.into())
+                .collect(),
+        );
+        receipt.set_events(
+            result
+                .events
+                .clone()
+                .into_iter()
+                .map(|event| event.into())
+                .collect(),
+        );
         receipt.set_transaction_id(result.signature.clone());
 
         receipt

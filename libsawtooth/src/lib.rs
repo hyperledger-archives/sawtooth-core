@@ -32,6 +32,8 @@ pub mod hashlib;
 pub mod journal;
 pub mod protos;
 #[cfg(feature = "validator-internals")]
+pub mod scheduler;
+#[cfg(feature = "validator-internals")]
 pub mod state;
 #[cfg(feature = "stores")]
 pub mod store;
