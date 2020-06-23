@@ -20,12 +20,13 @@ use std::sync::{Arc, Mutex};
 
 use sawtooth::{
     block::Block,
-    journal::{chain::COMMIT_STORE, NULL_BLOCK_IDENTIFIER},
+    journal::{
+        block_validator::BlockStatusStore, block_wrapper::BlockStatus, chain::COMMIT_STORE,
+        NULL_BLOCK_IDENTIFIER,
+    },
 };
 
 use journal::block_manager::BlockManager;
-use journal::block_validator::BlockStatusStore;
-use journal::block_wrapper::BlockStatus;
 use metrics;
 
 lazy_static! {

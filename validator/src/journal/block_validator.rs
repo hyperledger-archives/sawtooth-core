@@ -25,18 +25,23 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use sawtooth::{batch::Batch, block::Block, execution::execution_platform::NULL_STATE_HASH};
+use sawtooth::{
+    batch::Batch,
+    block::Block,
+    execution::execution_platform::NULL_STATE_HASH,
+    journal::{block_validator::BlockStatusStore, block_wrapper::BlockStatus},
+};
 use uluru;
 
 use execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;
+use journal::block_manager::BlockManager;
 use journal::block_scheduler::BlockScheduler;
 use journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
 use journal::validation_rule_enforcer::enforce_validation_rules;
-use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use scheduler::TxnExecutionResult;
 use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 
@@ -127,10 +132,6 @@ impl From<ChainCommitStateError> for ValidationError {
             ChainCommitStateError::Error(reason) => ValidationError::BlockValidationError(reason),
         }
     }
-}
-
-pub trait BlockStatusStore: Clone + Send + Sync {
-    fn status(&self, block_id: &str) -> BlockStatus;
 }
 
 #[derive(Clone, Debug)]

@@ -40,8 +40,8 @@ use sawtooth::{
     block::Block,
     consensus::registry::ConsensusRegistry,
     journal::{
-        chain::COMMIT_STORE, chain_id_manager::ChainIdManager, fork_cache::ForkCache,
-        NULL_BLOCK_IDENTIFIER,
+        block_wrapper::BlockStatus, chain::COMMIT_STORE, chain_id_manager::ChainIdManager,
+        fork_cache::ForkCache, NULL_BLOCK_IDENTIFIER,
     },
 };
 
@@ -52,7 +52,6 @@ use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
 };
-use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
