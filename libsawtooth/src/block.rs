@@ -17,8 +17,6 @@
 
 use std::fmt;
 
-use protobuf;
-
 use crate::batch::Batch;
 use crate::protos;
 
