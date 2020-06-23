@@ -38,7 +38,7 @@ use protobuf;
 use sawtooth::{
     batch::Batch,
     block::Block,
-    consensus::registry::ConsensusRegistry,
+    consensus::{notifier::ConsensusNotifier, registry::ConsensusRegistry},
     execution::execution_platform::ExecutionPlatform,
     gossip::permission_verifier::PermissionVerifier,
     journal::{
@@ -52,7 +52,6 @@ use sawtooth::{
     state::state_view_factory::StateViewFactory,
 };
 
-use consensus::notifier::ConsensusNotifier;
 use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
