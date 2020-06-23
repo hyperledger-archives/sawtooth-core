@@ -14,7 +14,8 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabase;
+
 use state::error::StateDatabaseError;
 use state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
 use state::StateReader;

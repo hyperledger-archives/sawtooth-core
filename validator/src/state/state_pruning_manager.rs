@@ -17,7 +17,8 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabase;
+
 use metrics;
 use state::merkle::MerkleDatabase;
 

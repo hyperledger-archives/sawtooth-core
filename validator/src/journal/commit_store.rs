@@ -20,14 +20,14 @@ use protobuf;
 use protobuf::Message;
 use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
 use journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
 use journal::chain::{ChainReadError, ChainReader};
+use sawtooth::database::error::DatabaseError;
+use sawtooth::database::lmdb::DatabaseReader;
+use sawtooth::database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabaseWriter;
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]

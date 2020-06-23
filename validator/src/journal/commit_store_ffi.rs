@@ -20,10 +20,10 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use protobuf;
+use sawtooth::database::error::DatabaseError;
+use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
-use database::error::DatabaseError;
-use database::lmdb::LmdbDatabase;
 use journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
 use proto;
 

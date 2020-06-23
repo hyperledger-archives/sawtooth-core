@@ -54,7 +54,7 @@ lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]
 redis-store = ["redis", "stores"]
 stores = []
-validator-internals = ["hex", "openssl"]
+validator-internals = ["hex", "lmdb-zero", "openssl"]
 
 [build-dependencies]
 protoc-rust = "2.0"

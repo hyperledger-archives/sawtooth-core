@@ -14,7 +14,8 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabase;
+
 use state::error::StateDatabaseError;
 use state::merkle::*;
 /// This module contains all of the extern C functions for the Merkle trie

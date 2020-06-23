@@ -31,12 +31,11 @@ use cbor::value::Value;
 
 use protobuf;
 use protobuf::Message;
+use sawtooth::database::error::DatabaseError;
+use sawtooth::database::lmdb::DatabaseReader;
+use sawtooth::database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabaseWriter;
 use sawtooth::hashlib::sha512_digest_bytes;
-
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
 
 use proto::merkle::ChangeLogEntry;
 use proto::merkle::ChangeLogEntry_Successor;
@@ -821,14 +820,15 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::error::DatabaseError;
-    use database::lmdb::DatabaseReader;
-    use database::lmdb::LmdbContext;
-    use database::lmdb::LmdbDatabase;
     use proto::merkle::ChangeLogEntry;
 
     use protobuf;
     use rand::{seq, thread_rng};
+    use sawtooth::database::error::DatabaseError;
+    use sawtooth::database::lmdb::DatabaseReader;
+    use sawtooth::database::lmdb::LmdbContext;
+    use sawtooth::database::lmdb::LmdbDatabase;
+
     use std::env;
     use std::fs::remove_file;
     use std::panic;

@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std;
-
 #[derive(Debug)]
 pub enum DatabaseError {
     InitError(String),
