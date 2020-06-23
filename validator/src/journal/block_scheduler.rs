@@ -275,8 +275,7 @@ mod tests {
     #[test]
     fn test_block_scheduler_multiple_forks() {
         let block_manager = BlockManager::new();
-        let block_status_store: Arc<Mutex<HashMap<String, BlockStatus>>> =
-            Arc::new(Mutex::new(HashMap::new()));
+        let block_status_store = ArcMockStore::new();
 
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let block_b = create_block("B", "A", 1);
@@ -370,8 +369,7 @@ mod tests {
     #[test]
     fn test_cache_misses() {
         let block_manager = BlockManager::new();
-        let block_status_store: Arc<Mutex<HashMap<String, BlockStatus>>> =
-            Arc::new(Mutex::new(HashMap::new()));
+        let block_status_store = ArcMockStore::new();
 
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, 0);
         let block_b = create_block("B", "A", 1);
@@ -391,7 +389,7 @@ mod tests {
             .put(vec![block_b.clone(), block_c3.clone()])
             .expect("Block manager errored trying to put a branch");
 
-        let block_scheduler = BlockScheduler::new(block_manager, Arc::clone(&block_status_store));
+        let block_scheduler = BlockScheduler::new(block_manager, block_status_store.clone());
 
         assert_eq!(
             block_scheduler.schedule(vec![block_a.clone(), block_b.clone()]),
@@ -399,10 +397,7 @@ mod tests {
             "Block A is ready, but block b is not"
         );
 
-        block_status_store
-            .lock()
-            .expect("Mutex was poisoned")
-            .insert(block_a.header_signature.clone(), BlockStatus::Valid);
+        block_status_store.insert(&block_a.header_signature, BlockStatus::Valid);
 
         assert_eq!(
             block_scheduler.done(&block_a.header_signature),
@@ -441,15 +436,6 @@ mod tests {
         }
     }
 
-    impl BlockStatusStore for Arc<Mutex<HashMap<String, BlockStatus>>> {
-        fn status(&self, block_id: &str) -> BlockStatus {
-            self.lock()
-                .expect("Mutex was poisoned")
-                .get(block_id)
-                .cloned()
-                .unwrap_or(BlockStatus::Unknown)
-        }
-    }
     #[derive(Clone)]
     struct MockStore {}
 
@@ -465,6 +451,41 @@ mod tests {
                 return BlockStatus::Unknown;
             }
             BlockStatus::Valid
+        }
+    }
+
+    #[derive(Clone)]
+    struct ArcMockStore {
+        statuses: Arc<Mutex<HashMap<String, BlockStatus>>>,
+    }
+
+    impl ArcMockStore {
+        fn new() -> Self {
+            ArcMockStore {
+                statuses: Default::default(),
+            }
+        }
+
+        fn insert(&self, id: &str, status: BlockStatus) {
+            self.statuses
+                .lock()
+                .expect("Mutex was poisoned")
+                .insert(id.into(), status);
+        }
+    }
+
+    impl BlockStatusStore for ArcMockStore {
+        fn status(&self, block_id: &str) -> BlockStatus {
+            if block_id == "UNKNOWN" {
+                return BlockStatus::Unknown;
+            } else {
+                self.statuses
+                    .lock()
+                    .expect("Mutex was poisoned")
+                    .get(block_id)
+                    .cloned()
+                    .unwrap_or(BlockStatus::Unknown)
+            }
         }
     }
 }
