@@ -17,8 +17,6 @@
 
 #![allow(unknown_lints)]
 
-use block::Block;
-
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::mem;
@@ -29,7 +27,7 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
-use sawtooth::batch::Batch;
+use sawtooth::{batch::Batch, block::Block};
 
 use crate::py_object_wrapper::PyObjectWrapper;
 use execution::execution_platform::ExecutionPlatform;
@@ -414,19 +412,21 @@ impl SyncBlockPublisher {
     fn publish_block(&self, block: &PyObject, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let block: Block = block
-            .extract(py)
-            .expect("Got block to publish that wasn't a BlockWrapper");
+        let py_obj = block
+            .extract::<PyObject>(py)
+            .expect("Unable to extract PyObject");
 
-        let block_id = block.header_signature.clone();
+        let wrapper = PyObjectWrapper::new(py_obj);
 
         self.block_sender
-            .call_method(py, "send", (block, injected_batches), None)
+            .call_method(py, "send", (&wrapper, injected_batches), None)
             .map_err(|py_err| {
                 ::pylogger::exception(py, "{:?}", py_err);
             })
             .expect("BlockSender.send() raised an exception");
 
+        let block: Block = Block::from(wrapper);
+        let block_id = block.header_signature.clone();
         let mut blocks_published_count =
             COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
         blocks_published_count.inc();

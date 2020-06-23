@@ -26,9 +26,7 @@ use cpython::PyList;
 use cpython::Python;
 
 use sawtooth::hashlib::sha256_digest_strs;
-use sawtooth::{batch::Batch, transaction::Transaction};
-
-use block::Block;
+use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
 use crate::py_object_wrapper::PyObjectWrapper;
 use journal::chain_commit_state::TransactionCommitCache;
@@ -241,7 +239,12 @@ impl CandidateBlock {
                     let gil = cpython::Python::acquire_gil();
                     let py = gil.python();
                     match injector
-                        .call_method(py, "block_start", (previous_block.clone(),), None)
+                        .call_method(
+                            py,
+                            "block_start",
+                            (PyObjectWrapper::from(previous_block.clone()),),
+                            None,
+                        )
                         .expect("BlockInjector.block_start failed")
                         .extract::<cpython::PyList>(py)
                     {

@@ -22,8 +22,8 @@ use std::slice;
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 use protobuf::{self, Message, ProtobufEnum};
 use py_ffi;
+use sawtooth::block::Block;
 
-use block::Block;
 use consensus::notifier::{
     BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
 };

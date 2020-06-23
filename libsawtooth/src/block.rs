@@ -15,19 +15,45 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
+use std::fmt;
+
 use protobuf;
 
-use sawtooth::{batch::Batch, block::Block};
+use crate::batch::Batch;
+use crate::protos;
 
-impl From<Block> for proto::block::Block {
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct Block {
+    pub header_signature: String,
+    pub batches: Vec<Batch>,
+    pub state_root_hash: String,
+    pub consensus: Vec<u8>,
+    pub batch_ids: Vec<String>,
+    pub signer_public_key: String,
+    pub previous_block_id: String,
+    pub block_num: u64,
+
+    pub header_bytes: Vec<u8>,
+}
+
+impl fmt::Display for Block {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Block(id: {}, block_num: {}, state_root_hash: {}, previous_block_id: {})",
+            self.header_signature, self.block_num, self.state_root_hash, self.previous_block_id
+        )
+    }
+}
+
+impl From<Block> for protos::block::Block {
     fn from(other: Block) -> Self {
-        let mut proto_block = proto::block::Block::new();
+        let mut proto_block = protos::block::Block::new();
         proto_block.set_batches(protobuf::RepeatedField::from_vec(
             other
                 .batches
                 .into_iter()
-                .map(proto::batch::Batch::from)
+                .map(protos::batch::Batch::from)
                 .collect(),
         ));
         proto_block.set_header_signature(other.header_signature);
@@ -36,9 +62,9 @@ impl From<Block> for proto::block::Block {
     }
 }
 
-impl From<proto::block::Block> for Block {
-    fn from(mut proto_block: proto::block::Block) -> Self {
-        let mut block_header: proto::block::BlockHeader =
+impl From<protos::block::Block> for Block {
+    fn from(mut proto_block: protos::block::Block) -> Self {
+        let mut block_header: protos::block::BlockHeader =
             protobuf::parse_from_bytes(proto_block.get_header())
                 .expect("Unable to parse BlockHeader bytes");
 
