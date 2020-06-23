@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "lmdb-store")]
+#[cfg(any(feature = "lmdb-store", feature = "validator-internals"))]
 #[macro_use]
 extern crate log;
 
@@ -31,6 +31,8 @@ pub mod hashlib;
 #[cfg(feature = "validator-internals")]
 pub mod journal;
 pub mod protos;
+#[cfg(feature = "validator-internals")]
+pub mod state;
 #[cfg(feature = "stores")]
 pub mod store;
 #[cfg(feature = "validator-internals")]

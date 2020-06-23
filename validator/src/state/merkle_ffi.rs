@@ -15,11 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 use sawtooth::database::lmdb::LmdbDatabase;
+use sawtooth::state::error::StateDatabaseError;
+use sawtooth::state::merkle::*;
+use sawtooth::state::StateReader;
 
-use state::error::StateDatabaseError;
-use state::merkle::*;
 /// This module contains all of the extern C functions for the Merkle trie
-use state::StateReader;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::mem;
