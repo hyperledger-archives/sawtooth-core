@@ -21,9 +21,11 @@ use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::state::merkle::MerkleDatabase;
 
 use metrics;
+use py_object_wrapper::PyObjectWrapper;
+use sawtooth::metrics::MetricsCollectorHandle;
 
 lazy_static! {
-    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
         metrics::get_collector("sawtooth_validator.state");
 }
 

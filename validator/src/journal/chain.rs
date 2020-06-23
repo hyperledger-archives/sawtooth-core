@@ -59,11 +59,13 @@ use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
+use py_object_wrapper::PyObjectWrapper;
+use sawtooth::metrics::MetricsCollectorHandle;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
 lazy_static! {
-    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
         metrics::get_collector("sawtooth_validator.chain");
 }
 
@@ -751,14 +753,14 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 let mut chain_head_gauge =
                     COLLECTOR.gauge("ChainController.chain_head", None, None);
-                chain_head_gauge.set_value(&block.header_signature[0..8]);
+                chain_head_gauge.set_value(block.header_signature[0..8].into());
 
                 let mut committed_transactions_count =
                     COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
                 committed_transactions_count.inc_n(result.transaction_count);
 
                 let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-                block_num_guage.set_value(block.block_num);
+                block_num_guage.set_value(block.block_num.into());
 
                 chain_head_guard.notify_on_chain_updated(
                     block.clone(),
@@ -809,7 +811,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
 
                 let mut committed_transactions_gauge =
                     COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
-                committed_transactions_gauge.set_value(total_committed_txns);
+                committed_transactions_gauge.set_value(total_committed_txns.into());
 
                 let chain_head_block_num = block.block_num;
                 if chain_head_block_num + 1 > u64::from(self.state_pruning_block_depth) {
@@ -914,10 +916,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             );
 
             let mut gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
-            gauge.set_value(&chain_head.header_signature[0..8]);
+            gauge.set_value(chain_head.header_signature[0..8].into());
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(&chain_head.block_num);
+            block_num_guage.set_value(chain_head.block_num.clone().into());
             let mut guard = self.chain_head_lock.acquire();
 
             guard.notify_on_chain_updated(chain_head, vec![], vec![]);

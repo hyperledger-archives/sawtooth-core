@@ -16,8 +16,10 @@
 use std::collections::HashMap;
 
 use cpython::{NoArgs, ObjectProtocol, PyDict, PyModule, PyObject, Python, ToPyObject};
+use py_object_wrapper::PyObjectWrapper;
+use sawtooth::metrics::{Counter, Gauge, Level, MetricsCollectorHandle};
 
-pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
+pub fn get_collector<S: AsRef<str>>(name: S) -> Box<PyMetricsCollectorHandle> {
     let gil = Python::acquire_gil();
     let py = gil.python();
     let py_metrics = py
@@ -26,21 +28,10 @@ pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
     let py_collector = py_metrics
         .call(py, "get_collector", (name.as_ref(),), None)
         .expect("Failed to call metrics.get_collector()");
-    MetricsCollectorHandle {
+    Box::new(PyMetricsCollectorHandle {
         py_collector,
         py_metrics,
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum Level {
-    Info,
-}
-
-impl Default for Level {
-    fn default() -> Self {
-        Level::Info
-    }
+    })
 }
 
 fn into_level_str(level: Level) -> &'static str {
@@ -50,34 +41,36 @@ fn into_level_str(level: Level) -> &'static str {
     }
 }
 
-pub struct MetricsCollectorHandle {
+pub struct PyMetricsCollectorHandle {
     py_collector: PyObject,
     py_metrics: PyModule,
 }
 
-impl MetricsCollectorHandle {
-    pub fn counter<S: AsRef<str>>(
+impl<S: AsRef<str>> MetricsCollectorHandle<S, PyObjectWrapper> for PyMetricsCollectorHandle {
+    fn counter(
         &self,
         metric_name: S,
         level: Option<Level>,
         tags: Option<HashMap<String, String>>,
-    ) -> Counter {
-        Counter {
+    ) -> Box<dyn Counter> {
+        Box::new(PyCounter {
             py_counter: self.create_metric("counter", metric_name, level, tags),
-        }
+        })
     }
 
-    pub fn gauge<S: AsRef<str>>(
+    fn gauge(
         &self,
         metric_name: S,
         level: Option<Level>,
         tags: Option<HashMap<String, String>>,
-    ) -> Gauge {
-        Gauge {
+    ) -> Box<dyn Gauge<PyObjectWrapper>> {
+        Box::new(PyGauge {
             py_gauge: self.create_metric("gauge", metric_name, level, tags),
-        }
+        })
     }
+}
 
+impl PyMetricsCollectorHandle {
     fn create_metric<S: AsRef<str>>(
         &self,
         metric_type: &str,
@@ -103,12 +96,12 @@ impl MetricsCollectorHandle {
     }
 }
 
-pub struct Gauge {
+pub struct PyGauge {
     py_gauge: PyObject,
 }
 
-impl Gauge {
-    pub fn set_value<T: ToPyObject>(&mut self, value: T) {
+impl<T: ToPyObject> Gauge<T> for PyGauge {
+    fn set_value(&mut self, value: T) {
         let gil = Python::acquire_gil();
         let py = gil.python();
         self.py_gauge
@@ -117,12 +110,12 @@ impl Gauge {
     }
 }
 
-pub struct Counter {
+pub struct PyCounter {
     py_counter: PyObject,
 }
 
-impl Counter {
-    pub fn inc(&mut self) {
+impl Counter for PyCounter {
+    fn inc(&mut self) {
         let gil = Python::acquire_gil();
         let py = gil.python();
         self.py_counter
@@ -130,7 +123,7 @@ impl Counter {
             .expect("Failed to call Counter.inc()");
     }
 
-    pub fn inc_n(&mut self, value: usize) {
+    fn inc_n(&mut self, value: usize) {
         let gil = Python::acquire_gil();
         let py = gil.python();
         self.py_counter
@@ -138,7 +131,7 @@ impl Counter {
             .expect("Failed to call Counter.inc()");
     }
 
-    pub fn dec_n(&mut self, value: usize) {
+    fn dec_n(&mut self, value: usize) {
         let gil = Python::acquire_gil();
         let py = gil.python();
         self.py_counter

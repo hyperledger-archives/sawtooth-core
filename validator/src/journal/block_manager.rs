@@ -25,9 +25,11 @@ use sawtooth::{block::Block, journal::NULL_BLOCK_IDENTIFIER};
 
 use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
 use metrics;
+use py_object_wrapper::PyObjectWrapper;
+use sawtooth::metrics::MetricsCollectorHandle;
 
 lazy_static! {
-    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
         metrics::get_collector("sawtooth_validator.block_manager");
 }
 
@@ -290,7 +292,7 @@ impl BlockManagerState {
 
         COLLECTOR
             .gauge("BlockManager.pool_size", None, None)
-            .set_value(block_by_block_id.len());
+            .set_value(block_by_block_id.len().into());
 
         Ok(())
     }

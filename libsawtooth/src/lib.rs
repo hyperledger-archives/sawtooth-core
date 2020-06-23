@@ -30,6 +30,8 @@ pub mod execution;
 pub mod hashlib;
 #[cfg(feature = "validator-internals")]
 pub mod journal;
+#[cfg(feature = "validator-internals")]
+pub mod metrics;
 pub mod protos;
 #[cfg(feature = "validator-internals")]
 pub mod scheduler;
