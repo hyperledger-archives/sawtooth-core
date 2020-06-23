@@ -426,7 +426,7 @@ impl SyncBlockPublisher {
             .expect("BlockSender.send() raised an exception");
 
         let block: Block = Block::from(wrapper);
-        let block_id = block.header_signature.clone();
+        let block_id = block.header_signature;
         let mut blocks_published_count =
             COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
         blocks_published_count.inc();

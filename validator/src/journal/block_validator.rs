@@ -445,7 +445,7 @@ impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationP
             .get(&[&block.previous_block_id])
             .next()
             .unwrap_or(None)
-            .map(|b| b.state_root_hash.clone());
+            .map(|b| b.state_root_hash);
 
         for validation in &self.validations {
             match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {

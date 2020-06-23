@@ -958,7 +958,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
-            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+            self.start_commit_queue_thread(exit_flag, commit_queue_receiver);
         }
     }
 

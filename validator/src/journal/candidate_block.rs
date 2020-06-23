@@ -395,7 +395,7 @@ impl CandidateBlock {
                         "Batch {} is invalid, due to missing txn dependency",
                         header_signature
                     );
-                    bad_batches.push(batch.clone());
+                    bad_batches.push(batch);
                     pending_batches.clear();
                     pending_batches.append(
                         &mut self
