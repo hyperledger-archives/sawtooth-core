@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{PyObject, Python, ToPyObject};
+use cpython::{PyObject, Python, PythonObject, ToPyObject};
 
 pub struct PyObjectWrapper {
     pub py_object: PyObject,
@@ -34,5 +34,32 @@ impl ToPyObject for PyObjectWrapper {
         self.py_object
             .extract::<PyObject>(py)
             .expect("Unable to get PyObject")
+    }
+}
+
+impl From<usize> for PyObjectWrapper {
+    fn from(value: usize) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        PyObjectWrapper::new(value.to_py_object(py).into_object())
+    }
+}
+
+impl From<u64> for PyObjectWrapper {
+    fn from(value: u64) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        PyObjectWrapper::new(value.to_py_object(py).into_object())
+    }
+}
+
+impl From<&str> for PyObjectWrapper {
+    fn from(value: &str) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        PyObjectWrapper::new(value.to_py_object(py).into_object())
     }
 }
