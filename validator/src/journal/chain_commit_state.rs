@@ -171,11 +171,11 @@ impl TransactionCommitCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use journal::block_store::InMemoryBlockStore;
-    use sawtooth::block::Block;
-    use sawtooth::transaction::Transaction;
 
+    use sawtooth::block::Block;
+    use sawtooth::journal::block_store::InMemoryBlockStore;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+    use sawtooth::transaction::Transaction;
 
     /// Creates Chains of blocks that match this diagram
     /// chain4                    B4-4  - B5-4

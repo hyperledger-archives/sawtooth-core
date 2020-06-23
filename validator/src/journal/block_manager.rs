@@ -21,9 +21,11 @@ use std::collections::{HashMap, HashSet};
 use std::iter::{FromIterator, Peekable};
 use std::sync::{Arc, RwLock};
 
+use sawtooth::journal::block_store::{
+    BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex,
+};
 use sawtooth::{block::Block, journal::NULL_BLOCK_IDENTIFIER};
 
-use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
 use metrics;
 
 lazy_static! {
@@ -1141,9 +1143,9 @@ impl Iterator for BranchDiffIterator {
 mod tests {
 
     use super::{BlockManager, BlockManagerError};
-    use journal::block_store::InMemoryBlockStore;
-    use sawtooth::block::Block;
 
+    use sawtooth::block::Block;
+    use sawtooth::journal::block_store::InMemoryBlockStore;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {

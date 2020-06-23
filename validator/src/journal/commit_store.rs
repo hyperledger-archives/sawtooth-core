@@ -18,16 +18,16 @@
 use proto::block::{Block as ProtoBlock, BlockHeader};
 use protobuf;
 use protobuf::Message;
-use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
-
-use journal::block_store::{
-    BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
-};
-use journal::chain::{ChainReadError, ChainReader};
 use sawtooth::database::error::DatabaseError;
 use sawtooth::database::lmdb::DatabaseReader;
 use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::database::lmdb::LmdbDatabaseWriter;
+use sawtooth::journal::block_store::{
+    BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
+};
+use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
+
+use journal::chain::{ChainReadError, ChainReader};
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]

@@ -18,7 +18,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use sawtooth::block::Block;
+use crate::block::Block;
 
 #[derive(Debug)]
 pub enum BlockStoreError {
@@ -246,9 +246,8 @@ impl Iterator for InMemoryIter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use sawtooth::block::Block;
 
-    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
         Block {
