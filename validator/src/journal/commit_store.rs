@@ -163,7 +163,7 @@ impl CommitStore {
     fn write_block_num_to_index(
         writer: &mut LmdbDatabaseWriter,
         block_num: u64,
-        header_signature: &String,
+        header_signature: &str,
     ) -> Result<(), DatabaseError> {
         let block_num_index = format!("0x{:0>16x}", block_num);
         writer.index_put(
