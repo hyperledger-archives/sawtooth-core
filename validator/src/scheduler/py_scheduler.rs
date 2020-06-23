@@ -19,27 +19,14 @@ use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyResult;
 
-use protobuf::ProtobufError;
-use sawtooth::batch::Batch;
+use sawtooth::{
+    batch::Batch,
+    scheduler::{ExecutionResults, Scheduler, SchedulerError},
+};
 
 use scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
-use scheduler::{ExecutionResults, Scheduler, SchedulerError};
 
 use crate::py_object_wrapper::PyObjectWrapper;
-
-impl From<ProtobufError> for SchedulerError {
-    fn from(other: ProtobufError) -> SchedulerError {
-        SchedulerError::Other(other.to_string())
-    }
-}
-
-impl From<cpython::PyErr> for SchedulerError {
-    fn from(other: cpython::PyErr) -> SchedulerError {
-        let gil = cpython::Python::acquire_gil();
-        let py = gil.python();
-        SchedulerError::Other(other.get_type(py).name(py).into_owned())
-    }
-}
 
 type CombinedOptionalBatchResult = Vec<(
     Vec<PyTxnExecutionResult>,
@@ -67,7 +54,12 @@ impl PyScheduler {
             .py_scheduler
             .call_method(py, "complete", (block,), None)
             .expect("No method complete on python scheduler")
-            .extract::<bool>(py)?)
+            .extract::<bool>(py)
+            .map_err(|err| {
+                let gil = cpython::Python::acquire_gil();
+                let py = gil.python();
+                SchedulerError::Other(err.get_type(py).name(py).into_owned())
+            })?)
     }
 }
 
@@ -150,7 +142,12 @@ impl Scheduler for PyScheduler {
                             Ok((vec![], None, id.to_owned()))
                         }
                     })
-                    .collect::<PyResult<CombinedOptionalBatchResult>>()?;
+                    .collect::<PyResult<CombinedOptionalBatchResult>>()
+                    .map_err(|err| {
+                        let gil = cpython::Python::acquire_gil();
+                        let py = gil.python();
+                        SchedulerError::Other(err.get_type(py).name(py).into_owned())
+                    })?;
 
             let beginning_state_hash = results
                 .first()

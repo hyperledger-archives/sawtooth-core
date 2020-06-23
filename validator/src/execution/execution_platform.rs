@@ -16,8 +16,7 @@
  */
 
 use cpython;
-
-use scheduler::Scheduler;
+use sawtooth::scheduler::Scheduler;
 
 pub trait ExecutionPlatform: Sync + Send {
     fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr>;

@@ -17,11 +17,11 @@
 
 use cpython;
 use cpython::{ObjectProtocol, PyClone};
+use sawtooth::scheduler::Scheduler;
 
 use execution::execution_platform::ExecutionPlatform;
 
 use scheduler::py_scheduler::PyScheduler;
-use scheduler::Scheduler;
 
 pub struct PyExecutor {
     executor: cpython::PyObject,
