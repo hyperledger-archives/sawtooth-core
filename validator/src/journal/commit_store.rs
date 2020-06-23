@@ -25,9 +25,8 @@ use sawtooth::database::lmdb::LmdbDatabaseWriter;
 use sawtooth::journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
+use sawtooth::journal::chain::{ChainReadError, ChainReader};
 use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
-
-use journal::chain::{ChainReadError, ChainReader};
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]
