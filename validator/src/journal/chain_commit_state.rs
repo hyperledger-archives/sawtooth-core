@@ -17,10 +17,10 @@
 
 use std::collections::HashSet;
 
+use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::{batch::Batch, transaction::Transaction};
 
 use journal::block_manager::BlockManager;
-use journal::commit_store::CommitStore;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {

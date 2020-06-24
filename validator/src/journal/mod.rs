@@ -28,7 +28,6 @@ mod chain_commit_state;
 pub mod chain_ffi;
 pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
-mod commit_store;
 pub mod commit_store_ffi;
 pub mod incoming_batch_queue_ffi;
 pub mod publisher;

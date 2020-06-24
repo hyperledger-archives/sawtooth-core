@@ -19,4 +19,5 @@ pub mod block_validator;
 pub mod block_wrapper;
 pub mod chain;
 pub mod chain_id_manager;
+pub mod commit_store;
 pub mod fork_cache;

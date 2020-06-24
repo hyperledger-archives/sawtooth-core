@@ -22,9 +22,11 @@ use std::slice;
 use protobuf;
 use sawtooth::database::error::DatabaseError;
 use sawtooth::database::lmdb::LmdbDatabase;
+use sawtooth::journal::commit_store::{
+    ByHeightDirection, CommitStore, CommitStoreByHeightIterator,
+};
 use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
-use journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
 use proto;
 
 #[repr(u32)]

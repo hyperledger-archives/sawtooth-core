@@ -21,13 +21,13 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
+use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::{batch::Batch, block::Block};
 
 use crate::py_object_wrapper::PyObjectWrapper;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
 use journal::block_manager::BlockManager;
-use journal::commit_store::CommitStore;
 use journal::publisher::{
     BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };

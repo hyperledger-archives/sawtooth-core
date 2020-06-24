@@ -21,11 +21,12 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use sawtooth::block::Block;
+use sawtooth::journal::commit_store::CommitStore;
 
 use journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::commit_store::CommitStore;
+
 use proto;
 use protobuf::{self, Message};
 
@@ -407,7 +408,6 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 #[cfg(test)]
 mod test {
     use super::*;
-    use journal::commit_store::CommitStore;
     use proto::block::BlockHeader;
 
     use protobuf::Message;
