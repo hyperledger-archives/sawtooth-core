@@ -742,12 +742,7 @@ impl Node {
         let children = self
             .children
             .into_iter()
-            .map(|(k, v)| {
-                (
-                    Key::Text(Text::Text(k)),
-                    Value::Text(Text::Text(v)),
-                )
-            })
+            .map(|(k, v)| (Key::Text(Text::Text(k)), Value::Text(Text::Text(v))))
             .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));

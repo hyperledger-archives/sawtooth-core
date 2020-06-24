@@ -24,7 +24,6 @@ use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_validator::{BlockValidationResultStore, BlockValidator};
-use journal::block_wrapper::BlockStatus;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
 use journal::commit_store::CommitStore;
@@ -42,6 +41,7 @@ use std::slice;
 use std::time::Duration;
 
 use protobuf::{self, Message};
+use sawtooth::journal::block_wrapper::BlockStatus;
 
 use proto;
 use proto::transaction_receipt::TransactionReceipt;

@@ -43,7 +43,8 @@ impl From<PyObjectWrapper> for Block {
 
         let mut block_header: BlockHeader = protobuf::parse_from_bytes(proto_block.get_header())
             .expect("Unable to parse protobuf bytes from python protobuf object");
-        let block = Block {
+
+        Block {
             header_signature: proto_block.take_header_signature(),
             header_bytes: proto_block.take_header(),
             state_root_hash: block_header.take_state_root_hash(),
@@ -58,9 +59,7 @@ impl From<PyObjectWrapper> for Block {
                 .into_iter()
                 .map(Batch::from)
                 .collect(),
-        };
-
-        block
+        }
     }
 }
 

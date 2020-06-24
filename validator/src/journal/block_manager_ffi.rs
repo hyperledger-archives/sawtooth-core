@@ -153,7 +153,7 @@ pub unsafe extern "C" fn block_manager_put(
     check_null!(block_manager, branch);
 
     let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
-        .into_iter()
+        .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);

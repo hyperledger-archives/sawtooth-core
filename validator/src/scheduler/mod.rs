@@ -15,10 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::batch::Batch;
-
-use proto::events::Event;
-use proto::transaction_receipt::StateChange;
+use sawtooth::{batch::Batch, scheduler::TxnExecutionResult};
 
 mod execution_result_ffi;
 
@@ -54,17 +51,6 @@ pub struct ExecutionResults {
 }
 
 pub type BatchExecutionResult = (String, Option<Vec<TxnExecutionResult>>);
-
-#[derive(Clone, Debug)]
-pub struct TxnExecutionResult {
-    pub signature: String,
-    pub is_valid: bool,
-    pub state_changes: Vec<StateChange>,
-    pub events: Vec<Event>,
-    pub data: Vec<Vec<u8>>,
-    pub error_message: String,
-    pub error_data: Vec<u8>,
-}
 
 #[derive(Debug)]
 pub enum SchedulerError {

@@ -426,7 +426,7 @@ impl SyncBlockPublisher {
             .expect("BlockSender.send() raised an exception");
 
         let block: Block = Block::from(wrapper);
-        let block_id = block.header_signature.clone();
+        let block_id = block.header_signature;
         let mut blocks_published_count =
             COLLECTOR.counter("BlockPublisher.blocks_published_count", None, None);
         blocks_published_count.inc();
@@ -915,7 +915,7 @@ impl QueueLimit {
             // b. Drained the queue, but the queue was not bigger than the
             //    current running average
 
-            let remainder = queue_length.checked_sub(consumed).unwrap_or(0);
+            let remainder = queue_length.saturating_sub(consumed);
 
             if remainder > self.avg.value() || consumed > self.avg.value() {
                 self.avg.update(consumed);

@@ -46,7 +46,7 @@ pub fn set_up_logger(verbosity: u64, py: Python) {
 pub extern "C" fn pylogger_init(verbosity: usize) {
     let gil = Python::acquire_gil();
     let py = gil.python();
-    if let Err(_) = PyLogger::init(determine_log_level(verbosity as u64), py) {
+    if PyLogger::init(determine_log_level(verbosity as u64), py).is_err() {
         warn!("Attempted to initialize logger twice; ignoring");
     }
 }

@@ -395,7 +395,7 @@ impl CandidateBlock {
                         "Batch {} is invalid, due to missing txn dependency",
                         header_signature
                     );
-                    bad_batches.push(batch.clone());
+                    bad_batches.push(batch);
                     pending_batches.clear();
                     pending_batches.append(
                         &mut self
@@ -442,12 +442,12 @@ impl CandidateBlock {
             .extract::<PyList>(py)
             .expect("Failed to extract PyList from uncommitted_batches")
             .iter(py)
-            .map(|py_obj| PyObjectWrapper::new(py_obj))
+            .map(PyObjectWrapper::new)
             .collect::<Vec<PyObjectWrapper>>();
 
         let batches = batch_py_objs
             .into_iter()
-            .map(|py_wrap| Batch::from(py_wrap))
+            .map(Batch::from)
             .collect::<Vec<Batch>>();
 
         let batch_ids: Vec<&str> = batches

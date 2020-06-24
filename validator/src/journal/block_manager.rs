@@ -275,7 +275,7 @@ impl BlockManagerState {
             );
             block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
-            blocks_with_references.into_iter().for_each(|block| {
+            blocks_with_references.iter().for_each(|block| {
                 block_by_block_id.insert(block.header_signature.clone(), block.clone());
 
                 references_by_block_id.insert(
@@ -305,8 +305,8 @@ impl BlockManagerState {
             .read()
             .expect("Acquiring blockstore by name read lock; lock poisoned");
         let block = block_by_block_id.get(block_id).cloned();
-        if block.is_some() {
-            BlockLocation::MainCache(block.unwrap())
+        if let Some(block) = block {
+            BlockLocation::MainCache(block)
         } else {
             let name: Option<String> = blockstore_by_name
                 .iter()
@@ -331,7 +331,7 @@ impl BlockManagerState {
         let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
             .get(&[block_id])?
-            .nth(0);
+            .next();
         Ok(block)
     }
 
@@ -367,7 +367,7 @@ impl BlockManagerState {
                 block.previous_block_id.clone(),
             );
             rc.increase_external_ref_count();
-            references_by_block_id.insert(block.header_signature.clone(), rc);
+            references_by_block_id.insert(block.header_signature, rc);
             return Ok(());
         }
 
@@ -497,7 +497,7 @@ impl BlockManagerState {
                     head.header_signature.clone(),
                     RefCount::new_unreffed_block(
                         head.header_signature.clone(),
-                        head.previous_block_id.clone(),
+                        head.previous_block_id,
                     ),
                 );
             }
@@ -890,7 +890,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation")
                 .iter()?;
-            block_store_iter.nth(0).map(|b| b.header_signature.clone())
+            block_store_iter.next().map(|b| b.header_signature)
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
@@ -1026,7 +1026,7 @@ impl Iterator for BranchIterator {
             {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
-                    Some(block.clone())
+                    Some(block)
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.clone());
@@ -1050,7 +1050,7 @@ impl Iterator for BranchIterator {
 
             if let Some(block) = block_option {
                 self.next_block_id = block.previous_block_id.clone();
-                Some(block.clone())
+                Some(block)
             } else {
                 None
             }

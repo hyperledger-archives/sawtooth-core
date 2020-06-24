@@ -40,9 +40,10 @@ use sawtooth::{
     block::Block,
     consensus::registry::ConsensusRegistry,
     journal::{
-        chain::COMMIT_STORE, chain_id_manager::ChainIdManager, fork_cache::ForkCache,
-        NULL_BLOCK_IDENTIFIER,
+        block_wrapper::BlockStatus, chain::COMMIT_STORE, chain_id_manager::ChainIdManager,
+        fork_cache::ForkCache, NULL_BLOCK_IDENTIFIER,
     },
+    scheduler::TxnExecutionResult,
 };
 
 use consensus::notifier::ConsensusNotifier;
@@ -52,14 +53,12 @@ use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
 };
-use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
-use scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -426,7 +425,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                     if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
@@ -446,7 +445,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
                 match state.block_manager.ref_block(&block_id) {
@@ -959,7 +958,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
-            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+            self.start_commit_queue_thread(exit_flag, commit_queue_receiver);
         }
     }
 
@@ -1062,13 +1061,23 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     fn from(result: &'a TxnExecutionResult) -> Self {
         let mut receipt = TransactionReceipt::new();
 
-        receipt.set_data(protobuf::RepeatedField::from_vec(
-            result.data.iter().map(|data| data.clone()).collect(),
-        ));
-        receipt.set_state_changes(protobuf::RepeatedField::from_vec(
-            result.state_changes.clone(),
-        ));
-        receipt.set_events(protobuf::RepeatedField::from_vec(result.events.clone()));
+        receipt.set_data(protobuf::RepeatedField::from_vec(result.data.to_vec()));
+        receipt.set_state_changes(
+            result
+                .state_changes
+                .clone()
+                .into_iter()
+                .map(|state_change| state_change.into())
+                .collect(),
+        );
+        receipt.set_events(
+            result
+                .events
+                .clone()
+                .into_iter()
+                .map(|event| event.into())
+                .collect(),
+        );
         receipt.set_transaction_id(result.signature.clone());
 
         receipt

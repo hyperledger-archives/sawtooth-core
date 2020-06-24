@@ -29,7 +29,7 @@ use crate::py_object_wrapper::PyObjectWrapper;
 
 impl From<ProtobufError> for SchedulerError {
     fn from(other: ProtobufError) -> SchedulerError {
-        SchedulerError::Other(other.to_string().into())
+        SchedulerError::Other(other.to_string())
     }
 }
 
@@ -188,7 +188,7 @@ impl Scheduler for PyScheduler {
                                 .collect(),
                         ),
                     ),
-                    None => (val.2.clone(), None),
+                    None => (val.2, None),
                 })
                 .collect();
 

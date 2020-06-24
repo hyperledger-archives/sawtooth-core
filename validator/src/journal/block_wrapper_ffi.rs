@@ -16,9 +16,8 @@
  */
 
 use cpython;
-use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, ToPyObject};
+use cpython::{FromPyObject, PyClone, PyObject, Python, ToPyObject};
 
-use journal::block_wrapper::BlockStatus;
 use journal::block_wrapper::BlockWrapper;
 
 lazy_static! {
@@ -28,52 +27,6 @@ lazy_static! {
         .expect("Unable to import block_wrapper")
         .get(Python::acquire_gil().python(), "BlockWrapper")
         .expect("Unable to get BlockWrapper");
-}
-
-lazy_static! {
-    static ref PY_BLOCK_STATUS: PyObject = Python::acquire_gil()
-        .python()
-        .import("sawtooth_validator.journal.block_wrapper")
-        .expect("Unable to import block_wrapper")
-        .get(Python::acquire_gil().python(), "BlockStatus")
-        .expect("Unable to get BlockStatus");
-}
-
-impl ToPyObject for BlockStatus {
-    type ObjectType = cpython::PyObject;
-
-    fn to_py_object(&self, py: Python) -> cpython::PyObject {
-        match *self {
-            BlockStatus::Unknown => PY_BLOCK_STATUS
-                .getattr(py, "Unknown")
-                .expect("No BlockStatus.Unknown"),
-            BlockStatus::Invalid => PY_BLOCK_STATUS
-                .getattr(py, "Invalid")
-                .expect("No BlockStatus.Invalid"),
-            BlockStatus::Valid => PY_BLOCK_STATUS
-                .getattr(py, "Valid")
-                .expect("No BlockStatus.Valid"),
-            BlockStatus::Missing => PY_BLOCK_STATUS
-                .getattr(py, "Missing")
-                .expect("No BlockStatus.Missing"),
-            BlockStatus::InValidation => PY_BLOCK_STATUS
-                .getattr(py, "InValidation")
-                .expect("No BlockStatus.InValidation"),
-        }
-    }
-}
-
-impl<'source> FromPyObject<'source> for BlockStatus {
-    fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
-        let enum_val: i32 = obj.extract(py)?;
-        Ok(match enum_val {
-            1 => BlockStatus::Invalid,
-            2 => BlockStatus::Valid,
-            3 => BlockStatus::Missing,
-            5 => BlockStatus::InValidation,
-            _ => BlockStatus::Unknown,
-        })
-    }
 }
 
 impl ToPyObject for BlockWrapper {

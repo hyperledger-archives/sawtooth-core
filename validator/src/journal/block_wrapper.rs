@@ -22,21 +22,6 @@ use sawtooth::block::Block;
 
 use crate::py_object_wrapper::PyObjectWrapper;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BlockStatus {
-    Unknown = 0,
-    Invalid = 1,
-    Valid = 2,
-    Missing = 3,
-    InValidation = 5,
-}
-
-impl Default for BlockStatus {
-    fn default() -> Self {
-        BlockStatus::Unknown
-    }
-}
-
 #[derive(Debug)]
 pub struct BlockWrapper {
     pub(super) py_block_wrapper: PyObject,

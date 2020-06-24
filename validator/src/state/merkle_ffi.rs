@@ -381,11 +381,10 @@ pub unsafe extern "C" fn merkle_db_update(
             Ok(Vec::with_capacity(0))
         };
 
-        if update_vec.is_err() {
-            return update_vec.unwrap_err();
+        match update_vec {
+            Ok(update_vec) => update_vec.into_iter().collect(),
+            Err(err) => return err,
         }
-
-        update_vec.unwrap().into_iter().collect()
     };
 
     let deletes: Result<Vec<String>, ErrorCode> = if deletes_len > 0 {
@@ -402,15 +401,12 @@ pub unsafe extern "C" fn merkle_db_update(
         Ok(Vec::with_capacity(0))
     };
 
-    if deletes.is_err() {
-        return deletes.unwrap_err();
-    }
+    let deletes = match deletes {
+        Ok(deletes) => deletes,
+        Err(err) => return err,
+    };
 
-    match (*(merkle_db as *mut MerkleDatabase)).update(
-        &update_map,
-        &deletes.unwrap(),
-        virtual_write,
-    ) {
+    match (*(merkle_db as *mut MerkleDatabase)).update(&update_map, &deletes, virtual_write) {
         Ok(state_root) => {
             *merkle_root_cap = state_root.capacity();
             *merkle_root_len = state_root.len();

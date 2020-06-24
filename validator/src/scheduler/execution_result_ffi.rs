@@ -18,11 +18,10 @@
 use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
+use sawtooth::scheduler::TxnExecutionResult;
 
-use proto::events::Event;
-use proto::transaction_receipt::StateChange;
-
-use scheduler::TxnExecutionResult;
+use proto::events::{Event, Event_Attribute};
+use proto::transaction_receipt::{StateChange, StateChange_Type};
 
 #[derive(Clone)]
 pub struct PyBatchExecutionResult {
@@ -59,21 +58,17 @@ impl<'source> FromPyObject<'source> for PyTxnExecutionResult {
     }
 }
 
-impl<'source> FromPyObject<'source> for TxnExecutionResult {
-    fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        Ok(TxnExecutionResult::from(try_pyobj_to_transaction_result(
-            py, obj,
-        )?))
-    }
-}
-
 impl From<PyTxnExecutionResult> for TxnExecutionResult {
     fn from(other: PyTxnExecutionResult) -> Self {
         TxnExecutionResult {
             signature: other.signature,
             is_valid: other.is_valid,
-            state_changes: other.state_changes,
-            events: other.events,
+            state_changes: other
+                .state_changes
+                .into_iter()
+                .map(|state_change| state_change.into())
+                .collect(),
+            events: other.events.into_iter().map(|event| event.into()).collect(),
             data: other.data,
             error_message: other.error_message,
             error_data: other.error_data,
@@ -106,6 +101,41 @@ fn try_pyobj_to_transaction_result(
     })
 }
 
+impl From<sawtooth::protos::transaction_receipt::StateChange> for StateChange {
+    fn from(state_change: sawtooth::protos::transaction_receipt::StateChange) -> Self {
+        let mut ret = StateChange::new();
+        ret.set_address(state_change.address);
+        ret.set_value(state_change.value);
+        ret.set_field_type(match state_change.field_type {
+            sawtooth::protos::transaction_receipt::StateChange_Type::TYPE_UNSET => {
+                StateChange_Type::TYPE_UNSET
+            }
+            sawtooth::protos::transaction_receipt::StateChange_Type::SET => StateChange_Type::SET,
+            sawtooth::protos::transaction_receipt::StateChange_Type::DELETE => {
+                StateChange_Type::DELETE
+            }
+        });
+        ret
+    }
+}
+impl From<StateChange> for sawtooth::protos::transaction_receipt::StateChange {
+    fn from(state_change: StateChange) -> Self {
+        let mut ret = sawtooth::protos::transaction_receipt::StateChange::new();
+        ret.set_address(state_change.address);
+        ret.set_value(state_change.value);
+        ret.set_field_type(match state_change.field_type {
+            StateChange_Type::TYPE_UNSET => {
+                sawtooth::protos::transaction_receipt::StateChange_Type::TYPE_UNSET
+            }
+            StateChange_Type::SET => sawtooth::protos::transaction_receipt::StateChange_Type::SET,
+            StateChange_Type::DELETE => {
+                sawtooth::protos::transaction_receipt::StateChange_Type::DELETE
+            }
+        });
+        ret
+    }
+}
+
 impl<'source> FromPyObject<'source> for StateChange {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
         let state_change_bytes = obj
@@ -115,6 +145,55 @@ impl<'source> FromPyObject<'source> for StateChange {
         let state_change: StateChange =
             ::protobuf::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
         Ok(state_change)
+    }
+}
+
+impl From<sawtooth::protos::events::Event_Attribute> for Event_Attribute {
+    fn from(attribute: sawtooth::protos::events::Event_Attribute) -> Self {
+        let mut ret = Event_Attribute::new();
+        ret.set_key(attribute.key);
+        ret.set_value(attribute.value);
+        ret
+    }
+}
+impl From<Event_Attribute> for sawtooth::protos::events::Event_Attribute {
+    fn from(attribute: Event_Attribute) -> Self {
+        let mut ret = sawtooth::protos::events::Event_Attribute::new();
+        ret.set_key(attribute.key);
+        ret.set_value(attribute.value);
+        ret
+    }
+}
+
+impl From<sawtooth::protos::events::Event> for Event {
+    fn from(event: sawtooth::protos::events::Event) -> Self {
+        let mut ret = Event::new();
+        ret.set_event_type(event.event_type);
+        ret.set_attributes(
+            event
+                .attributes
+                .into_iter()
+                .map(|attribute| attribute.into())
+                .collect(),
+        );
+        ret.set_data(event.data);
+        ret
+    }
+}
+
+impl From<Event> for sawtooth::protos::events::Event {
+    fn from(event: Event) -> Self {
+        let mut ret = sawtooth::protos::events::Event::new();
+        ret.set_event_type(event.event_type);
+        ret.set_attributes(
+            event
+                .attributes
+                .into_iter()
+                .map(|attribute| attribute.into())
+                .collect(),
+        );
+        ret.set_data(event.data);
+        ret
     }
 }
 
