@@ -29,6 +29,7 @@ use sawtooth::{
     batch::Batch,
     block::Block,
     execution::execution_platform::NULL_STATE_HASH,
+    gossip::permission_verifier::PermissionVerifier,
     journal::{
         block_validator::BlockStatusStore, block_wrapper::BlockStatus,
         validation_rule_enforcer::enforce_validation_rules,
@@ -39,7 +40,6 @@ use sawtooth::{
 use uluru;
 
 use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_scheduler::BlockScheduler;
 use journal::chain_commit_state::{

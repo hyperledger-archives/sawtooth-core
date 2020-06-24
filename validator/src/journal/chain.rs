@@ -39,6 +39,7 @@ use sawtooth::{
     batch::Batch,
     block::Block,
     consensus::registry::ConsensusRegistry,
+    gossip::permission_verifier::PermissionVerifier,
     journal::{
         block_wrapper::BlockStatus,
         chain::{ChainReadError, ChainReader, COMMIT_STORE},
@@ -52,7 +53,6 @@ use sawtooth::{
 
 use consensus::notifier::ConsensusNotifier;
 use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
 use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,

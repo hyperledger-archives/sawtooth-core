@@ -17,12 +17,9 @@
 
 use cpython::{self, ObjectProtocol, PyClone};
 use sawtooth::batch::Batch;
+use sawtooth::gossip::permission_verifier::PermissionVerifier;
 
 use crate::py_object_wrapper::PyObjectWrapper;
-
-pub trait PermissionVerifier: Sync + Send {
-    fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str) -> bool;
-}
 
 pub struct PyPermissionVerifier {
     verifier: cpython::PyObject,
