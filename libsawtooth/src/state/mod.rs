@@ -17,6 +17,7 @@
 
 pub mod error;
 pub mod merkle;
+pub mod settings_view;
 
 use self::error::StateDatabaseError;
 
