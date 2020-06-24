@@ -15,14 +15,16 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::{batch::Batch, state::settings_view::SettingsView, transaction::Transaction};
+use crate::{batch::Batch, state::settings_view::SettingsView, transaction::Transaction};
 
 /// Retrieve the validation rules stored in state and check that the
 /// given batches do not violate any of those rules. These rules include:
 ///
+/// ```ignore
 ///     NofX: Only N of transaction type X may be included in a block.
 ///     XatY: A transaction of type X must be in the list at position Y.
 ///     local: A transaction must be signed by the given public key
+///```
 ///
 /// If any setting stored in state does not match the required format for
 /// that rule, the rule will be ignored.
@@ -228,7 +230,7 @@ fn parse_rule(rule: &str) -> Option<(&str, Vec<&str>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sawtooth::{batch::Batch, transaction::Transaction};
+    use crate::{batch::Batch, transaction::Transaction};
 
     /// Test that if no validation rules are set, the block is valid.
     #[test]

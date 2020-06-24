@@ -29,7 +29,10 @@ use sawtooth::{
     batch::Batch,
     block::Block,
     execution::execution_platform::NULL_STATE_HASH,
-    journal::{block_validator::BlockStatusStore, block_wrapper::BlockStatus},
+    journal::{
+        block_validator::BlockStatusStore, block_wrapper::BlockStatus,
+        validation_rule_enforcer::enforce_validation_rules,
+    },
     scheduler::TxnExecutionResult,
     state::{settings_view::SettingsView, state_view_factory::StateViewFactory},
 };
@@ -43,7 +46,6 @@ use journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
-use journal::validation_rule_enforcer::enforce_validation_rules;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 

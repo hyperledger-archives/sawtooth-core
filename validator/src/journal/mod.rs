@@ -32,4 +32,3 @@ pub mod commit_store_ffi;
 pub mod incoming_batch_queue_ffi;
 pub mod publisher;
 pub mod publisher_ffi;
-mod validation_rule_enforcer;
