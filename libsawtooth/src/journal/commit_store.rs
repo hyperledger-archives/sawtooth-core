@@ -15,19 +15,18 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::block::{Block as ProtoBlock, BlockHeader};
-use protobuf;
 use protobuf::Message;
-use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
 
-use journal::block_store::{
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
+use crate::journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
-use journal::chain::{ChainReadError, ChainReader};
-use sawtooth::database::error::DatabaseError;
-use sawtooth::database::lmdb::DatabaseReader;
-use sawtooth::database::lmdb::LmdbDatabase;
-use sawtooth::database::lmdb::LmdbDatabaseWriter;
+use crate::journal::chain::{ChainReadError, ChainReader};
+use crate::protos::block::{Block as ProtoBlock, BlockHeader};
+use crate::{batch::Batch, block::Block, transaction::Transaction};
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]

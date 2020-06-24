@@ -40,8 +40,11 @@ use sawtooth::{
     block::Block,
     consensus::registry::ConsensusRegistry,
     journal::{
-        block_wrapper::BlockStatus, chain::COMMIT_STORE, chain_id_manager::ChainIdManager,
-        fork_cache::ForkCache, NULL_BLOCK_IDENTIFIER,
+        block_wrapper::BlockStatus,
+        chain::{ChainReadError, ChainReader, COMMIT_STORE},
+        chain_id_manager::ChainIdManager,
+        fork_cache::ForkCache,
+        NULL_BLOCK_IDENTIFIER,
     },
     scheduler::TxnExecutionResult,
 };
@@ -117,18 +120,6 @@ impl From<BlockManagerError> for ChainControllerError {
 
 pub trait ChainObserver: Send + Sync {
     fn chain_update(&mut self, block: &Block, receipts: &[TransactionReceipt]);
-}
-
-#[derive(Debug)]
-pub enum ChainReadError {
-    GeneralReadError(String),
-}
-
-pub trait ChainReader: Send + Sync {
-    fn chain_head(&self) -> Result<Option<Block>, ChainReadError>;
-    fn count_committed_transactions(&self) -> Result<usize, ChainReadError>;
-    fn get_block_by_block_num(&self, block_num: u64) -> Result<Option<Block>, ChainReadError>;
-    fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError>;
 }
 
 /// Holds the results of Block Validation.

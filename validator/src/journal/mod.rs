@@ -18,7 +18,6 @@
 pub mod block_manager;
 pub mod block_manager_ffi;
 mod block_scheduler;
-pub mod block_store;
 pub mod block_validator;
 pub mod block_validator_ffi;
 pub mod block_wrapper;
@@ -29,7 +28,6 @@ mod chain_commit_state;
 pub mod chain_ffi;
 pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
-mod commit_store;
 pub mod commit_store_ffi;
 pub mod incoming_batch_queue_ffi;
 pub mod publisher;

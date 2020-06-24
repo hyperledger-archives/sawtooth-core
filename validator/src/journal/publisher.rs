@@ -27,6 +27,7 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
+use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::{batch::Batch, block::Block};
 
 use crate::py_object_wrapper::PyObjectWrapper;
@@ -36,7 +37,6 @@ use journal::block_manager::{BlockManager, BlockRef};
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
-use journal::commit_store::CommitStore;
 use metrics;
 use state::settings_view::SettingsView;
 use state::state_view_factory::StateViewFactory;

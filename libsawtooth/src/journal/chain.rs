@@ -14,5 +14,18 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use crate::block::Block;
 
 pub const COMMIT_STORE: &str = "commit_store";
+
+#[derive(Debug)]
+pub enum ChainReadError {
+    GeneralReadError(String),
+}
+
+pub trait ChainReader: Send + Sync {
+    fn chain_head(&self) -> Result<Option<Block>, ChainReadError>;
+    fn count_committed_transactions(&self) -> Result<usize, ChainReadError>;
+    fn get_block_by_block_num(&self, block_num: u64) -> Result<Option<Block>, ChainReadError>;
+    fn get_block_by_block_id(&self, block_id: &str) -> Result<Option<Block>, ChainReadError>;
+}
