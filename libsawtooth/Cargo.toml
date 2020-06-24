@@ -24,6 +24,7 @@ description = """\
 """
 
 [dependencies]
+cbor-codec = { version = "0.7", optional = true }
 hex = { version = "0.4", optional = true }
 log = "0.4"
 lmdb-zero = { version = "0.4", optional = true }
@@ -54,8 +55,11 @@ lmdb-store = ["lmdb-zero", "stores"]
 receipt-store = ["stores"]
 redis-store = ["redis", "stores"]
 stores = []
-validator-internals = ["hex", "openssl"]
+validator-internals = ["cbor-codec", "hex", "lmdb-zero", "openssl"]
 
 [build-dependencies]
 protoc-rust = "2.0"
 glob = "0.2"
+
+[dev-dependencies]
+rand = "0.4"

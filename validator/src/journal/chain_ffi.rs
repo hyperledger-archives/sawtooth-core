@@ -20,7 +20,6 @@
 use consensus::notifier::BackgroundConsensusNotifier;
 use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
-use database::lmdb::LmdbDatabase;
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
@@ -32,6 +31,7 @@ use journal::commit_store::CommitStore;
 use py_ffi;
 use pylogger;
 use sawtooth::block::Block;
+use sawtooth::database::lmdb::LmdbDatabase;
 use state::state_pruning_manager::StatePruningManager;
 use state::state_view_factory::StateViewFactory;
 use std::ffi::CStr;

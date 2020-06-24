@@ -17,9 +17,10 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use database::lmdb::LmdbDatabase;
+use sawtooth::database::lmdb::LmdbDatabase;
+use sawtooth::state::merkle::MerkleDatabase;
+
 use metrics;
-use state::merkle::MerkleDatabase;
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =

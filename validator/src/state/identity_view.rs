@@ -25,8 +25,8 @@ use proto::identity::PolicyList;
 use proto::identity::Role;
 use proto::identity::RoleList;
 
-use state::StateDatabaseError;
-use state::StateReader;
+use sawtooth::state::error::StateDatabaseError;
+use sawtooth::state::StateReader;
 
 /// The namespace for storage
 const POLICY_NS: &str = "00001d00";
@@ -220,8 +220,6 @@ mod tests {
 
     use protobuf;
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]

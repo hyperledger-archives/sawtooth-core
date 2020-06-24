@@ -21,7 +21,6 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Cursor;
 
-use cbor;
 use cbor::decoder::GenericDecoder;
 use cbor::encoder::GenericEncoder;
 use cbor::value::Bytes;
@@ -29,20 +28,18 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use protobuf;
 use protobuf::Message;
-use sawtooth::hashlib::sha512_digest_bytes;
 
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
+use crate::hashlib::sha512_digest_bytes;
+use crate::protos::merkle::ChangeLogEntry;
+use crate::protos::merkle::ChangeLogEntry_Successor;
 
-use proto::merkle::ChangeLogEntry;
-use proto::merkle::ChangeLogEntry_Successor;
-
-use state::error::StateDatabaseError;
-use state::{StateIter, StateReader};
+use super::error::StateDatabaseError;
+use super::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
@@ -679,7 +676,7 @@ fn encode_and_hash(node: Node) -> Result<(Vec<u8>, Vec<u8>), StateDatabaseError>
 /// Given a path, split it into its parent's path and the specific branch for
 /// this path, such that the following assertion is true:
 ///
-/// ```
+/// ```ignore
 /// let (parent_path, branch) = parent_and_branch(some_path);
 /// let mut path = String::new();
 /// path.push(parent_path);
@@ -747,8 +744,8 @@ impl Node {
             .into_iter()
             .map(|(k, v)| {
                 (
-                    Key::Text(Text::Text(k.to_string())),
-                    Value::Text(Text::Text(v.to_string())),
+                    Key::Text(Text::Text(k)),
+                    Value::Text(Text::Text(v)),
                 )
             })
             .collect();
@@ -821,14 +818,16 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::error::DatabaseError;
-    use database::lmdb::DatabaseReader;
-    use database::lmdb::LmdbContext;
-    use database::lmdb::LmdbDatabase;
-    use proto::merkle::ChangeLogEntry;
 
     use protobuf;
     use rand::{seq, thread_rng};
+
+    use crate::database::error::DatabaseError;
+    use crate::database::lmdb::DatabaseReader;
+    use crate::database::lmdb::LmdbContext;
+    use crate::database::lmdb::LmdbDatabase;
+    use crate::protos::merkle::ChangeLogEntry;
+
     use std::env;
     use std::fs::remove_file;
     use std::panic;

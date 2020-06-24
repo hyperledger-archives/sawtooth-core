@@ -21,9 +21,8 @@ use std::num::ParseIntError;
 
 use protobuf;
 use sawtooth::hashlib::sha256_digest_str;
-
-use state::StateDatabaseError;
-use state::StateReader;
+use sawtooth::state::error::StateDatabaseError;
+use sawtooth::state::StateReader;
 
 use proto::setting::Setting;
 
@@ -178,8 +177,6 @@ mod tests {
     use proto::setting::Setting_Entry;
     use protobuf;
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]

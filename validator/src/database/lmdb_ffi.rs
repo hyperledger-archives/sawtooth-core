@@ -14,8 +14,9 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use sawtooth::database::lmdb::*;
+
 use cpython::{PyList, PyObject, Python};
-use database::lmdb::*;
 use py_ffi;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
