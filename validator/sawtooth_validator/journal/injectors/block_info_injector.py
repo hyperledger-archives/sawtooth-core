@@ -102,13 +102,13 @@ class BlockInfoInjector(BatchInjector):
         return [self.create_batch(block_info)]
 
     def before_batch(self, previous_block, batch):
-        pass
+        return []
 
     def after_batch(self, previous_block, batch):
-        pass
+        return []
 
     def block_end(self, previous_block, batches):
-        pass
+        return []
 
 
 def create_block_address(block_num):

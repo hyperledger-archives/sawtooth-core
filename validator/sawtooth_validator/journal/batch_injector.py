@@ -50,6 +50,48 @@ class BatchInjector(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def before_batch(self, previous_block, batch):
+        """Returns an ordered list of batches to inject at the beginning of the
+        block. Can also return None if no batches should be injected.
+
+        Args:
+            previous_block (Block): The previous block.
+            batch (Batch): Current batch.
+
+        Returns:
+            A list of batches to inject.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def after_batch(self, previous_block, batch):
+        """Returns an ordered list of batches to inject at the beginning of the
+        block. Can also return None if no batches should be injected.
+
+        Args:
+            previous_block (Block): The previous block.
+            batch (Batch): Current batch.
+
+        Returns:
+            A list of batches to inject.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def block_end(self, previous_block, batches):
+        """Returns an ordered list of batches to inject at the beginning of the
+        block. Can also return None if no batches should be injected.
+
+        Args:
+            previous_block (Block): The previous block.
+            batches (list<Batch>): The previous batches.
+
+        Returns:
+            A list of batches to inject.
+        """
+        raise NotImplementedError()
+
 
 class UnknownBatchInjectorError(Exception):
     def __init__(self, injector_name):
@@ -85,8 +127,7 @@ class DefaultBatchInjectorFactory:
         """Returns a new batch injector"""
         if injector == "block_info":
             block_info_injector = importlib.import_module(
-                "sawtooth_validator.journal.block_info_injector")
-
+                "sawtooth_validator.journal.injectors.block_info_injector")
             return block_info_injector.BlockInfoInjector(
                 self._state_view_factory, self._signer)
 

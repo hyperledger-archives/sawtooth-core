@@ -39,6 +39,27 @@ use pylogger;
 
 use scheduler::Scheduler;
 
+#[derive(PartialEq, Debug)]
+pub enum BatchInjectionStage {
+    BlockStart,
+    BeforeBatch,
+    AfterBatch,
+    BlockEnd,
+    BlockUnderFormation,
+}
+
+impl BatchInjectionStage {
+    fn value(&self) -> &str {
+        match *self {
+            BatchInjectionStage::BlockStart => "block_start",
+            BatchInjectionStage::BeforeBatch => "before_batch",
+            BatchInjectionStage::AfterBatch => "after_batch",
+            BatchInjectionStage::BlockEnd => "block_end",
+            _ => "",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum CandidateBlockError {
     BlockEmpty,
@@ -218,6 +239,55 @@ impl CandidateBlock {
         batches
     }
 
+    pub fn get_injected_batches(
+        &mut self,
+        stage: BatchInjectionStage,
+        batch_opt: Option<&Batch>,
+    ) -> Vec<Batch> {
+        let previous_block = self.previous_block.clone();
+        let pending_batches = self.pending_batches.clone();
+
+        return self.poll_injectors(|injector: &cpython::PyObject| {
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
+            let injector_call = match stage {
+                BatchInjectionStage::BlockStart => {
+                    injector.call_method(py, stage.value(), (previous_block.clone(),), None)
+                }
+                BatchInjectionStage::BeforeBatch | BatchInjectionStage::AfterBatch => injector
+                    .call_method(
+                        py,
+                        stage.value(),
+                        (previous_block.clone(), batch_opt.clone().unwrap()),
+                        None,
+                    ),
+                BatchInjectionStage::BlockEnd => injector.call_method(
+                    py,
+                    stage.value(),
+                    (previous_block.clone(), pending_batches.clone()),
+                    None,
+                ),
+                _ => return vec![],
+            };
+
+            let result = injector_call
+                .expect(&format!("BlockInjector.{} failed", &stage.value()))
+                .extract::<cpython::PyList>(py);
+
+            match result {
+                Ok(injected) => injected.iter(py).collect(),
+                Err(err) => {
+                    pylogger::exception(
+                        py,
+                        &format!("During block injection, calling {}", &stage.value()),
+                        err,
+                    );
+                    vec![]
+                }
+            }
+        });
+    }
+
     pub fn add_batch(&mut self, batch: Batch) {
         let batch_header_signature = batch.header_signature.clone();
 
@@ -239,60 +309,67 @@ impl CandidateBlock {
 
             // Inject blocks at the beginning of a Candidate Block
             if self.pending_batches.is_empty() {
-                let previous_block = self.previous_block.clone();
-                let mut injected_batches = self.poll_injectors(|injector: &cpython::PyObject| {
-                    let gil = cpython::Python::acquire_gil();
-                    let py = gil.python();
-                    match injector
-                        .call_method(py, "block_start", (previous_block.clone(),), None)
-                        .expect("BlockInjector.block_start failed")
-                        .extract::<cpython::PyList>(py)
-                    {
-                        Ok(injected) => injected.iter(py).collect(),
-                        Err(err) => {
-                            pylogger::exception(
-                                py,
-                                "During block injection, calling block_start",
-                                err,
-                            );
-                            vec![]
-                        }
-                    }
-                });
+                let mut injected_batches =
+                    self.get_injected_batches(BatchInjectionStage::BlockStart, None);
                 batches_to_add.append(&mut injected_batches);
             }
 
-            batches_to_add.push(batch);
+            let mut injected_batches_before =
+                self.get_injected_batches(BatchInjectionStage::BeforeBatch, Some(&batch));
 
-            {
-                let batches_to_test = self
-                    .pending_batches
-                    .iter()
-                    .chain(batches_to_add.iter())
-                    .collect::<Vec<_>>();
-                if !validation_rule_enforcer::enforce_validation_rules(
-                    &self.settings_view,
-                    &self.get_signer_public_key_hex(),
-                    &batches_to_test,
-                ) {
-                    return;
-                }
-            }
+            // Inject batches before current batch
+            batches_to_add.append(&mut injected_batches_before);
 
-            for b in batches_to_add {
-                let batch_id = b.header_signature.clone();
-                self.pending_batches.push(b.clone());
-                self.pending_batch_ids.insert(batch_id.clone());
+            // Insert current batch
+            batches_to_add.push(batch.clone());
 
-                let injected = self.injected_batch_ids.contains(batch_id.as_str());
+            let mut injected_batches_after =
+                self.get_injected_batches(BatchInjectionStage::AfterBatch, Some(&batch));
 
-                self.scheduler.add_batch(b, None, injected).unwrap()
-            }
+            // Inject batches after current batch
+            batches_to_add.append(&mut injected_batches_after);
+
+            self.test_and_add_batches(batches_to_add, &BatchInjectionStage::BlockUnderFormation);
         } else {
             debug!(
                 "Dropping batch due to missing dependencies: {}",
                 batch_header_signature.as_str()
             );
+        }
+    }
+
+    fn add_block_end_batches(&mut self) {
+        // Inject blocks at the end of a Candidate Block
+        let batches_to_add = self.get_injected_batches(BatchInjectionStage::BlockEnd, None);
+
+        self.test_and_add_batches(batches_to_add, &BatchInjectionStage::BlockEnd);
+    }
+
+    fn test_and_add_batches(&mut self, batches: Vec<Batch>, stage: &BatchInjectionStage) {
+        {
+            let batches_to_test = self
+                .pending_batches
+                .iter()
+                .chain(batches.iter())
+                .collect::<Vec<_>>();
+            if !validation_rule_enforcer::enforce_validation_rules(
+                &self.settings_view,
+                &self.get_signer_public_key_hex(),
+                &batches_to_test,
+                stage,
+            ) {
+                return;
+            }
+        }
+
+        for b in batches {
+            let batch_id = b.header_signature.clone();
+            self.pending_batches.push(b.clone());
+            self.pending_batch_ids.insert(batch_id.clone());
+
+            let injected = self.injected_batch_ids.contains(batch_id.as_str());
+
+            self.scheduler.add_batch(b, None, injected).unwrap()
         }
     }
 
@@ -335,6 +412,7 @@ impl CandidateBlock {
             return Err(CandidateBlockError::BlockEmpty);
         }
 
+        self.add_block_end_batches();
         self.scheduler.finalize(true).unwrap();
         let execution_results = self.scheduler.complete(true).unwrap().unwrap();
 
