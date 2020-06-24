@@ -30,7 +30,6 @@ use std::time::Duration;
 use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::{batch::Batch, block::Block};
 
-use crate::py_object_wrapper::PyObjectWrapper;
 use execution::execution_platform::ExecutionPlatform;
 use ffi::py_import_class;
 use journal::block_manager::{BlockManager, BlockRef};
@@ -38,6 +37,8 @@ use journal::candidate_block::{CandidateBlock, CandidateBlockError};
 use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
+use py_object_wrapper::PyObjectWrapper;
+use sawtooth::metrics::{Gauge, MetricsCollectorHandle};
 use state::settings_view::SettingsView;
 use state::state_view_factory::StateViewFactory;
 
@@ -45,7 +46,7 @@ const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
 
 lazy_static! {
-    static ref COLLECTOR: metrics::MetricsCollectorHandle =
+    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
         metrics::get_collector("sawtooth_validator.publisher");
 }
 
@@ -747,7 +748,7 @@ pub struct PendingBatchesPool {
     batches: Vec<Batch>,
     ids: HashSet<String>,
     limit: QueueLimit,
-    gauge: metrics::Gauge,
+    gauge: Box<dyn Gauge<PyObjectWrapper>>,
 }
 
 impl PendingBatchesPool {
@@ -824,7 +825,7 @@ impl PendingBatchesPool {
             }
         }
 
-        self.gauge.set_value(self.batches.len());
+        self.gauge.set_value(self.batches.len().into());
     }
 
     pub fn update(&mut self, mut still_pending: Vec<Batch>, last_sent: &Batch) {
@@ -850,7 +851,7 @@ impl PendingBatchesPool {
             self.append(batch);
         }
 
-        self.gauge.set_value(self.batches.len());
+        self.gauge.set_value(self.batches.len().into());
     }
 
     pub fn update_limit(&mut self, consumed: usize) {
