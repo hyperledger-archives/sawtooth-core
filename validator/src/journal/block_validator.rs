@@ -31,7 +31,7 @@ use sawtooth::{
     execution::execution_platform::NULL_STATE_HASH,
     journal::{block_validator::BlockStatusStore, block_wrapper::BlockStatus},
     scheduler::TxnExecutionResult,
-    state::settings_view::SettingsView,
+    state::{settings_view::SettingsView, state_view_factory::StateViewFactory},
 };
 use uluru;
 
@@ -44,7 +44,6 @@ use journal::chain_commit_state::{
     validate_transaction_dependencies, ChainCommitStateError,
 };
 use journal::validation_rule_enforcer::enforce_validation_rules;
-use state::state_view_factory::StateViewFactory;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 

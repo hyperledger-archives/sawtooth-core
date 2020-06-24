@@ -47,6 +47,7 @@ use sawtooth::{
         NULL_BLOCK_IDENTIFIER,
     },
     scheduler::TxnExecutionResult,
+    state::state_view_factory::StateViewFactory,
 };
 
 use consensus::notifier::ConsensusNotifier;
@@ -59,7 +60,6 @@ use journal::block_validator::{
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
 use py_object_wrapper::PyObjectWrapper;

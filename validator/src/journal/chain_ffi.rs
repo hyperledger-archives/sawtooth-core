@@ -32,7 +32,6 @@ use sawtooth::block::Block;
 use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::journal::commit_store::CommitStore;
 use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -42,6 +41,7 @@ use std::time::Duration;
 
 use protobuf::{self, Message};
 use sawtooth::journal::block_wrapper::BlockStatus;
+use sawtooth::state::state_view_factory::StateViewFactory;
 
 use proto;
 use proto::transaction_receipt::TransactionReceipt;

@@ -14,10 +14,12 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use sawtooth::database::lmdb::LmdbDatabase;
-use sawtooth::state::error::StateDatabaseError;
-use sawtooth::state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
-use sawtooth::state::StateReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::{
+    error::StateDatabaseError,
+    merkle::{DecodedMerkleStateReader, MerkleDatabase},
+    StateReader,
+};
 
 /// The StateViewFactory produces StateViews for a particular merkle root.
 ///

@@ -28,7 +28,7 @@ use std::thread;
 use std::time::Duration;
 
 use sawtooth::journal::commit_store::CommitStore;
-use sawtooth::state::settings_view::SettingsView;
+use sawtooth::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 use sawtooth::{batch::Batch, block::Block};
 
 use execution::execution_platform::ExecutionPlatform;
@@ -40,7 +40,6 @@ use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use py_object_wrapper::PyObjectWrapper;
 use sawtooth::metrics::{Gauge, MetricsCollectorHandle};
-use state::state_view_factory::StateViewFactory;
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
