@@ -20,8 +20,6 @@ use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
-use protobuf;
-
 use crate::hashlib::sha256_digest_str;
 use crate::protos::setting::Setting;
 use crate::state::error::StateDatabaseError;
