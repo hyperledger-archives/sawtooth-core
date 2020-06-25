@@ -29,21 +29,23 @@ use sawtooth::{
     batch::Batch,
     block::Block,
     execution::execution_platform::NULL_STATE_HASH,
-    journal::{block_validator::BlockStatusStore, block_wrapper::BlockStatus},
+    gossip::permission_verifier::PermissionVerifier,
+    journal::{
+        block_validator::BlockStatusStore, block_wrapper::BlockStatus,
+        validation_rule_enforcer::enforce_validation_rules,
+    },
     scheduler::TxnExecutionResult,
+    state::{settings_view::SettingsView, state_view_factory::StateViewFactory},
 };
 use uluru;
 
 use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
 use journal::block_manager::BlockManager;
 use journal::block_scheduler::BlockScheduler;
 use journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
-use journal::validation_rule_enforcer::enforce_validation_rules;
-use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 

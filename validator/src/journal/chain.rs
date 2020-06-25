@@ -39,6 +39,7 @@ use sawtooth::{
     batch::Batch,
     block::Block,
     consensus::registry::ConsensusRegistry,
+    gossip::permission_verifier::PermissionVerifier,
     journal::{
         block_wrapper::BlockStatus,
         chain::{ChainReadError, ChainReader, COMMIT_STORE},
@@ -47,11 +48,11 @@ use sawtooth::{
         NULL_BLOCK_IDENTIFIER,
     },
     scheduler::TxnExecutionResult,
+    state::state_view_factory::StateViewFactory,
 };
 
 use consensus::notifier::ConsensusNotifier;
 use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
 use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
@@ -59,7 +60,6 @@ use journal::block_validator::{
 use journal::chain_head_lock::ChainHeadLock;
 use metrics;
 use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
 
 use proto::transaction_receipt::TransactionReceipt;
 use py_object_wrapper::PyObjectWrapper;

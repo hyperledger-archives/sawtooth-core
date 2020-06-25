@@ -14,17 +14,18 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
 use protobuf;
-use sawtooth::hashlib::sha256_digest_str;
-use sawtooth::state::error::StateDatabaseError;
-use sawtooth::state::StateReader;
 
-use proto::setting::Setting;
+use crate::hashlib::sha256_digest_str;
+use crate::protos::setting::Setting;
+use crate::state::error::StateDatabaseError;
+use crate::state::StateReader;
 
 const CONFIG_STATE_NAMESPACE: &str = "000000";
 const MAX_KEY_PARTS: usize = 4;
@@ -173,8 +174,8 @@ fn short_hash(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::setting::Setting;
-    use proto::setting::Setting_Entry;
+    use crate::protos::setting::Setting;
+    use crate::protos::setting::Setting_Entry;
     use protobuf;
     use protobuf::Message;
     use std::collections::HashMap;

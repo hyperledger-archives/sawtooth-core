@@ -23,8 +23,9 @@ use journal::{
     block_validator::{BlockValidationResultStore, BlockValidator},
 };
 use py_ffi;
-use state::state_view_factory::StateViewFactory;
 use std::os::raw::c_void;
+
+use sawtooth::state::state_view_factory::StateViewFactory;
 
 #[repr(u32)]
 #[derive(Debug)]
