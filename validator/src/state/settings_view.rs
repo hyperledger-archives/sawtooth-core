@@ -207,6 +207,14 @@ mod tests {
             setting_entry("my.setting", "10"),
             setting_entry("my.setting.list", "10,11,12"),
             setting_entry("my.other.list", "13;14;15"),
+
+            setting_entry("sawtooth.validator.block_validation_rules", 
+                "NofX:1,injector_1;XatY:injector_1,0;
+                NofX:1,injector_2;XatY:injector_2,-1;
+                NofX:1,injector_3;XatY:injector_3,1;
+                NofX:1,injector_4;XatY:injector_4,2;
+                local:0,-1,1,2"
+            ),
         ]);
 
         let settings_view = SettingsView::new(Box::new(mock_reader));
@@ -266,6 +274,11 @@ mod tests {
                     .collect::<Result<Vec<u32>, SettingsViewError>>())
                 .unwrap()
         );
+
+        let block_validation_rules = settings_view
+            .get_setting_str("sawtooth.validator.block_validation_rules", None)
+            .unwrap();
+        assert!(block_validation_rules.is_some());
     }
 
     fn setting_entry(key: &str, value: &str) -> (String, Vec<u8>) {
