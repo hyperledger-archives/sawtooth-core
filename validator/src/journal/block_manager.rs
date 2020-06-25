@@ -26,15 +26,6 @@ use sawtooth::journal::block_store::{
 };
 use sawtooth::{block::Block, journal::NULL_BLOCK_IDENTIFIER};
 
-use metrics;
-use py_object_wrapper::PyObjectWrapper;
-use sawtooth::metrics::MetricsCollectorHandle;
-
-lazy_static! {
-    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
-        metrics::get_collector("sawtooth_validator.block_manager");
-}
-
 #[derive(Debug, PartialEq)]
 pub enum BlockManagerError {
     MissingPredecessor(String),
@@ -292,9 +283,10 @@ impl BlockManagerState {
             })
         };
 
-        COLLECTOR
-            .gauge("BlockManager.pool_size", None, None)
-            .set_value(block_by_block_id.len().into());
+        gauge!(
+            "block_manager.BlockManager.pool_size",
+            block_by_block_id.len() as i64
+        );
 
         Ok(())
     }
@@ -412,9 +404,10 @@ impl BlockManagerState {
             false
         };
 
-        COLLECTOR
-            .counter("BlockManager.expired", None, None)
-            .inc_n(blocks_to_remove.len());
+        counter!(
+            "block_manager.BlockManager.expired",
+            blocks_to_remove.len() as u64
+        );
 
         blocks_to_remove.iter().for_each(|block_id| {
             debug!("Removing block {}", block_id);
@@ -831,10 +824,6 @@ impl BlockManager {
             )?
         };
 
-        COLLECTOR
-            .counter("BlockManager.persisted", None, None)
-            .dec_n(blocks_for_the_main_pool.len());
-
         for block in blocks_for_the_main_pool {
             block_by_block_id.insert(block.header_signature.clone(), block);
         }
@@ -848,10 +837,6 @@ impl BlockManager {
         block_by_block_id: &mut HashMap<String, Block>,
         store_name: &str,
     ) -> Result<(), BlockManagerError> {
-        COLLECTOR
-            .counter("BlockManager.persisted", None, None)
-            .inc_n(to_be_inserted.len());
-
         for block in &to_be_inserted {
             block_by_block_id.remove(&block.header_signature);
         }

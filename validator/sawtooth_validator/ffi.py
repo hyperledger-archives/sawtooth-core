@@ -65,6 +65,7 @@ class Library:
 
 LIBRARY = Library(ctypes.CDLL)
 LIBRARY.call("pylogger_init", LOGGER.getEffectiveLevel())
+LIBRARY.call("pymetrics_init")
 PY_LIBRARY = Library(ctypes.PyDLL)
 
 

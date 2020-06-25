@@ -20,15 +20,6 @@ use std::collections::BinaryHeap;
 use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::state::merkle::MerkleDatabase;
 
-use metrics;
-use py_object_wrapper::PyObjectWrapper;
-use sawtooth::metrics::MetricsCollectorHandle;
-
-lazy_static! {
-    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
-        metrics::get_collector("sawtooth_validator.state");
-}
-
 /// The StatePruneManager manages a collection of state root hashes that will be
 /// prune from the MerkleDatabase at intervals.  Pruning will occur by decimating
 /// the state root hashes.  I.e. ten percent (rounded down) of the state roots in
@@ -121,9 +112,7 @@ impl StatePruningManager {
                     if removed_keys.is_empty() {
                         self.state_root_prune_queue.push(candidate);
                     } else {
-                        let mut state_roots_pruned_count =
-                            COLLECTOR.counter("StatePruneManager.state_roots_pruned", None, None);
-                        state_roots_pruned_count.inc();
+                        counter!("state.StatePruneManager.state_roots_pruned", 1);
                     }
                 }
                 Err(err) => {

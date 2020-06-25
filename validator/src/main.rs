@@ -2,8 +2,10 @@ extern crate clap;
 extern crate cpython;
 #[macro_use]
 extern crate log;
+extern crate metrics;
 
 mod pylogger;
+mod pymetrics;
 mod server;
 
 use cpython::Python;
@@ -20,6 +22,8 @@ fn main() {
     let verbosity: u64 = args.occurrences_of("verbose");
 
     pylogger::set_up_logger(verbosity, py);
+
+    pymetrics::set_up_metrics(py);
 
     let pydict = cli::wrap_in_pydict(py, &args)
         .map_err(|err| err.print(py))
