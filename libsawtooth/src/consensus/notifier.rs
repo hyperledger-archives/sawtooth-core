@@ -19,18 +19,20 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use hex;
 use protobuf::{Message, RepeatedField};
-use sawtooth::{block::Block, hashlib::sha256_digest_strs};
 
-use proto::consensus::{
-    ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,
-    ConsensusNotifyBlockNew, ConsensusNotifyBlockValid, ConsensusNotifyEngineActivated,
-    ConsensusNotifyEngineDeactivated, ConsensusNotifyPeerConnected,
-    ConsensusNotifyPeerDisconnected, ConsensusNotifyPeerMessage, ConsensusPeerInfo,
-    ConsensusPeerMessage,
+use crate::block::Block;
+use crate::hashlib::sha256_digest_strs;
+use crate::protos::{
+    consensus::{
+        ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,
+        ConsensusNotifyBlockNew, ConsensusNotifyBlockValid, ConsensusNotifyEngineActivated,
+        ConsensusNotifyEngineDeactivated, ConsensusNotifyPeerConnected,
+        ConsensusNotifyPeerDisconnected, ConsensusNotifyPeerMessage, ConsensusPeerInfo,
+        ConsensusPeerMessage,
+    },
+    validator::Message_MessageType as MessageType,
 };
-use proto::validator::Message_MessageType as MessageType;
 
 pub trait ConsensusNotifier: Send + Sync {
     fn notify_peer_connected(&self, peer_id: &str);

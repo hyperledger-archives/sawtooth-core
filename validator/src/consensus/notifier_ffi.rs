@@ -22,13 +22,15 @@ use std::slice;
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 use protobuf::{self, Message, ProtobufEnum};
 use py_ffi;
-use sawtooth::block::Block;
-
-use consensus::notifier::{
-    BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
+use sawtooth::{
+    block::Block,
+    consensus::notifier::{
+        BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
+    },
+    protos::{consensus::ConsensusPeerMessage, validator::Message_MessageType as MessageType},
 };
-use proto::validator::Message_MessageType as MessageType;
-use proto::{self, consensus::ConsensusPeerMessage};
+
+use proto;
 use pylogger;
 
 pub struct PyNotifierService {

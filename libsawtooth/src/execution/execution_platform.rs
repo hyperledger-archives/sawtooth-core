@@ -1,5 +1,6 @@
 /*
  * Copyright 2018 Intel Corporation
+ * Copyright 2020 Cargill Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +16,19 @@
  * ------------------------------------------------------------------------------
  */
 
+use crate::scheduler::Scheduler;
+
 /// The logical state hash before state has been added to the
 /// merkle database. May not be the actual first state hash due to
 /// implementation details of the merkle database.
 pub const NULL_STATE_HASH: &str = "";
+
+pub trait ExecutionPlatform: Sync + Send {
+    fn create_scheduler(
+        &self,
+        state_hash: &str,
+    ) -> Result<Box<dyn Scheduler>, ExecutionPlatformError>;
+}
+
+#[derive(Debug)]
+pub struct ExecutionPlatformError(pub String);

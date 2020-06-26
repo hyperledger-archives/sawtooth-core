@@ -17,7 +17,6 @@
 
 #![allow(unknown_lints)]
 
-use consensus::notifier::BackgroundConsensusNotifier;
 use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use execution::py_executor::PyExecutor;
@@ -40,8 +39,10 @@ use std::slice;
 use std::time::Duration;
 
 use protobuf::{self, Message};
-use sawtooth::journal::block_wrapper::BlockStatus;
-use sawtooth::state::state_view_factory::StateViewFactory;
+use sawtooth::{
+    consensus::notifier::BackgroundConsensusNotifier, journal::block_wrapper::BlockStatus,
+    state::state_view_factory::StateViewFactory,
+};
 
 use proto;
 use proto::transaction_receipt::TransactionReceipt;

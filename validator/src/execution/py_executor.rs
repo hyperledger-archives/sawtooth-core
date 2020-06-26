@@ -17,11 +17,12 @@
 
 use cpython;
 use cpython::{ObjectProtocol, PyClone};
-
-use execution::execution_platform::ExecutionPlatform;
+use sawtooth::{
+    execution::execution_platform::{ExecutionPlatform, ExecutionPlatformError},
+    scheduler::Scheduler,
+};
 
 use scheduler::py_scheduler::PyScheduler;
-use scheduler::Scheduler;
 
 pub struct PyExecutor {
     executor: cpython::PyObject,
@@ -34,7 +35,10 @@ impl PyExecutor {
 }
 
 impl ExecutionPlatform for PyExecutor {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
+    fn create_scheduler(
+        &self,
+        state_hash: &str,
+    ) -> Result<Box<dyn Scheduler>, ExecutionPlatformError> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
         let scheduler = self

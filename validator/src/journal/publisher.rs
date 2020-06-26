@@ -29,9 +29,8 @@ use std::time::Duration;
 
 use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
-use sawtooth::{batch::Batch, block::Block};
+use sawtooth::{batch::Batch, block::Block, execution::execution_platform::ExecutionPlatform};
 
-use execution::execution_platform::ExecutionPlatform;
 use ffi::py_import_class;
 use journal::block_manager::{BlockManager, BlockRef};
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
