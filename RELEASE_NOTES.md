@@ -1,5 +1,21 @@
 # Release Notes
 
+## Changes in Sawtooth 1.2.5
+
+### sawtooth-core:
+ - Fixed issue with decoding state values which caused the validator to crash
+   when settings with long values were used. Add DecodedMerkleStateReader for
+   state views. This reader provides the CBOR-decoded values to the rust
+   implementations of StateView structs via a new implementation of the
+   StateReader.
+ - Add a justfile with build, clean, docker-build-doc, docker-lint, fix, lint
+   and test targets. This is currently Rust-centric as it's the easiest to put
+   into the justfile in a useful manner.
+ - Add stable and experimental features to all crates.
+
+### Documentation:
+- Fix capitalization of glossary and glossary references.
+
 ## Changes in Sawtooth 1.2.4
 
 ### sawtooth-core:
