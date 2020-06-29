@@ -16,7 +16,6 @@
  */
 
 pub mod block_manager_ffi;
-mod block_scheduler;
 pub mod block_validator;
 pub mod block_validator_ffi;
 pub mod block_wrapper;

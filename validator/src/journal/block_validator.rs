@@ -32,6 +32,7 @@ use sawtooth::{
     gossip::permission_verifier::PermissionVerifier,
     journal::{
         block_manager::BlockManager,
+        block_scheduler::BlockScheduler,
         block_validator::{BlockValidationResult, BlockValidationResultStore},
         block_wrapper::BlockStatus,
         validation_rule_enforcer::enforce_validation_rules,
@@ -39,7 +40,6 @@ use sawtooth::{
     state::{settings_view::SettingsView, state_view_factory::StateViewFactory},
 };
 
-use journal::block_scheduler::BlockScheduler;
 use journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
