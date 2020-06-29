@@ -21,7 +21,6 @@ use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
-use journal::block_validator::BlockValidator;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
 use py_ffi;
@@ -40,7 +39,8 @@ use protobuf::{self, Message};
 use sawtooth::{
     consensus::notifier::BackgroundConsensusNotifier,
     journal::{
-        block_manager::BlockManager, block_validator::BlockValidationResultStore,
+        block_manager::BlockManager,
+        block_validator::{BlockValidationResultStore, BlockValidator},
         block_wrapper::BlockStatus,
     },
     state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},

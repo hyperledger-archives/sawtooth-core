@@ -18,12 +18,14 @@
 use cpython;
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
-use journal::block_validator::BlockValidator;
 use py_ffi;
 use std::os::raw::c_void;
 
 use sawtooth::{
-    journal::{block_manager::BlockManager, block_validator::BlockValidationResultStore},
+    journal::{
+        block_manager::BlockManager,
+        block_validator::{BlockValidationResultStore, BlockValidator},
+    },
     state::state_view_factory::StateViewFactory,
 };
 
