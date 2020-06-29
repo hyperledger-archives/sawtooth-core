@@ -26,13 +26,13 @@ use cpython::PyList;
 use cpython::Python;
 
 use sawtooth::hashlib::sha256_digest_strs;
+use sawtooth::journal::chain_commit_state::TransactionCommitCache;
 use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::journal::validation_rule_enforcer;
 use sawtooth::state::settings_view::SettingsView;
 use sawtooth::{batch::Batch, block::Block, scheduler::Scheduler, transaction::Transaction};
 
 use crate::py_object_wrapper::PyObjectWrapper;
-use journal::chain_commit_state::TransactionCommitCache;
 
 use pylogger;
 

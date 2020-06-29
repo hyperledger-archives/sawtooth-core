@@ -27,14 +27,13 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
-use sawtooth::journal::commit_store::CommitStore;
+use sawtooth::journal::{chain_commit_state::TransactionCommitCache, commit_store::CommitStore};
 use sawtooth::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 use sawtooth::{batch::Batch, block::Block, execution::execution_platform::ExecutionPlatform};
 
 use ffi::py_import_class;
 use journal::block_manager::{BlockManager, BlockRef};
 use journal::candidate_block::{CandidateBlock, CandidateBlockError};
-use journal::chain_commit_state::TransactionCommitCache;
 use journal::chain_head_lock::ChainHeadLock;
 use py_object_wrapper::PyObjectWrapper;
 
