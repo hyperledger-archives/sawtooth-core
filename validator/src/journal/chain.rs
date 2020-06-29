@@ -42,6 +42,7 @@ use sawtooth::{
     execution::execution_platform::ExecutionPlatform,
     gossip::permission_verifier::PermissionVerifier,
     journal::{
+        block_manager::{BlockManager, BlockManagerError, BlockRef},
         block_validator::{BlockValidationResult, BlockValidationResultStore},
         block_wrapper::BlockStatus,
         chain::{ChainReadError, ChainReader, COMMIT_STORE},
@@ -53,7 +54,6 @@ use sawtooth::{
     state::state_view_factory::StateViewFactory,
 };
 
-use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{BlockValidator, ValidationError};
 use journal::chain_head_lock::ChainHeadLock;
 use state::state_pruning_manager::StatePruningManager;

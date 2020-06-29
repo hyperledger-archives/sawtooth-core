@@ -21,10 +21,11 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use sawtooth::block::Block;
-use sawtooth::journal::commit_store::CommitStore;
-
-use journal::block_manager::{
-    BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
+use sawtooth::journal::{
+    block_manager::{
+        BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
+    },
+    commit_store::CommitStore,
 };
 
 use proto;

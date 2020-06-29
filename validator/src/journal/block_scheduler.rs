@@ -21,12 +21,10 @@ use std::sync::{Arc, Mutex};
 use sawtooth::{
     block::Block,
     journal::{
-        block_validator::BlockStatusStore, block_wrapper::BlockStatus, chain::COMMIT_STORE,
-        NULL_BLOCK_IDENTIFIER,
+        block_manager::BlockManager, block_validator::BlockStatusStore, block_wrapper::BlockStatus,
+        chain::COMMIT_STORE, NULL_BLOCK_IDENTIFIER,
     },
 };
-
-use journal::block_manager::BlockManager;
 
 #[derive(Clone)]
 pub struct BlockScheduler<B: BlockStatusStore> {

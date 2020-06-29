@@ -15,9 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+use sawtooth::journal::block_manager::BlockManager;
 use sawtooth::transaction::Transaction;
-
-use journal::block_manager::BlockManager;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
