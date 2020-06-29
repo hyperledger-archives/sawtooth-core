@@ -22,7 +22,7 @@ use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPy
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::block_manager::BlockManager;
-use journal::block_validator::{BlockValidationResultStore, BlockValidator};
+use journal::block_validator::BlockValidator;
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
 use py_ffi;
@@ -40,7 +40,8 @@ use std::time::Duration;
 
 use protobuf::{self, Message};
 use sawtooth::{
-    consensus::notifier::BackgroundConsensusNotifier, journal::block_wrapper::BlockStatus,
+    consensus::notifier::BackgroundConsensusNotifier,
+    journal::{block_validator::BlockValidationResultStore, block_wrapper::BlockStatus},
     state::state_view_factory::StateViewFactory,
 };
 
