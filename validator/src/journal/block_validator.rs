@@ -35,14 +35,13 @@ use sawtooth::{
         block_scheduler::BlockScheduler,
         block_validator::{BlockValidationResult, BlockValidationResultStore},
         block_wrapper::BlockStatus,
+        chain_commit_state::{
+            validate_no_duplicate_batches, validate_no_duplicate_transactions,
+            validate_transaction_dependencies, ChainCommitStateError,
+        },
         validation_rule_enforcer::enforce_validation_rules,
     },
     state::{settings_view::SettingsView, state_view_factory::StateViewFactory},
-};
-
-use journal::chain_commit_state::{
-    validate_no_duplicate_batches, validate_no_duplicate_transactions,
-    validate_transaction_dependencies, ChainCommitStateError,
 };
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;

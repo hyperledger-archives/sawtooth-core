@@ -22,7 +22,6 @@ pub mod block_wrapper;
 pub mod block_wrapper_ffi;
 mod candidate_block;
 pub mod chain;
-mod chain_commit_state;
 pub mod chain_ffi;
 pub mod chain_head_lock;
 pub mod chain_head_lock_ffi;
