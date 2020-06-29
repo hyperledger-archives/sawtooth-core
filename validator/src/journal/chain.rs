@@ -51,12 +51,11 @@ use sawtooth::{
         NULL_BLOCK_IDENTIFIER,
     },
     scheduler::TxnExecutionResult,
-    state::state_view_factory::StateViewFactory,
+    state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
 use journal::block_validator::{BlockValidator, ValidationError};
 use journal::chain_head_lock::ChainHeadLock;
-use state::state_pruning_manager::StatePruningManager;
 
 use proto::transaction_receipt::TransactionReceipt;
 

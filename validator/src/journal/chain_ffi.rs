@@ -29,7 +29,6 @@ use pylogger;
 use sawtooth::block::Block;
 use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::journal::commit_store::CommitStore;
-use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -44,7 +43,7 @@ use sawtooth::{
         block_manager::BlockManager, block_validator::BlockValidationResultStore,
         block_wrapper::BlockStatus,
     },
-    state::state_view_factory::StateViewFactory,
+    state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
 use proto;

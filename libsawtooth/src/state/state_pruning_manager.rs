@@ -17,8 +17,8 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use sawtooth::database::lmdb::LmdbDatabase;
-use sawtooth::state::merkle::MerkleDatabase;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::merkle::MerkleDatabase;
 
 /// The StatePruneManager manages a collection of state root hashes that will be
 /// prune from the MerkleDatabase at intervals.  Pruning will occur by decimating

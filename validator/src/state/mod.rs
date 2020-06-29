@@ -17,5 +17,4 @@
 
 pub mod identity_view;
 pub mod merkle_ffi;
-pub mod state_pruning_manager;
 pub mod state_view_ffi;
