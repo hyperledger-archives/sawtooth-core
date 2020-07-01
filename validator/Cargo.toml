@@ -14,7 +14,6 @@ metrics = { version = "0.12", features = ["std"] }
 protobuf = "2.0"
 python3-sys = "0.2"
 sawtooth = { path = "../libsawtooth", features = ["validator-internals"] }
-uluru = "0.2.0"
 
 [build-dependencies]
 protoc-rust = "2.0"

@@ -15,6 +15,9 @@
 #[cfg(any(feature = "lmdb-store", feature = "validator-internals"))]
 #[macro_use]
 extern crate log;
+#[cfg(feature = "validator-internals")]
+#[macro_use]
+extern crate metrics;
 
 #[cfg(feature = "validator-internals")]
 pub mod batch;

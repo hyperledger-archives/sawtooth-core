@@ -17,10 +17,9 @@
 
 use std::collections::HashSet;
 
-use sawtooth::journal::commit_store::CommitStore;
-use sawtooth::{batch::Batch, transaction::Transaction};
-
-use journal::block_manager::BlockManager;
+use crate::batch::Batch;
+use crate::journal::{block_manager::BlockManager, commit_store::CommitStore};
+use crate::transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
@@ -172,10 +171,10 @@ impl TransactionCommitCache {
 mod test {
     use super::*;
 
-    use sawtooth::block::Block;
-    use sawtooth::journal::block_store::InMemoryBlockStore;
-    use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
-    use sawtooth::transaction::Transaction;
+    use crate::block::Block;
+    use crate::journal::block_store::InMemoryBlockStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
+    use crate::transaction::Transaction;
 
     /// Creates Chains of blocks that match this diagram
     /// chain4                    B4-4  - B5-4

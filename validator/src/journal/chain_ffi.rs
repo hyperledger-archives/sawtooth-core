@@ -21,8 +21,6 @@ use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
-use journal::block_manager::BlockManager;
-use journal::block_validator::{BlockValidationResultStore, BlockValidator};
 use journal::chain::*;
 use journal::chain_head_lock::ChainHeadLock;
 use py_ffi;
@@ -30,7 +28,6 @@ use pylogger;
 use sawtooth::block::Block;
 use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::journal::commit_store::CommitStore;
-use state::state_pruning_manager::StatePruningManager;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -40,8 +37,13 @@ use std::time::Duration;
 
 use protobuf::{self, Message};
 use sawtooth::{
-    consensus::notifier::BackgroundConsensusNotifier, journal::block_wrapper::BlockStatus,
-    state::state_view_factory::StateViewFactory,
+    consensus::notifier::BackgroundConsensusNotifier,
+    journal::{
+        block_manager::BlockManager,
+        block_validator::{BlockValidationResultStore, BlockValidator},
+        block_wrapper::BlockStatus,
+    },
+    state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
 use proto;

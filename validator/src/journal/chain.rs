@@ -42,6 +42,10 @@ use sawtooth::{
     execution::execution_platform::ExecutionPlatform,
     gossip::permission_verifier::PermissionVerifier,
     journal::{
+        block_manager::{BlockManager, BlockManagerError, BlockRef},
+        block_validator::{
+            BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
+        },
         block_wrapper::BlockStatus,
         chain::{ChainReadError, ChainReader, COMMIT_STORE},
         chain_id_manager::ChainIdManager,
@@ -49,15 +53,10 @@ use sawtooth::{
         NULL_BLOCK_IDENTIFIER,
     },
     scheduler::TxnExecutionResult,
-    state::state_view_factory::StateViewFactory,
+    state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
-use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
-use journal::block_validator::{
-    BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
-};
 use journal::chain_head_lock::ChainHeadLock;
-use state::state_pruning_manager::StatePruningManager;
 
 use proto::transaction_receipt::TransactionReceipt;
 

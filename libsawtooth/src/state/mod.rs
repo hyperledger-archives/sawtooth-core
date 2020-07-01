@@ -18,6 +18,7 @@
 pub mod error;
 pub mod merkle;
 pub mod settings_view;
+pub mod state_pruning_manager;
 pub mod state_view_factory;
 
 use self::error::StateDatabaseError;
