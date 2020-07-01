@@ -24,6 +24,8 @@ extern crate python3_sys as py_ffi;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate metrics;
 extern crate sawtooth;
 extern crate uluru;
 
@@ -33,10 +35,10 @@ pub(crate) mod database;
 pub(crate) mod execution;
 pub(crate) mod gossip;
 pub(crate) mod journal;
-mod metrics;
 pub(crate) mod proto;
 pub(crate) mod py_object_wrapper;
 pub(crate) mod pylogger;
+pub(crate) mod pymetrics;
 pub(crate) mod scheduler;
 pub(crate) mod state;
 pub(crate) mod transaction;

@@ -27,14 +27,6 @@ use sawtooth::{
 };
 
 use journal::block_manager::BlockManager;
-use metrics;
-use py_object_wrapper::PyObjectWrapper;
-use sawtooth::metrics::MetricsCollectorHandle;
-
-lazy_static! {
-    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
-        metrics::get_collector("sawtooth_validator.block_validator");
-}
 
 #[derive(Clone)]
 pub struct BlockScheduler<B: BlockStatusStore> {
@@ -224,10 +216,14 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
     }
 
     fn update_gauges(&self) {
-        let mut blocks_processing = COLLECTOR.gauge("BlockScheduler.blocks_processing", None, None);
-        blocks_processing.set_value(self.processing.len().into());
-        let mut blocks_pending = COLLECTOR.gauge("BlockScheduler.blocks_pending", None, None);
-        blocks_pending.set_value(self.pending.len().into())
+        gauge!(
+            "block_validator.BlockScheduler.blocks_processing",
+            self.processing.len() as i64
+        );
+        gauge!(
+            "block_validator.BlockScheduler.blocks_pending",
+            self.pending.len() as i64
+        );
     }
 }
 

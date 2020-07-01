@@ -57,19 +57,11 @@ use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
 };
 use journal::chain_head_lock::ChainHeadLock;
-use metrics;
 use state::state_pruning_manager::StatePruningManager;
 
 use proto::transaction_receipt::TransactionReceipt;
-use py_object_wrapper::PyObjectWrapper;
-use sawtooth::metrics::MetricsCollectorHandle;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
-
-lazy_static! {
-    static ref COLLECTOR: Box<dyn MetricsCollectorHandle<&'static str, PyObjectWrapper>> =
-        metrics::get_collector("sawtooth_validator.chain");
-}
 
 #[derive(Debug)]
 pub enum ChainControllerError {
@@ -200,9 +192,7 @@ impl ChainControllerState {
         );
         if let Some(prior_heads_successor) = result.new_chain.get(0) {
             if prior_heads_successor.previous_block_id != chain_head.header_signature {
-                let mut moved_to_fork_count =
-                    COLLECTOR.counter("ChainController.chain_head_moved_to_fork_count", None, None);
-                moved_to_fork_count.inc();
+                counter!("chain.ChainController.chain_head_moved_to_fork_count", 1);
             }
         }
 
@@ -602,9 +592,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     }
 
     fn on_block_validated(&self, block: &Block, result: &BlockValidationResult) {
-        let mut blocks_considered_count =
-            COLLECTOR.counter("ChainController.blocks_considered_count", None, None);
-        blocks_considered_count.inc();
+        counter!("chain.ChainController.blocks_considered_count", 1);
 
         match result.status {
             BlockStatus::Valid => {
@@ -741,16 +729,11 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 self.consensus_notifier
                     .notify_block_commit(&block.header_signature);
 
-                let mut chain_head_gauge =
-                    COLLECTOR.gauge("ChainController.chain_head", None, None);
-                chain_head_gauge.set_value(block.header_signature[0..8].into());
-
-                let mut committed_transactions_count =
-                    COLLECTOR.counter("ChainController.committed_transactions_count", None, None);
-                committed_transactions_count.inc_n(result.transaction_count);
-
-                let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-                block_num_guage.set_value(block.block_num.into());
+                counter!(
+                    "chain.ChainController.committed_transactions_count",
+                    result.transaction_count as u64
+                );
+                gauge!("chain.ChainController.block_num", block.block_num as i64);
 
                 chain_head_guard.notify_on_chain_updated(
                     block.clone(),
@@ -799,9 +782,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     }
                 };
 
-                let mut committed_transactions_gauge =
-                    COLLECTOR.gauge("ChainController.committed_transactions_gauge", None, None);
-                committed_transactions_gauge.set_value(total_committed_txns.into());
+                gauge!(
+                    "chain.ChainController.committed_transactions_gauge",
+                    total_committed_txns as i64
+                );
 
                 let chain_head_block_num = block.block_num;
                 if chain_head_block_num + 1 > u64::from(self.state_pruning_block_depth) {
@@ -905,11 +889,11 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     .expect("Failed to reference chain head"),
             );
 
-            let mut gauge = COLLECTOR.gauge("ChainController.chain_head", None, None);
-            gauge.set_value(chain_head.header_signature[0..8].into());
+            gauge!(
+                "chain.ChainController.block_num",
+                chain_head.block_num as i64
+            );
 
-            let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(chain_head.block_num.clone().into());
             let mut guard = self.chain_head_lock.acquire();
 
             guard.notify_on_chain_updated(chain_head, vec![], vec![]);
