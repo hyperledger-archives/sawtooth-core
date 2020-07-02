@@ -1,6 +1,6 @@
 use sawtooth::{batch::Batch, block::Block};
 
-use journal::publisher::{BlockPublisherState, SyncBlockPublisher};
+use journal::publisher::{PublisherState, SyncBlockPublisher};
 use std::sync::RwLockWriteGuard;
 
 /// Abstracts acquiring the lock used by the BlockPublisher without exposing access to the
@@ -25,7 +25,7 @@ impl ChainHeadLock {
 
 /// RAII type that represents having acquired the lock used by the BlockPublisher
 pub struct ChainHeadGuard<'a> {
-    state: RwLockWriteGuard<'a, BlockPublisherState>,
+    state: RwLockWriteGuard<'a, Box<dyn PublisherState>>,
     publisher: SyncBlockPublisher,
 }
 
