@@ -31,8 +31,8 @@ use sawtooth::journal::{
     block_manager::{BlockManager, BlockRef},
     candidate_block::{CandidateBlock, CandidateBlockError},
     chain_commit_state::TransactionCommitCache,
-    commit_store::CommitStore,
     chain_head_lock::ChainHeadLock,
+    commit_store::CommitStore,
     publisher::{
         BatchObserver, FinalizeBlockError, InitializeBlockError, PendingBatchesPool,
         PublisherState, SyncPublisher,
