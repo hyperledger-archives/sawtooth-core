@@ -26,6 +26,9 @@ use cpython::PyList;
 use cpython::Python;
 
 use sawtooth::hashlib::sha256_digest_strs;
+use sawtooth::journal::candidate_block::{
+    CandidateBlock, CandidateBlockError, FinalizeBlockResult,
+};
 use sawtooth::journal::chain_commit_state::TransactionCommitCache;
 use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::journal::validation_rule_enforcer;
@@ -35,37 +38,6 @@ use sawtooth::{batch::Batch, block::Block, scheduler::Scheduler, transaction::Tr
 use crate::py_object_wrapper::PyObjectWrapper;
 
 use pylogger;
-
-#[derive(Debug)]
-pub enum CandidateBlockError {
-    BlockEmpty,
-}
-
-#[derive(Debug)]
-pub struct FinalizeBlockResult {
-    pub block: Option<cpython::PyObject>,
-    pub remaining_batches: Vec<Batch>,
-    pub last_batch: Batch,
-    pub injected_batch_ids: Vec<String>,
-}
-
-pub trait CandidateBlock: Send + Sync {
-    fn cancel(&mut self);
-
-    fn previous_block_id(&self) -> String;
-
-    fn add_batch(&mut self, batch: Batch);
-
-    fn can_add_batch(&self) -> bool;
-
-    fn summarize(&mut self, force: bool) -> Result<Option<Vec<u8>>, CandidateBlockError>;
-
-    fn finalize(
-        &mut self,
-        consensus_data: &[u8],
-        force: bool,
-    ) -> Result<FinalizeBlockResult, CandidateBlockError>;
-}
 
 pub struct FFICandidateBlock {
     previous_block: Block,
@@ -528,6 +500,13 @@ impl FFICandidateBlock {
         block: Option<cpython::PyObject>,
     ) -> Result<FinalizeBlockResult, CandidateBlockError> {
         if let Some(last_batch) = self.last_batch().cloned() {
+            let block: Option<Block> = if let Some(py_block) = block {
+                let wrapper = PyObjectWrapper::new(py_block);
+                Some(Block::from(wrapper))
+            } else {
+                None
+            };
+
             Ok(FinalizeBlockResult {
                 block,
                 remaining_batches: self.remaining_batches.clone(),

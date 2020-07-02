@@ -31,6 +31,7 @@ use std::time::Duration;
 
 use sawtooth::journal::{
     block_manager::{BlockManager, BlockRef},
+    candidate_block::{CandidateBlock, CandidateBlockError},
     chain_commit_state::TransactionCommitCache,
     commit_store::CommitStore,
 };
@@ -38,7 +39,7 @@ use sawtooth::state::{settings_view::SettingsView, state_view_factory::StateView
 use sawtooth::{batch::Batch, block::Block, execution::execution_platform::ExecutionPlatform};
 
 use ffi::py_import_class;
-use journal::candidate_block::{CandidateBlock, CandidateBlockError, FFICandidateBlock};
+use journal::candidate_block::FFICandidateBlock;
 use journal::chain_head_lock::ChainHeadLock;
 use py_object_wrapper::PyObjectWrapper;
 
@@ -507,7 +508,7 @@ impl SyncPublisher for SyncBlockPublisher {
                             }
 
                             Some(Ok(
-                                self.publish_block(&block, finalize_result.injected_batch_ids)
+                                self.publish_block(block, finalize_result.injected_batch_ids)
                             ))
                         }
                         None => None,
@@ -598,14 +599,11 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn publish_block(&self, block: &PyObject, injected_batches: Vec<String>) -> String {
+    fn publish_block(&self, block: Block, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_obj = block
-            .extract::<PyObject>(py)
-            .expect("Unable to extract PyObject");
 
-        let wrapper = PyObjectWrapper::new(py_obj);
+        let wrapper = PyObjectWrapper::from(block);
 
         self.block_sender
             .call_method(py, "send", (&wrapper, injected_batches), None)
