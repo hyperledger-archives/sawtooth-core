@@ -32,6 +32,7 @@ use sawtooth::journal::{
     candidate_block::{CandidateBlock, CandidateBlockError},
     chain_commit_state::TransactionCommitCache,
     commit_store::CommitStore,
+    chain_head_lock::ChainHeadLock,
     publisher::{
         BatchObserver, FinalizeBlockError, InitializeBlockError, PendingBatchesPool,
         PublisherState, SyncPublisher,
@@ -42,7 +43,6 @@ use sawtooth::{batch::Batch, block::Block, execution::execution_platform::Execut
 
 use ffi::py_import_class;
 use journal::candidate_block::FFICandidateBlock;
-use journal::chain_head_lock::ChainHeadLock;
 use py_object_wrapper::PyObjectWrapper;
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;

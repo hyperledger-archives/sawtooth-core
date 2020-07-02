@@ -22,7 +22,6 @@ use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPy
 use execution::py_executor::PyExecutor;
 use gossip::permission_verifier::PyPermissionVerifier;
 use journal::chain::*;
-use journal::chain_head_lock::ChainHeadLock;
 use py_ffi;
 use pylogger;
 use sawtooth::block::Block;
@@ -42,6 +41,7 @@ use sawtooth::{
         block_manager::BlockManager,
         block_validator::{BlockValidationResultStore, BlockValidator},
         block_wrapper::BlockStatus,
+        chain_head_lock::ChainHeadLock,
     },
     state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };

@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use sawtooth::journal::publisher::{PublisherState, SyncPublisher};
-use sawtooth::{batch::Batch, block::Block};
+use crate::journal::publisher::{PublisherState, SyncPublisher};
+use crate::{batch::Batch, block::Block};
 
 use std::sync::RwLockWriteGuard;
 

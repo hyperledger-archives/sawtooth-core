@@ -41,6 +41,7 @@ use sawtooth::{
     consensus::{notifier::ConsensusNotifier, registry::ConsensusRegistry},
     execution::execution_platform::ExecutionPlatform,
     gossip::permission_verifier::PermissionVerifier,
+    journal::chain_head_lock::ChainHeadLock,
     journal::{
         block_manager::{BlockManager, BlockManagerError, BlockRef},
         block_validator::{
@@ -55,8 +56,6 @@ use sawtooth::{
     scheduler::TxnExecutionResult,
     state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
-
-use journal::chain_head_lock::ChainHeadLock;
 
 use proto::transaction_receipt::TransactionReceipt;
 

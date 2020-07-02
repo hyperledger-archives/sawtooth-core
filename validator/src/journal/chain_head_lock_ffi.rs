@@ -17,7 +17,7 @@
 
 use std::os::raw::c_void;
 
-use journal::chain_head_lock::ChainHeadLock;
+use sawtooth::journal::chain_head_lock::ChainHeadLock;
 
 #[repr(u32)]
 #[derive(Debug)]
