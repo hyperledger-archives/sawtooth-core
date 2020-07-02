@@ -166,8 +166,57 @@ impl PublisherState for BlockPublisherState {
     }
 }
 
+pub trait SyncPublisher: Send + Sync {
+    fn box_clone(&self) -> Box<dyn SyncPublisher>;
+
+    fn state(&self) -> &Arc<RwLock<Box<dyn PublisherState>>>;
+
+    fn on_chain_updated(
+        &self,
+        state: &mut Box<dyn PublisherState>,
+        chain_head: Block,
+        committed_batches: Vec<Batch>,
+        uncommitted_batches: Vec<Batch>,
+    );
+
+    fn on_chain_updated_internal(
+        &mut self,
+        chain_head: Block,
+        committed_batches: Vec<Batch>,
+        uncommitted_batches: Vec<Batch>,
+    );
+
+    fn on_batch_received(&self, batch: Batch);
+
+    fn cancel_block(&self, state: &mut Box<dyn PublisherState>, unref_block: bool);
+
+    fn initialize_block(
+        &self,
+        state: &mut Box<dyn PublisherState>,
+        previous_block: &Block,
+        ref_block: bool,
+    ) -> Result<(), InitializeBlockError>;
+
+    fn finalize_block(
+        &self,
+        state: &mut Box<dyn PublisherState>,
+        consensus_data: &[u8],
+        force: bool,
+    ) -> Result<String, FinalizeBlockError>;
+
+    fn summarize_block(
+        &self,
+        state: &mut Box<dyn PublisherState>,
+        force: bool,
+    ) -> Result<Vec<u8>, FinalizeBlockError>;
+
+    fn stopped(&self) -> bool;
+
+    fn stop(&self);
+}
+
 pub struct SyncBlockPublisher {
-    pub state: Arc<RwLock<Box<dyn PublisherState>>>,
+    state: Arc<RwLock<Box<dyn PublisherState>>>,
 
     commit_store: CommitStore,
     block_manager: BlockManager,
@@ -207,8 +256,16 @@ impl Clone for SyncBlockPublisher {
     }
 }
 
-impl SyncBlockPublisher {
-    pub fn on_chain_updated(
+impl SyncPublisher for SyncBlockPublisher {
+    fn box_clone(&self) -> Box<dyn SyncPublisher> {
+        Box::new(self.clone())
+    }
+
+    fn state(&self) -> &Arc<RwLock<Box<dyn PublisherState>>> {
+        &self.state
+    }
+
+    fn on_chain_updated(
         &self,
         state: &mut Box<dyn PublisherState>,
         chain_head: Block,
@@ -236,7 +293,7 @@ impl SyncBlockPublisher {
         }
     }
 
-    pub fn on_chain_updated_internal(
+    fn on_chain_updated_internal(
         &mut self,
         chain_head: Block,
         committed_batches: Vec<Batch>,
@@ -254,14 +311,64 @@ impl SyncBlockPublisher {
         );
     }
 
-    fn load_injectors(&self, py: Python, state_root: &str) -> Vec<PyObject> {
-        self.batch_injector_factory
-            .call_method(py, "create_injectors", (state_root,), None)
-            .expect("BatchInjectorFactory has no method 'create_injectors'")
-            .extract::<PyList>(py)
-            .unwrap()
-            .iter(py)
-            .collect()
+    fn on_batch_received(&self, batch: Batch) {
+        let mut state = self.state.write().expect("Lock should not be poisoned");
+
+        // Batch can be added if the signer is authorized and the batch isn't already committed
+        let permission_check = {
+            let gil = Python::acquire_gil();
+            let py = gil.python();
+
+            let batch_wrapper = PyObjectWrapper::from(batch.clone());
+
+            self.permission_verifier
+                .call_method(py, "is_batch_signer_authorized", (batch_wrapper,), None)
+                .expect("PermissionVerifier has no method is_batch_signer_authorized")
+                .extract(py)
+                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
+        };
+
+        let batch_already_committed = self
+            .commit_store
+            .contains_batch(batch.header_signature.as_str())
+            .expect("Couldn't check for batch");
+
+        if permission_check && !batch_already_committed {
+            // If the batch is already in the pending queue, don't do anything further
+            if state.mut_pending_batches().append(batch.clone()) {
+                // Notify observers
+                for observer in state.batch_observers() {
+                    observer.notify_batch_pending(&batch);
+                }
+                // If currently building a block, add the batch to it
+                if let Some(ref mut candidate_block) = state.candidate_block() {
+                    if candidate_block.can_add_batch() {
+                        candidate_block.add_batch(batch);
+                    }
+                }
+            }
+        }
+    }
+
+    fn cancel_block(&self, state: &mut Box<dyn PublisherState>, unref_block: bool) {
+        let mut candidate_block = None;
+        candidate_block = state.set_candidate_block(candidate_block);
+        if let Some(mut candidate_block) = candidate_block {
+            if unref_block {
+                // Drop Ref-D: We cancelled the block, so we can drop the ext. ref. to its predecessor.
+                if state
+                    .block_references()
+                    .remove(&candidate_block.previous_block_id())
+                    .is_none()
+                {
+                    error!(
+                        "Reference not found for canceled block {}",
+                        &candidate_block.previous_block_id()
+                    );
+                }
+            }
+            candidate_block.cancel();
+        }
     }
 
     fn initialize_block(
@@ -418,27 +525,6 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn get_block(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
-        self.block_manager
-            .get(&[block_id])
-            .next()
-            .expect("Did not return any Results, even not found blocks")
-            .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
-    }
-
-    fn restart_block(&self, state: &mut Box<dyn PublisherState>) {
-        if let Some(previous_block) = state.candidate_block().as_ref().map(|candidate| {
-            self.get_block(&candidate.previous_block_id())
-                .expect("Failed to get previous block, but we are building on it.")
-        }) {
-            self.cancel_block(state, false);
-
-            if let Err(err) = self.initialize_block(state, &previous_block, false) {
-                error!("Initialization failed unexpectedly: {:?}", err);
-            }
-        }
-    }
-
     fn summarize_block(
         &self,
         state: &mut Box<dyn PublisherState>,
@@ -462,6 +548,53 @@ impl SyncBlockPublisher {
         } else {
             self.restart_block(state);
             Err(FinalizeBlockError::BlockEmpty)
+        }
+    }
+
+    fn stopped(&self) -> bool {
+        self.exit.get()
+    }
+
+    fn stop(&self) {
+        self.exit.set()
+    }
+}
+
+impl Clone for Box<dyn SyncPublisher> {
+    fn clone(&self) -> Box<dyn SyncPublisher> {
+        self.box_clone()
+    }
+}
+
+impl SyncBlockPublisher {
+    fn load_injectors(&self, py: Python, state_root: &str) -> Vec<PyObject> {
+        self.batch_injector_factory
+            .call_method(py, "create_injectors", (state_root,), None)
+            .expect("BatchInjectorFactory has no method 'create_injectors'")
+            .extract::<PyList>(py)
+            .unwrap()
+            .iter(py)
+            .collect()
+    }
+
+    fn get_block(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
+        self.block_manager
+            .get(&[block_id])
+            .next()
+            .expect("Did not return any Results, even not found blocks")
+            .ok_or_else(|| BlockPublisherError::UnknownBlock(block_id.to_string()))
+    }
+
+    fn restart_block(&self, state: &mut Box<dyn PublisherState>) {
+        if let Some(previous_block) = state.candidate_block().as_ref().map(|candidate| {
+            self.get_block(&candidate.previous_block_id())
+                .expect("Failed to get previous block, but we are building on it.")
+        }) {
+            self.cancel_block(state, false);
+
+            if let Err(err) = self.initialize_block(state, &previous_block, false) {
+                error!("Initialization failed unexpectedly: {:?}", err);
+            }
         }
     }
 
@@ -508,71 +641,11 @@ impl SyncBlockPublisher {
             (false, None)
         }
     }
-
-    pub fn on_batch_received(&self, batch: Batch) {
-        let mut state = self.state.write().expect("Lock should not be poisoned");
-
-        // Batch can be added if the signer is authorized and the batch isn't already committed
-        let permission_check = {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-
-            let batch_wrapper = PyObjectWrapper::from(batch.clone());
-
-            self.permission_verifier
-                .call_method(py, "is_batch_signer_authorized", (batch_wrapper,), None)
-                .expect("PermissionVerifier has no method is_batch_signer_authorized")
-                .extract(py)
-                .expect("PermissionVerifier.is_batch_signer_authorized did not return bool")
-        };
-
-        let batch_already_committed = self
-            .commit_store
-            .contains_batch(batch.header_signature.as_str())
-            .expect("Couldn't check for batch");
-
-        if permission_check && !batch_already_committed {
-            // If the batch is already in the pending queue, don't do anything further
-            if state.mut_pending_batches().append(batch.clone()) {
-                // Notify observers
-                for observer in state.batch_observers() {
-                    observer.notify_batch_pending(&batch);
-                }
-                // If currently building a block, add the batch to it
-                if let Some(ref mut candidate_block) = state.candidate_block() {
-                    if candidate_block.can_add_batch() {
-                        candidate_block.add_batch(batch);
-                    }
-                }
-            }
-        }
-    }
-
-    fn cancel_block(&self, state: &mut Box<dyn PublisherState>, unref_block: bool) {
-        let mut candidate_block = None;
-        candidate_block = state.set_candidate_block(candidate_block);
-        if let Some(mut candidate_block) = candidate_block {
-            if unref_block {
-                // Drop Ref-D: We cancelled the block, so we can drop the ext. ref. to its predecessor.
-                if state
-                    .block_references()
-                    .remove(&candidate_block.previous_block_id())
-                    .is_none()
-                {
-                    error!(
-                        "Reference not found for canceled block {}",
-                        &candidate_block.previous_block_id()
-                    );
-                }
-            }
-            candidate_block.cancel();
-        }
-    }
 }
 
 #[derive(Clone)]
 pub struct BlockPublisher {
-    pub publisher: SyncBlockPublisher,
+    pub publisher: Box<dyn SyncPublisher>,
 }
 
 impl BlockPublisher {
@@ -616,7 +689,9 @@ impl BlockPublisher {
             exit: Arc::new(Exit::new()),
         };
 
-        BlockPublisher { publisher }
+        BlockPublisher {
+            publisher: Box::new(publisher),
+        }
     }
 
     pub fn start(&mut self) -> IncomingBatchSender {
@@ -630,7 +705,7 @@ impl BlockPublisher {
                     match batch_rx.get(Duration::from_millis(100)) {
                         Err(err) => match err {
                             BatchQueueError::Timeout => {
-                                if block_publisher.exit.get() {
+                                if block_publisher.stopped() {
                                     break;
                                 }
                             }
@@ -649,7 +724,7 @@ impl BlockPublisher {
     }
 
     pub fn cancel_block(&self) -> Result<(), CancelBlockError> {
-        let mut state = self.publisher.state.write().expect("RwLock was poisoned");
+        let mut state = self.publisher.state().write().expect("RwLock was poisoned");
         if state.candidate_block().is_some() {
             self.publisher.cancel_block(&mut state, true);
             Ok(())
@@ -659,7 +734,7 @@ impl BlockPublisher {
     }
 
     pub fn stop(&self) {
-        self.publisher.exit.set();
+        self.publisher.stop();
     }
 
     pub fn chain_head_lock(&self) -> ChainHeadLock {
@@ -667,7 +742,7 @@ impl BlockPublisher {
     }
 
     pub fn initialize_block(&self, previous_block: &Block) -> Result<(), InitializeBlockError> {
-        let mut state = self.publisher.state.write().expect("RwLock was poisoned");
+        let mut state = self.publisher.state().write().expect("RwLock was poisoned");
         self.publisher
             .initialize_block(&mut state, previous_block, true)
     }
@@ -677,20 +752,20 @@ impl BlockPublisher {
         consensus_data: &[u8],
         force: bool,
     ) -> Result<String, FinalizeBlockError> {
-        let mut state = self.publisher.state.write().expect("RwLock is poisoned");
+        let mut state = self.publisher.state().write().expect("RwLock is poisoned");
         self.publisher
             .finalize_block(&mut state, consensus_data, force)
     }
 
     pub fn summarize_block(&self, force: bool) -> Result<Vec<u8>, FinalizeBlockError> {
-        let mut state = self.publisher.state.write().expect("RwLock is poisoned");
+        let mut state = self.publisher.state().write().expect("RwLock is poisoned");
         self.publisher.summarize_block(&mut state, force)
     }
 
     pub fn pending_batch_info(&self) -> (i32, i32) {
         let state = self
             .publisher
-            .state
+            .state()
             .read()
             .expect("RwLock was poisoned during a write lock");
         (
@@ -702,7 +777,7 @@ impl BlockPublisher {
     pub fn has_batch(&self, batch_id: &str) -> bool {
         let state = self
             .publisher
-            .state
+            .state()
             .read()
             .expect("RwLock was poisoned during a write lock");
         state.pending_batches().contains(batch_id)
