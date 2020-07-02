@@ -1,6 +1,6 @@
+use sawtooth::journal::publisher::{PublisherState, SyncPublisher};
 use sawtooth::{batch::Batch, block::Block};
 
-use journal::publisher::{PublisherState, SyncPublisher};
 use std::sync::RwLockWriteGuard;
 
 /// Abstracts acquiring the lock used by the BlockPublisher without exposing access to the
