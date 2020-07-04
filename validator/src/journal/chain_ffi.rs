@@ -221,7 +221,7 @@ macro_rules! chain_controller_block_ffi {
 
             let $block: Block = {
                 let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-                let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+                let proto_block: sawtooth::protos::block::Block = match protobuf::parse_from_bytes(&data) {
                     Ok(block) => block,
                     Err(err) => {
                         error!("Failed to parse block bytes: {:?}", err);
@@ -304,7 +304,10 @@ pub unsafe extern "C" fn chain_controller_chain_head(
         as *mut ChainController<PyExecutor, PyPermissionVerifier>))
         .light_clone();
 
-    if let Some(chain_head) = controller.chain_head().map(proto::block::Block::from) {
+    if let Some(chain_head) = controller
+        .chain_head()
+        .map(sawtooth::protos::block::Block::from)
+    {
         match chain_head.write_to_bytes() {
             Ok(payload) => {
                 *block_cap = payload.capacity();
