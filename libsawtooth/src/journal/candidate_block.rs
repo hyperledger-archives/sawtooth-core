@@ -15,24 +15,35 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::os::raw::c_void;
+use crate::{batch::Batch, block::Block};
 
-use sawtooth::journal::chain_head_lock::ChainHeadLock;
-
-#[repr(u32)]
 #[derive(Debug)]
-pub enum ErrorCode {
-    Success = 0,
-    NullPointerProvided = 0x01,
+pub enum CandidateBlockError {
+    BlockEmpty,
 }
 
-#[no_mangle]
-pub extern "C" fn chain_head_lock_drop(chain_head_lock_ptr: *mut c_void) -> ErrorCode {
-    if chain_head_lock_ptr.is_null() {
-        return ErrorCode::NullPointerProvided;
-    }
-    unsafe {
-        Box::from_raw(chain_head_lock_ptr as *mut ChainHeadLock);
-    }
-    ErrorCode::Success
+#[derive(Debug)]
+pub struct FinalizeBlockResult {
+    pub block: Option<Block>,
+    pub remaining_batches: Vec<Batch>,
+    pub last_batch: Batch,
+    pub injected_batch_ids: Vec<String>,
+}
+
+pub trait CandidateBlock: Send + Sync {
+    fn cancel(&mut self);
+
+    fn previous_block_id(&self) -> String;
+
+    fn add_batch(&mut self, batch: Batch);
+
+    fn can_add_batch(&self) -> bool;
+
+    fn summarize(&mut self, force: bool) -> Result<Option<Vec<u8>>, CandidateBlockError>;
+
+    fn finalize(
+        &mut self,
+        consensus_data: &[u8],
+        force: bool,
+    ) -> Result<FinalizeBlockResult, CandidateBlockError>;
 }

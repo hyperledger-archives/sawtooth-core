@@ -21,6 +21,7 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
+use sawtooth::journal::publisher::{BatchObserver, FinalizeBlockError, InitializeBlockError};
 use sawtooth::journal::{block_manager::BlockManager, commit_store::CommitStore};
 use sawtooth::state::state_view_factory::StateViewFactory;
 use sawtooth::{batch::Batch, block::Block};
@@ -28,9 +29,7 @@ use sawtooth::{batch::Batch, block::Block};
 use crate::py_object_wrapper::PyObjectWrapper;
 use execution::py_executor::PyExecutor;
 use ffi::py_import_class;
-use journal::publisher::{
-    BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
-};
+use journal::publisher::{BlockPublisher, IncomingBatchSender};
 
 lazy_static! {
     static ref PY_BATCH_PUBLISHER_CLASS: PyObject = py_import_class(

@@ -16,6 +16,8 @@
 use cpython::{ObjectProtocol, PyObject, Python};
 use metrics::{Key, Recorder, SetRecorderError};
 
+// This is used in main but clippy says it is unused
+#[allow(dead_code)]
 pub fn set_up_metrics(py: Python) {
     PyRecorder::init(py).expect("Failed to initialize metrics");
 }
