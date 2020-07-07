@@ -28,7 +28,6 @@ use sawtooth::journal::{
     commit_store::CommitStore,
 };
 
-use proto;
 use protobuf::{self, Message};
 
 #[repr(u32)]
@@ -159,7 +158,7 @@ pub unsafe extern "C" fn block_manager_put(
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
-            let proto_block: proto::block::Block =
+            let proto_block: sawtooth::protos::block::Block =
                 protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
@@ -271,7 +270,7 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
     check_null!(iterator);
 
     if let Some(Some(block)) = (*(iterator as *mut GetBlockIterator)).next() {
-        let proto_block: proto::block::Block = block.into();
+        let proto_block: sawtooth::protos::block::Block = block.into();
         let bytes = proto_block
             .write_to_bytes()
             .expect("Failed to serialize proto Block");
@@ -326,7 +325,7 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
     check_null!(iterator);
 
     if let Some(block) = (*(iterator as *mut BranchIterator)).next() {
-        let proto_block: proto::block::Block = block.into();
+        let proto_block: sawtooth::protos::block::Block = block.into();
         let bytes = proto_block
             .write_to_bytes()
             .expect("Failed to serialize proto Block");
@@ -389,7 +388,7 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     check_null!(iterator);
 
     if let Some(block) = (*(iterator as *mut BranchDiffIterator)).next() {
-        let proto_block: proto::block::Block = block.into();
+        let proto_block: sawtooth::protos::block::Block = block.into();
         let bytes = proto_block
             .write_to_bytes()
             .expect("Failed to serialize proto Block");

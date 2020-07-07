@@ -15,18 +15,13 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::iter::repeat;
-
+use crate::{
+    hashlib::sha256_digest_str,
+    protos::identity::{Policy, PolicyList, Role, RoleList},
+    state::{error::StateDatabaseError, StateReader},
+};
 use protobuf;
-use sawtooth::hashlib::sha256_digest_str;
-
-use proto::identity::Policy;
-use proto::identity::PolicyList;
-use proto::identity::Role;
-use proto::identity::RoleList;
-
-use sawtooth::state::error::StateDatabaseError;
-use sawtooth::state::StateReader;
+use std::iter::repeat;
 
 /// The namespace for storage
 const POLICY_NS: &str = "00001d00";
@@ -211,12 +206,9 @@ fn short_hash(s: &str, length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::identity::Policy;
-    use proto::identity::PolicyList;
-    use proto::identity::Policy_Entry;
-    use proto::identity::Policy_EntryType;
-    use proto::identity::Role;
-    use proto::identity::RoleList;
+    use crate::protos::identity::{
+        Policy, PolicyList, Policy_Entry, Policy_EntryType, Role, RoleList,
+    };
 
     use protobuf;
     use protobuf::Message;
