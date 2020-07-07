@@ -1,6 +1,6 @@
 [package]
 name = "sawtooth_validator"
-version = "1.3.0"
+version = "1.99.0"
 authors = ["Intel Corporation"]
 
 [dependencies]
