@@ -14,7 +14,6 @@
 
 
 crates := '\
-    libsawtooth \
     validator \
     adm \
     perf/sawtooth_perf \
