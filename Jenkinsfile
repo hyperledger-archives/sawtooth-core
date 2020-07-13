@@ -38,18 +38,6 @@ pipeline {
     }
 
     stages {
-        stage('Check Whitelist') {
-            steps {
-                readTrusted 'bin/whitelist'
-                sh './bin/whitelist "$CHANGE_AUTHOR" /etc/jenkins-authorized-builders'
-            }
-            when {
-                not {
-                    branch 'master'
-                }
-            }
-        }
-
         stage('Check for Signed-Off Commits') {
             steps {
                 sh '''#!/bin/bash -l
