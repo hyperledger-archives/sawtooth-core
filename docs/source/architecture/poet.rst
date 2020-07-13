@@ -17,7 +17,7 @@ At a high-level, PoET stochastically elects individual peers to execute requests
 at a given target rate. Individual peers sample an exponentially distributed
 random variable and wait for an amount of time dictated by the sample. The peer
 with the smallest sample wins the election. Cheating is prevented through the
-use of a trusted execution environment, identity verification and blacklisting
+use of a trusted execution environment, identity verification and denylisting
 based on asymmetric key cryptography, and an additional set of election
 policies.
 
@@ -471,10 +471,10 @@ determines the election winner.
 Revocation
 ----------
 
-Two mechanisms are put in place to blacklist validators whose EPID key has been
+Two mechanisms are put in place to denylist validators whose EPID key has been
 revoked by IAS. The first one affects each validator periodically, although
 infrequently. The second one is an asynchronous revocation check that each
-validator could perform on other validators' EPID keys  at any time.
+validator could perform on other validators' EPID keys at any time.
 
 1. **Periodic regeneration of PPK** a validator whose EPID key has been revoked
    by the IAS would not be able to obtain any valid AVR and therefore would be
@@ -485,22 +485,22 @@ validator could perform on other validators' EPID keys  at any time.
 
 #. **Asynchronous sign-up quote verification** A validator can (at any time) ask
    IAS for attestation on a quote that another validator used to sign-up to
-   check if its EPID key has been revoked since. If so, the returned AVR will
-   indicate that the key is revoked. A validator that obtains such an AVR from
-   IAS can broadcast it in a blacklisting transaction, so that all the
+   check if his/her EPID key has been revoked since. If so the returned AVR will
+   indicate that the key is revoked. A validator who obtains such an AVR from
+   IAS can broadcast it in a denylisting transaction, so that all the
    validators can check the veracity of the AVR and proceed with the
-   blacklisting. To limit the use of blacklisting transactions as a means to
+   denylisting. To limit the use of denylisting transactions as a means to
    thwart liveness for malicious validators one can control the rate at which
    they can be committed in different ways:
 
    * A certain number of participation tokens needs to be burned to commit a
-     blacklisting transaction.
+     denylisting transaction.
 
-   * A validator can commit a blacklisting transaction only once it wins one
+   * A validator can commit a denylisting transaction only once he/she wins one
      or more elections.
 
-   * A validator that commits a certain number of non-legit blacklisting
-     transactions is blacklisted.
+   * A validator who commits a certain number of non-legit denylisting
+     transactions is denylisted.
 
 Security Considerations
 -----------------------
