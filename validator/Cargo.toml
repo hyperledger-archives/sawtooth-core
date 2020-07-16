@@ -13,7 +13,7 @@ libc = ">=0.2.35"
 metrics = { version = "0.12", features = ["std"] }
 protobuf = "2.0"
 python3-sys = "0.2"
-sawtooth = { git = "https://github.com/hyperledger/sawtooth-lib", branch = "0-3", features = ["validator-internals"] }
+sawtooth = { version = "0.3", features = ["validator-internals"] }
 
 [build-dependencies]
 protoc-rust = "2.0"
