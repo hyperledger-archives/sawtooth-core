@@ -38,10 +38,10 @@ pipeline {
     }
 
     stages {
-        stage('Check Whitelist') {
+        stage('Check User Authorization') {
             steps {
-                readTrusted 'bin/whitelist'
-                sh './bin/whitelist "$CHANGE_AUTHOR" /etc/jenkins-authorized-builders'
+                readTrusted 'bin/authorize-cicd'
+                sh './bin/authorize-cicd "$CHANGE_AUTHOR" /etc/jenkins-authorized-builders'
             }
             when {
                 not {
