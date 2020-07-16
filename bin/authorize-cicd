@@ -17,19 +17,19 @@
 
 if [[ -z $1 || -z $2 ]]
 then
-    echo "USAGE: $0 [user] [whitelist]"
+    echo "USAGE: $0 [user] [authlist]"
     exit 1
 fi
 
-whitelist=$(cat $2 | grep user | sed 's#.*: \(.*$\)#\1#')
-for user in $whitelist
+authlist=$(cat $2 | grep user | sed 's#.*: \(.*$\)#\1#')
+for user in $authlist
 do
     if [[ $user == $1 ]]
     then
-        echo "SUCCESS: User '$1' whitelisted"
+        echo "SUCCESS: User '$1' authorized"
         exit 0
     fi
 done
 
-echo "FAILED: User '$1' not whitelisted."
+echo "FAILED: User '$1' not authorized."
 exit 1
