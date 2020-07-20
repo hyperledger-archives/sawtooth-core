@@ -16,7 +16,7 @@
 import argparse
 import time
 
-from sys import maxsize
+import sys
 
 from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
@@ -85,7 +85,7 @@ def add_batch_status_parser(subparsers, parent_parser):
     status_parser.add_argument(
         '--wait',
         nargs='?',
-        const=maxsize,
+        const=sys.maxsize,
         type=int,
         help='set time, in seconds, to wait for commit')
 
@@ -114,7 +114,7 @@ def add_batch_submit_parser(subparsers, parent_parser):
     submit_parser.add_argument(
         '--wait',
         nargs='?',
-        const=maxsize,
+        const=sys.maxsize,
         type=int,
         help='set time, in seconds, to wait for batches to commit')
 
@@ -283,4 +283,4 @@ def do_batch_submit(args):
         print('Wait timed out! Some batches have not yet been committed...')
         for batch_id, status in statuses[0].items():
             print('{}  {}'.format(batch_id, status))
-        exit(1)
+        sys.exit(1)

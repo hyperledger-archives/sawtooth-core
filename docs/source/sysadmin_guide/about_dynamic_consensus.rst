@@ -29,9 +29,12 @@ settings and requirements for each supported consensus type:
 .. note::
 
    **Compatibility with Sawtooth 1.0**:
-   Sawtooth provides defaults for backward compatibility with previous versions
-   of Sawtooth (1.0 and earlier), when Devmode and PoET were the only supported
+   Sawtooth provides defaults for backward compatibility with Sawtooth 1.0
+   (and earlier versions), when Devmode and PoET were the only supported
    consensus algorithms.
+
+   The following defaults apply to a network that was created with Sawtooth
+   release 1.1 or earlier:
 
    * If ``sawtooth.consensus.algorithm.version`` is not set, the default version
      is ``0.1``.
@@ -41,6 +44,9 @@ settings and requirements for each supported consensus type:
      exists, Sawtooth uses the specified consensus.
 
    * Otherwise, Sawtooth uses Devmode consensus.
+
+   A new network **must** specify the ``sawtooth.consensus.algorithm.version``
+   and ``sawtooth.consensus.algorithm.name`` settings.
 
    **Important:** In release 1.1 and later, a consensus engine is always
    required. The same consensus engine must be running on all nodes in the

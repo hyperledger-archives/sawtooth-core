@@ -58,7 +58,7 @@ your own transaction family. These transaction families are available in the
   provides a cross-platform workload for comparing the performance of
   blockchain systems.
   The family name is ``smallbank``.
-  The transaction processor is ``smallbank-tp``.
+  The transaction processor is ``smallbank-tp-{language}``.
 
 * The :doc:`/transaction_family_specifications/xo_transaction_family`
   allows two users to play a simple game of tic-tac-toe (see

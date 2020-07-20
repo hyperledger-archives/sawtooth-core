@@ -638,7 +638,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.block_validator.BlockValidator.chain_head_moved_to_fork_count",
+              "measurement": "sawtooth_validator.chain.ChainController.chain_head_moved_to_fork_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",

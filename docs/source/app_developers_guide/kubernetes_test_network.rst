@@ -223,7 +223,7 @@ Sawtooth network can use these keys when it starts.
 
    .. code-block:: console
 
-      $ kubectl log pbft-keys-xxxxx
+      $ kubectl logs pbft-keys-xxxxx
 
    The output will resemble this example:
 

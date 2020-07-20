@@ -34,22 +34,22 @@ EXPECTED = {
 }
 
 
-class TestPeerList(unittest.TestCase):
+class TestIPv6(unittest.TestCase):
     def setUp(self):
-        endpoints = ['rest-api-{}:8008'.format(i)
+        endpoints = ['rest-api-{}-ipv6:8008'.format(i)
                      for i in range(len(EXPECTED))]
 
         wait_for_rest_apis(endpoints)
 
-    def test_peer_list(self):
-        '''Test various CLI commands for reporting peers.
+    def test_ipv6(self):
+        '''Use various CLI commands for reporting peers to test IPv6
+        functionality in the validator.
 
         Five validators are started, peered as described in EXPECTED
         (see the test's associated yaml file for details).
         '''
 
         LOGGER.info('Testing `sawtooth peer list`')
-
         for node_number, peer_numbers in EXPECTED.items():
             actual_peers = _get_peers(node_number)
 
@@ -133,7 +133,8 @@ class TestPeerList(unittest.TestCase):
         # run `sawnet peers graph`, but don't verify output
         subprocess.run(
             shlex.split(
-                'sawnet peers graph --force {}'.format(http_addresses)
+                'sawnet peers graph -o peers-ipv6.dot --force {}'.format(
+                    http_addresses)
             ), check=True
         )
 
@@ -160,8 +161,8 @@ def _run_peer_command(command):
 
 
 def _make_http_address(node_number):
-    return 'http://rest-api-{}:8008'.format(node_number)
+    return 'http://rest-api-{}-ipv6:8008'.format(node_number)
 
 
 def _make_tcp_address(node_number):
-    return 'tcp://validator-{}:8800'.format(node_number)
+    return 'tcp://validator-{}-ipv6:8800'.format(node_number)

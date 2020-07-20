@@ -23,7 +23,7 @@ some use cases.  Two examples of inter-transaction validation are:
 BatchInjector Interface
 =======================
 
-The ``BatchInjector`` class supports injecting transactions into blocks:
+The ``BatchInjector`` class supports injecting batches into blocks:
 
 .. code-block:: python
 
