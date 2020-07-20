@@ -8,7 +8,7 @@ Hyperledger Sawtooth :term:`core platform<Sawtooth core>`, primarily through
 the use of Sawtooth's provided SDKs and :term:`REST API`.
 
 Topics include an overview of
-:term:`Sawtooth transaction families<Transaction family>`,
+:term:`Sawtooth transaction families<transaction family>`,
 setting up an application development environment, learning Sawtooth
 concepts with an example client, and tutorials on using the Sawtooth SDKs
 to write the business logic for your application.

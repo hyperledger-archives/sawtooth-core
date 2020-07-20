@@ -27,7 +27,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         """The ordering of entries is fairly arbitrary, so some tests
         need to filter for the matching address.
         """
-        return [l for l in entries if l.address == address][0].data
+        return [e for e in entries if e.address == address][0].data
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
