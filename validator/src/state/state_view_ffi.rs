@@ -16,8 +16,8 @@
  */
 use std::os::raw::c_void;
 
-use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::state::state_view_factory::StateViewFactory;
+use transact::database::lmdb::LmdbDatabase;
 
 #[repr(u32)]
 #[derive(Debug)]

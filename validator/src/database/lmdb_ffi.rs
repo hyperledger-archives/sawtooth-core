@@ -14,7 +14,7 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use sawtooth::database::lmdb::*;
+use transact::database::lmdb::*;
 
 use cpython::{PyList, PyObject, Python};
 use py_ffi;

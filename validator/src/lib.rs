@@ -27,6 +27,7 @@ extern crate log;
 #[macro_use]
 extern crate metrics;
 extern crate sawtooth;
+extern crate transact;
 
 // exported modules
 pub(crate) mod consensus;
