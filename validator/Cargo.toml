@@ -14,6 +14,7 @@ metrics = { version = "0.12", features = ["std"] }
 protobuf = "2.0"
 python3-sys = "0.2"
 sawtooth = {git = "https://github.com/Cargill/sawtooth-lib", branch="agunde406-transact-state", features = ["validator-internals"]}
+transact = "0.2"
 
 [build-dependencies]
 protoc-rust = "2.0"
