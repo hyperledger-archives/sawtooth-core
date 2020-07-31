@@ -24,7 +24,6 @@ use gossip::permission_verifier::PyPermissionVerifier;
 use py_ffi;
 use pylogger;
 use sawtooth::block::Block;
-use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::journal::commit_store::CommitStore;
 use std::ffi::CStr;
 use std::mem;
@@ -32,6 +31,7 @@ use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
 use std::time::Duration;
+use transact::database::lmdb::LmdbDatabase;
 
 use protobuf::{self, Message};
 use sawtooth::{
@@ -46,7 +46,6 @@ use sawtooth::{
     state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
-use proto;
 use proto::events::{Event, Event_Attribute};
 use proto::transaction_receipt::{StateChange, StateChange_Type, TransactionReceipt};
 

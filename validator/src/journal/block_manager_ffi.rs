@@ -412,9 +412,9 @@ mod test {
 
     use protobuf::Message;
     use sawtooth::block::Block;
-    use sawtooth::database::lmdb::{LmdbContext, LmdbDatabase};
     use sawtooth::journal::block_store::BlockStore;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+    use transact::database::lmdb::{LmdbContext, LmdbDatabase};
 
     use std::env;
     use std::fs::remove_file;

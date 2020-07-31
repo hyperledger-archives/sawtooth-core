@@ -20,12 +20,12 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use protobuf;
-use sawtooth::database::error::DatabaseError;
-use sawtooth::database::lmdb::LmdbDatabase;
 use sawtooth::journal::commit_store::{
     ByHeightDirection, CommitStore, CommitStoreByHeightIterator,
 };
 use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
+use transact::database::error::DatabaseError;
+use transact::database::lmdb::LmdbDatabase;
 
 #[repr(u32)]
 #[derive(Debug)]
