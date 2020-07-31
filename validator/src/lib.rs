@@ -33,7 +33,6 @@ extern crate transact;
 pub(crate) mod consensus;
 pub(crate) mod database;
 pub(crate) mod execution;
-pub(crate) mod gossip;
 pub(crate) mod journal;
 pub(crate) mod proto;
 pub(crate) mod py_object_wrapper;
