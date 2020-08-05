@@ -23,11 +23,13 @@ use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 use protobuf::{self, Message, ProtobufEnum};
 use py_ffi;
 use sawtooth::{
-    block::Block,
     consensus::notifier::{
         BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
     },
-    protos::{consensus::ConsensusPeerMessage, validator::Message_MessageType as MessageType},
+    protocol::block::BlockPair,
+    protos::{
+        consensus::ConsensusPeerMessage, validator::Message_MessageType as MessageType, FromBytes,
+    },
 };
 
 use pylogger;
@@ -269,21 +271,16 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
 ) -> ErrorCode {
     check_null!(notifier, block_bytes);
 
-    let block: Block = {
-        let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: sawtooth::protos::block::Block = match protobuf::parse_from_bytes(&data) {
-            Ok(block) => block,
-            Err(err) => {
-                error!("Failed to parse block bytes: {:?}", err);
-                return ErrorCode::InvalidArgument;
-            }
-        };
-        proto_block.into()
-    };
-
-    (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_new(&block);
-
-    ErrorCode::Success
+    match BlockPair::from_bytes(&slice::from_raw_parts(block_bytes, block_bytes_len)) {
+        Ok(block_pair) => {
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_block_new(&block_pair);
+            ErrorCode::Success
+        }
+        Err(err) => {
+            error!("Failed to parse block bytes: {:?}", err);
+            ErrorCode::InvalidArgument
+        }
+    }
 }
 
 #[no_mangle]
@@ -326,20 +323,16 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
 ) -> ErrorCode {
     check_null!(notifier, block_bytes);
 
-    let block: Block = {
-        let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: sawtooth::protos::block::Block = match protobuf::parse_from_bytes(&data) {
-            Ok(block) => block,
-            Err(err) => {
-                error!("Failed to parse block bytes: {:?}", err);
-                return ErrorCode::InvalidArgument;
-            }
-        };
-        proto_block.into()
-    };
-
-    (*(notifier as *mut BackgroundConsensusNotifier)).notify_engine_activated(&block);
-    ErrorCode::Success
+    match BlockPair::from_bytes(&slice::from_raw_parts(block_bytes, block_bytes_len)) {
+        Ok(block_pair) => {
+            (*(notifier as *mut BackgroundConsensusNotifier)).notify_engine_activated(&block_pair);
+            ErrorCode::Success
+        }
+        Err(err) => {
+            error!("Failed to parse block bytes: {:?}", err);
+            ErrorCode::InvalidArgument
+        }
+    }
 }
 
 #[no_mangle]

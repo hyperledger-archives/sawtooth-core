@@ -20,15 +20,16 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use sawtooth::block::Block;
-use sawtooth::journal::{
-    block_manager::{
-        BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
+use sawtooth::{
+    journal::{
+        block_manager::{
+            BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
+        },
+        commit_store::CommitStore,
     },
-    commit_store::CommitStore,
+    protocol::block::BlockPair,
+    protos::{FromBytes, IntoBytes},
 };
-
-use protobuf::{self, Message};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -153,17 +154,15 @@ pub unsafe extern "C" fn block_manager_put(
 ) -> ErrorCode {
     check_null!(block_manager, branch);
 
-    let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
-        .iter()
-        .map(|ptr| {
-            let entry = *ptr as *const PutEntry;
-            let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
-            let proto_block: sawtooth::protos::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
-
-            Ok(Block::from(proto_block))
-        })
-        .collect();
+    let branch_result: Result<Vec<BlockPair>, ErrorCode> =
+        slice::from_raw_parts(branch, branch_len)
+            .iter()
+            .map(|ptr| {
+                let entry = *ptr as *const PutEntry;
+                let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
+                Ok(BlockPair::from_bytes(&payload).expect("Failed to parse block bytes"))
+            })
+            .collect();
 
     match branch_result {
         Ok(branch) => match (*(block_manager as *mut BlockManager)).put(branch) {
@@ -269,11 +268,8 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
 ) -> ErrorCode {
     check_null!(iterator);
 
-    if let Some(Some(block)) = (*(iterator as *mut GetBlockIterator)).next() {
-        let proto_block: sawtooth::protos::block::Block = block.into();
-        let bytes = proto_block
-            .write_to_bytes()
-            .expect("Failed to serialize proto Block");
+    if let Some(Some(block_pair)) = (*(iterator as *mut GetBlockIterator)).next() {
+        let bytes = block_pair.into_bytes().expect("Failed to serialize block");
 
         *block_cap = bytes.capacity();
         *block_len = bytes.len();
@@ -324,11 +320,8 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
 ) -> ErrorCode {
     check_null!(iterator);
 
-    if let Some(block) = (*(iterator as *mut BranchIterator)).next() {
-        let proto_block: sawtooth::protos::block::Block = block.into();
-        let bytes = proto_block
-            .write_to_bytes()
-            .expect("Failed to serialize proto Block");
+    if let Some(block_pair) = (*(iterator as *mut BranchIterator)).next() {
+        let bytes = block_pair.into_bytes().expect("Failed to serialize block");
 
         *block_cap = bytes.capacity();
         *block_len = bytes.len();
@@ -387,11 +380,8 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 ) -> ErrorCode {
     check_null!(iterator);
 
-    if let Some(block) = (*(iterator as *mut BranchDiffIterator)).next() {
-        let proto_block: sawtooth::protos::block::Block = block.into();
-        let bytes = proto_block
-            .write_to_bytes()
-            .expect("Failed to serialize proto Block");
+    if let Some(block_pair) = (*(iterator as *mut BranchDiffIterator)).next() {
+        let bytes = block_pair.into_bytes().expect("Failed to serialize block");
 
         *block_cap = bytes.capacity();
         *block_len = bytes.len();
@@ -408,12 +398,11 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 #[cfg(test)]
 mod test {
     use super::*;
-    use proto::block::BlockHeader;
 
-    use protobuf::Message;
-    use sawtooth::block::Block;
     use sawtooth::journal::block_store::BlockStore;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
+    use sawtooth::protocol::block::{BlockBuilder, BlockPair};
+    use sawtooth::signing::hash::HashSigner;
     use transact::database::lmdb::{LmdbContext, LmdbDatabase};
 
     use std::env;
@@ -432,14 +421,21 @@ mod test {
         run_test(|db_path| {
             let mut store = create_block_store(db_path);
 
-            let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
-            let block_b = create_block("B", 2, "A");
-            let block_c = create_block("C", 3, "B");
+            let block_a = create_block(NULL_BLOCK_IDENTIFIER, 1, None);
+            let block_b = create_block(block_a.block().header_signature(), 2, None);
+            let block_c = create_block(block_b.block().header_signature(), 3, None);
 
             store
                 .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
                 .unwrap();
-            assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
+            assert_eq!(
+                store
+                    .get(&[block_a.block().header_signature()])
+                    .unwrap()
+                    .next()
+                    .unwrap(),
+                block_a
+            );
 
             {
                 let mut iterator = store.iter().unwrap();
@@ -450,7 +446,10 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
+            assert_eq!(
+                store.delete(&[block_c.block().header_signature()]).unwrap(),
+                vec![block_c.clone()]
+            );
 
             let chain_head = get_chain_head(&store);
 
@@ -468,18 +467,25 @@ mod test {
                 .add_store("commit_store", Box::new(store.clone()))
                 .expect("The commitstore can be added");
 
-            let block_a = create_block("A", 1, NULL_BLOCK_IDENTIFIER);
-            let block_b = create_block("B", 2, "A");
-            let block_c = create_block("C", 3, "B");
+            let block_a = create_block(NULL_BLOCK_IDENTIFIER, 1, None);
+            let block_b = create_block(block_a.block().header_signature(), 2, None);
+            let block_c = create_block(block_b.block().header_signature(), 3, None);
 
             block_manager
                 .put(vec![block_a.clone(), block_b.clone(), block_c.clone()])
                 .unwrap();
             block_manager
-                .persist(&block_c.header_signature, "commit_store")
+                .persist(block_c.block().header_signature(), "commit_store")
                 .unwrap();
 
-            assert_eq!(store.get(&["A"]).unwrap().next().unwrap(), block_a);
+            assert_eq!(
+                store
+                    .get(&[block_a.block().header_signature()])
+                    .unwrap()
+                    .next()
+                    .unwrap(),
+                block_a
+            );
 
             {
                 let mut iterator = store.iter().unwrap();
@@ -496,22 +502,21 @@ mod test {
         })
     }
 
-    fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
-        let mut block_header = BlockHeader::new();
-        block_header.set_previous_block_id(previous_block_id.to_string());
-        block_header.set_block_num(block_num);
-        block_header.set_state_root_hash(format!("state-{}", block_num));
-        Block {
-            header_signature: header_signature.into(),
-            previous_block_id: block_header.get_previous_block_id().to_string(),
-            block_num,
-            batches: vec![],
-            state_root_hash: block_header.get_state_root_hash().to_string(),
-            consensus: vec![],
-            batch_ids: vec![],
-            signer_public_key: "".into(),
-            header_bytes: block_header.write_to_bytes().unwrap(),
-        }
+    /// `state_root_hash` should be set if two or more blocks with the same `previous_block_id` and
+    /// `block_num` are created; this ensures that the resulting header signatures (IDs) of the
+    /// blocks are different.
+    fn create_block(
+        previous_block_id: &str,
+        block_num: u64,
+        state_root_hash: Option<&[u8]>,
+    ) -> BlockPair {
+        BlockBuilder::new()
+            .with_block_num(block_num)
+            .with_previous_block_id(previous_block_id.into())
+            .with_state_root_hash(state_root_hash.unwrap_or_default().into())
+            .with_batches(vec![])
+            .build_pair(&HashSigner::default())
+            .expect("Failed to build block pair")
     }
 
     fn create_block_store(db_path: &str) -> CommitStore {
@@ -525,7 +530,7 @@ mod test {
         CommitStore::new(db)
     }
 
-    fn get_chain_head(store: &dyn BlockStore) -> Option<Block> {
+    fn get_chain_head(store: &dyn BlockStore) -> Option<BlockPair> {
         store.iter().expect("Failed to get BlockStore iter").next()
     }
 

@@ -19,7 +19,7 @@ use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
 use cpython::{PyObject, Python};
-use sawtooth::batch::Batch;
+use transact::protocol::batch::Batch;
 
 use crate::py_object_wrapper::PyObjectWrapper;
 use journal::publisher::IncomingBatchSender;

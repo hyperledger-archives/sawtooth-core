@@ -32,15 +32,17 @@ use sawtooth::journal::candidate_block::{
 use sawtooth::journal::chain_commit_state::TransactionCommitCache;
 use sawtooth::journal::commit_store::CommitStore;
 use sawtooth::journal::validation_rule_enforcer;
+use sawtooth::protocol::block::BlockPair;
+use sawtooth::scheduler::Scheduler;
 use sawtooth::state::settings_view::SettingsView;
-use sawtooth::{batch::Batch, block::Block, scheduler::Scheduler, transaction::Transaction};
+use transact::protocol::{batch::Batch, transaction::Transaction};
 
 use crate::py_object_wrapper::PyObjectWrapper;
 
 use pylogger;
 
 pub struct FFICandidateBlock {
-    previous_block: Block,
+    previous_block: BlockPair,
     commit_store: CommitStore,
     scheduler: Box<dyn Scheduler>,
     max_batches: usize,
@@ -66,7 +68,7 @@ impl CandidateBlock for FFICandidateBlock {
     }
 
     fn previous_block_id(&self) -> String {
-        self.previous_block.header_signature.clone()
+        self.previous_block.block().header_signature().to_string()
     }
 
     fn can_add_batch(&self) -> bool {
@@ -75,20 +77,19 @@ impl CandidateBlock for FFICandidateBlock {
     }
 
     fn add_batch(&mut self, batch: Batch) {
-        let batch_header_signature = batch.header_signature.clone();
+        let batch_header_signature = batch.header_signature().to_string();
 
-        if batch.trace {
+        if batch.trace() {
             debug!(
                 "TRACE {}: {}",
-                batch_header_signature.as_str(),
-                "FFICandidateBlock , add_batch"
+                batch_header_signature, "FFICandidateBlock , add_batch"
             );
         }
 
         if self.batch_is_already_committed(&batch) {
             debug!(
                 "Dropping previously committed batch: {}",
-                batch_header_signature.as_str()
+                batch_header_signature
             );
         } else if self.check_batch_dependencies_add_batch(&batch) {
             let mut batches_to_add = vec![];
@@ -126,11 +127,9 @@ impl CandidateBlock for FFICandidateBlock {
             batches_to_add.push(batch);
 
             {
-                let batches_to_test = self
-                    .pending_batches
-                    .iter()
-                    .chain(batches_to_add.iter())
-                    .collect::<Vec<_>>();
+                let mut batches_to_test = self.pending_batches.clone();
+                batches_to_test.append(&mut batches_to_add.clone());
+
                 if !validation_rule_enforcer::enforce_validation_rules(
                     &self.settings_view,
                     &self.get_signer_public_key_hex(),
@@ -141,18 +140,18 @@ impl CandidateBlock for FFICandidateBlock {
             }
 
             for b in batches_to_add {
-                let batch_id = b.header_signature.clone();
                 self.pending_batches.push(b.clone());
-                self.pending_batch_ids.insert(batch_id.clone());
+                self.pending_batch_ids
+                    .insert(b.header_signature().to_string());
 
-                let injected = self.injected_batch_ids.contains(batch_id.as_str());
+                let injected = self.injected_batch_ids.contains(b.header_signature());
 
                 self.scheduler.add_batch(b, None, injected).unwrap()
             }
         } else {
             debug!(
                 "Dropping batch due to missing dependencies: {}",
-                batch_header_signature.as_str()
+                batch_header_signature
             );
         }
     }
@@ -203,16 +202,13 @@ impl CandidateBlock for FFICandidateBlock {
         }
 
         for batch in self.pending_batches.clone() {
-            let header_signature = &batch.header_signature.clone();
-            if batch.trace {
+            let header_signature = batch.header_signature().to_string();
+            if batch.trace() {
                 debug!("TRACE {} : FFICandidateBlock  finalize", header_signature)
             }
 
-            if batches_w_no_results.contains(&batch.header_signature) {
-                if !self
-                    .injected_batch_ids
-                    .contains(batch.header_signature.as_str())
-                {
+            if batches_w_no_results.contains(&header_signature) {
+                if !self.injected_batch_ids.contains(&header_signature) {
                     pending_batches.push(batch)
                 } else {
                     warn! {
@@ -220,7 +216,7 @@ impl CandidateBlock for FFICandidateBlock {
                         header_signature
                     };
                 }
-            } else if valid_batch_ids.contains(&batch.header_signature) {
+            } else if valid_batch_ids.contains(&header_signature) {
                 if !self.check_batch_dependencies(&batch, &mut committed_txn_cache) {
                     debug!(
                         "Batch {} is invalid, due to missing txn dependency",
@@ -262,7 +258,7 @@ impl CandidateBlock for FFICandidateBlock {
             .call_method(
                 py,
                 "set_state_hash",
-                (execution_results.ending_state_hash,),
+                (execution_results.ending_state_hash.map(hex::encode),),
                 None,
             )
             .expect("BlockBuilder has no method 'set_state_hash'");
@@ -281,10 +277,10 @@ impl CandidateBlock for FFICandidateBlock {
             .map(Batch::from)
             .collect::<Vec<Batch>>();
 
-        let batch_ids: Vec<&str> = batches
+        let batch_ids = batches
             .iter()
-            .map(|batch| batch.header_signature.as_str())
-            .collect();
+            .map(|batch| batch.header_signature().to_string())
+            .collect::<Vec<_>>();
 
         self.summary = Some(sha256_digest_strs(batch_ids.as_slice()));
         self.remaining_batches = pending_batches;
@@ -328,7 +324,7 @@ impl CandidateBlock for FFICandidateBlock {
 impl FFICandidateBlock {
     #![allow(clippy::too_many_arguments)]
     pub fn new(
-        previous_block: Block,
+        previous_block: BlockPair,
         commit_store: CommitStore,
         scheduler: Box<dyn Scheduler>,
         committed_txn_cache: TransactionCommitCache,
@@ -361,18 +357,19 @@ impl FFICandidateBlock {
     }
 
     fn check_batch_dependencies_add_batch(&mut self, batch: &Batch) -> bool {
-        for txn in &batch.transactions {
+        for txn in batch.transactions() {
             if self.txn_is_already_committed(txn, &self.committed_txn_cache) {
                 debug!(
                     "Transaction rejected as it is already in the chain {}",
-                    txn.header_signature
+                    txn.header_signature()
                 );
                 return false;
             } else if !self.check_transaction_dependencies(txn) {
                 self.committed_txn_cache.remove_batch(batch);
                 return false;
             }
-            self.committed_txn_cache.add(txn.header_signature.clone());
+            self.committed_txn_cache
+                .add(txn.header_signature().to_string());
         }
         true
     }
@@ -382,29 +379,40 @@ impl FFICandidateBlock {
         batch: &Batch,
         committed_txn_cache: &mut TransactionCommitCache,
     ) -> bool {
-        for txn in &batch.transactions {
+        for txn in batch.transactions() {
             if self.txn_is_already_committed(txn, committed_txn_cache) {
                 debug!(
                     "Transaction rejected as it is already in the chain {}",
-                    txn.header_signature
+                    txn.header_signature()
                 );
                 return false;
             } else if !self.check_transaction_dependencies(txn) {
                 committed_txn_cache.remove_batch(batch);
                 return false;
             }
-            committed_txn_cache.add(txn.header_signature.clone());
+            committed_txn_cache.add(txn.header_signature().to_string());
         }
         true
     }
 
     fn check_transaction_dependencies(&self, txn: &Transaction) -> bool {
-        for dep in &txn.dependencies {
-            if !self.committed_txn_cache.contains(dep.as_str()) {
+        let txn_header = match txn.clone().into_pair() {
+            Ok(txn_pair) => txn_pair.take().1,
+            Err(err) => {
+                debug!(
+                    "Transaction rejected, unable to parse transaction header: {}",
+                    err
+                );
+                return false;
+            }
+        };
+        for dep in txn_header.dependencies() {
+            let dep = hex::encode(dep);
+            if !self.committed_txn_cache.contains(&dep) {
                 debug!(
                     "Transaction rejected due to missing dependency, transaction {} depends on {}",
-                    txn.header_signature.as_str(),
-                    dep.as_str()
+                    txn.header_signature(),
+                    dep
                 );
                 return false;
             }
@@ -417,19 +425,18 @@ impl FFICandidateBlock {
         txn: &Transaction,
         committed_txn_cache: &TransactionCommitCache,
     ) -> bool {
-        committed_txn_cache.contains(txn.header_signature.as_str())
+        committed_txn_cache.contains(txn.header_signature())
             || self
                 .commit_store
-                .contains_transaction(txn.header_signature.as_str())
+                .contains_transaction(txn.header_signature())
                 .expect("Couldn't check for txn")
     }
 
     fn batch_is_already_committed(&self, batch: &Batch) -> bool {
-        self.pending_batch_ids
-            .contains(batch.header_signature.as_str())
+        self.pending_batch_ids.contains(batch.header_signature())
             || self
                 .commit_store
-                .contains_batch(batch.header_signature.as_str())
+                .contains_batch(batch.header_signature())
                 .expect("Couldn't check for batch")
     }
 
@@ -445,7 +452,7 @@ impl FFICandidateBlock {
                     let py_wrapper = PyObjectWrapper::new(b);
                     let batch = Batch::from(py_wrapper);
                     self.injected_batch_ids
-                        .insert(batch.header_signature.clone());
+                        .insert(batch.header_signature().to_string());
                     batches.push(batch);
                 }
             }
@@ -453,17 +460,17 @@ impl FFICandidateBlock {
         batches
     }
 
-    fn get_signer_public_key_hex(&self) -> String {
+    fn get_signer_public_key_hex(&self) -> Vec<u8> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
 
         self.identity_signer
             .call_method(py, "get_public_key", cpython::NoArgs, None)
             .expect("IdentitySigner has no method 'get_public_key'")
-            .call_method(py, "as_hex", cpython::NoArgs, None)
-            .expect("PublicKey has no method 'as_hex'")
+            .call_method(py, "as_bytes", cpython::NoArgs, None)
+            .expect("PublicKey has no method 'as_bytes'")
             .extract(py)
-            .expect("Unable to convert python string to rust")
+            .expect("Unable to convert python bytes to rust")
     }
 
     pub fn sign_block(&self, block_builder: &cpython::PyObject) {
@@ -500,12 +507,7 @@ impl FFICandidateBlock {
         block: Option<cpython::PyObject>,
     ) -> Result<FinalizeBlockResult, CandidateBlockError> {
         if let Some(last_batch) = self.last_batch().cloned() {
-            let block: Option<Block> = if let Some(py_block) = block {
-                let wrapper = PyObjectWrapper::new(py_block);
-                Some(Block::from(wrapper))
-            } else {
-                None
-            };
+            let block = block.map(|py_block| BlockPair::from(PyObjectWrapper::new(py_block)));
 
             Ok(FinalizeBlockResult {
                 block,
