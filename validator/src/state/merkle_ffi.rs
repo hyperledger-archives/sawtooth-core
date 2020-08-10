@@ -14,13 +14,13 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use sawtooth::database::lmdb::LmdbDatabase;
-use sawtooth::state::error::StateDatabaseError;
-use sawtooth::state::merkle::*;
-use sawtooth::state::StateReader;
+use transact::database::lmdb::LmdbDatabase;
+use transact::state::merkle::{
+    MerkleLeafIterator, MerkleRadixTree, StateDatabaseError as TransactStateDatabaseError,
+};
+use transact::state::StateChange;
 
 /// This module contains all of the extern C functions for the Merkle trie
-use std::collections::HashMap;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -89,16 +89,16 @@ unsafe fn make_merkle_db(
     }
 
     let db_ref = (database as *const LmdbDatabase).as_ref().unwrap();
-    match MerkleDatabase::new(db_ref.clone(), root) {
+    match MerkleRadixTree::new(Box::new(db_ref.clone()), root) {
         Ok(new_merkle_tree) => {
             *merkle_db = Box::into_raw(Box::new(new_merkle_tree)) as *const c_void;
             ErrorCode::Success
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(merkle_db as *mut MerkleDatabase);
+    Box::from_raw(merkle_db as *mut MerkleRadixTree);
     ErrorCode::Success
 }
 
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn merkle_db_get_merkle_root(
         return ErrorCode::NullPointerProvided;
     }
 
-    let state_root = (*(merkle_db as *mut MerkleDatabase)).get_merkle_root();
+    let state_root = (*(merkle_db as *mut MerkleRadixTree)).get_merkle_root();
     *merkle_root_cap = state_root.capacity();
     *merkle_root_len = state_root.len();
     *merkle_root = state_root.as_str().as_ptr();
@@ -154,13 +154,13 @@ pub unsafe extern "C" fn merkle_db_set_merkle_root(
         Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).set_merkle_root(state_root) {
+    match (*(merkle_db as *mut MerkleRadixTree)).set_merkle_root(state_root) {
         Ok(()) => ErrorCode::Success,
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -187,14 +187,14 @@ pub unsafe extern "C" fn merkle_db_contains(
         Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).contains(address_str) {
+    match (*(merkle_db as *mut MerkleRadixTree)).contains(address_str) {
         Ok(true) => ErrorCode::Success,
         Ok(false) => ErrorCode::NotFound,
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn merkle_db_get(
         Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).get(address_str) {
+    match (*(merkle_db as *mut MerkleRadixTree)).get_value(address_str) {
         Ok(Some(data_vec)) => {
             *bytes_cap = data_vec.capacity();
             *bytes_len = data_vec.len();
@@ -234,11 +234,11 @@ pub unsafe extern "C" fn merkle_db_get(
             ErrorCode::Success
         }
         Ok(None) => ErrorCode::NotFound,
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -273,8 +273,11 @@ pub unsafe extern "C" fn merkle_db_set(
     };
 
     let data = slice::from_raw_parts(data, data_len);
-
-    match (*(merkle_db as *mut MerkleDatabase)).set(address_str, data) {
+    let updates = vec![StateChange::Set {
+        key: address_str.to_string(),
+        value: data.to_vec(),
+    }];
+    match (*(merkle_db as *mut MerkleRadixTree)).update(&updates, false) {
         Ok(state_root) => {
             *merkle_root_cap = state_root.capacity();
             *merkle_root_len = state_root.len();
@@ -284,7 +287,7 @@ pub unsafe extern "C" fn merkle_db_set(
 
             ErrorCode::Success
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
@@ -315,7 +318,11 @@ pub unsafe extern "C" fn merkle_db_delete(
         Err(_) => return ErrorCode::InvalidHashString,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).delete(address_str) {
+    let updates = vec![StateChange::Delete {
+        key: address_str.to_string(),
+    }];
+
+    match (*(merkle_db as *mut MerkleRadixTree)).update(&updates, false) {
         Ok(state_root) => {
             *merkle_root_cap = state_root.capacity();
             *merkle_root_len = state_root.len();
@@ -325,11 +332,11 @@ pub unsafe extern "C" fn merkle_db_delete(
 
             ErrorCode::Success
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -361,8 +368,8 @@ pub unsafe extern "C" fn merkle_db_update(
         return ErrorCode::NullPointerProvided;
     }
 
-    let update_map: HashMap<String, Vec<u8>> = {
-        let update_vec: Result<Vec<(String, Vec<u8>)>, ErrorCode> = if updates_len > 0 {
+    let mut updates: Vec<StateChange> = {
+        let update_vec: Result<Vec<StateChange>, ErrorCode> = if updates_len > 0 {
             slice::from_raw_parts(updates, updates_len)
                 .iter()
                 .map(|ptr| {
@@ -374,7 +381,10 @@ pub unsafe extern "C" fn merkle_db_update(
                     let data = slice::from_raw_parts((*entry).data, (*entry).data_len);
 
                     let data = Vec::from(data);
-                    Ok((address, data))
+                    Ok(StateChange::Set {
+                        key: address,
+                        value: data,
+                    })
                 })
                 .collect()
         } else {
@@ -387,13 +397,15 @@ pub unsafe extern "C" fn merkle_db_update(
         }
     };
 
-    let deletes: Result<Vec<String>, ErrorCode> = if deletes_len > 0 {
+    let deletes: Result<Vec<StateChange>, ErrorCode> = if deletes_len > 0 {
         slice::from_raw_parts(deletes, deletes_len)
             .iter()
             .map(|c_str| {
                 CStr::from_ptr(*c_str)
                     .to_str()
-                    .map(String::from)
+                    .map(|address| StateChange::Delete {
+                        key: address.to_string(),
+                    })
                     .map_err(|_| ErrorCode::InvalidAddress)
             })
             .collect()
@@ -401,12 +413,13 @@ pub unsafe extern "C" fn merkle_db_update(
         Ok(Vec::with_capacity(0))
     };
 
-    let deletes = match deletes {
+    let mut deletes = match deletes {
         Ok(deletes) => deletes,
         Err(err) => return err,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).update(&update_map, &deletes, virtual_write) {
+    updates.append(&mut deletes);
+    match (*(merkle_db as *mut MerkleRadixTree)).update(&updates, virtual_write) {
         Ok(state_root) => {
             *merkle_root_cap = state_root.capacity();
             *merkle_root_len = state_root.len();
@@ -416,19 +429,11 @@ pub unsafe extern "C" fn merkle_db_update(
 
             ErrorCode::Success
         }
-        Err(StateDatabaseError::NotFound(addr)) => {
-            error!(
-                "Address {}, in {}, was not found.",
-                addr,
-                if update_map.contains_key(&addr) {
-                    "updates"
-                } else {
-                    "deletions"
-                }
-            );
+        Err(TransactStateDatabaseError::NotFound(addr)) => {
+            error!("Address {} was not found.", addr,);
             ErrorCode::NotFound
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
@@ -459,20 +464,20 @@ pub unsafe extern "C" fn merkle_db_prune(
 
     let db_ref = (state_database as *const LmdbDatabase).as_ref().unwrap();
 
-    match MerkleDatabase::prune(db_ref, &state_root) {
+    match MerkleRadixTree::prune(db_ref, &state_root) {
         Ok(results) => {
             *result = !results.is_empty();
             ErrorCode::Success
         }
-        Err(StateDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
-        Err(StateDatabaseError::InvalidChangeLogIndex(msg)) => {
+        Err(TransactStateDatabaseError::InvalidHash(_)) => ErrorCode::InvalidHashString,
+        Err(TransactStateDatabaseError::InvalidChangeLogIndex(msg)) => {
             error!(
                 "Invalid Change Log Index while pruning {}: {}",
                 state_root, msg
             );
             ErrorCode::InvalidChangeLogIndex
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
@@ -502,17 +507,17 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
         Err(_) => return ErrorCode::InvalidAddress,
     };
 
-    match (*(merkle_db as *mut MerkleDatabase)).leaves(Some(prefix)) {
+    match (*(merkle_db as *mut MerkleRadixTree)).leaves(Some(prefix)) {
         Ok(leaf_iterator) => {
             *iterator = Box::into_raw(leaf_iterator) as *const c_void;
 
             ErrorCode::Success
         }
-        Err(StateDatabaseError::DatabaseError(err)) => {
+        Err(TransactStateDatabaseError::DatabaseError(err)) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
-        Err(StateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
+        Err(TransactStateDatabaseError::NotFound(_)) => ErrorCode::NotFound,
         Err(err) => {
             error!("Unknown Error!: {:?}", err);
             ErrorCode::Unknown
@@ -560,7 +565,7 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
             ErrorCode::Success
         }
         None => ErrorCode::StopIteration,
-        Some(Err(StateDatabaseError::DatabaseError(err))) => {
+        Some(Err(TransactStateDatabaseError::DatabaseError(err))) => {
             error!("A Database Error occurred: {}", err);
             ErrorCode::DatabaseError
         }
