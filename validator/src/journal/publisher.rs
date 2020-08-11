@@ -559,7 +559,7 @@ impl SyncBlockPublisher {
 
 #[derive(Clone)]
 pub struct BlockPublisher {
-    pub publisher: Box<dyn SyncPublisher>,
+    pub publisher: SyncBlockPublisher,
 }
 
 impl BlockPublisher {
@@ -603,9 +603,7 @@ impl BlockPublisher {
             exit: Arc::new(Exit::new()),
         };
 
-        BlockPublisher {
-            publisher: Box::new(publisher),
-        }
+        BlockPublisher { publisher }
     }
 
     pub fn start(&mut self) -> IncomingBatchSender {
@@ -652,7 +650,7 @@ impl BlockPublisher {
     }
 
     pub fn chain_head_lock(&self) -> ChainHeadLock {
-        ChainHeadLock::new(self.publisher.clone())
+        ChainHeadLock::new(self.publisher.box_clone())
     }
 
     pub fn initialize_block(&self, previous_block: &BlockPair) -> Result<(), InitializeBlockError> {

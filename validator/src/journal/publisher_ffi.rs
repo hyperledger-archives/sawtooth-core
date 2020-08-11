@@ -21,7 +21,9 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
-use sawtooth::journal::publisher::{BatchObserver, FinalizeBlockError, InitializeBlockError};
+use sawtooth::journal::publisher::{
+    BatchObserver, FinalizeBlockError, InitializeBlockError, SyncPublisher,
+};
 use sawtooth::journal::{block_manager::BlockManager, commit_store::CommitStore};
 use sawtooth::protocol::block::BlockPair;
 use sawtooth::state::state_view_factory::StateViewFactory;
