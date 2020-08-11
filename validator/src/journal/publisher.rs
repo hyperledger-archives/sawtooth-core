@@ -21,11 +21,9 @@
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, SendError, Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::mpsc::{channel, SendError, Sender};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::Duration;
 
 use sawtooth::journal::{
     block_manager::{BlockManager, BlockRef},
@@ -147,7 +145,7 @@ pub struct SyncBlockPublisher {
     config_dir: PyObject,
     permission_verifier: PyObject,
 
-    exit: Arc<Exit>,
+    batch_sender: Arc<Mutex<Option<Sender<BatchQueueMessage>>>>,
 }
 
 impl Clone for SyncBlockPublisher {
@@ -169,7 +167,7 @@ impl Clone for SyncBlockPublisher {
             data_dir: self.data_dir.clone_ref(py),
             config_dir: self.config_dir.clone_ref(py),
             permission_verifier: self.permission_verifier.clone_ref(py),
-            exit: Arc::clone(&self.exit),
+            batch_sender: self.batch_sender.clone(),
         }
     }
 }
@@ -475,11 +473,23 @@ impl SyncPublisher for SyncBlockPublisher {
     }
 
     fn stopped(&self) -> bool {
-        self.exit.get()
+        self.batch_sender
+            .lock()
+            .expect("IncomingBatchSender lock poisoned")
+            .is_none()
     }
 
     fn stop(&self) {
-        self.exit.set()
+        if self
+            .batch_sender
+            .lock()
+            .expect("IncomingBatchSender lock poisoned")
+            .take()
+            .and_then(|sender| sender.send(BatchQueueMessage::Shutdown).ok())
+            .is_none()
+        {
+            warn!("PublisherThread is no longer running");
+        }
     }
 }
 
@@ -555,6 +565,13 @@ impl SyncBlockPublisher {
             (false, None)
         }
     }
+
+    fn add_batch_sender(&self, sender: Sender<BatchQueueMessage>) {
+        *self
+            .batch_sender
+            .lock()
+            .expect("Batch sender lock poisoned") = Some(sender)
+    }
 }
 
 #[derive(Clone)]
@@ -600,31 +617,30 @@ impl BlockPublisher {
             config_dir,
             permission_verifier,
             batch_injector_factory,
-            exit: Arc::new(Exit::new()),
+            batch_sender: Arc::new(Mutex::new(None)),
         };
 
         BlockPublisher { publisher }
     }
 
     pub fn start(&mut self) -> IncomingBatchSender {
-        let (batch_tx, mut batch_rx) = make_batch_queue();
+        let (batch_tx, batch_rx) = channel();
+        self.publisher.add_batch_sender(batch_tx.clone());
+
         let builder = thread::Builder::new().name("PublisherThread".into());
         let block_publisher = self.publisher.clone();
         builder
             .spawn(move || {
                 loop {
                     // Receive and process a batch
-                    match batch_rx.get(Duration::from_millis(100)) {
-                        Err(err) => match err {
-                            BatchQueueError::Timeout => {
-                                if block_publisher.stopped() {
-                                    break;
-                                }
-                            }
-                            err => panic!("Unhandled error: {:?}", err),
-                        },
-                        Ok(batch) => {
-                            block_publisher.on_batch_received(batch);
+                    match batch_rx.recv() {
+                        Ok(BatchQueueMessage::Batch(batch)) => {
+                            block_publisher.on_batch_received(batch)
+                        }
+                        Ok(BatchQueueMessage::Shutdown) => break,
+                        Err(_) => {
+                            warn!("IncomingBatchSender has disconnected");
+                            break;
                         }
                     }
                 }
@@ -632,7 +648,7 @@ impl BlockPublisher {
             })
             .unwrap();
 
-        batch_tx
+        IncomingBatchSender::new(batch_tx)
     }
 
     pub fn cancel_block(&self) -> Result<(), CancelBlockError> {
@@ -701,56 +717,31 @@ impl BlockPublisher {
 /// duplicates to make it into this queue, which is intentional to avoid
 /// blocking threads trying to put/get from the queue. Any duplicates
 /// introduced by this must be filtered out later.
-pub fn make_batch_queue() -> (IncomingBatchSender, IncomingBatchReceiver) {
-    let (sender, reciever) = channel();
-    let ids = Arc::new(RwLock::new(HashSet::new()));
-    (
-        IncomingBatchSender::new(ids.clone(), sender),
-        IncomingBatchReceiver::new(ids, reciever),
-    )
-}
-
-pub struct IncomingBatchReceiver {
-    ids: Arc<RwLock<HashSet<String>>>,
-    receiver: Receiver<Batch>,
-}
-
-impl IncomingBatchReceiver {
-    pub fn new(
-        ids: Arc<RwLock<HashSet<String>>>,
-        receiver: Receiver<Batch>,
-    ) -> IncomingBatchReceiver {
-        IncomingBatchReceiver { ids, receiver }
-    }
-
-    pub fn get(&mut self, timeout: Duration) -> Result<Batch, BatchQueueError> {
-        let batch = self.receiver.recv_timeout(timeout)?;
-        self.ids
-            .write()
-            .expect("RwLock was poisoned during a write lock")
-            .remove(batch.header_signature());
-        Ok(batch)
-    }
-}
-
 #[derive(Clone)]
 pub struct IncomingBatchSender {
     ids: Arc<RwLock<HashSet<String>>>,
-    sender: Sender<Batch>,
+    sender: Sender<BatchQueueMessage>,
 }
 
 impl IncomingBatchSender {
-    pub fn new(ids: Arc<RwLock<HashSet<String>>>, sender: Sender<Batch>) -> IncomingBatchSender {
-        IncomingBatchSender { ids, sender }
+    pub fn new(sender: Sender<BatchQueueMessage>) -> IncomingBatchSender {
+        IncomingBatchSender {
+            ids: Default::default(),
+            sender,
+        }
     }
+
     pub fn put(&mut self, batch: Batch) -> Result<(), BatchQueueError> {
         let mut ids = self
             .ids
             .write()
             .expect("RwLock was poisoned during a write lock");
 
-        if !ids.insert(batch.header_signature().to_string()) {
-            self.sender.send(batch).map_err(BatchQueueError::from)
+        if !ids.contains(batch.header_signature()) {
+            ids.insert(batch.header_signature().to_string());
+            self.sender
+                .send(BatchQueueMessage::Batch(batch))
+                .map_err(BatchQueueError::from)
         } else {
             Ok(())
         }
@@ -765,42 +756,19 @@ impl IncomingBatchSender {
     }
 }
 
+/// Messages passed between the `IncomingBatchSender` and its Receiver
+pub enum BatchQueueMessage {
+    Shutdown,
+    Batch(Batch),
+}
+
 #[derive(Debug)]
 pub enum BatchQueueError {
-    SenderError(SendError<Batch>),
-    Timeout,
+    SenderError(SendError<BatchQueueMessage>),
 }
 
-impl From<SendError<Batch>> for BatchQueueError {
-    fn from(e: SendError<Batch>) -> Self {
+impl From<SendError<BatchQueueMessage>> for BatchQueueError {
+    fn from(e: SendError<BatchQueueMessage>) -> Self {
         BatchQueueError::SenderError(e)
-    }
-}
-
-impl From<RecvTimeoutError> for BatchQueueError {
-    fn from(_: RecvTimeoutError) -> Self {
-        BatchQueueError::Timeout
-    }
-}
-
-/// Utility class for signaling that a background thread should shutdown
-#[derive(Default)]
-pub struct Exit {
-    flag: AtomicBool,
-}
-
-impl Exit {
-    pub fn new() -> Self {
-        Exit {
-            flag: AtomicBool::new(false),
-        }
-    }
-
-    pub fn get(&self) -> bool {
-        self.flag.load(Ordering::Relaxed)
-    }
-
-    pub fn set(&self) {
-        self.flag.store(true, Ordering::Relaxed);
     }
 }
