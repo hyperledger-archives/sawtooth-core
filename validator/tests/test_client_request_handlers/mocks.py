@@ -44,12 +44,14 @@ def _increment_key(key, offset=1):
 
 def _make_mock_transaction(base_id='id', payload='payload'):
     txn_id = 'c' * (128 - len(base_id)) + base_id
+    signer_public_key = b'public_key' + bytes(base_id, 'utf-8')
+
     header = TransactionHeader(
-        batcher_public_key='public_key-' + base_id,
+        batcher_public_key=signer_public_key.hex(),
         family_name='family',
         family_version='0.0',
         nonce=txn_id,
-        signer_public_key='public_key-' + base_id)
+        signer_public_key=signer_public_key.hex())
 
     return Transaction(
         header=header.SerializeToString(),
@@ -61,8 +63,10 @@ def make_mock_batch(base_id='id'):
     batch_id = 'a' * (128 - len(base_id)) + base_id
     txn = _make_mock_transaction(base_id)
 
+    signer_public_key = b'public_key' + bytes(base_id, 'utf-8')
+
     header = BatchHeader(
-        signer_public_key='public_key-' + base_id,
+        signer_public_key=signer_public_key.hex(),
         transaction_ids=[txn.header_signature])
 
     return Batch(
@@ -94,7 +98,7 @@ class MockBlockStore(BlockStore):
     def clear(self):
         self.__init__(size=0)
 
-    def add_block(self, base_id, root='merkle_root'):
+    def add_block(self, base_id, root=b'merkle_root'.hex()):
         block_id = 'b' * (128 - len(base_id)) + base_id
         head = self.chain_head
         if head:
@@ -104,10 +108,12 @@ class MockBlockStore(BlockStore):
             previous_id = 'zzzzz'
             num = 0
 
+        signer_public_key = b'public_key' + bytes(base_id, 'utf-8')
+
         header = BlockHeader(
             block_num=num,
             previous_block_id=previous_id,
-            signer_public_key='public_key-' + base_id,
+            signer_public_key=signer_public_key.hex(),
             batch_ids=[block_id],
             consensus=b'consensus',
             state_root_hash=root)
