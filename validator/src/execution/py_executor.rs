@@ -37,13 +37,13 @@ impl PyExecutor {
 impl ExecutionPlatform for PyExecutor {
     fn create_scheduler(
         &self,
-        state_hash: &str,
+        state_hash: &[u8],
     ) -> Result<Box<dyn Scheduler>, ExecutionPlatformError> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
         let scheduler = self
             .executor
-            .call_method(py, "create_scheduler", (state_hash,), None)
+            .call_method(py, "create_scheduler", (hex::encode(state_hash),), None)
             .expect(
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",
             );

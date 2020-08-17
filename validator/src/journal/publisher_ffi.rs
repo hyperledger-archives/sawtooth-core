@@ -21,10 +21,13 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
-use sawtooth::journal::publisher::{BatchObserver, FinalizeBlockError, InitializeBlockError};
+use sawtooth::journal::publisher::{
+    BatchObserver, FinalizeBlockError, InitializeBlockError, SyncPublisher,
+};
 use sawtooth::journal::{block_manager::BlockManager, commit_store::CommitStore};
+use sawtooth::protocol::block::BlockPair;
 use sawtooth::state::state_view_factory::StateViewFactory;
-use sawtooth::{batch::Batch, block::Block};
+use transact::protocol::batch::Batch;
 
 use crate::py_object_wrapper::PyObjectWrapper;
 use execution::py_executor::PyExecutor;
@@ -111,7 +114,7 @@ pub unsafe extern "C" fn block_publisher_new(
         None
     } else {
         let wrapped_chain_head = PyObjectWrapper::new(chain_head);
-        Some(Block::from(wrapped_chain_head))
+        Some(BlockPair::from(wrapped_chain_head))
     };
 
     let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
@@ -235,7 +238,7 @@ pub unsafe extern "C" fn block_publisher_initialize_block(
     let py = gil.python();
     let py_obj = PyObject::from_borrowed_ptr(py, previous_block);
     let wrapper = PyObjectWrapper::new(py_obj);
-    let block = Block::from(wrapper);
+    let block = BlockPair::from(wrapper);
 
     let publisher = (*(publisher as *mut BlockPublisher)).clone();
     py.allow_threads(move || match publisher.initialize_block(&block) {
@@ -299,7 +302,7 @@ pub unsafe fn convert_on_chain_updated_args(
     chain_head_ptr: *mut py_ffi::PyObject,
     committed_batches_ptr: *mut py_ffi::PyObject,
     uncommitted_batches_ptr: *mut py_ffi::PyObject,
-) -> (Block, Vec<Batch>, Vec<Batch>) {
+) -> (BlockPair, Vec<Batch>, Vec<Batch>) {
     let chain_head = PyObject::from_borrowed_ptr(py, chain_head_ptr);
     let py_committed_batches = PyObject::from_borrowed_ptr(py, committed_batches_ptr);
     let py_wrappers_committed: Vec<PyObjectWrapper> = py_committed_batches
@@ -334,7 +337,7 @@ pub unsafe fn convert_on_chain_updated_args(
             .collect::<Vec<Batch>>()
     };
     let wrapped_chain_head = PyObjectWrapper::new(chain_head);
-    let chain_head = Block::from(wrapped_chain_head);
+    let chain_head = BlockPair::from(wrapped_chain_head);
 
     (chain_head, committed_batches, uncommitted_batches)
 }

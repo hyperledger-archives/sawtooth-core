@@ -19,13 +19,16 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use protobuf;
 use sawtooth::journal::commit_store::{
     ByHeightDirection, CommitStore, CommitStoreByHeightIterator,
 };
-use sawtooth::{batch::Batch, block::Block, transaction::Transaction};
+use sawtooth::{
+    protocol::block::BlockPair,
+    protos::{FromBytes, IntoBytes},
+};
 use transact::database::error::DatabaseError;
 use transact::database::lmdb::LmdbDatabase;
+use transact::protocol::{batch::Batch, transaction::Transaction};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -403,17 +406,14 @@ pub unsafe extern "C" fn commit_store_put_blocks(
 ) -> ErrorCode {
     check_null!(commit_store, blocks);
 
-    let blocks_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(blocks, blocks_len)
+    let blocks_result = slice::from_raw_parts(blocks, blocks_len)
         .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
-            let proto_block: sawtooth::protos::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
-
-            Ok(Block::from(proto_block))
+            BlockPair::from_bytes(&payload)
         })
-        .collect();
+        .collect::<Result<_, _>>();
 
     match blocks_result {
         Ok(blocks) => match (*(commit_store as *mut CommitStore)).put_blocks(blocks) {
@@ -433,12 +433,26 @@ pub unsafe extern "C" fn commit_store_put_blocks(
 // FFI Helpers
 
 unsafe fn return_block(
-    block: Block,
+    block_pair: BlockPair,
     block_ptr: *mut *const u8,
     block_len: *mut usize,
     block_cap: *mut usize,
 ) -> ErrorCode {
-    return_proto::<_, sawtooth::protos::block::Block>(block, block_ptr, block_len, block_cap)
+    match block_pair.into_bytes() {
+        Ok(payload) => {
+            *block_cap = payload.capacity();
+            *block_len = payload.len();
+            *block_ptr = payload.as_slice().as_ptr();
+
+            mem::forget(payload);
+
+            ErrorCode::Success
+        }
+        Err(err) => {
+            warn!("Failed to serialize block to bytes: {}", err);
+            ErrorCode::DatabaseError
+        }
+    }
 }
 
 unsafe fn return_batch(
@@ -447,7 +461,21 @@ unsafe fn return_batch(
     batch_len: *mut usize,
     batch_cap: *mut usize,
 ) -> ErrorCode {
-    return_proto::<_, sawtooth::protos::batch::Batch>(batch, batch_ptr, batch_len, batch_cap)
+    match batch.into_bytes() {
+        Ok(payload) => {
+            *batch_cap = payload.capacity();
+            *batch_len = payload.len();
+            *batch_ptr = payload.as_slice().as_ptr();
+
+            mem::forget(payload);
+
+            ErrorCode::Success
+        }
+        Err(err) => {
+            warn!("Failed to serialize batch to bytes: {}", err);
+            ErrorCode::DatabaseError
+        }
+    }
 }
 
 unsafe fn return_transaction(
@@ -456,32 +484,18 @@ unsafe fn return_transaction(
     transaction_len: *mut usize,
     transaction_cap: *mut usize,
 ) -> ErrorCode {
-    return_proto::<_, sawtooth::protos::transaction::Transaction>(
-        transaction,
-        transaction_ptr,
-        transaction_len,
-        transaction_cap,
-    )
-}
-
-unsafe fn return_proto<I, O: protobuf::Message + From<I>>(
-    input: I,
-    output_ptr: *mut *const u8,
-    output_len: *mut usize,
-    output_cap: *mut usize,
-) -> ErrorCode {
-    match O::from(input).write_to_bytes() {
+    match transaction.into_bytes() {
         Ok(payload) => {
-            *output_cap = payload.capacity();
-            *output_len = payload.len();
-            *output_ptr = payload.as_slice().as_ptr();
+            *transaction_cap = payload.capacity();
+            *transaction_len = payload.len();
+            *transaction_ptr = payload.as_slice().as_ptr();
 
             mem::forget(payload);
 
             ErrorCode::Success
         }
         Err(err) => {
-            warn!("Failed to serialize Block proto to bytes: {}", err);
+            warn!("Failed to serialize transaction to bytes: {}", err);
             ErrorCode::DatabaseError
         }
     }

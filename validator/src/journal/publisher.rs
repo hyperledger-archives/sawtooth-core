@@ -21,11 +21,9 @@
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, SendError, Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::mpsc::{channel, SendError, Sender};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::Duration;
 
 use sawtooth::journal::{
     block_manager::{BlockManager, BlockRef},
@@ -39,7 +37,8 @@ use sawtooth::journal::{
     },
 };
 use sawtooth::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
-use sawtooth::{batch::Batch, block::Block, execution::execution_platform::ExecutionPlatform};
+use sawtooth::{execution::execution_platform::ExecutionPlatform, protocol::block::BlockPair};
+use transact::protocol::batch::Batch;
 
 use ffi::py_import_class;
 use journal::candidate_block::FFICandidateBlock;
@@ -68,7 +67,7 @@ pub enum BlockPublisherError {
 pub struct BlockPublisherState {
     pub transaction_executor: Box<dyn ExecutionPlatform>,
     pub batch_observers: Vec<Box<dyn BatchObserver>>,
-    pub chain_head: Option<Block>,
+    pub chain_head: Option<BlockPair>,
     pub candidate_block: Option<Box<dyn CandidateBlock>>,
     pub pending_batches: PendingBatchesPool,
     block_references: HashMap<String, BlockRef>,
@@ -78,7 +77,7 @@ impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<dyn ExecutionPlatform>,
         batch_observers: Vec<Box<dyn BatchObserver>>,
-        chain_head: Option<Block>,
+        chain_head: Option<BlockPair>,
         candidate_block: Option<Box<dyn CandidateBlock>>,
         pending_batches: PendingBatchesPool,
     ) -> Self {
@@ -102,7 +101,7 @@ impl PublisherState for BlockPublisherState {
         &mut self.pending_batches
     }
 
-    fn chain_head(&mut self, block: Option<Block>) {
+    fn chain_head(&mut self, block: Option<BlockPair>) {
         self.chain_head = block;
     }
 
@@ -146,7 +145,7 @@ pub struct SyncBlockPublisher {
     config_dir: PyObject,
     permission_verifier: PyObject,
 
-    exit: Arc<Exit>,
+    batch_sender: Arc<Mutex<Option<Sender<BatchQueueMessage>>>>,
 }
 
 impl Clone for SyncBlockPublisher {
@@ -168,7 +167,7 @@ impl Clone for SyncBlockPublisher {
             data_dir: self.data_dir.clone_ref(py),
             config_dir: self.config_dir.clone_ref(py),
             permission_verifier: self.permission_verifier.clone_ref(py),
-            exit: Arc::clone(&self.exit),
+            batch_sender: self.batch_sender.clone(),
         }
     }
 }
@@ -185,12 +184,12 @@ impl SyncPublisher for SyncBlockPublisher {
     fn on_chain_updated(
         &self,
         state: &mut Box<dyn PublisherState>,
-        chain_head: Block,
+        chain_head: BlockPair,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
-        info!("Now building on top of block, {}", chain_head);
-        let batches_len = chain_head.batches.len();
+        info!("Now building on top of block, {}", chain_head.block());
+        let batches_len = chain_head.block().batches().len();
         state.chain_head(Some(chain_head));
         let mut previous_block_option = None;
         if let (true, Some(previous_block)) = self.is_building_block(state) {
@@ -212,7 +211,7 @@ impl SyncPublisher for SyncBlockPublisher {
 
     fn on_chain_updated_internal(
         &mut self,
-        chain_head: Block,
+        chain_head: BlockPair,
         committed_batches: Vec<Batch>,
         uncommitted_batches: Vec<Batch>,
     ) {
@@ -247,7 +246,7 @@ impl SyncPublisher for SyncBlockPublisher {
 
         let batch_already_committed = self
             .commit_store
-            .contains_batch(batch.header_signature.as_str())
+            .contains_batch(batch.header_signature())
             .expect("Couldn't check for batch");
 
         if permission_check && !batch_already_committed {
@@ -291,7 +290,7 @@ impl SyncPublisher for SyncBlockPublisher {
     fn initialize_block(
         &self,
         state: &mut Box<dyn PublisherState>,
-        previous_block: &Block,
+        previous_block: &BlockPair,
         ref_block: bool,
     ) -> Result<(), InitializeBlockError> {
         if state.candidate_block().is_some() {
@@ -305,7 +304,7 @@ impl SyncPublisher for SyncBlockPublisher {
             // to the completer or 2) after the block is cancelled.
             match self
                 .block_manager
-                .ref_block(&previous_block.header_signature)
+                .ref_block(previous_block.block().header_signature())
             {
                 Ok(block_ref) => {
                     state
@@ -313,7 +312,7 @@ impl SyncPublisher for SyncBlockPublisher {
                         .insert(block_ref.block_id().to_owned(), block_ref);
                 }
                 Err(err) => {
-                    error!("Unable to ref block! {}: {:?}", &previous_block, err);
+                    error!("Unable to ref block! {}: {:?}", previous_block.block(), err);
                     return Err(InitializeBlockError::MissingPredecessor);
                 }
             }
@@ -321,7 +320,7 @@ impl SyncPublisher for SyncBlockPublisher {
         let mut candidate_block = {
             let settings_view: SettingsView = self
                 .state_view_factory
-                .create_view(&previous_block.state_root_hash)
+                .create_view(previous_block.header().state_root_hash())
                 .expect("Failed to get state view for previous block");
 
             let max_batches = settings_view
@@ -333,14 +332,19 @@ impl SyncPublisher for SyncBlockPublisher {
             let py = gil.python();
 
             let public_key = self.get_public_key(py);
-            let batch_injectors = self.load_injectors(py, &previous_block.state_root_hash);
+            let batch_injectors =
+                self.load_injectors(py, &hex::encode(previous_block.header().state_root_hash()));
 
             let kwargs = PyDict::new(py);
             kwargs
-                .set_item(py, "block_num", previous_block.block_num + 1)
+                .set_item(py, "block_num", previous_block.header().block_num() + 1)
                 .unwrap();
             kwargs
-                .set_item(py, "previous_block_id", &previous_block.header_signature)
+                .set_item(
+                    py,
+                    "previous_block_id",
+                    &previous_block.block().header_signature(),
+                )
                 .unwrap();
             kwargs
                 .set_item(py, "signer_public_key", &public_key)
@@ -355,7 +359,7 @@ impl SyncPublisher for SyncBlockPublisher {
 
             let scheduler = state
                 .transaction_executor()
-                .create_scheduler(&previous_block.state_root_hash)
+                .create_scheduler(previous_block.header().state_root_hash())
                 .expect("Failed to create new scheduler");
 
             let committed_txn_cache = TransactionCommitCache::new(self.commit_store.clone());
@@ -469,11 +473,23 @@ impl SyncPublisher for SyncBlockPublisher {
     }
 
     fn stopped(&self) -> bool {
-        self.exit.get()
+        self.batch_sender
+            .lock()
+            .expect("IncomingBatchSender lock poisoned")
+            .is_none()
     }
 
     fn stop(&self) {
-        self.exit.set()
+        if self
+            .batch_sender
+            .lock()
+            .expect("IncomingBatchSender lock poisoned")
+            .take()
+            .and_then(|sender| sender.send(BatchQueueMessage::Shutdown).ok())
+            .is_none()
+        {
+            warn!("PublisherThread is no longer running");
+        }
     }
 }
 
@@ -488,7 +504,7 @@ impl SyncBlockPublisher {
             .collect()
     }
 
-    fn get_block(&self, block_id: &str) -> Result<Block, BlockPublisherError> {
+    fn get_block(&self, block_id: &str) -> Result<BlockPair, BlockPublisherError> {
         self.block_manager
             .get(&[block_id])
             .next()
@@ -509,7 +525,7 @@ impl SyncBlockPublisher {
         }
     }
 
-    fn publish_block(&self, block: Block, injected_batches: Vec<String>) -> String {
+    fn publish_block(&self, block: BlockPair, injected_batches: Vec<String>) -> String {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -522,8 +538,8 @@ impl SyncBlockPublisher {
             })
             .expect("BlockSender.send() raised an exception");
 
-        let block: Block = Block::from(wrapper);
-        let block_id = block.header_signature;
+        let block = BlockPair::from(wrapper);
+        let block_id = block.block().header_signature().to_string();
         counter!("publisher.BlockPublisher.blocks_published_count", 1);
 
         block_id
@@ -539,7 +555,7 @@ impl SyncBlockPublisher {
             .unwrap()
     }
 
-    fn is_building_block(&self, state: &mut Box<dyn PublisherState>) -> (bool, Option<Block>) {
+    fn is_building_block(&self, state: &mut Box<dyn PublisherState>) -> (bool, Option<BlockPair>) {
         if let Some(ref candidate_block) = state.candidate_block() {
             let previous = self
                 .get_block(&candidate_block.previous_block_id())
@@ -549,11 +565,18 @@ impl SyncBlockPublisher {
             (false, None)
         }
     }
+
+    fn add_batch_sender(&self, sender: Sender<BatchQueueMessage>) {
+        *self
+            .batch_sender
+            .lock()
+            .expect("Batch sender lock poisoned") = Some(sender)
+    }
 }
 
 #[derive(Clone)]
 pub struct BlockPublisher {
-    pub publisher: Box<dyn SyncPublisher>,
+    pub publisher: SyncBlockPublisher,
 }
 
 impl BlockPublisher {
@@ -565,7 +588,7 @@ impl BlockPublisher {
         state_view_factory: StateViewFactory,
         block_sender: PyObject,
         batch_publisher: PyObject,
-        chain_head: Option<Block>,
+        chain_head: Option<BlockPair>,
         identity_signer: PyObject,
         data_dir: PyObject,
         config_dir: PyObject,
@@ -594,33 +617,30 @@ impl BlockPublisher {
             config_dir,
             permission_verifier,
             batch_injector_factory,
-            exit: Arc::new(Exit::new()),
+            batch_sender: Arc::new(Mutex::new(None)),
         };
 
-        BlockPublisher {
-            publisher: Box::new(publisher),
-        }
+        BlockPublisher { publisher }
     }
 
     pub fn start(&mut self) -> IncomingBatchSender {
-        let (batch_tx, mut batch_rx) = make_batch_queue();
+        let (batch_tx, batch_rx) = channel();
+        self.publisher.add_batch_sender(batch_tx.clone());
+
         let builder = thread::Builder::new().name("PublisherThread".into());
         let block_publisher = self.publisher.clone();
         builder
             .spawn(move || {
                 loop {
                     // Receive and process a batch
-                    match batch_rx.get(Duration::from_millis(100)) {
-                        Err(err) => match err {
-                            BatchQueueError::Timeout => {
-                                if block_publisher.stopped() {
-                                    break;
-                                }
-                            }
-                            err => panic!("Unhandled error: {:?}", err),
-                        },
-                        Ok(batch) => {
-                            block_publisher.on_batch_received(batch);
+                    match batch_rx.recv() {
+                        Ok(BatchQueueMessage::Batch(batch)) => {
+                            block_publisher.on_batch_received(batch)
+                        }
+                        Ok(BatchQueueMessage::Shutdown) => break,
+                        Err(_) => {
+                            warn!("IncomingBatchSender has disconnected");
+                            break;
                         }
                     }
                 }
@@ -628,7 +648,7 @@ impl BlockPublisher {
             })
             .unwrap();
 
-        batch_tx
+        IncomingBatchSender::new(batch_tx)
     }
 
     pub fn cancel_block(&self) -> Result<(), CancelBlockError> {
@@ -646,10 +666,10 @@ impl BlockPublisher {
     }
 
     pub fn chain_head_lock(&self) -> ChainHeadLock {
-        ChainHeadLock::new(self.publisher.clone())
+        ChainHeadLock::new(self.publisher.box_clone())
     }
 
-    pub fn initialize_block(&self, previous_block: &Block) -> Result<(), InitializeBlockError> {
+    pub fn initialize_block(&self, previous_block: &BlockPair) -> Result<(), InitializeBlockError> {
         let mut state = self.publisher.state().write().expect("RwLock was poisoned");
         self.publisher
             .initialize_block(&mut state, previous_block, true)
@@ -697,57 +717,31 @@ impl BlockPublisher {
 /// duplicates to make it into this queue, which is intentional to avoid
 /// blocking threads trying to put/get from the queue. Any duplicates
 /// introduced by this must be filtered out later.
-pub fn make_batch_queue() -> (IncomingBatchSender, IncomingBatchReceiver) {
-    let (sender, reciever) = channel();
-    let ids = Arc::new(RwLock::new(HashSet::new()));
-    (
-        IncomingBatchSender::new(ids.clone(), sender),
-        IncomingBatchReceiver::new(ids, reciever),
-    )
-}
-
-pub struct IncomingBatchReceiver {
-    ids: Arc<RwLock<HashSet<String>>>,
-    receiver: Receiver<Batch>,
-}
-
-impl IncomingBatchReceiver {
-    pub fn new(
-        ids: Arc<RwLock<HashSet<String>>>,
-        receiver: Receiver<Batch>,
-    ) -> IncomingBatchReceiver {
-        IncomingBatchReceiver { ids, receiver }
-    }
-
-    pub fn get(&mut self, timeout: Duration) -> Result<Batch, BatchQueueError> {
-        let batch = self.receiver.recv_timeout(timeout)?;
-        self.ids
-            .write()
-            .expect("RwLock was poisoned during a write lock")
-            .remove(&batch.header_signature);
-        Ok(batch)
-    }
-}
-
 #[derive(Clone)]
 pub struct IncomingBatchSender {
     ids: Arc<RwLock<HashSet<String>>>,
-    sender: Sender<Batch>,
+    sender: Sender<BatchQueueMessage>,
 }
 
 impl IncomingBatchSender {
-    pub fn new(ids: Arc<RwLock<HashSet<String>>>, sender: Sender<Batch>) -> IncomingBatchSender {
-        IncomingBatchSender { ids, sender }
+    pub fn new(sender: Sender<BatchQueueMessage>) -> IncomingBatchSender {
+        IncomingBatchSender {
+            ids: Default::default(),
+            sender,
+        }
     }
+
     pub fn put(&mut self, batch: Batch) -> Result<(), BatchQueueError> {
         let mut ids = self
             .ids
             .write()
             .expect("RwLock was poisoned during a write lock");
 
-        if !ids.contains(&batch.header_signature) {
-            ids.insert(batch.header_signature.clone());
-            self.sender.send(batch).map_err(BatchQueueError::from)
+        if !ids.contains(batch.header_signature()) {
+            ids.insert(batch.header_signature().to_string());
+            self.sender
+                .send(BatchQueueMessage::Batch(batch))
+                .map_err(BatchQueueError::from)
         } else {
             Ok(())
         }
@@ -762,42 +756,19 @@ impl IncomingBatchSender {
     }
 }
 
+/// Messages passed between the `IncomingBatchSender` and its Receiver
+pub enum BatchQueueMessage {
+    Shutdown,
+    Batch(Batch),
+}
+
 #[derive(Debug)]
 pub enum BatchQueueError {
-    SenderError(SendError<Batch>),
-    Timeout,
+    SenderError(SendError<BatchQueueMessage>),
 }
 
-impl From<SendError<Batch>> for BatchQueueError {
-    fn from(e: SendError<Batch>) -> Self {
+impl From<SendError<BatchQueueMessage>> for BatchQueueError {
+    fn from(e: SendError<BatchQueueMessage>) -> Self {
         BatchQueueError::SenderError(e)
-    }
-}
-
-impl From<RecvTimeoutError> for BatchQueueError {
-    fn from(_: RecvTimeoutError) -> Self {
-        BatchQueueError::Timeout
-    }
-}
-
-/// Utility class for signaling that a background thread should shutdown
-#[derive(Default)]
-pub struct Exit {
-    flag: AtomicBool,
-}
-
-impl Exit {
-    pub fn new() -> Self {
-        Exit {
-            flag: AtomicBool::new(false),
-        }
-    }
-
-    pub fn get(&self) -> bool {
-        self.flag.load(Ordering::Relaxed)
-    }
-
-    pub fn set(&self) {
-        self.flag.store(true, Ordering::Relaxed);
     }
 }

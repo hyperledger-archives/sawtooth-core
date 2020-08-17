@@ -17,16 +17,13 @@
 use crate::py_object_wrapper::PyObjectWrapper;
 use cpython;
 use cpython::{ObjectProtocol, Python, PythonObject, ToPyObject};
-use protobuf;
-use protobuf::Message;
 
 use sawtooth::{
-    batch::Batch,
-    block::Block,
-    protos::block::{Block as ProtoBlock, BlockHeader},
+    protocol::block::BlockPair,
+    protos::{FromBytes, IntoBytes},
 };
 
-impl From<PyObjectWrapper> for Block {
+impl From<PyObjectWrapper> for BlockPair {
     fn from(py_object_wrapper: PyObjectWrapper) -> Self {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -38,37 +35,15 @@ impl From<PyObjectWrapper> for Block {
             .extract(py)
             .expect("Unable to extract bytes from PyObject");
 
-        let mut proto_block: ProtoBlock = protobuf::parse_from_bytes(&bytes)
-            .expect("Unable to parse protobuf bytes from python protobuf object");
-
-        let mut block_header: BlockHeader = protobuf::parse_from_bytes(proto_block.get_header())
-            .expect("Unable to parse protobuf bytes from python protobuf object");
-
-        Block {
-            header_signature: proto_block.take_header_signature(),
-            header_bytes: proto_block.take_header(),
-            state_root_hash: block_header.take_state_root_hash(),
-            consensus: block_header.take_consensus(),
-            batch_ids: block_header.take_batch_ids().into_vec(),
-            signer_public_key: block_header.take_signer_public_key(),
-            previous_block_id: block_header.take_previous_block_id(),
-            block_num: block_header.get_block_num(),
-
-            batches: proto_block
-                .take_batches()
-                .into_iter()
-                .map(Batch::from)
-                .collect(),
-        }
+        BlockPair::from_bytes(&bytes).expect("Unable to parse block from bytes")
     }
 }
 
-impl From<Block> for PyObjectWrapper {
-    fn from(native_block: Block) -> Self {
+impl From<BlockPair> for PyObjectWrapper {
+    fn from(native_block: BlockPair) -> Self {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let block_proto = ProtoBlock::from(native_block);
         let block_pb2 = py
             .import("sawtooth_validator.protobuf.block_pb2")
             .expect("Unable to import block_pb2");
@@ -80,7 +55,7 @@ impl From<Block> for PyObjectWrapper {
             .call_method(
                 py,
                 "ParseFromString",
-                (cpython::PyBytes::new(py, &block_proto.write_to_bytes().unwrap()).into_object(),),
+                (cpython::PyBytes::new(py, &native_block.into_bytes().unwrap()).into_object(),),
                 None,
             )
             .expect("Unable to ParseFromString");

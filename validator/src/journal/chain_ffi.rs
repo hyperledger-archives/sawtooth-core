@@ -22,7 +22,6 @@ use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPy
 use execution::py_executor::PyExecutor;
 use py_ffi;
 use pylogger;
-use sawtooth::block::Block;
 use sawtooth::journal::commit_store::CommitStore;
 use std::ffi::CStr;
 use std::mem;
@@ -32,7 +31,7 @@ use std::slice;
 use std::time::Duration;
 use transact::database::lmdb::LmdbDatabase;
 
-use protobuf::{self, Message};
+use protobuf::Message;
 use sawtooth::{
     consensus::notifier::BackgroundConsensusNotifier,
     journal::{
@@ -42,6 +41,8 @@ use sawtooth::{
         chain::*,
         chain_head_lock::ChainHeadLock,
     },
+    protocol::block::BlockPair,
+    protos::{FromBytes, IntoBytes},
     state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
 };
 
@@ -215,16 +216,13 @@ macro_rules! chain_controller_block_ffi {
         ) -> ErrorCode {
             check_null!(chain_controller, block_bytes);
 
-            let $block: Block = {
-                let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-                let proto_block: sawtooth::protos::block::Block = match protobuf::parse_from_bytes(&data) {
-                    Ok(block) => block,
-                    Err(err) => {
-                        error!("Failed to parse block bytes: {:?}", err);
-                        return ErrorCode::Unknown;
-                    }
-                };
-                proto_block.into()
+            let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+            let $block = match BlockPair::from_bytes(&data) {
+                Ok(block_pair) => block_pair,
+                Err(err) => {
+                    error!("Failed to parse block bytes: {:?}", err);
+                    return ErrorCode::Unknown;
+                }
             };
 
             (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
@@ -296,11 +294,8 @@ pub unsafe extern "C" fn chain_controller_chain_head(
 
     let controller = (*(chain_controller as *mut ChainController<PyExecutor>)).light_clone();
 
-    if let Some(chain_head) = controller
-        .chain_head()
-        .map(sawtooth::protos::block::Block::from)
-    {
-        match chain_head.write_to_bytes() {
+    if let Some(chain_head) = controller.chain_head() {
+        match chain_head.into_bytes() {
             Ok(payload) => {
                 *block_cap = payload.capacity();
                 *block_len = payload.len();
@@ -311,7 +306,7 @@ pub unsafe extern "C" fn chain_controller_chain_head(
                 ErrorCode::Success
             }
             Err(err) => {
-                warn!("Failed to serialize Block proto to bytes: {}", err);
+                warn!("Failed to serialize block to bytes: {}", err);
                 ErrorCode::Unknown
             }
         }
@@ -335,7 +330,7 @@ impl PyChainObserver {
 impl ChainObserver for PyChainObserver {
     fn chain_update(
         &mut self,
-        block: &Block,
+        block: &BlockPair,
         receipts: &[sawtooth::protos::transaction_receipt::TransactionReceipt],
     ) {
         let gil_guard = Python::acquire_gil();
