@@ -15,5 +15,4 @@
 
 __all__ = [
     'database',
-    'indexed_database',
     'lmdb_nolock_database']
