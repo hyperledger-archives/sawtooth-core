@@ -36,7 +36,7 @@ def _encode(value):
 class MerkleDatabase(ffi.OwnedPointer):
 
     def __init__(self, database, merkle_root=None):
-        super(MerkleDatabase, self).__init__('merkle_db_drop')
+        super().__init__('merkle_db_drop')
 
         if merkle_root:
             init_root = ctypes.c_char_p(merkle_root.encode())

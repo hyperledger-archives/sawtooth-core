@@ -83,7 +83,7 @@ class NativeStateViewFactory(ffi.OwnedPointer):
     """A StateViewFactory, which wraps a native Rust instance, which can be
     passed to other rust objects."""
     def __init__(self, database):
-        super(NativeStateViewFactory, self).__init__('state_view_factory_drop')
+        super().__init__('state_view_factory_drop')
         ffi.LIBRARY.call('state_view_factory_new',
                          database.pointer,
                          ctypes.byref(self.pointer))

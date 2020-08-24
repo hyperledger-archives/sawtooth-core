@@ -60,7 +60,7 @@ class ChainController(OwnedPointer):
         data_dir=None,
         observers=None
     ):
-        super(ChainController, self).__init__('chain_controller_drop')
+        super().__init__('chain_controller_drop')
 
         if data_dir is None:
             data_dir = ''
@@ -159,7 +159,7 @@ class ChainController(OwnedPointer):
 
 class ValidationResponseSender(OwnedPointer):
     def __init__(self, sender_ptr):
-        super(ValidationResponseSender, self).__init__(
+        super().__init__(
             'sender_drop', initialized_ptr=sender_ptr)
 
     def send(self, block):

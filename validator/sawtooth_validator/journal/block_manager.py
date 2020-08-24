@@ -64,7 +64,7 @@ class _PutEntry(ctypes.Structure):
 class BlockManager(OwnedPointer):
 
     def __init__(self):
-        super(BlockManager, self).__init__('block_manager_drop')
+        super().__init__('block_manager_drop')
         _libexec("block_manager_new",
                  ctypes.byref(self.pointer))
 
