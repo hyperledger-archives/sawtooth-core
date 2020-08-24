@@ -74,7 +74,7 @@ def do_keygen(args):
             try:
                 os.makedirs(key_dir, 0o755)
             except IOError as e:
-                raise CliException('IOError: {}'.format(str(e)))
+                raise CliException('IOError: {}'.format(str(e))) from e
 
     priv_filename = os.path.join(key_dir, key_name + '.priv')
     pub_filename = os.path.join(key_dir, key_name + '.pub')
@@ -119,4 +119,4 @@ def do_keygen(args):
             os.chmod(pub_filename, 0o644)
 
     except IOError as ioe:
-        raise CliException('IOError: {}'.format(str(ioe)))
+        raise CliException('IOError: {}'.format(str(ioe))) from ioe

@@ -130,4 +130,4 @@ def do_keygen(args):
             os.chmod(pub_filename, 0o644)
 
     except IOError as ioe:
-        raise CliException('IOError: {}'.format(str(ioe)))
+        raise CliException('IOError: {}'.format(str(ioe))) from ioe

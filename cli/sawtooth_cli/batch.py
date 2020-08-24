@@ -246,7 +246,7 @@ def do_batch_submit(args):
             batches = batch_pb2.BatchList()
             batches.ParseFromString(fd.read())
     except IOError as e:
-        raise CliException(e)
+        raise CliException(e) from e
 
     rest_client = RestClient(args.url, args.user)
 

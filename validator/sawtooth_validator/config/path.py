@@ -76,7 +76,7 @@ def load_toml_path_config(filename):
             raw_config = fd.read()
     except IOError as e:
         raise LocalConfigurationError(
-            "Unable to load path configuration file: {}".format(str(e)))
+            "Unable to load path configuration file: {}".format(str(e))) from e
 
     toml_config = toml.loads(raw_config)
 

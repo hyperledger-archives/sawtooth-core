@@ -50,7 +50,8 @@ class Library:
             lib_prefix = lib_prefix_mapping[os_name]
             lib_suffix = lib_suffix_mapping[os_name]
         except KeyError:
-            raise OSError("OS isn't supported: {}".format(os_name))
+            raise OSError(
+                "OS isn't supported: {}".format(os_name)) from KeyError
 
         library_path = "{}{}sawtooth_validator{}".format(
             lib_location, lib_prefix, lib_suffix)
