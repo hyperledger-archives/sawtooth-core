@@ -41,7 +41,7 @@ class TimedCache(MutableMapping):
             self.timestamp = time.time()
 
     def __init__(self, keep_time=30, purge_frequency=30):
-        super(TimedCache, self).__init__()
+        super().__init__()
         self._lock = RLock()
         self._cache = {}
         self._keep_time = keep_time
