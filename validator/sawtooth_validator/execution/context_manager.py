@@ -484,7 +484,7 @@ class _ContextReader(InstrumentedThread):
 
     def __init__(self, database, state_view_factory,
                  address_queue, inflated_addresses):
-        super(_ContextReader, self).__init__(name='_ContextReader')
+        super().__init__(name='_ContextReader')
         self._database = database
         self._state_view_factory = state_view_factory
         self._addresses = address_queue
@@ -523,7 +523,7 @@ class _ContextWriter(InstrumentedThread):
             contexts (_ThreadsafeContexts): The datastructures to write the
                 address-value pairs to.
         """
-        super(_ContextWriter, self).__init__(name='_ContextWriter')
+        super().__init__(name='_ContextWriter')
         self._inflated_addresses = inflated_addresses
         self._contexts = contexts
 

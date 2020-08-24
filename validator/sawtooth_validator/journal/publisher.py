@@ -173,7 +173,7 @@ class BlockPublisher(OwnedPointer):
             batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
                 for creating BatchInjectors.
         """
-        super(BlockPublisher, self).__init__('block_publisher_drop')
+        super().__init__('block_publisher_drop')
 
         if block_store.chain_head is not None:
             chain_head = BlockWrapper.wrap(block_store.chain_head)

@@ -55,7 +55,7 @@ class IndexedDatabase(database.Database):
                 database.  Refer to the documentation for anydbm.open().
                 Defaults to None.
         """
-        super(IndexedDatabase, self).__init__()
+        super().__init__()
 
         create = bool(flag == 'c')
 
