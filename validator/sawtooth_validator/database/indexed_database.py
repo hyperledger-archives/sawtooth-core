@@ -150,14 +150,16 @@ class IndexedDatabase(database.Database):
                     try:
                         read_key = index_cursor.get(read_key)
                     except lmdb.BadValsizeError:
-                        raise KeyError("Invalid key: %s" % read_key)
+                        raise KeyError("Invalid key: %s" % read_key) from \
+                            KeyError
                     if not read_key:
                         continue
 
                 try:
                     packed = cursor.get(read_key)
                 except lmdb.BadValsizeError:
-                    raise KeyError("Invalid key: %s" % read_key)
+                    raise KeyError("Invalid key: %s" % read_key) from \
+                        KeyError
 
                 if packed is not None:
                     result.append((read_key.decode(),
@@ -330,7 +332,7 @@ class ReferenceChainCursor(database.Cursor):
                         cursor_chain,
                         deserializer)
                 except lmdb.Error:
-                    raise StopIteration()
+                    raise StopIteration() from StopIteration()
 
         return _WrapperIter()
 
