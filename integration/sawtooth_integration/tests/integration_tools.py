@@ -143,11 +143,11 @@ class RestClient:
         except requests.exceptions.HTTPError as excp:
             return (excp.response.status_code, excp.response.reason)
         except RemoteDisconnected as excp:
-            raise Exception(excp)
+            raise Exception(excp) from excp
         except requests.exceptions.ConnectionError as excp:
             raise Exception(
                 ('Unable to connect to "{}": '
-                 'make sure URL is correct').format(self.url))
+                 'make sure URL is correct').format(self.url)) from excp
 
     @staticmethod
     def _format_queries(queries):

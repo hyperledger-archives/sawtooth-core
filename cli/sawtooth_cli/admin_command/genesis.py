@@ -89,7 +89,8 @@ def do_genesis(args, data_dir=None):
             with open(input_file, 'rb') as in_file:
                 input_data.ParseFromString(in_file.read())
         except:
-            raise CliException('Unable to read {}'.format(input_file))
+            raise CliException(
+                'Unable to read {}'.format(input_file)) from CliException
 
         genesis_batches += input_data.batches
 

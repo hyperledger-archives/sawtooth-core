@@ -104,8 +104,9 @@ class MockConnection:
 
         try:
             response_bytes = self._response.pop().SerializeToString()
-        except AttributeError:
-            raise AssertionError("Preset a response before sending a request!")
+        except AttributeError as e:
+            raise AssertionError(
+                "Preset a response before sending a request!") from e
 
         return Message(content=response_bytes)
 
@@ -287,7 +288,8 @@ class BaseApiTest(AioHTTPTestCase):
             self.assertTrue(url.endswith(expected_ending))
         except AssertionError:
             raise AssertionError(
-                'Expected "{}" to end with "{}"'.format(url, expected_ending))
+                'Expected "{}" to end with "{}"'.format(
+                    url, expected_ending)) from AssertionError
 
     def assert_entries_match(self, proto_entries, json_entries):
         """Asserts that each JSON leaf matches the original Protobuf entries

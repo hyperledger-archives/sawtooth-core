@@ -125,14 +125,16 @@ class FutureCollection:
             return self._futures[correlation_id]
         except KeyError:
             raise FutureCollectionKeyError(
-                "no such correlation id: {}".format(correlation_id))
+                "no such correlation id: {}".format(
+                    correlation_id)) from KeyError
 
     def _remove(self, correlation_id):
         try:
             return self._futures.pop(correlation_id)
         except KeyError:
             raise FutureCollectionKeyError(
-                "no such correlation id: {}".format(correlation_id))
+                "no such correlation id: {}".format(
+                    correlation_id)) from KeyError
 
     def remove_expired(self):
         with self._lock:

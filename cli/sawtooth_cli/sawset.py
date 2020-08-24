@@ -98,7 +98,7 @@ def _do_config_proposal_create(args):
                 batch_file.write(batch_list.SerializeToString())
         except IOError as e:
             raise CliException(
-                'Unable to write to batch file: {}'.format(str(e)))
+                'Unable to write to batch file: {}'.format(str(e))) from e
     elif args.sabre_output is not None:
         for i, txn in enumerate(txns):
             with open("{}-{}".format(args.sabre_output, i), 'wb') as outfile:
@@ -236,7 +236,7 @@ def _do_config_genesis(args):
         print('Generated {}'.format(args.output))
     except IOError as e:
         raise CliException(
-            'Unable to write to batch file: {}'.format(str(e)))
+            'Unable to write to batch file: {}'.format(str(e))) from e
 
 
 def _get_proposals(rest_client):
@@ -286,12 +286,13 @@ def _read_signer(key_filename):
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
     except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
+        raise CliException('Unable to read key file: {}'.format(str(e))) from e
 
     try:
         private_key = Secp256k1PrivateKey.from_hex(signing_key)
     except ParseError as e:
-        raise CliException('Unable to read key in file: {}'.format(str(e)))
+        raise CliException(
+            'Unable to read key in file: {}'.format(str(e))) from e
 
     context = create_context('secp256k1')
     crypto_factory = CryptoFactory(context)

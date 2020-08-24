@@ -155,7 +155,7 @@ class RouteHandler:
         except DecodeError:
             LOGGER.debug('Submission body could not be decoded: %s', body)
             self._post_batches_error.inc()
-            raise errors.BadProtobufSubmitted()
+            raise errors.BadProtobufSubmitted() from DecodeError
 
         # Query validator
         error_traps = [error_handlers.BatchInvalidTrap,
@@ -625,13 +625,13 @@ class RouteHandler:
                 timeout=self._timeout)
         except DisconnectError:
             LOGGER.warning('Validator disconnected while waiting for response')
-            raise errors.ValidatorDisconnected()
+            raise errors.ValidatorDisconnected() from DisconnectError
         except asyncio.TimeoutError:
             LOGGER.warning('Timed out while waiting for validator response')
-            raise errors.ValidatorTimedOut()
+            raise errors.ValidatorTimedOut() from asyncio.TimeoutError
         except SendBackoffTimeoutError:
             LOGGER.warning('Failed sending message - Backoff timed out')
-            raise errors.SendBackoffTimeout()
+            raise errors.SendBackoffTimeout() from SendBackoffTimeoutError
 
     async def _head_to_root(self, block_id):
         error_traps = [error_handlers.BlockNotFoundTrap]
@@ -664,9 +664,9 @@ class RouteHandler:
             content = proto()
             content.ParseFromString(response.content)
             return content
-        except (DecodeError, AttributeError):
+        except (DecodeError, AttributeError) as e:
             LOGGER.error('Validator response was not parsable: %s', response)
-            raise errors.ValidatorResponseInvalid()
+            raise errors.ValidatorResponseInvalid() from e
 
     @staticmethod
     def _check_status_errors(proto, content, error_traps=None):
@@ -892,13 +892,13 @@ class RouteHandler:
         try:
             header_bytes = base64.b64decode(resource['header'])
             header.ParseFromString(header_bytes)
-        except (KeyError, TypeError, ValueError, DecodeError):
+        except (KeyError, TypeError, ValueError, DecodeError) as e:
             header = resource.get('header', None)
             LOGGER.error(
                 'The validator sent a resource with %s %s',
                 'a missing header' if header is None else 'an invalid header:',
                 header or '')
-            raise errors.ResourceHeaderInvalid()
+            raise errors.ResourceHeaderInvalid() from e
 
         resource['header'] = cls._message_to_dict(header)
         return resource
@@ -916,7 +916,7 @@ class RouteHandler:
                 controls['limit'] = int(limit)
             except ValueError:
                 LOGGER.debug('Request query had an invalid limit: %s', limit)
-                raise errors.CountInvalid()
+                raise errors.CountInvalid() from ValueError
 
             if controls['limit'] <= 0:
                 LOGGER.debug('Request query had an invalid limit: %s', limit)

@@ -73,7 +73,7 @@ class EventFilterFactory:
             return self.filter_types[filter_type](key, match_string)
         except KeyError:
             raise InvalidFilterError(
-                "Unknown filter type: {}".format(filter_type))
+                "Unknown filter type: {}".format(filter_type)) from KeyError
 
 
 class EventFilter(metaclass=ABCMeta):
@@ -143,7 +143,7 @@ class RegexAnyFilter(EventFilter):
         except Exception as e:
             raise InvalidFilterError(
                 "Invalid regular expression: {}: {}".format(
-                    match_string, str(e)))
+                    match_string, str(e))) from e
 
     def matches(self, event):
         for attribute in event.attributes:
@@ -180,7 +180,7 @@ class RegexAllFilter(EventFilter):
         except Exception as e:
             raise InvalidFilterError(
                 "Invalid regular expression: {}: {}".format(
-                    match_string, str(e)))
+                    match_string, str(e))) from e
 
     def matches(self, event):
         for attribute in event.attributes:
