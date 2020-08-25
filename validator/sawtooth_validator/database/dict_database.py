@@ -23,7 +23,7 @@ class DictDatabase(database.Database):
     """
 
     def __init__(self, data=None, indexes=None):
-        super(DictDatabase, self).__init__()
+        super().__init__()
 
         if indexes:
             self._indexes = {

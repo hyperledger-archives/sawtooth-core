@@ -37,7 +37,7 @@ class LMDBNoLockDatabase(database.Database):
             flag (str): a flag indicating the mode for opening the database.
                 Refer to the documentation for anydbm.open().
         """
-        super(LMDBNoLockDatabase, self).__init__()
+        super().__init__()
 
         create = bool(flag == 'c')
 

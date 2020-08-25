@@ -123,7 +123,7 @@ class BlockStore(ffi.OwnedPointer):
         try:
             return self._get_block_by_id(key, 'commit_store_get_by_block_id')
         except ValueError:
-            raise KeyError("Unable to find block id: %s" % key)
+            raise KeyError("Unable to find block id: %s" % key) from ValueError
 
     def put_blocks(self, blocks):
         c_put_items = (ctypes.POINTER(_PutEntry) * len(blocks))()
@@ -302,7 +302,9 @@ class BlockStore(ffi.OwnedPointer):
             return self._get_block_by_num(
                 block_num, 'commit_store_get_by_block_num')
         except ValueError:
-            raise KeyError("Unable to find block number: %s" % repr(block_num))
+            raise KeyError(
+                "Unable to find block number: %s" % repr(
+                    block_num)) from ValueError
 
     def has_transaction(self, txn_id):
         """Returns True if the transaction is contained in a block in the

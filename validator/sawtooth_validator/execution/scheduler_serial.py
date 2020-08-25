@@ -238,7 +238,7 @@ class SerialScheduler(Scheduler):
                 except IndexError:
                     if self._final:
                         self._condition.notify_all()
-                        raise StopIteration()
+                        raise StopIteration() from IndexError
                     return None
                 # Handle this transaction being invalid based on a
                 # dependency.

@@ -151,7 +151,7 @@ class GenesisController:
         except IOError:
             raise InvalidGenesisStateError(
                 "Genesis File {} specified, but unreadable".format(
-                    genesis_file))
+                    genesis_file)) from IOError
 
         initial_state_root = self._context_manager.get_first_root()
 
@@ -272,7 +272,7 @@ class GenesisController:
                 config_dir=self._config_dir,
                 validator_id=self._identity_signer.get_public_key().as_hex())
         except UnknownConsensusModuleError as e:
-            raise InvalidGenesisStateError(e)
+            raise InvalidGenesisStateError(e) from e
 
     def _generate_genesis_block(self):
         """

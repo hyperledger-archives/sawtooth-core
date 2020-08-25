@@ -588,7 +588,7 @@ class _SendReceive:
                 except zmq.error.ZMQError as e:
                     raise LocalConfigurationError(
                         "Can't bind to {}: {}".format(self._address,
-                                                      str(e)))
+                                                      str(e))) from e
                 else:
                     LOGGER.info("Listening on %s", self._address)
 

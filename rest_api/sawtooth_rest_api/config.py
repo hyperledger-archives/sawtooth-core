@@ -49,7 +49,8 @@ def load_toml_rest_api_config(filename):
             raw_config = fd.read()
     except IOError as e:
         raise RestApiConfigurationError(
-            "Unable to load rest api configuration file: {}".format(str(e)))
+            "Unable to load rest api configuration file: {}".format(
+                str(e))) from e
 
     toml_config = toml.loads(raw_config)
 

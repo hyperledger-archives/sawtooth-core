@@ -89,7 +89,7 @@ def log_configuration(log_config=None, log_dir=None, name=None):
                 ' %(levelname)s] %(message)s', "%H:%M:%S"))
             error_handler.setLevel(logging.ERROR)
         except IOError as e:
-            raise LocalConfigurationError("Error: {}".format(str(e)))
+            raise LocalConfigurationError("Error: {}".format(str(e))) from e
 
         logging.getLogger().addHandler(error_handler)
         logging.getLogger().addHandler(debug_handler)

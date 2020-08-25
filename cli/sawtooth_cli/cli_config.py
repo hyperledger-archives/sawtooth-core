@@ -68,7 +68,7 @@ def _load_toml_cli_config(filename=None):
             raw_config = fd.read()
     except IOError as e:
         raise CliConfigurationError(
-            "Unable to load CLI configuration file: {}".format(str(e)))
+            "Unable to load CLI configuration file: {}".format(str(e))) from e
 
     return toml.loads(raw_config)
 
