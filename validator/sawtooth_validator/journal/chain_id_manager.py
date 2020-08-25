@@ -37,7 +37,8 @@ class ChainIdManager:
                 f.write(block_chain_id)
         except IOError:
             raise LocalConfigurationError(
-                "Unable to write to {}".format(block_chain_id_file))
+                "Unable to write to {}".format(
+                    block_chain_id_file)) from IOError
 
     def get_block_chain_id(self):
         block_chain_id_file = os.path.join(self._data_dir, 'block-chain-id')
@@ -49,6 +50,6 @@ class ChainIdManager:
                 block_chain_id = f.read()
                 return block_chain_id if block_chain_id else None
 
-        except IOError:
+        except IOError as e:
             raise LocalConfigurationError(
-                'The block-chain-id file exists, but is unreadable')
+                'The block-chain-id file exists, but is unreadable') from e

@@ -132,7 +132,7 @@ def _do_settings_list(args):
             for setting in printable_settings:
                 writer.writerow([setting.key, setting.value])
         except csv.Error:
-            raise CliException('Error writing CSV')
+            raise CliException('Error writing CSV') from CliException
     elif args.format == 'json' or args.format == 'yaml':
         settings_snapshot = {
             'head': head,

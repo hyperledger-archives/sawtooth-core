@@ -62,7 +62,8 @@ def load_toml_validator_config(filename):
             raw_config = fd.read()
     except IOError as e:
         raise LocalConfigurationError(
-            "Unable to load validator configuration file: {}".format(str(e)))
+            "Unable to load validator configuration file: {}".format(
+                str(e))) from e
 
     toml_config = toml.loads(raw_config)
     invalid_keys = set(toml_config.keys()).difference(

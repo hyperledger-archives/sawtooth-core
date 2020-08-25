@@ -98,7 +98,7 @@ def print_csv(headers, data_list, parse_row_fn):
         for data in data_list:
             writer.writerow(parse_row_fn(data))
     except csv.Error as e:
-        raise CliException('Error writing CSV: {}'.format(e))
+        raise CliException('Error writing CSV: {}'.format(e)) from e
 
 
 def print_json(data):

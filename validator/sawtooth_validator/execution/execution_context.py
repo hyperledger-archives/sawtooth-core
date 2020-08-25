@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 class AuthorizationException(Exception):
     def __init__(self, address):
-        super(AuthorizationException, self).__init__(
+        super().__init__(
             "Not authorized to read/write to {}".format(address))
 
 

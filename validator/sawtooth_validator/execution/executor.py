@@ -70,7 +70,7 @@ class TransactionExecutorThread:
             _tp_settings_key (str): the key used to reference the part of state
                 where the list of required transaction processors are.
         """
-        super(TransactionExecutorThread, self).__init__()
+        super().__init__()
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
