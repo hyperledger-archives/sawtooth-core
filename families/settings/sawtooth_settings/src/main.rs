@@ -26,10 +26,10 @@ cfg_if! {
         #[macro_use]
         extern crate clap;
         extern crate log4rs;
-        extern crate rustc_serialize;
         extern crate sawtooth_sdk;
         #[macro_use]
         extern crate log;
+        extern crate sawtooth_settings;
         use log::LevelFilter;
         use log4rs::append::console::ConsoleAppender;
         use log4rs::config::{Appender, Config, Root};
@@ -38,14 +38,9 @@ cfg_if! {
 
         use sawtooth_sdk::processor::TransactionProcessor;
 
-        use handler::SettingsTransactionHandler;
+        use sawtooth_settings::handler::SettingsTransactionHandler;
     }
 }
-
-pub mod handler;
-mod protos;
-extern crate crypto;
-extern crate protobuf;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

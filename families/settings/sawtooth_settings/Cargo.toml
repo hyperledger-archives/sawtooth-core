@@ -34,6 +34,10 @@ conf-files = [
     "/etc/default/sawtooth-settings-tp"
 ]
 
+[lib]
+name = "sawtooth_settings"
+path = "./src/lib.rs"
+
 [[bin]]
 name = "settings-tp"
 path = "./src/main.rs"
