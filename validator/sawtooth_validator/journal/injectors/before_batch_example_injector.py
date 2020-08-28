@@ -13,45 +13,49 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from datetime import datetime
+from random import seed, gauss
 import hashlib
-import time
+import cbor
 
 from sawtooth_validator.journal.batch_injector import BatchInjector
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
-from sawtooth_validator.protobuf.block_info_pb2 import BlockInfoTxn
-from sawtooth_validator.protobuf.block_info_pb2 import BlockInfo
-
-FAMILY_NAME = 'block_info'
+FAMILY_NAME = 'intkey'
 FAMILY_VERSION = '1.0'
-NAMESPACE = '00b10c'
-BLOCK_INFO_NAMESPACE = NAMESPACE + '00'
-CONFIG_ADDRESS = NAMESPACE + '01' + '0' * 62
-DEFAULT_SYNC_TOLERANCE = 60 * 5
-DEFAULT_TARGET_COUNT = 256
+INTKEY_NAMESPACE = '1cf126'
 
 
-class BlockInfoInjector(BatchInjector):
-    """Inject BlockInfo transactions at the beginning of blocks."""
+class BeforeBatchExampleInjector(BatchInjector):
+    """Inject intkey transactions after each batch."""
 
     def __init__(self, state_view_factory, signer):
         self._state_view_factory = state_view_factory
         self._signer = signer
 
-    def create_batch(self, block_info):
-        payload = BlockInfoTxn(block=block_info).SerializeToString()
+    def create_batch(self):
+        payload = cbor.dumps({
+            'Name': 'inject',
+            'Value': 9999,
+            'Verb': 'inc',
+        }, sort_keys=True)
+
+        # Create nonce
+        seed(datetime.timestamp(datetime.now()))
+        random_float = gauss(0, 1)
+
         public_key = self._signer.get_public_key().as_hex()
         header = TransactionHeader(
             signer_public_key=public_key,
             family_name=FAMILY_NAME,
             family_version=FAMILY_VERSION,
-            inputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
-            outputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
+            inputs=[INTKEY_NAMESPACE],
+            outputs=[INTKEY_NAMESPACE],
             dependencies=[],
+            nonce=str(random_float),
             payload_sha512=hashlib.sha512(payload).hexdigest(),
             batcher_public_key=public_key,
         ).SerializeToString()
@@ -78,38 +82,24 @@ class BlockInfoInjector(BatchInjector):
         )
 
     def block_start(self, previous_block):
-        """Returns an ordered list of batches to inject at the beginning of the
-        block. Can also return None if no batches should be injected.
+        return []
+
+    def before_batch(self, previous_block, batch):
+        """Returns an ordered list of batches to inject before the current
+        batch. Can also return None if no batches should be injected.
 
         Args:
             previous_block (Block): The previous block.
+            batch (Batch): The current batch.
 
         Returns:
             A list of batches to inject.
         """
 
-        previous_header_bytes = previous_block.header
-        previous_header = BlockHeader()
-        previous_header.ParseFromString(previous_header_bytes)
-
-        block_info = BlockInfo(
-            block_num=previous_header.block_num,
-            previous_block_id=previous_header.previous_block_id,
-            signer_public_key=previous_header.signer_public_key,
-            header_signature=previous_block.header_signature,
-            timestamp=int(time.time()))
-
-        return [self.create_batch(block_info)]
-
-    def before_batch(self, previous_block, batch):
-        pass
+        return [self.create_batch()]
 
     def after_batch(self, previous_block, batch):
-        pass
+        return []
 
     def block_end(self, previous_block, batches):
-        pass
-
-
-def create_block_address(block_num):
-    return BLOCK_INFO_NAMESPACE + hex(block_num)[2:].zfill(62)
+        return []

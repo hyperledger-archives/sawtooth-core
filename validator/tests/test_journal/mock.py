@@ -322,6 +322,15 @@ class MockBatchInjector(BatchInjector):
     def block_start(self, previous_block_id):
         return [self._batch]
 
+    def before_batch(self, previous_block_id, batch):
+        return [self._batch]
+
+    def after_batch(self, previous_block_id, batch):
+        return [self._batch]
+
+    def block_end(self, previous_block_id, batches):
+        return [self._batch]
+
 
 class MockConsensusNotifier(ConsensusNotifier):
     def __init__(self):

@@ -137,7 +137,7 @@ fn do_nofx(transactions: &[&Transaction], arguments: &[&str]) -> bool {
 fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
     let (family, position) = if arguments.len() == 2 {
         let family = arguments[0].trim();
-        let position: usize = match arguments[1].trim().parse() {
+        let position: isize = match arguments[1].trim().parse() {
             Ok(i) => i,
             Err(_) => {
                 warn!(
@@ -156,21 +156,21 @@ fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
         return true;
     };
 
-    if position >= transactions.len() {
-        debug!(
-            "Block does not have enough transactions to valid this rule XatY:{:?}",
-            arguments
-        );
-        return false;
-    }
+    let txn = get_transaction_from_index(&transactions, position, "XatY".to_string());
 
-    let txn = transactions[position];
-    if txn.family_name != family {
-        debug!(
-            "Transaction at position {} is not of type {}",
-            position, family
-        );
-        return false;
+    match txn {
+        Some(transaction) => {
+            if transaction.family_name != family {
+                warn!(
+                    "Transaction at position {} is not of type {}",
+                    position, family
+                );
+                return false;
+            }
+        }
+        _ => {
+            return false;
+        }
     }
 
     true
@@ -182,7 +182,7 @@ fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
 /// to ensure a client is not submitting transactions that should only be
 /// injected by the winning validator.
 fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&str]) -> bool {
-    let indices: Result<Vec<usize>, _> = arguments.iter().map(|s| s.trim().parse()).collect();
+    let indices: Result<Vec<isize>, _> = arguments.iter().map(|s| s.trim().parse()).collect();
 
     if indices.is_err() || indices.as_ref().unwrap().is_empty() {
         warn!(
@@ -194,24 +194,22 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
     }
 
     for index in indices.unwrap() {
-        if index >= transactions.len() {
-            debug!(
-                "Ignore, Block does not have enough transactions to validate this rule local: {}",
-                index
-            );
-            continue;
-        }
-
-        if transactions[index].signer_public_key != expected_signer {
-            debug!(
-                "Transaction at  position {} was not signed by the expected signer.",
-                index
-            );
-            return false;
+        let txn = get_transaction_from_index(&transactions, index, "local".to_string());
+        match txn {
+            Some(transaction) => {
+                if transaction.signer_public_key != expected_signer {
+                    warn!(
+                        "Transaction at position {} was not signed by the expected signer, \
+                        signer public key: {} != expected signer: {}",
+                        index, transaction.signer_public_key, expected_signer
+                    );
+                    return false;
+                }
+            }
+            _ => continue,
         }
     }
-
-    true
+    return true;
 }
 
 /// Splits up a rule string in the form of "<rule_type>:<rule_arg>,*"
@@ -227,6 +225,34 @@ fn parse_rule(rule: &str) -> Option<(&str, Vec<&str>)> {
     Some((rule_type.trim(), rule_args))
 }
 
+/// Get transaction from the given index
+fn get_transaction_from_index(
+    transactions: &[&Transaction],
+    index: isize,
+    rule: String,
+) -> Option<Transaction> {
+    let absolute_index: usize = if index < 0 {
+        (index * -1) as usize
+    } else {
+        index as usize
+    };
+    if (index < 0 && absolute_index > transactions.len())
+        || (index >= 0 && absolute_index >= transactions.len())
+    {
+        debug!(
+            "Ignore, Block does not have enough transactions to validate this rule {}: {}",
+            rule, index
+        );
+        return None;
+    }
+
+    if index < 0 {
+        return Some(transactions[transactions.len() - absolute_index].clone());
+    }
+
+    return Some(transactions[absolute_index].clone());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,7 +266,7 @@ mod tests {
         assert!(enforce_rules(
             None,
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -255,17 +281,17 @@ mod tests {
         assert!(enforce_rules(
             Some("NofX:1,intkey".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(!enforce_rules(
             Some("NofX:0,intkey".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(enforce_rules(
             Some("NofX:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -280,17 +306,17 @@ mod tests {
         assert!(enforce_rules(
             Some("XatY:intkey,0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(!enforce_rules(
             Some("XatY:blockinfo,0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(enforce_rules(
             Some("XatY:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -306,17 +332,17 @@ mod tests {
         assert!(enforce_rules(
             Some("local:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(!enforce_rules(
             Some("local:0".to_string()),
             "another_pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
         assert!(enforce_rules(
             Some("local".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -328,7 +354,7 @@ mod tests {
         assert!(enforce_rules(
             Some("NofX:1,intkey;XatY:intkey,0;local:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -340,7 +366,7 @@ mod tests {
         assert!(!enforce_rules(
             Some("NofX:0,intkey;XatY:intkey,0;local:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -353,7 +379,7 @@ mod tests {
         assert!(!enforce_rules(
             Some("NofX:1,intkey;XatY:blockinfo,0;local:0".to_string()),
             "pub_key",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
@@ -366,7 +392,63 @@ mod tests {
         assert!(!enforce_rules(
             Some("NofX:1,intkey;XatY:intkey,0;local:0".to_string()),
             "not_same_pubkey",
-            &batches.iter().collect::<Vec<_>>()
+            &batches.iter().collect::<Vec<_>>(),
+        ));
+    }
+
+    /// Test that if multiple rules are set for multiple batch injectors,
+    /// they are all checked correctly.
+    ///     1. Expected valid XatY rules for negative position
+    ///     2. Expected valid NofX and muliple valid XatY rules
+    #[test]
+    fn test_all_at_once_multiple_injectors() {
+        let batches = make_batches(&["intkey", "block_info"], "pub_key");
+        assert!(enforce_rules(
+            Some(
+                "NofX:1,intkey;XatY:intkey,0;NofX:1,block_info;XatY:block_info,-1;local:0"
+                    .to_string()
+            ),
+            "pub_key",
+            &batches.iter().collect::<Vec<_>>(),
+        ));
+        let even_more_batches = make_batches(
+            &[
+                "block_info",
+                "intkey",
+                "random_injector",
+                "random_injector",
+                "random_injector",
+                "random_injector",
+            ],
+            "pub_key",
+        );
+        assert!(enforce_rules(
+            Some(
+                "NofX:1,block_info;
+                XatY:block_info,0;
+                NofX:4,random_injector;
+                XatY:random_injector,5;
+                XatY:random_injector,4;
+                XatY:random_injector,3;
+                XatY:random_injector,2;
+                local:0,-1
+                "
+                .to_string()
+            ),
+            "pub_key",
+            &even_more_batches.iter().collect::<Vec<_>>(),
+        ));
+    }
+
+    /// Test that if multiple local rules are set, they are all checked correctly.
+    /// Expected valid local rules for negative positions
+    #[test]
+    fn test_multiple_locals() {
+        let batches = make_batches(&["intkey"], "pub_key");
+        assert!(enforce_rules(
+            Some("local:0,-1".to_string()),
+            "pub_key",
+            &batches.iter().collect::<Vec<_>>(),
         ));
     }
 
