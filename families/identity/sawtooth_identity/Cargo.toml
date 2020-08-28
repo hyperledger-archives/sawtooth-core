@@ -21,6 +21,10 @@ authors = ["Bitwise IO"]
 build = "build.rs"
 description = "The Sawtooth Identity TP for validating on-chain roles and identities."
 
+[lib]
+name = "sawtooth_identity"
+path = "src/lib.rs"
+
 [[bin]]
 name = "identity-tp"
 path = "src/main.rs"
