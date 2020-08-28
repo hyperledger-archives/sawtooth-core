@@ -20,6 +20,10 @@ version = "1.0.0"
 authors = ["Intel Corporation"]
 build = "build.rs"
 
+[lib]
+name = "sawtooth_smallbank"
+path = "src/lib.rs"
+
 [[bin]]
 name = "smallbank-tp-rust"
 path = "src/main.rs"

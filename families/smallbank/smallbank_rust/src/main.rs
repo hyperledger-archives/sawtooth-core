@@ -17,16 +17,12 @@
 
 #[macro_use]
 extern crate clap;
-extern crate crypto;
+
 #[macro_use]
 extern crate log;
 extern crate log4rs;
-extern crate protobuf;
-extern crate rustc_serialize;
 extern crate sawtooth_sdk;
-
-mod handler;
-mod protos;
+extern crate sawtooth_smallbank;
 
 use log::LevelFilter;
 use log4rs::append::console::ConsoleAppender;
@@ -36,7 +32,7 @@ use std::process;
 
 use sawtooth_sdk::processor::TransactionProcessor;
 
-use handler::SmallbankTransactionHandler;
+use sawtooth_smallbank::handler::SmallbankTransactionHandler;
 
 fn main() {
     let matches = clap_app!(smallbank =>
