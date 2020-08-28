@@ -21,7 +21,7 @@ protoc-rust = "2.0"
 glob = "0.2"
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [[bin]]
 name = "sawtooth-validator"
