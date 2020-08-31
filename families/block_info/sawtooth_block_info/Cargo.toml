@@ -39,6 +39,10 @@ conf-files = [
 name = "block-info-tp"
 path = "./src/main.rs"
 
+[lib]
+name = "block_info_tp"
+path = "./src/lib.rs"
+
 [dependencies]
 clap = "2"
 protobuf = "2.0"

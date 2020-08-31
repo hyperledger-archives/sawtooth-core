@@ -17,9 +17,6 @@
 
 #[macro_use]
 extern crate cfg_if;
-extern crate crypto;
-extern crate hex;
-extern crate protobuf;
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -31,23 +28,17 @@ cfg_if! {
         #[macro_use]
         extern crate log;
         extern crate log4rs;
-        extern crate rustc_serialize;
         extern crate sawtooth_sdk;
+        extern crate block_info_tp;
         use std::process;
         use log::LevelFilter;
         use log4rs::append::console::ConsoleAppender;
         use log4rs::config::{Appender, Config, Root};
         use log4rs::encode::pattern::PatternEncoder;
         use sawtooth_sdk::processor::TransactionProcessor;
-        use handler::BlockInfoTransactionHandler;
+        use block_info_tp::handler::BlockInfoTransactionHandler;
     }
 }
-
-pub mod addressing;
-pub mod handler;
-pub mod payload;
-pub mod protos;
-pub mod state;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

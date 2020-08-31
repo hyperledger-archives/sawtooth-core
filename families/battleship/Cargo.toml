@@ -20,6 +20,10 @@ authors = ["Bitwise IO, Inc."]
 [[example]]
 name = "play"
 
+[lib]
+name = "battleship"
+path = "src/lib.rs"
+
 [[bin]]
 name = "battleship-tp"
 path = "src/bin/processor.rs"
