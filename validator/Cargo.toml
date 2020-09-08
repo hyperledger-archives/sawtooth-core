@@ -6,6 +6,7 @@ authors = ["Intel Corporation"]
 [dependencies]
 clap = "2"
 cpython = "0.2"
+cylinder = "0.1"
 hex = "0.3"
 lazy_static = "1.0"
 log = { version = "0.4", features = ["std"] }
@@ -13,8 +14,9 @@ libc = ">=0.2.35"
 metrics = { version = "0.12", features = ["std"] }
 protobuf = "2.0"
 python3-sys = "0.2"
-sawtooth = { version = "0.5", features = ["validator-internals"] }
-transact = "0.2"
+sawtooth = { version = "0.6", features = ["validator-internals"] }
+transact = { version = "0.3", features = ["sawtooth-compat"] }
+
 
 [build-dependencies]
 protoc-rust = "2.0"

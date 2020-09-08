@@ -399,10 +399,10 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 mod test {
     use super::*;
 
+    use cylinder::{secp256k1::Secp256k1Context, Context, Signer};
     use sawtooth::journal::block_store::BlockStore;
     use sawtooth::journal::NULL_BLOCK_IDENTIFIER;
     use sawtooth::protocol::block::{BlockBuilder, BlockPair};
-    use sawtooth::signing::hash::HashSigner;
     use transact::database::lmdb::{LmdbContext, LmdbDatabase};
 
     use std::env;
@@ -510,12 +510,13 @@ mod test {
         block_num: u64,
         state_root_hash: Option<&[u8]>,
     ) -> BlockPair {
+        let new_signer = new_signer();
         BlockBuilder::new()
             .with_block_num(block_num)
             .with_previous_block_id(previous_block_id.into())
             .with_state_root_hash(state_root_hash.unwrap_or_default().into())
             .with_batches(vec![])
-            .build_pair(&HashSigner::default())
+            .build_pair(&*new_signer)
             .expect("Failed to build block pair")
     }
 
@@ -554,5 +555,11 @@ mod test {
         let thread_id = thread::current().id();
         temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
         temp_dir.to_str().unwrap().to_string()
+    }
+
+    fn new_signer() -> Box<dyn Signer> {
+        let context = Secp256k1Context::new();
+        let key = context.new_random_private_key();
+        context.new_signer(key)
     }
 }

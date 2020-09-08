@@ -16,6 +16,7 @@
  */
 
 extern crate cpython;
+extern crate cylinder;
 extern crate hex;
 extern crate libc;
 extern crate protobuf;
