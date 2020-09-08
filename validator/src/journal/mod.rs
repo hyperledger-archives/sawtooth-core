@@ -16,11 +16,10 @@
  */
 
 pub mod block_manager_ffi;
-pub mod block_validator_ffi;
 mod candidate_block;
-pub mod chain_ffi;
 pub mod chain_head_lock_ffi;
 pub mod commit_store_ffi;
 pub mod incoming_batch_queue_ffi;
+pub mod journal_ffi;
 pub mod publisher;
 pub mod publisher_ffi;

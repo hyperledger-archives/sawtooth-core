@@ -15,12 +15,20 @@
  * ------------------------------------------------------------------------------
  */
 
+extern crate battleship;
+extern crate block_info_tp;
 extern crate cpython;
 extern crate cylinder;
 extern crate hex;
 extern crate libc;
 extern crate protobuf;
 extern crate python3_sys as py_ffi;
+extern crate sawtooth_identity;
+extern crate sawtooth_intkey;
+extern crate sawtooth_sabre;
+extern crate sawtooth_settings;
+extern crate sawtooth_smallbank;
+extern crate sawtooth_xo;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

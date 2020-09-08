@@ -18,6 +18,16 @@ sawtooth = { version = "0.6", features = ["validator-internals"] }
 transact = { version = "0.3", features = ["sawtooth-compat"] }
 
 
+# pull in smart contracts
+sawtooth-settings-tp = {path = "../families/settings/sawtooth_settings"}
+sawtooth-block-info-tp = {path = "../families/block_info/sawtooth_block_info"}
+battleship = {path = "../families/battleship/"}
+sawtooth-identity-tp = {path = "../families/identity/sawtooth_identity"}
+sawtooth-smallbank-tp-rust = {path = "../families/smallbank/smallbank_rust"}
+sawtooth-sabre = "0.6"
+sawtooth-intkey = "0.5"
+sawtooth-xo = "0.5"
+
 [build-dependencies]
 protoc-rust = "2.0"
 glob = "0.2"

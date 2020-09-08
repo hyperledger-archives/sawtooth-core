@@ -26,6 +26,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/bumper/nightly xenial universe" >> 
  && apt-get install -y -q --allow-downgrades \
     git \
     libssl-dev \
+    libzmq3-dev \
     openssl \
     pkg-config \
     python3 \

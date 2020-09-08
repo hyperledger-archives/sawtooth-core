@@ -29,6 +29,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly bionic universe" >> /etc/ap
  && apt-get install -y -q \
     git \
     libssl-dev \
+    libzmq3-dev \
     openssl \
     pkg-config \
     python3 \

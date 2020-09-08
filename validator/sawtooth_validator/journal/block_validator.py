@@ -17,33 +17,7 @@ import ctypes
 
 from sawtooth_validator.ffi import CommonErrorCode
 from sawtooth_validator.ffi import OwnedPointer
-from sawtooth_validator.ffi import PY_LIBRARY, LIBRARY
-
-
-class BlockValidator(OwnedPointer):
-
-    def __init__(self,
-                 block_manager,
-                 transaction_executor,
-                 block_status_store,
-                 permission_verifier,
-                 view_factory):
-        super().__init__("block_validator_drop")
-
-        _to_exception(PY_LIBRARY.call("block_validator_new",
-                                      block_manager.pointer,
-                                      ctypes.py_object(transaction_executor),
-                                      block_status_store.pointer,
-                                      ctypes.py_object(permission_verifier),
-                                      view_factory.pointer,
-                                      ctypes.byref(self.pointer)))
-
-    def start(self):
-
-        _to_exception(LIBRARY.call("block_validator_start", self.pointer))
-
-    def stop(self):
-        _to_exception(LIBRARY.call("block_validator_stop", self.pointer))
+from sawtooth_validator.ffi import LIBRARY
 
 
 class BlockValidationResultStore(OwnedPointer):

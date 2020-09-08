@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Intel Corporation
+ * Copyright 2020 Cargill Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-#![allow(unknown_lints)]
-
-use consensus::registry_ffi::PyConsensusRegistry;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
-use execution::py_executor::PyExecutor;
 use py_ffi;
 use pylogger;
 use sawtooth::journal::commit_store::CommitStore;
@@ -29,8 +25,18 @@ use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
 use std::time::Duration;
-use transact::database::lmdb::LmdbDatabase;
+use transact::{
+    context::manager::sync::ContextManager,
+    database::lmdb::LmdbDatabase,
+    execution::adapter::static_adapter::StaticExecutionAdapter,
+    execution::executor::Executor,
+    sawtooth::SawtoothToTransactHandlerAdapter,
+    scheduler::serial::SerialSchedulerFactory,
+    state::merkle::{MerkleRadixTree, MerkleState},
+};
 
+use battleship::handler::BattleshipTransactionHandler;
+use block_info_tp::handler::BlockInfoTransactionHandler;
 use protobuf::Message;
 use sawtooth::{
     consensus::notifier::BackgroundConsensusNotifier,
@@ -43,13 +49,39 @@ use sawtooth::{
     },
     protocol::block::BlockPair,
     protos::{FromBytes, IntoBytes},
-    state::{state_pruning_manager::StatePruningManager, state_view_factory::StateViewFactory},
+    state::merkle::CborMerkleState,
+    state::state_pruning_manager::StatePruningManager,
+    state::state_view_factory::StateViewFactory,
 };
+use sawtooth_identity::handler::IdentityTransactionHandler;
+use sawtooth_intkey::handler::IntkeyTransactionHandler;
+use sawtooth_sabre::handler::SabreTransactionHandler;
+use sawtooth_settings::handler::SettingsTransactionHandler;
+use sawtooth_smallbank::handler::SmallbankTransactionHandler;
+use sawtooth_xo::handler::XoTransactionHandler;
 
 use proto::events::{Event, Event_Attribute};
 use proto::transaction_receipt::{StateChange, StateChange_Type, TransactionReceipt};
 
 use py_object_wrapper::PyObjectWrapper;
+
+struct Journal {
+    chain_controller: ChainController,
+    executor: Option<Executor>,
+}
+
+impl Journal {
+    fn start(&mut self) {
+        self.chain_controller.start();
+    }
+
+    fn stop(&mut self) {
+        self.chain_controller.stop();
+        if let Some(executor) = self.executor.take() {
+            executor.stop()
+        }
+    }
+}
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -66,16 +98,15 @@ pub enum ErrorCode {
 }
 
 macro_rules! check_null {
-    ($($arg:expr) , *) => {
-        $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
-    }
-}
+     ($($arg:expr) , *) => {
+         $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
+     }
+ }
 
 #[no_mangle]
-pub unsafe extern "C" fn chain_controller_new(
+pub unsafe extern "C" fn journal_new(
     commit_store: *mut c_void,
     block_manager: *const c_void,
-    block_validator: *const c_void,
     state_database: *const c_void,
     chain_head_lock: *const c_void,
     block_validation_result_cache: *const c_void,
@@ -84,17 +115,14 @@ pub unsafe extern "C" fn chain_controller_new(
     state_pruning_block_depth: u32,
     fork_cache_keep_time: u32,
     data_directory: *const c_char,
-    chain_controller_ptr: *mut *const c_void,
-    consensus_registry: *mut py_ffi::PyObject,
+    journal_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
         commit_store,
         block_manager,
-        block_validator,
         state_database,
         chain_head_lock,
         consensus_notifier_service,
-        consensus_registry,
         observers,
         data_directory
     );
@@ -106,14 +134,13 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let py = Python::assume_gil_acquired();
 
-    let block_validator = (*(block_validator as *const BlockValidator<PyExecutor>)).clone();
-
-    let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
     let consensus_notifier_service =
         Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
-    let py_consensus_registry = PyObject::from_borrowed_ptr(py, consensus_registry);
+    let block_status_store =
+        (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
 
+    let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
         let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
@@ -126,32 +153,70 @@ pub unsafe extern "C" fn chain_controller_new(
 
     let block_manager = (*(block_manager as *const BlockManager)).clone();
     let state_database = (*(state_database as *const LmdbDatabase)).clone();
-    let results_cache =
-        (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
 
     let state_view_factory = StateViewFactory::new(state_database.clone());
-
-    let state_pruning_manager = StatePruningManager::new(state_database);
+    let state_pruning_manager = StatePruningManager::new(state_database.clone());
 
     let commit_store = Box::from_raw(commit_store as *mut CommitStore);
+    let merkle_state = CborMerkleState::new(MerkleState::new(Box::new(state_database.clone())));
+    let context_manager = ContextManager::new(Box::new(merkle_state.clone()));
+
+    let mut executor = match get_executor(context_manager.clone()) {
+        Ok(executor) => executor,
+        Err(error_code) => return error_code,
+    };
+
+    if let Err(err) = executor.start() {
+        error!("Executor cannot start: {}", err);
+        return ErrorCode::Unknown;
+    };
+
+    let block_validator_submitter = match executor.execution_task_submitter() {
+        Ok(submitter) => submitter,
+        Err(err) => {
+            error!("Unable to get execution task submitter: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    let scheduler_factory = SerialSchedulerFactory::new(Box::new(context_manager));
+    let initial_state_root = match MerkleRadixTree::new(Box::new(state_database), None) {
+        Ok(merkle_radix_tree) => merkle_radix_tree.get_merkle_root(),
+        Err(err) => {
+            error!("Unable to get initial state root hash: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    let block_validator = BlockValidator::new(
+        block_manager.clone(),
+        block_validator_submitter,
+        block_status_store.clone(),
+        state_view_factory,
+        Box::new(scheduler_factory),
+        initial_state_root.clone(),
+        merkle_state.clone(),
+    );
 
     let chain_controller = ChainController::new(
         block_manager,
         block_validator,
         commit_store.clone(),
         chain_head_lock_ref.clone(),
-        results_cache,
+        block_status_store,
         consensus_notifier_service.clone(),
-        Box::new(PyConsensusRegistry::new(py_consensus_registry)),
-        state_view_factory,
         data_dir.into(),
         state_pruning_block_depth,
         observer_wrappers,
         state_pruning_manager,
         Duration::from_secs(u64::from(fork_cache_keep_time)),
+        merkle_state,
+        initial_state_root,
     );
 
-    *chain_controller_ptr = Box::into_raw(Box::new(chain_controller)) as *const c_void;
+    let journal = Journal { chain_controller, executor: Some(executor)};
+
+    *journal_ptr = Box::into_raw(Box::new(journal)) as *const c_void;
 
     Box::into_raw(consensus_notifier_service);
     Box::into_raw(commit_store);
@@ -159,26 +224,66 @@ pub unsafe extern "C" fn chain_controller_new(
     ErrorCode::Success
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
-    check_null!(chain_controller);
+fn get_executor(context_manager: ContextManager) -> Result<Executor, ErrorCode> {
+    let execution_adapter = match StaticExecutionAdapter::new_adapter(
+        vec![
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                SettingsTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                SabreTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                BlockInfoTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                BattleshipTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                IdentityTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                SmallbankTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                IntkeyTransactionHandler::new(),
+            )),
+            Box::new(SawtoothToTransactHandlerAdapter::new(
+                XoTransactionHandler::new(),
+            )),
+        ],
+        context_manager,
+    ) {
+        Ok(executor_adapter) => executor_adapter,
+        Err(err) => {
+            error!("Unable to create executor adapter: {}", err);
+            return Err(ErrorCode::Unknown);
+        }
+    };
 
-    Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
+    Ok(Executor::new(vec![Box::new(execution_adapter)]))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn journal_drop(journal: *mut c_void) -> ErrorCode {
+    check_null!(journal);
+
+    Box::from_raw(journal as *mut Journal);
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
-    check_null!(chain_controller);
+pub unsafe extern "C" fn journal_start(journal: *mut c_void) -> ErrorCode {
+    check_null!(journal);
 
-    (*(chain_controller as *mut ChainController<PyExecutor>)).start();
+    (*(journal as *mut Journal)).start();
 
     ErrorCode::Success
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_block_validation_result(
-    chain_controller: *mut c_void,
+    journal: *mut c_void,
     block_id: *const c_char,
     result: *mut i32,
 ) -> ErrorCode {
@@ -187,7 +292,8 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    let status = match (*(chain_controller as *mut ChainController<PyExecutor>))
+    let status = match (*(journal as *mut Journal))
+        .chain_controller
         .block_validation_result(block_id)
     {
         Some(r) => r.status,
@@ -198,39 +304,39 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
-    check_null!(chain_controller);
+pub unsafe extern "C" fn journal_stop(journal: *mut c_void) -> ErrorCode {
+    check_null!(journal);
 
-    (*(chain_controller as *mut ChainController<PyExecutor>)).stop();
+    (*(journal as *mut Journal)).stop();
 
     ErrorCode::Success
 }
 
 macro_rules! chain_controller_block_ffi {
-    ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
-        #[no_mangle]
-        pub unsafe extern "C" fn $ffi_fn_name(
-            chain_controller: *mut c_void,
-            block_bytes: *const u8,
-            block_bytes_len: usize,
-        ) -> ErrorCode {
-            check_null!(chain_controller, block_bytes);
+     ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+         #[no_mangle]
+         pub unsafe extern "C" fn $ffi_fn_name(
+             journal: *mut c_void,
+             block_bytes: *const u8,
+             block_bytes_len: usize,
+         ) -> ErrorCode {
+             check_null!(journal, block_bytes);
 
-            let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-            let $block = match BlockPair::from_bytes(&data) {
-                Ok(block_pair) => block_pair,
-                Err(err) => {
-                    error!("Failed to parse block bytes: {:?}", err);
-                    return ErrorCode::Unknown;
-                }
-            };
+             let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+             let $block = match BlockPair::from_bytes(&data) {
+                 Ok(block_pair) => block_pair,
+                 Err(err) => {
+                     error!("Failed to parse block bytes: {:?}", err);
+                     return ErrorCode::Unknown;
+                 }
+             };
 
-            (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
+             (*(journal as *mut Journal)).chain_controller.$cc_fn_name($($block_args)*);
 
-            ErrorCode::Success
-        }
-    }
-}
+             ErrorCode::Success
+         }
+     }
+ }
 
 chain_controller_block_ffi!(
     chain_controller_validate_block,
@@ -244,17 +350,19 @@ chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, 
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_queue_block(
-    chain_controller: *mut c_void,
+    journal: *mut c_void,
     block_id: *const c_char,
 ) -> ErrorCode {
-    check_null!(chain_controller, block_id);
+    check_null!(journal, block_id);
 
     let block_id = match CStr::from_ptr(block_id).to_str() {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    (*(chain_controller as *mut ChainController<PyExecutor>)).queue_block(block_id);
+    (*(journal as *mut Journal))
+        .chain_controller
+        .queue_block(block_id);
 
     ErrorCode::Success
 }
@@ -263,38 +371,32 @@ pub unsafe extern "C" fn chain_controller_queue_block(
 /// when proper rust tests are written for the ChainController
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_on_block_received(
-    chain_controller: *mut c_void,
+    journal: *mut c_void,
     block_id: *const c_char,
 ) -> ErrorCode {
-    check_null!(chain_controller, block_id);
+    check_null!(journal, block_id);
 
     let block_id = match CStr::from_ptr(block_id).to_str() {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidBlockId,
     };
 
-    if let Err(err) =
-        (*(chain_controller as *mut ChainController<PyExecutor>)).on_block_received(block_id)
-    {
-        error!("ChainController.on_block_received error: {:?}", err);
-        return ErrorCode::Unknown;
-    }
+    (*(journal as *mut Journal))
+        .chain_controller
+        .queue_block(block_id);
 
     ErrorCode::Success
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_chain_head(
-    chain_controller: *mut c_void,
+    journal: *mut c_void,
     block: *mut *const u8,
     block_len: *mut usize,
     block_cap: *mut usize,
 ) -> ErrorCode {
-    check_null!(chain_controller);
-
-    let controller = (*(chain_controller as *mut ChainController<PyExecutor>)).light_clone();
-
-    if let Some(chain_head) = controller.chain_head() {
+    check_null!(journal);
+    if let Some(chain_head) = (*(journal as *mut Journal)).chain_controller.chain_head() {
         match chain_head.into_bytes() {
             Ok(payload) => {
                 *block_cap = payload.capacity();
@@ -436,4 +538,22 @@ impl From<sawtooth::protos::transaction_receipt::TransactionReceipt> for Transac
 
         local_txn_receipt
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_status_store_new(
+    block_status_store_ptr: *mut *const c_void,
+) -> ErrorCode {
+    let block_status_store = BlockValidationResultStore::new();
+
+    *block_status_store_ptr = Box::into_raw(Box::new(block_status_store)) as *const c_void;
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_status_store_drop(block_status_store_ptr: *mut c_void) -> ErrorCode {
+    check_null!(block_status_store_ptr);
+
+    Box::from_raw(block_status_store_ptr as *mut BlockValidationResultStore);
+    ErrorCode::Success
 }
