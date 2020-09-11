@@ -270,6 +270,7 @@ def main(args):
         path_config.data_dir,
         path_config.config_dir,
         identity_signer,
+        path_config.key_dir,
         validator_config.scheduler,
         validator_config.permissions,
         validator_config.minimum_peer_connectivity,

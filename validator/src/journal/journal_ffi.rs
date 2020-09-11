@@ -14,17 +14,19 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-
-use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
-use py_ffi;
-use pylogger;
-use sawtooth::journal::commit_store::CommitStore;
 use std::ffi::CStr;
+use std::fs::File;
+use std::io::Read;
 use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
 use std::time::Duration;
+
+use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use py_ffi;
+use pylogger;
+use sawtooth::journal::commit_store::CommitStore;
 use transact::{
     context::manager::sync::ContextManager,
     database::lmdb::LmdbDatabase,
@@ -37,6 +39,7 @@ use transact::{
 
 use battleship::handler::BattleshipTransactionHandler;
 use block_info_tp::handler::BlockInfoTransactionHandler;
+use cylinder::{secp256k1::Secp256k1Context, Context, PrivateKey, Signer};
 use protobuf::Message;
 use sawtooth::{
     consensus::notifier::BackgroundConsensusNotifier,
@@ -46,6 +49,8 @@ use sawtooth::{
         block_wrapper::BlockStatus,
         chain::*,
         chain_head_lock::ChainHeadLock,
+        chain_id_manager::ChainIdManager,
+        genesis::{builder::GenesisControllerBuilder, GenesisController},
     },
     protocol::block::BlockPair,
     protos::{FromBytes, IntoBytes},
@@ -68,11 +73,30 @@ use py_object_wrapper::PyObjectWrapper;
 struct Journal {
     chain_controller: ChainController,
     executor: Option<Executor>,
+    genesis_controller: GenesisController,
 }
 
 impl Journal {
-    fn start(&mut self) {
+    fn start(&mut self) -> ErrorCode {
+        match self.genesis_controller.requires_genesis() {
+            Ok(create_genesis) => {
+                if create_genesis {
+                    if let Err(err) = self.genesis_controller.start() {
+                        error!("Unable to create genesis block: {}", err);
+                        return ErrorCode::Unknown;
+                    }
+                }
+            }
+            Err(err) => {
+                error!(
+                    "Unable to check if the genesis block should be built: {}",
+                    err
+                );
+                return ErrorCode::Unknown;
+            }
+        }
         self.chain_controller.start();
+        ErrorCode::Success
     }
 
     fn stop(&mut self) {
@@ -115,6 +139,8 @@ pub unsafe extern "C" fn journal_new(
     state_pruning_block_depth: u32,
     fork_cache_keep_time: u32,
     data_directory: *const c_char,
+    key_directory: *const c_char,
+    genesis_observers: *mut py_ffi::PyObject,
     journal_ptr: *mut *const c_void,
 ) -> ErrorCode {
     check_null!(
@@ -124,10 +150,17 @@ pub unsafe extern "C" fn journal_new(
         chain_head_lock,
         consensus_notifier_service,
         observers,
-        data_directory
+        data_directory,
+        key_directory,
+        genesis_observers
     );
 
     let data_dir = match CStr::from_ptr(data_directory).to_str() {
+        Ok(s) => s,
+        Err(_) => return ErrorCode::InvalidDataDir,
+    };
+
+    let key_dir = match CStr::from_ptr(key_directory).to_str() {
         Ok(s) => s,
         Err(_) => return ErrorCode::InvalidDataDir,
     };
@@ -154,6 +187,18 @@ pub unsafe extern "C" fn journal_new(
     let block_manager = (*(block_manager as *const BlockManager)).clone();
     let state_database = (*(state_database as *const LmdbDatabase)).clone();
 
+    let py_genesis_observers = PyObject::from_borrowed_ptr(py, genesis_observers);
+    let genesis_observer_wrappers = if let Ok(py_list) = py_genesis_observers.extract::<PyList>(py)
+    {
+        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
+        py_list
+            .iter(py)
+            .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
+        res
+    } else {
+        return ErrorCode::InvalidPythonObject;
+    };
+
     let state_view_factory = StateViewFactory::new(state_database.clone());
     let state_pruning_manager = StatePruningManager::new(state_database.clone());
 
@@ -179,7 +224,6 @@ pub unsafe extern "C" fn journal_new(
         }
     };
 
-    let scheduler_factory = SerialSchedulerFactory::new(Box::new(context_manager));
     let initial_state_root = match MerkleRadixTree::new(Box::new(state_database), None) {
         Ok(merkle_radix_tree) => merkle_radix_tree.get_merkle_root(),
         Err(err) => {
@@ -192,14 +236,16 @@ pub unsafe extern "C" fn journal_new(
         block_manager.clone(),
         block_validator_submitter,
         block_status_store.clone(),
-        state_view_factory,
-        Box::new(scheduler_factory),
+        state_view_factory.clone(),
+        Box::new(SerialSchedulerFactory::new(Box::new(
+            context_manager.clone(),
+        ))),
         initial_state_root.clone(),
         merkle_state.clone(),
     );
 
     let chain_controller = ChainController::new(
-        block_manager,
+        block_manager.clone(),
         block_validator,
         commit_store.clone(),
         chain_head_lock_ref.clone(),
@@ -210,11 +256,54 @@ pub unsafe extern "C" fn journal_new(
         observer_wrappers,
         state_pruning_manager,
         Duration::from_secs(u64::from(fork_cache_keep_time)),
-        merkle_state,
-        initial_state_root,
+        merkle_state.clone(),
+        initial_state_root.to_string(),
     );
 
-    let journal = Journal { chain_controller, executor: Some(executor)};
+    let genesis_executor = match executor.execution_task_submitter() {
+        Ok(submitter) => submitter,
+        Err(err) => {
+            error!(
+                "Unable to get execution task submitter for genesis: {}",
+                err
+            );
+            return ErrorCode::Unknown;
+        }
+    };
+    let chain_id_manager = ChainIdManager::new(data_dir.into());
+    let identity_signer = match get_signer(key_dir) {
+        Ok(signer) => signer,
+        Err(error_code) => return error_code,
+    };
+
+    let genesis_controller = match GenesisControllerBuilder::new()
+        .with_transaction_executor(genesis_executor)
+        .with_scheduler_factory(Box::new(SerialSchedulerFactory::new(Box::new(
+            context_manager,
+        ))))
+        .with_block_manager(block_manager)
+        .with_chain_reader(commit_store.clone())
+        .with_state_view_factory(state_view_factory)
+        .with_data_dir(data_dir.into())
+        .with_observers(genesis_observer_wrappers)
+        .with_initial_state_root(initial_state_root)
+        .with_merkle_state(merkle_state)
+        .with_identity_signer(identity_signer)
+        .with_chain_id_manager(chain_id_manager)
+        .build()
+    {
+        Ok(genesis_controller) => genesis_controller,
+        Err(err) => {
+            error!("Unable to build genesis controller: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    let journal = Journal {
+        chain_controller,
+        genesis_controller,
+        executor: Some(executor),
+    };
 
     *journal_ptr = Box::into_raw(Box::new(journal)) as *const c_void;
 
@@ -264,6 +353,49 @@ fn get_executor(context_manager: ContextManager) -> Result<Executor, ErrorCode> 
     Ok(Executor::new(vec![Box::new(execution_adapter)]))
 }
 
+fn get_signer(private_key_filename: &str) -> Result<Box<dyn Signer>, ErrorCode> {
+    let private_key_filename = format!("{}/validator.priv", private_key_filename);
+    let mut f = match File::open(&private_key_filename) {
+        Ok(f) => f,
+        Err(err) => {
+            error!("Unable to open key file {}: {}", private_key_filename, err);
+            return Err(ErrorCode::Unknown);
+        }
+    };
+
+    let mut contents = String::new();
+    match f.read_to_string(&mut contents) {
+        Ok(_) => (),
+        Err(err) => {
+            error!("Unable to read key file {}: {}", private_key_filename, err);
+            return Err(ErrorCode::Unknown);
+        }
+    };
+
+    let key_str = match contents.lines().next() {
+        Some(k) => k,
+        None => {
+            error!("Empty key file: {}", private_key_filename);
+            return Err(ErrorCode::Unknown);
+        }
+    };
+
+    let context = Secp256k1Context::new();
+    let private_key = match PrivateKey::new_from_hex(key_str) {
+        Ok(k) => k,
+        Err(err) => {
+            error!(
+                "Unable to create private key from hex in {}: {}",
+                private_key_filename, err
+            );
+            return Err(ErrorCode::Unknown);
+        }
+    };
+
+    let key = context.new_signer(private_key);
+    Ok(key)
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn journal_drop(journal: *mut c_void) -> ErrorCode {
     check_null!(journal);
@@ -276,9 +408,7 @@ pub unsafe extern "C" fn journal_drop(journal: *mut c_void) -> ErrorCode {
 pub unsafe extern "C" fn journal_start(journal: *mut c_void) -> ErrorCode {
     check_null!(journal);
 
-    (*(journal as *mut Journal)).start();
-
-    ErrorCode::Success
+    (*(journal as *mut Journal)).start()
 }
 
 #[no_mangle]

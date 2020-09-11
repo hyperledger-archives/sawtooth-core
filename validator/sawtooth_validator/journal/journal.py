@@ -38,14 +38,22 @@ class Journal(OwnedPointer):
         fork_cache_keep_time=300,  # seconds
         data_dir=None,
         observers=None,
+        genesis_observers=None,
+        key_dir=None,
     ):
         super().__init__('journal_drop')
 
         if data_dir is None:
             data_dir = ''
 
+        if key_dir is None:
+            key_dir = ''
+
         if observers is None:
             observers = []
+
+        if genesis_observers is None:
+            genesis_observers = []
 
         _pylibexec(
             'journal_new',
@@ -59,6 +67,8 @@ class Journal(OwnedPointer):
             ctypes.c_long(state_pruning_block_depth),
             ctypes.c_long(fork_cache_keep_time),
             ctypes.c_char_p(data_dir.encode()),
+            ctypes.c_char_p(key_dir.encode()),
+            ctypes.py_object(genesis_observers),
             ctypes.byref(self.pointer))
 
     def start(self):

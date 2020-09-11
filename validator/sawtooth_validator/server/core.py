@@ -32,7 +32,6 @@ from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import \
     BlockValidationResultStore
 from sawtooth_validator.journal.publisher import BlockPublisher
-from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
@@ -43,7 +42,6 @@ from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.networking.dispatch import Dispatcher
-from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.merkle import MerkleDatabase
@@ -82,6 +80,7 @@ class Validator:
                  data_dir,
                  config_dir,
                  identity_signer,
+                 key_dir,
                  scheduler_type,
                  permissions,
                  minimum_peer_connectivity,
@@ -116,8 +115,9 @@ class Validator:
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
             config_dir (str): path to the config directory
-            identity_signer (str): cryptographic signer the validator uses for
-                signing
+            identity_signer (Signer): cryptographic signer the validator uses
+                for signing
+            key_dir (str): path to the data directory
             component_thread_pool_workers (int): number of workers in the
                 component thread pool; defaults to 10.
             network_thread_pool_workers (int): number of workers in the network
@@ -291,7 +291,6 @@ class Validator:
 
         block_sender = BroadcastBlockSender(completer, gossip)
         batch_sender = BroadcastBatchSender(completer, gossip)
-        chain_id_manager = ChainIdManager(data_dir)
 
         identity_view_factory = IdentityViewFactory(
             StateViewFactory(global_state_db))
@@ -350,22 +349,11 @@ class Validator:
                 settings_observer,
                 consensus_activation_observer
             ],
+            key_dir=key_dir,
+            genesis_observers=[receipt_store],
         )
 
         completer.set_get_chain_head(lambda: journal.chain_head)
-
-        genesis_controller = GenesisController(
-            context_manager=context_manager,
-            transaction_executor=transaction_executor,
-            block_manager=block_manager,
-            block_store=block_store,
-            state_view_factory=state_view_factory,
-            identity_signer=identity_signer,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            chain_id_manager=chain_id_manager,
-            batch_sender=batch_sender,
-            receipt_store=receipt_store)
 
         responder = Responder(completer)
 
@@ -428,7 +416,6 @@ class Validator:
 
         self._context_manager = context_manager
         self._transaction_executor = transaction_executor
-        self._genesis_controller = genesis_controller
         self._gossip = gossip
 
         self._block_publisher = block_publisher
@@ -437,12 +424,9 @@ class Validator:
     def start(self):
         self._component_dispatcher.start()
         self._component_service.start()
-        if self._genesis_controller.requires_genesis():
-            self._genesis_controller.start(self._start)
-        else:
-            self._start()
+        # will check if genesis block should be created
+        self._journal.start()
 
-    def _start(self):
         self._consensus_dispatcher.start()
         self._consensus_service.start()
         self._network_dispatcher.start()
@@ -450,7 +434,6 @@ class Validator:
 
         self._gossip.start()
         self._incoming_batch_sender = self._block_publisher.start()
-        self._journal.start()
 
         self._completer.set_on_batch_received(self._incoming_batch_sender.send)
         signal_event = threading.Event()
