@@ -91,11 +91,11 @@ def init_metrics(level=None, registry=None):
     MetricsCollector.set_instance(level, registry)
 
 
-def get_collector(module_name):
+def get_collector(module_name=None):
     """
     Get a handle to the metrics collector.
     """
-    return MetricsCollectorHandle(module_name.split(".")[-1])
+    return MetricsCollectorHandle(module_name)
 
 
 class MetricsCollector:
@@ -151,7 +151,7 @@ class MetricsCollector:
 
     def _join(self, identifier, instance=None, tags=None):
         """
-        Join the identifier tuple with periods ".", combine the arbitrary tags
+        Join the identifier list with periods ".", combine the arbitrary tags
         with the base tags and the identifier tag, convert tags to "tag=value"
         format, and then join everything with ",".
         """
@@ -167,6 +167,8 @@ class MetricsCollector:
 
 class MetricsCollectorHandle:
     def __init__(self, module_name):
+        if module_name is not None:
+            module_name = module_name.split(".")[-1]
         self._module_name = module_name
 
     def gauge(self, metric_name, level=DEFAULT, instance=None, tags=None):
@@ -191,9 +193,12 @@ class MetricsCollectorHandle:
             tags=tags)
 
     def _create_identifier(self, metric_name, instance=None):
-        if instance is None:
-            return (self._module_name, metric_name)
-        return (self._module_name, instance.__class__.__name__, metric_name)
+        identifier = [metric_name]
+        if instance is not None:
+            identifier.insert(0, instance.__class__.__name__)
+        if self._module_name is not None:
+            identifier.insert(0, self._module_name)
+        return instance
 
 
 class NoOpMetricsRegistry:
