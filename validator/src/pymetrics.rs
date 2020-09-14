@@ -40,7 +40,7 @@ impl PyRecorder {
         let py_collector = py
             .import("sawtooth_validator.metrics")
             .expect("Failed to import sawtooth_validator.metrics module")
-            .call(py, "get_collector", ("sawtooth_validator",), None)
+            .call(py, "get_collector", cpython::NoArgs, None)
             .expect("Failed to call metrics.get_collector()");
         Self { py_collector }
     }
