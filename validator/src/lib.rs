@@ -30,10 +30,7 @@ extern crate sawtooth_settings;
 extern crate sawtooth_smallbank;
 extern crate sawtooth_xo;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate log;
-#[macro_use]
 extern crate metrics;
 extern crate sawtooth;
 extern crate transact;
@@ -41,7 +38,6 @@ extern crate transact;
 // exported modules
 pub(crate) mod consensus;
 pub(crate) mod database;
-pub(crate) mod execution;
 pub(crate) mod journal;
 pub(crate) mod proto;
 pub(crate) mod py_object_wrapper;

@@ -16,4 +16,3 @@
  */
 
 mod execution_result_ffi;
-pub mod py_scheduler;
