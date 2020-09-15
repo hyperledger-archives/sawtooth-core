@@ -23,7 +23,7 @@ use std::ptr;
 use std::slice;
 use std::time::Duration;
 
-use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use cpython::{self, ObjectProtocol, PyBytes, PyList, PyObject, Python, PythonObject, ToPyObject};
 use py_ffi;
 use pylogger;
 use sawtooth::journal::commit_store::CommitStore;
@@ -32,6 +32,7 @@ use transact::{
     database::lmdb::LmdbDatabase,
     execution::adapter::static_adapter::StaticExecutionAdapter,
     execution::executor::Executor,
+    protocol::batch::{Batch, BatchPair},
     sawtooth::SawtoothToTransactHandlerAdapter,
     scheduler::serial::SerialSchedulerFactory,
     state::merkle::{MerkleRadixTree, MerkleState},
@@ -48,9 +49,13 @@ use sawtooth::{
         block_validator::{BlockValidationResultStore, BlockValidator},
         block_wrapper::BlockStatus,
         chain::*,
-        chain_head_lock::ChainHeadLock,
         chain_id_manager::ChainIdManager,
         genesis::{builder::GenesisControllerBuilder, GenesisController},
+        publisher::{
+            BatchObserver, BatchSubmitter, BatchSubmitterError, BlockBroadcaster,
+            BlockCancellationError, BlockCompletionError, BlockInitializationError, BlockPublisher,
+            BlockPublisherError, BlockPublishingDetails, InvalidTransactionObserver,
+        },
     },
     protocol::block::BlockPair,
     protos::{FromBytes, IntoBytes},
@@ -71,6 +76,8 @@ use proto::transaction_receipt::{StateChange, StateChange_Type, TransactionRecei
 use py_object_wrapper::PyObjectWrapper;
 
 struct Journal {
+    batch_submitter: BatchSubmitter,
+    block_publisher: BlockPublisher,
     chain_controller: ChainController,
     executor: Option<Executor>,
     genesis_controller: GenesisController,
@@ -100,6 +107,7 @@ impl Journal {
     }
 
     fn stop(&mut self) {
+        self.block_publisher.shutdown_signaler().shutdown();
         self.chain_controller.stop();
         if let Some(executor) = self.executor.take() {
             executor.stop()
@@ -121,6 +129,11 @@ pub enum ErrorCode {
     CreateError = 0x07,
     MissingSigner = 0x08,
     ExecutorError = 0x09,
+    BatchSubmitterDisconnected = 0x10,
+    BlockInProgress = 0x11,
+    MissingPredecessor = 0x12,
+    BlockNotInitialized = 0x13,
+    BlockEmpty = 0x14,
 
     Unknown = 0xff,
 }
@@ -136,9 +149,11 @@ pub unsafe extern "C" fn journal_new(
     commit_store: *mut c_void,
     block_manager: *const c_void,
     state_database: *const c_void,
-    chain_head_lock: *const c_void,
     block_validation_result_cache: *const c_void,
     consensus_notifier_service: *mut c_void,
+    block_sender: *mut py_ffi::PyObject,
+    invalid_transaction_observers: *mut py_ffi::PyObject,
+    batch_observers: *mut py_ffi::PyObject,
     observers: *mut py_ffi::PyObject,
     state_pruning_block_depth: u32,
     fork_cache_keep_time: u32,
@@ -151,8 +166,10 @@ pub unsafe extern "C" fn journal_new(
         commit_store,
         block_manager,
         state_database,
-        chain_head_lock,
         consensus_notifier_service,
+        block_sender,
+        invalid_transaction_observers,
+        batch_observers,
         observers,
         data_directory,
         key_directory,
@@ -171,11 +188,39 @@ pub unsafe extern "C" fn journal_new(
 
     let py = Python::assume_gil_acquired();
 
-    let chain_head_lock_ref = (chain_head_lock as *const ChainHeadLock).as_ref().unwrap();
     let consensus_notifier_service =
         Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
     let block_status_store =
         (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
+
+    let block_broadcaster = PyBlockBroadcaster {
+        py_block_sender: PyObject::from_borrowed_ptr(py, block_sender),
+    };
+
+    let py_invalid_transaction_observers =
+        PyObject::from_borrowed_ptr(py, invalid_transaction_observers);
+    let invalid_transaction_observers = if let Ok(py_list) =
+        py_invalid_transaction_observers.extract::<PyList>(py)
+    {
+        let mut res: Vec<Box<dyn InvalidTransactionObserver>> = Vec::with_capacity(py_list.len(py));
+        py_list
+            .iter(py)
+            .for_each(|pyobj| res.push(Box::new(PyInvalidTransactionObserver::new(pyobj))));
+        res
+    } else {
+        return ErrorCode::InvalidPythonObject;
+    };
+
+    let py_batch_observers = PyObject::from_borrowed_ptr(py, batch_observers);
+    let batch_observers = if let Ok(py_list) = py_batch_observers.extract::<PyList>(py) {
+        let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        py_list
+            .iter(py)
+            .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
+        res
+    } else {
+        return ErrorCode::InvalidPythonObject;
+    };
 
     let py_observers = PyObject::from_borrowed_ptr(py, observers);
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
@@ -220,7 +265,7 @@ pub unsafe extern "C" fn journal_new(
         return ErrorCode::CreateError;
     };
 
-    let block_validator_submitter = match executor.execution_task_submitter() {
+    let task_submitter = match executor.execution_task_submitter() {
         Ok(submitter) => submitter,
         Err(err) => {
             error!("Unable to get execution task submitter: {}", err);
@@ -238,7 +283,7 @@ pub unsafe extern "C" fn journal_new(
 
     let block_validator = BlockValidator::new(
         block_manager.clone(),
-        block_validator_submitter,
+        task_submitter.clone(),
         block_status_store.clone(),
         state_view_factory.clone(),
         Box::new(SerialSchedulerFactory::new(Box::new(
@@ -248,11 +293,47 @@ pub unsafe extern "C" fn journal_new(
         merkle_state.clone(),
     );
 
+    let identity_signer = match get_signer(key_dir) {
+        Ok(signer) => signer,
+        Err(error_code) => return error_code,
+    };
+
+    let mut block_publisher = match BlockPublisher::builder()
+        .with_batch_observers(batch_observers)
+        .with_block_broadcaster(Box::new(block_broadcaster))
+        .with_block_manager(block_manager.clone())
+        .with_commit_store((*commit_store).clone())
+        .with_execution_task_submitter(task_submitter)
+        .with_invalid_transaction_observers(invalid_transaction_observers)
+        .with_merkle_state(merkle_state.clone())
+        .with_scheduler_factory(Box::new(SerialSchedulerFactory::new(Box::new(
+            context_manager.clone(),
+        ))))
+        .with_signer(identity_signer.clone())
+        .with_state_view_factory(state_view_factory.clone())
+        .start()
+    {
+        Ok(publisher) => publisher,
+        Err(err) => {
+            error!("Unable to start block publisher: {}", err);
+            return ErrorCode::CreateError;
+        }
+    };
+
+    let batch_submitter = match block_publisher.take_batch_submitter() {
+        Some(submitter) => submitter,
+        None => {
+            error!("Batch submitter should not already be taken from the block publisher");
+            return ErrorCode::CreateError;
+        }
+    };
+
+    let chain_head_lock = block_publisher.get_chain_head_lock();
     let chain_controller = ChainController::new(
         block_manager.clone(),
         block_validator,
         commit_store.clone(),
-        chain_head_lock_ref.clone(),
+        chain_head_lock,
         block_status_store,
         consensus_notifier_service.clone(),
         data_dir.into(),
@@ -275,10 +356,6 @@ pub unsafe extern "C" fn journal_new(
         }
     };
     let chain_id_manager = ChainIdManager::new(data_dir.into());
-    let identity_signer = match get_signer(key_dir) {
-        Ok(signer) => signer,
-        Err(error_code) => return error_code,
-    };
 
     let genesis_controller = match GenesisControllerBuilder::new()
         .with_transaction_executor(genesis_executor)
@@ -304,6 +381,8 @@ pub unsafe extern "C" fn journal_new(
     };
 
     let journal = Journal {
+        batch_submitter,
+        block_publisher,
         chain_controller,
         genesis_controller,
         executor: Some(executor),
@@ -413,6 +492,212 @@ pub unsafe extern "C" fn journal_start(journal: *mut c_void) -> ErrorCode {
     check_null!(journal);
 
     (*(journal as *mut Journal)).start()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn batch_submitter_is_batch_pool_full(
+    journal: *mut c_void,
+    is_full: *mut bool,
+) -> ErrorCode {
+    check_null!(journal);
+
+    *is_full = match (*(journal as *mut Journal))
+        .batch_submitter
+        .is_batch_pool_full()
+    {
+        Ok(is_full) => is_full,
+        Err(err) => {
+            error!("Failed to check if batch pool is full: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn batch_submitter_submit(
+    journal: *mut c_void,
+    batch_bytes: *const u8,
+    batch_bytes_len: usize,
+) -> ErrorCode {
+    check_null!(journal, batch_bytes);
+
+    let data = slice::from_raw_parts(batch_bytes, batch_bytes_len);
+    let batch = match BatchPair::from_bytes(&data) {
+        Ok(batch_pair) => batch_pair,
+        Err(err) => {
+            error!("Failed to parse batch bytes: {:?}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    match (*(journal as *mut Journal))
+        .batch_submitter
+        .submit(batch, true)
+    {
+        Ok(_) => ErrorCode::Success,
+        Err(BatchSubmitterError::PoolShutdown) => ErrorCode::BatchSubmitterDisconnected,
+        Err(err) => {
+            error!("Failed to submit batch: {}", err);
+            ErrorCode::Unknown
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_publisher_has_batch(
+    journal: *mut c_void,
+    batch_id: *const c_char,
+    has: *mut bool,
+) -> ErrorCode {
+    check_null!(journal, batch_id);
+
+    let batch_id = match CStr::from_ptr(batch_id).to_str() {
+        Ok(s) => s,
+        Err(err) => {
+            error!("Failed to parse batch ID: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    *has = match (*(journal as *mut Journal))
+        .block_publisher
+        .has_batch(batch_id)
+    {
+        Ok(has) => has,
+        Err(err) => {
+            error!("Failed to check if publisher has batch: {}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    ErrorCode::Success
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_publisher_initialize_block(
+    journal: *mut c_void,
+    previous_block_bytes: *const u8,
+    previous_block_bytes_len: usize,
+) -> ErrorCode {
+    check_null!(journal, previous_block_bytes);
+
+    let data = slice::from_raw_parts(previous_block_bytes, previous_block_bytes_len);
+    let block = match BlockPair::from_bytes(&data) {
+        Ok(block_pair) => block_pair,
+        Err(err) => {
+            error!("Failed to parse block bytes: {:?}", err);
+            return ErrorCode::Unknown;
+        }
+    };
+
+    match (*(journal as *mut Journal))
+        .block_publisher
+        .initialize_block(block)
+    {
+        Ok(_) => ErrorCode::Success,
+        Err(BlockPublisherError::BlockInitializationFailed(
+            BlockInitializationError::BlockInProgress,
+        )) => ErrorCode::BlockInProgress,
+        Err(BlockPublisherError::BlockInitializationFailed(
+            BlockInitializationError::MissingPredecessor,
+        )) => ErrorCode::MissingPredecessor,
+        Err(err) => {
+            error!("Failed to initialize block: {}", err);
+            ErrorCode::Unknown
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_publisher_summarize_block(
+    journal: *mut c_void,
+    result: *mut *const u8,
+    result_len: *mut usize,
+    result_cap: *mut usize,
+) -> ErrorCode {
+    check_null!(journal);
+
+    match (*(journal as *mut Journal))
+        .block_publisher
+        .summarize_block()
+    {
+        Ok(summary) => {
+            *result_cap = summary.capacity();
+            *result_len = summary.len();
+            *result = summary.as_slice().as_ptr();
+
+            mem::forget(summary);
+
+            ErrorCode::Success
+        }
+        Err(BlockPublisherError::BlockCompletionFailed(
+            BlockCompletionError::BlockNotInitialized,
+        )) => ErrorCode::BlockNotInitialized,
+        Err(BlockPublisherError::BlockCompletionFailed(BlockCompletionError::BlockEmpty)) => {
+            ErrorCode::BlockEmpty
+        }
+        Err(err) => {
+            error!("Failed to summarize block: {}", err);
+            ErrorCode::Unknown
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_publisher_finalize_block(
+    journal: *mut c_void,
+    consensus: *const u8,
+    consensus_len: usize,
+    result: *mut *const u8,
+    result_len: *mut usize,
+    result_cap: *mut usize,
+) -> ErrorCode {
+    check_null!(journal, consensus);
+
+    let consensus = slice::from_raw_parts(consensus, consensus_len).to_vec();
+
+    match (*(journal as *mut Journal))
+        .block_publisher
+        .finalize_block(consensus)
+    {
+        Ok(block_id) => {
+            *result_cap = block_id.capacity();
+            *result_len = block_id.len();
+            *result = block_id.as_bytes().as_ptr();
+
+            mem::forget(block_id);
+
+            ErrorCode::Success
+        }
+        Err(BlockPublisherError::BlockCompletionFailed(
+            BlockCompletionError::BlockNotInitialized,
+        )) => ErrorCode::BlockNotInitialized,
+        Err(BlockPublisherError::BlockCompletionFailed(BlockCompletionError::BlockEmpty)) => {
+            ErrorCode::BlockEmpty
+        }
+        Err(err) => {
+            error!("Failed to finalize block: {}", err);
+            ErrorCode::Unknown
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn block_publisher_cancel_block(journal: *mut c_void) -> ErrorCode {
+    check_null!(journal);
+
+    match (*(journal as *mut Journal)).block_publisher.cancel_block() {
+        Ok(_) => ErrorCode::Success,
+        Err(BlockPublisherError::BlockCancellationFailed(
+            BlockCancellationError::BlockNotInitialized,
+        )) => ErrorCode::BlockNotInitialized,
+        Err(err) => {
+            error!("Failed to cancel block: {}", err);
+            ErrorCode::Unknown
+        }
+    }
 }
 
 #[no_mangle]
@@ -690,4 +975,92 @@ pub unsafe extern "C" fn block_status_store_drop(block_status_store_ptr: *mut c_
 
     Box::from_raw(block_status_store_ptr as *mut BlockValidationResultStore);
     ErrorCode::Success
+}
+
+/// Wraps the Python block sender to provide the `BlockBroadcaster` trait to the publisher.
+struct PyBlockBroadcaster {
+    py_block_sender: PyObject,
+}
+
+impl BlockBroadcaster for PyBlockBroadcaster {
+    fn broadcast(
+        &self,
+        block: BlockPair,
+        publishing_details: BlockPublishingDetails,
+    ) -> Result<(), BlockPublisherError> {
+        let py_block: PyObjectWrapper = block.into();
+
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        self.py_block_sender
+            .call_method(
+                py,
+                "send",
+                (&py_block, publishing_details.injected_batch_ids()),
+                None,
+            )
+            .map(|_| ())
+            .map_err(|py_err| {
+                ::pylogger::exception(py, "{:?}", py_err);
+                BlockPublisherError::Internal(
+                    "Unable to broadcast block due to python error".into(),
+                )
+            })
+    }
+}
+
+/// Wraps a Python batch observer so it can be used by the publisher.
+struct PyBatchObserver {
+    py_batch_observer: PyObject,
+}
+
+impl PyBatchObserver {
+    fn new(py_batch_observer: PyObject) -> Self {
+        PyBatchObserver { py_batch_observer }
+    }
+}
+
+impl BatchObserver for PyBatchObserver {
+    fn notify_batch_pending(&self, batch: &Batch) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let batch_wrapper = PyObjectWrapper::from(batch.clone());
+        self.py_batch_observer
+            .call_method(py, "notify_batch_pending", (batch_wrapper,), None)
+            .expect("BatchObserver has no method notify_batch_pending");
+    }
+}
+
+/// Wraps a Python invalid transaction observer so it can be used by the publisher.
+struct PyInvalidTransactionObserver {
+    py_invalid_transaction_observer: PyObject,
+}
+
+impl PyInvalidTransactionObserver {
+    fn new(py_invalid_transaction_observer: PyObject) -> Self {
+        PyInvalidTransactionObserver {
+            py_invalid_transaction_observer,
+        }
+    }
+}
+
+impl InvalidTransactionObserver for PyInvalidTransactionObserver {
+    fn notify_transaction_invalid(
+        &self,
+        transaction_id: &str,
+        error_message: &str,
+        error_data: &[u8],
+    ) {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        self.py_invalid_transaction_observer
+            .call_method(
+                py,
+                "notify_txn_invalid",
+                (transaction_id, error_message, PyBytes::new(py, error_data)),
+                None,
+            )
+            .expect("InvalidTransactionObserver has no method notify_txn_invalid");
+    }
 }

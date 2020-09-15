@@ -30,13 +30,15 @@ class Journal(OwnedPointer):
         block_store,
         block_manager,
         state_database,
-        chain_head_lock,
+        block_sender,
         block_status_store,
         consensus_notifier,
         consensus_registry,
         state_pruning_block_depth=1000,
         fork_cache_keep_time=300,  # seconds
         data_dir=None,
+        batch_observers=None,
+        invalid_transaction_observers=None,
         observers=None,
         genesis_observers=None,
         key_dir=None,
@@ -60,9 +62,11 @@ class Journal(OwnedPointer):
             block_store.pointer,
             block_manager.pointer,
             state_database.pointer,
-            chain_head_lock.pointer,
             block_status_store.pointer,
             consensus_notifier.pointer,
+            ctypes.py_object(block_sender),
+            ctypes.py_object(batch_observers),
+            ctypes.py_object(invalid_transaction_observers),
             ctypes.py_object(observers),
             ctypes.c_long(state_pruning_block_depth),
             ctypes.c_long(fork_cache_keep_time),
@@ -77,27 +81,84 @@ class Journal(OwnedPointer):
     def stop(self):
         _libexec('journal_stop', self.pointer)
 
-    def _journal_block_ffi_fn(self, name, block):
-        payload = block.SerializeToString()
+    def _journal_serialize_ffi_fn(self, name, item):
+        payload = item.SerializeToString()
         _libexec(name, self.pointer, payload, len(payload))
 
+    def is_batch_pool_full(self):
+        is_full = ctypes.c_bool(False)
+
+        _libexec(
+            'batch_submitter_is_batch_pool_full',
+            self.pointer,
+            ctypes.byref(is_full))
+
+        return is_full
+
+    def submit_batch(self, batch):
+        self._journal_serialize_ffi_fn('batch_submitter_submit', batch)
+
+    def has_batch(self, batch_id):
+        has = ctypes.c_bool(False)
+        c_batch_id = ctypes.c_char_p(batch_id.encode())
+
+        _libexec(
+            'block_publisher_has_batch',
+            self.pointer,
+            c_batch_id,
+            ctypes.byref(has))
+
+        return has
+
+    def initialize_block(self, previous_block):
+        self._journal_serialize_ffi_fn(
+            'block_publisher_initialize_block',
+            previous_block)
+
+    def summarize_block(self):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+        _libexec(
+            'block_publisher_summarize_block',
+            self.pointer,
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap)
+
+    def finalize_block(self, consensus=None):
+        (vec_ptr, vec_len, vec_cap) = ffi.prepare_vec_result()
+        _libexec(
+            'block_publisher_finalize_block',
+            self.pointer,
+            consensus,
+            len(consensus),
+            ctypes.byref(vec_ptr),
+            ctypes.byref(vec_len),
+            ctypes.byref(vec_cap))
+
+        return ffi.from_rust_vec(vec_ptr, vec_len, vec_cap).decode('utf-8')
+
+    def cancel_block(self):
+        _libexec("block_publisher_cancel_block", self.pointer)
+
     def validate_block(self, block):
-        self._journal_block_ffi_fn(
+        self._journal_serialize_ffi_fn(
             'chain_controller_validate_block',
             block)
 
     def ignore_block(self, block):
-        self._journal_block_ffi_fn(
+        self._journal_serialize_ffi_fn(
             'chain_controller_ignore_block',
             block)
 
     def fail_block(self, block):
-        self._journal_block_ffi_fn(
+        self._journal_serialize_ffi_fn(
             'chain_controller_fail_block',
             block)
 
     def commit_block(self, block):
-        self._journal_block_ffi_fn(
+        self._journal_serialize_ffi_fn(
             'chain_controller_commit_block',
             block)
 
@@ -175,6 +236,16 @@ def _exec(library, name, *args):
         raise JournalSignerError()
     if res == ErrorCode.ExecutorError:
         raise JournalExecutorError()
+    if res == ErrorCode.BatchSubmitterDisconnected:
+        raise BatchSubmitterDisconnected()
+    if res == ErrorCode.BlockInProgress:
+        raise BlockInProgress()
+    if res == ErrorCode.MissingPredecessor:
+        raise MissingPredecessor()
+    if res == ErrorCode.BlockNotInitialized:
+        raise BlockNotInitialized()
+    if res == ErrorCode.BlockEmpty:
+        raise BlockEmpty()
 
     raise TypeError("Unknown error occurred")
 
@@ -190,6 +261,11 @@ class ErrorCode(IntEnum):
     CreateError = 0x07
     MissingSigner = 0x08
     ExecutorError = 0x09
+    BatchSubmitterDisconnected = 0x10
+    BlockInProgress = 0x11
+    MissingPredecessor = 0x12
+    BlockNotInitialized = 0x13
+    BlockEmpty = 0x14
 
 
 class GenesisError(Exception):
@@ -209,3 +285,23 @@ class JournalSignerError(Exception):
 
 class JournalExecutorError(Exception):
     """Unable to create transaction executor"""
+
+
+class BatchSubmitterDisconnected(Exception):
+    """The receiving end of the BatchSubmitter hung up."""
+
+
+class BlockInProgress(Exception):
+    """There is already a block in progress."""
+
+
+class MissingPredecessor(Exception):
+    """A predecessor was missing"""
+
+
+class BlockNotInitialized(Exception):
+    """There is no block in progress to finalize."""
+
+
+class BlockEmpty(Exception):
+    """There are no batches in the block."""

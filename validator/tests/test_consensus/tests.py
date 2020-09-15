@@ -216,8 +216,7 @@ class TestProxy(unittest.TestCase):
 
     def setUp(self):
         self._mock_block_manager = MockBlockManager()
-        self._mock_block_publisher = Mock()
-        self._mock_chain_controller = Mock()
+        self._mock_journal = Mock()
         self._mock_gossip = MockGossip()
         self._mock_identity_signer = MockIdentitySigner()
         self._mock_settings_view_factory = Mock()
@@ -226,8 +225,7 @@ class TestProxy(unittest.TestCase):
         self._consensus_notifier = Mock()
         self._proxy = ConsensusProxy(
             block_manager=self._mock_block_manager,
-            chain_controller=self._mock_chain_controller,
-            block_publisher=self._mock_block_publisher,
+            journal=self._mock_journal,
             gossip=self._mock_gossip,
             identity_signer=self._mock_identity_signer,
             settings_view_factory=self._mock_settings_view_factory,
@@ -251,33 +249,33 @@ class TestProxy(unittest.TestCase):
     # Using block publisher
     def test_initialize_block(self):
         self._proxy.initialize_block(None)
-        self._mock_block_publisher.initialize_block.assert_called_with(
-            self._mock_chain_controller.chain_head)
+        self._mock_journal.initialize_block.assert_called_with(
+            self._mock_journal.chain_head)
 
         self._mock_block_manager["34"] = "a block"
         self._proxy.initialize_block(previous_id=bytes([0x34]))
-        self._mock_block_publisher\
+        self._mock_journal\
             .initialize_block.assert_called_with("a block")
 
     def test_summarize_block(self):
-        self._mock_block_publisher.summarize_block.return_value =\
+        self._mock_journal.summarize_block.return_value =\
             b"summary"
 
         summary = self._proxy.summarize_block()
-        self._mock_block_publisher.summarize_block.assert_called_with()
+        self._mock_journal.summarize_block.assert_called_with()
         self.assertEqual(summary, b"summary")
 
     def test_finalize_block(self):
-        self._mock_block_publisher.finalize_block.return_value = "00"
+        self._mock_journal.finalize_block.return_value = "00"
 
         data = bytes([0x56])
         self._proxy.finalize_block(data)
-        self._mock_block_publisher.finalize_block.assert_called_with(
+        self._mock_journal.finalize_block.assert_called_with(
             consensus=data)
 
     def test_cancel_block(self):
         self._proxy.cancel_block()
-        self._mock_block_publisher.cancel_block.assert_called_with()
+        self._mock_journal.cancel_block.assert_called_with()
 
     # Using chain controller
     def test_check_blocks(self):
@@ -292,21 +290,21 @@ class TestProxy(unittest.TestCase):
     def test_commit_block(self):
         self._mock_block_manager["34"] = "a block"
         self._proxy.commit_block(block_id=bytes([0x34]))
-        self._mock_chain_controller\
+        self._mock_journal\
             .commit_block\
             .assert_called_with("a block")
 
     def test_ignore_block(self):
         self._mock_block_manager["34"] = "a block"
         self._proxy.ignore_block(block_id=bytes([0x34]))
-        self._mock_chain_controller\
+        self._mock_journal\
             .ignore_block\
             .assert_called_with("a block")
 
     def test_fail_block(self):
         self._mock_block_manager["34"] = "a block"
         self._proxy.fail_block(block_id=bytes([0x34]))
-        self._mock_chain_controller\
+        self._mock_journal\
             .fail_block\
             .assert_called_with("a block")
 
@@ -350,7 +348,7 @@ class TestProxy(unittest.TestCase):
             block_num=2,
             consensus=b'consensus')
 
-        self._mock_chain_controller.chain_head = chain_head
+        self._mock_journal.chain_head = chain_head
 
         self.assertEqual(
             self._proxy.chain_head_get(),

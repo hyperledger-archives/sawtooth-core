@@ -31,15 +31,11 @@ from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.database.native_lmdb import NativeLmdbDatabase
 from sawtooth_validator.journal.block_validator import \
     BlockValidationResultStore
-from sawtooth_validator.journal.publisher import BlockPublisher
-from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_manager import BlockManager
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
-from sawtooth_validator.journal.batch_injector import \
-    DefaultBatchInjectorFactory
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.execution.executor import TransactionExecutor
@@ -50,7 +46,6 @@ from sawtooth_validator.state.settings_cache import SettingsObserver
 from sawtooth_validator.state.settings_cache import SettingsCache
 from sawtooth_validator.state.identity_view import IdentityViewFactory
 from sawtooth_validator.state.state_view import StateViewFactory
-from sawtooth_validator.state.state_view import NativeStateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
 from sawtooth_validator.gossip.identity_observer import IdentityObserver
@@ -134,7 +129,6 @@ class Validator:
             global_state_db_filename,
             indexes=MerkleDatabase.create_index_configuration())
         state_view_factory = StateViewFactory(global_state_db)
-        native_state_view_factory = NativeStateViewFactory(global_state_db)
 
         # -- Setup Receipt Store -- #
         receipt_db_filename = os.path.join(
@@ -290,7 +284,6 @@ class Validator:
         self._completer = completer
 
         block_sender = BroadcastBlockSender(completer, gossip)
-        batch_sender = BroadcastBatchSender(completer, gossip)
 
         identity_view_factory = IdentityViewFactory(
             StateViewFactory(global_state_db))
@@ -312,35 +305,19 @@ class Validator:
             forked=settings_cache.forked)
 
         # -- Setup Journal -- #
-        batch_injector_factory = DefaultBatchInjectorFactory(
-            state_view_factory=state_view_factory,
-            signer=identity_signer)
-
-        block_publisher = BlockPublisher(
-            block_store=block_store,
-            block_manager=block_manager,
-            transaction_executor=transaction_executor,
-            state_view_factory=native_state_view_factory,
-            block_sender=block_sender,
-            batch_sender=batch_sender,
-            identity_signer=identity_signer,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            permission_verifier=permission_verifier,
-            batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory)
-
         journal = Journal(
             block_store=block_store,
             block_manager=block_manager,
             state_database=global_state_db,
-            chain_head_lock=block_publisher.chain_head_lock,
+            block_sender=block_sender,
             block_status_store=block_status_store,
             consensus_notifier=consensus_notifier,
             consensus_registry=consensus_registry,
             state_pruning_block_depth=state_pruning_block_depth,
             fork_cache_keep_time=fork_cache_keep_time,
             data_dir=data_dir,
+            batch_observers=[batch_tracker],
+            invalid_transaction_observers=[batch_tracker],
             observers=[
                 event_broadcaster,
                 receipt_store,
@@ -359,14 +336,12 @@ class Validator:
 
         completer.set_on_block_received(journal.queue_block)
 
-        self._incoming_batch_sender = None
-
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
-            lambda block_id: block_id in block_manager, self.has_batch,
-            permission_verifier, block_publisher, consensus_notifier)
+            lambda block_id: block_id in block_manager, journal.has_batch,
+            permission_verifier, consensus_notifier)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager,
@@ -374,8 +349,7 @@ class Validator:
             global_state_db, self.get_chain_head_state_root_hash,
             receipt_store, event_broadcaster, permission_verifier,
             component_thread_pool, client_thread_pool,
-            sig_pool, block_publisher,
-            identity_signer.get_public_key().as_hex())
+            sig_pool, journal, identity_signer.get_public_key().as_hex())
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher
@@ -388,8 +362,7 @@ class Validator:
 
         consensus_proxy = ConsensusProxy(
             block_manager=block_manager,
-            chain_controller=journal,
-            block_publisher=block_publisher,
+            journal=journal,
             gossip=gossip,
             identity_signer=identity_signer,
             settings_view_factory=SettingsViewFactory(state_view_factory),
@@ -418,7 +391,6 @@ class Validator:
         self._transaction_executor = transaction_executor
         self._gossip = gossip
 
-        self._block_publisher = block_publisher
         self._journal = journal
 
     def start(self):
@@ -433,9 +405,8 @@ class Validator:
         self._network_service.start()
 
         self._gossip.start()
-        self._incoming_batch_sender = self._block_publisher.start()
 
-        self._completer.set_on_batch_received(self._incoming_batch_sender.send)
+        self._completer.set_on_batch_received(self._journal.submit_batch)
         signal_event = threading.Event()
 
         signal.signal(signal.SIGTERM,
@@ -464,7 +435,6 @@ class Validator:
         self._transaction_executor.stop()
         self._context_manager.stop()
 
-        self._block_publisher.stop()
         self._journal.stop()
 
         threads = threading.enumerate()
@@ -488,16 +458,6 @@ class Validator:
                     time.sleep(1)
 
         LOGGER.info("All threads have been stopped and joined")
-
-    def has_batch(self, batch_id):
-        if self._block_publisher.has_batch(batch_id):
-            return True
-
-        if self._incoming_batch_sender and \
-                self._incoming_batch_sender.has_batch(batch_id):
-            return True
-
-        return False
 
     def get_chain_head_state_root_hash(self):
         return self._chain_controller.chain_head.state_root_hash

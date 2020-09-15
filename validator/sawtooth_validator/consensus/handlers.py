@@ -28,10 +28,10 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
-from sawtooth_validator.journal.publisher import BlockEmpty
-from sawtooth_validator.journal.publisher import BlockInProgress
-from sawtooth_validator.journal.publisher import BlockNotInitialized
-from sawtooth_validator.journal.publisher import MissingPredecessor
+from sawtooth_validator.journal.journal import BlockEmpty
+from sawtooth_validator.journal.journal import BlockInProgress
+from sawtooth_validator.journal.journal import BlockNotInitialized
+from sawtooth_validator.journal.journal import MissingPredecessor
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.consensus_pb2 import ConsensusSettingsEntry
