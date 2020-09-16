@@ -34,8 +34,8 @@ from sawtooth_validator.server.keys import load_identity_signer
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.server import state_verifier
-from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.journal.journal import GenesisError
 from sawtooth_validator import metrics
 
 

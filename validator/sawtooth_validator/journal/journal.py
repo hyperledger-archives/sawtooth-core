@@ -167,8 +167,16 @@ def _exec(library, name, *args):
         raise ValueError("Invalid block id provided.")
     if res == ErrorCode.UnknownBlock:
         raise KeyError("Unknown block")
+    if res == ErrorCode.GenesisError:
+        raise GenesisError("Unable to create genesis block")
+    if res == ErrorCode.CreateError:
+        raise JournalCreateError()
+    if res == ErrorCode.MissingSigner:
+        raise JournalSignerError()
+    if res == ErrorCode.ExecutorError:
+        raise JournalExecutorError()
 
-    raise TypeError("Unknown error occurred: {}".format(res.error))
+    raise TypeError("Unknown error occurred")
 
 
 class ErrorCode(IntEnum):
@@ -178,3 +186,26 @@ class ErrorCode(IntEnum):
     InvalidPythonObject = 0x03
     InvalidBlockId = 0x04
     UnknownBlock = 0x05
+    GenesisError = 0x06
+    CreateError = 0x07
+    MissingSigner = 0x08
+    ExecutorError = 0x09
+
+
+class GenesisError(Exception):
+    """
+    General Error thrown when an error occurs as a result of an incomplete
+    or erroneous genesis action.
+    """
+
+
+class JournalCreateError(Exception):
+    """Unable to create Journal"""
+
+
+class JournalSignerError(Exception):
+    """Unable to create Signer for Journal"""
+
+
+class JournalExecutorError(Exception):
+    """Unable to create transaction executor"""

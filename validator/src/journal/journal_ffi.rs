@@ -83,7 +83,7 @@ impl Journal {
                 if create_genesis {
                     if let Err(err) = self.genesis_controller.start() {
                         error!("Unable to create genesis block: {}", err);
-                        return ErrorCode::Unknown;
+                        return ErrorCode::GenesisError;
                     }
                 }
             }
@@ -92,7 +92,7 @@ impl Journal {
                     "Unable to check if the genesis block should be built: {}",
                     err
                 );
-                return ErrorCode::Unknown;
+                return ErrorCode::GenesisError;
             }
         }
         self.chain_controller.start();
@@ -117,6 +117,10 @@ pub enum ErrorCode {
     InvalidBlockId = 0x04,
     #[allow(dead_code)]
     UnknownBlock = 0x05,
+    GenesisError = 0x06,
+    CreateError = 0x07,
+    MissingSigner = 0x08,
+    ExecutorError = 0x09,
 
     Unknown = 0xff,
 }
@@ -213,14 +217,14 @@ pub unsafe extern "C" fn journal_new(
 
     if let Err(err) = executor.start() {
         error!("Executor cannot start: {}", err);
-        return ErrorCode::Unknown;
+        return ErrorCode::CreateError;
     };
 
     let block_validator_submitter = match executor.execution_task_submitter() {
         Ok(submitter) => submitter,
         Err(err) => {
             error!("Unable to get execution task submitter: {}", err);
-            return ErrorCode::Unknown;
+            return ErrorCode::CreateError;
         }
     };
 
@@ -228,7 +232,7 @@ pub unsafe extern "C" fn journal_new(
         Ok(merkle_radix_tree) => merkle_radix_tree.get_merkle_root(),
         Err(err) => {
             error!("Unable to get initial state root hash: {}", err);
-            return ErrorCode::Unknown;
+            return ErrorCode::CreateError;
         }
     };
 
@@ -267,7 +271,7 @@ pub unsafe extern "C" fn journal_new(
                 "Unable to get execution task submitter for genesis: {}",
                 err
             );
-            return ErrorCode::Unknown;
+            return ErrorCode::CreateError;
         }
     };
     let chain_id_manager = ChainIdManager::new(data_dir.into());
@@ -295,7 +299,7 @@ pub unsafe extern "C" fn journal_new(
         Ok(genesis_controller) => genesis_controller,
         Err(err) => {
             error!("Unable to build genesis controller: {}", err);
-            return ErrorCode::Unknown;
+            return ErrorCode::CreateError;
         }
     };
 
@@ -346,7 +350,7 @@ fn get_executor(context_manager: ContextManager) -> Result<Executor, ErrorCode> 
         Ok(executor_adapter) => executor_adapter,
         Err(err) => {
             error!("Unable to create executor adapter: {}", err);
-            return Err(ErrorCode::Unknown);
+            return Err(ErrorCode::ExecutorError);
         }
     };
 
@@ -359,7 +363,7 @@ fn get_signer(private_key_filename: &str) -> Result<Box<dyn Signer>, ErrorCode> 
         Ok(f) => f,
         Err(err) => {
             error!("Unable to open key file {}: {}", private_key_filename, err);
-            return Err(ErrorCode::Unknown);
+            return Err(ErrorCode::MissingSigner);
         }
     };
 
@@ -368,7 +372,7 @@ fn get_signer(private_key_filename: &str) -> Result<Box<dyn Signer>, ErrorCode> 
         Ok(_) => (),
         Err(err) => {
             error!("Unable to read key file {}: {}", private_key_filename, err);
-            return Err(ErrorCode::Unknown);
+            return Err(ErrorCode::MissingSigner);
         }
     };
 
@@ -376,7 +380,7 @@ fn get_signer(private_key_filename: &str) -> Result<Box<dyn Signer>, ErrorCode> 
         Some(k) => k,
         None => {
             error!("Empty key file: {}", private_key_filename);
-            return Err(ErrorCode::Unknown);
+            return Err(ErrorCode::MissingSigner);
         }
     };
 
@@ -388,7 +392,7 @@ fn get_signer(private_key_filename: &str) -> Result<Box<dyn Signer>, ErrorCode> 
                 "Unable to create private key from hex in {}: {}",
                 private_key_filename, err
             );
-            return Err(ErrorCode::Unknown);
+            return Err(ErrorCode::MissingSigner);
         }
     };
 
