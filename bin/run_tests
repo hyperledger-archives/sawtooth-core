@@ -203,8 +203,6 @@ test_validator() {
     copy_coverage .coverage.validator
     run_docker_test test_two_families
     copy_coverage .coverage.test_two_families
-    run_docker_test test_namespace_restriction
-    copy_coverage .coverage.namespace_restriction
     run_docker_test test_state_verifier --timeout 30
     run_docker_test ./validator/tests/unit_rust_validator.yaml
 }
