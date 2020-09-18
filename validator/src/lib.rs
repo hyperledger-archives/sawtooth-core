@@ -15,16 +15,22 @@
  * ------------------------------------------------------------------------------
  */
 
+extern crate battleship;
+extern crate block_info_tp;
 extern crate cpython;
+extern crate cylinder;
 extern crate hex;
 extern crate libc;
 extern crate protobuf;
 extern crate python3_sys as py_ffi;
-#[macro_use]
-extern crate lazy_static;
+extern crate sawtooth_identity;
+extern crate sawtooth_intkey;
+extern crate sawtooth_sabre;
+extern crate sawtooth_settings;
+extern crate sawtooth_smallbank;
+extern crate sawtooth_xo;
 #[macro_use]
 extern crate log;
-#[macro_use]
 extern crate metrics;
 extern crate sawtooth;
 extern crate transact;
@@ -32,7 +38,6 @@ extern crate transact;
 // exported modules
 pub(crate) mod consensus;
 pub(crate) mod database;
-pub(crate) mod execution;
 pub(crate) mod journal;
 pub(crate) mod proto;
 pub(crate) mod py_object_wrapper;

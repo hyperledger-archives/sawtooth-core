@@ -41,6 +41,7 @@ RUN apt-get install -y -q \
 
 RUN apt-get install -y -q \
     libssl-dev \
+    libzmq3-dev \
     openssl \
     pkg-config \
     python3-cachetools \

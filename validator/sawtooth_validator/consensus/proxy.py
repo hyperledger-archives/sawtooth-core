@@ -103,13 +103,11 @@ class ConsensusProxy:
     """Receives requests from the consensus engine handlers and delegates them
     to the appropriate components."""
 
-    def __init__(self, block_manager, block_publisher,
-                 chain_controller, gossip, identity_signer,
+    def __init__(self, block_manager, journal, gossip, identity_signer,
                  settings_view_factory, state_view_factory,
                  consensus_registry, consensus_notifier):
         self._block_manager = block_manager
-        self._chain_controller = chain_controller
-        self._block_publisher = block_publisher
+        self._journal = journal
         self._gossip = gossip
         self._identity_signer = identity_signer
         self._public_key = self._identity_signer.get_public_key().as_bytes()
@@ -186,20 +184,20 @@ class ConsensusProxy:
                     self._block_manager.get([previous_id.hex()]))
             except StopIteration:
                 raise UnknownBlock() from StopIteration
-            self._block_publisher.initialize_block(previous_block)
+            self._journal.initialize_block(previous_block)
         else:
-            self._block_publisher.initialize_block(
-                self._chain_controller.chain_head)
+            self._journal.initialize_block(
+                self._journal.chain_head)
 
     def summarize_block(self):
-        return self._block_publisher.summarize_block()
+        return self._journal.summarize_block()
 
     def finalize_block(self, consensus_data):
-        return bytes.fromhex(self._block_publisher.finalize_block(
+        return bytes.fromhex(self._journal.finalize_block(
             consensus=consensus_data))
 
     def cancel_block(self):
-        self._block_publisher.cancel_block()
+        self._journal.cancel_block()
 
     def check_blocks(self, block_ids):
         for block_id in block_ids:
@@ -212,7 +210,7 @@ class ConsensusProxy:
         try:
             return [
                 (block_id.hex(),
-                 self._chain_controller.block_validation_result(
+                 self._journal.block_validation_result(
                      block_id.hex()))
                 for block_id in block_ids
             ]
@@ -225,28 +223,28 @@ class ConsensusProxy:
             block = next(self._block_manager.get([block_id]))
         except StopIteration as stop_iteration:
             raise UnknownBlock(stop_iteration.args[0]) from stop_iteration
-        self._chain_controller.validate_block(block)
+        self._journal.validate_block(block)
 
     def commit_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration as stop_iteration:
             raise UnknownBlock(stop_iteration.args[0]) from stop_iteration
-        self._chain_controller.commit_block(block)
+        self._journal.commit_block(block)
 
     def ignore_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration:
             raise UnknownBlock() from StopIteration
-        self._chain_controller.ignore_block(block)
+        self._journal.ignore_block(block)
 
     def fail_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration:
             raise UnknownBlock() from StopIteration
-        self._chain_controller.fail_block(block)
+        self._journal.fail_block(block)
 
     # Using blockstore and state database
     def blocks_get(self, block_ids):
@@ -256,7 +254,7 @@ class ConsensusProxy:
     def chain_head_get(self):
         '''Returns the chain head.'''
 
-        chain_head = self._chain_controller.chain_head
+        chain_head = self._journal.chain_head
 
         if chain_head is None:
             raise UnknownBlock()

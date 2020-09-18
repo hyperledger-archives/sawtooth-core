@@ -83,7 +83,6 @@ def add(
         has_block,
         has_batch,
         permission_verifier,
-        block_publisher,
         consensus_notifier,
 ):
 

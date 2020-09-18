@@ -25,16 +25,8 @@ from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
 from sawtooth_validator.execution.scheduler import TxnExecutionResult
 
-from sawtooth_validator.journal.batch_sender import BatchSender
-from sawtooth_validator.journal.block_sender import BlockSender
-from sawtooth_validator.journal.batch_injector import BatchInjectorFactory
-from sawtooth_validator.journal.batch_injector import BatchInjector
-
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
-from sawtooth_validator.protobuf.setting_pb2 import Setting
-
-from sawtooth_validator.state.settings_view import SettingsView
 
 
 LOGGER = logging.getLogger(__name__)
@@ -177,104 +169,6 @@ class MockScheduler(Scheduler):
         return False
 
 
-class MockTransactionExecutor:
-    def __init__(self, batch_execution_result=True):
-        self.messages = []
-        self.batch_execution_result = batch_execution_result
-
-    def create_scheduler(self, first_state_root):
-        return MockScheduler(self.batch_execution_result)
-
-    def execute(self, scheduler, state_hash=None):
-        pass
-
-
-class MockBlockSender(BlockSender):
-    def __init__(self):
-        self.new_block = None
-
-    def send(self, block, keep_batches=None):
-        self.new_block = block
-
-
-class MockBatchSender(BatchSender):
-    def __init__(self):
-        self.new_batch = None
-
-    def send(self, batch):
-        self.new_batch = batch
-
-
-class MockStateViewFactory:
-    """The StateViewFactory produces StateViews for a particular merkle root.
-
-    This factory produces read-only views of a merkle tree. For a given
-    database, these views are considered immutable.
-    """
-
-    def __init__(self, database=None):
-        """Initializes the factory with a given database.
-
-        Args:
-            database (:obj:`Database`): the database containing the merkle
-                tree.
-        """
-        self._database = database
-        if self._database is None:
-            self._database = {}
-
-    def create_view(self, state_root_hash=None):
-        """Creates a StateView for the given state root hash.
-
-        Returns:
-            StateView: state view locked to the given root hash.
-        """
-        return MockStateView(self._database)
-
-
-class MockStateView:
-    """The StateView provides read-only access to a particular merkle tree
-    root.
-
-    The StateView is a read-only view of a merkle tree. Access is limited to
-    available addresses, collections of leaf nodes, and specific leaf nodes.
-    The view is lock to a single merkle root, effectively making it an
-    immutable snapshot.
-    """
-
-    def __init__(self, tree):
-        """Creates a StateView with a given merkle tree.
-
-        Args:
-            tree (:obj:`MerkleDatabase`): the merkle tree for this view
-        """
-        self._database = tree
-
-    def get(self, address):
-        """
-        Returns:
-            bytes the state entry at the given address
-        """
-        return self._database[address]
-
-    def addresses(self):
-        """
-        Returns:
-            list of str: the list of addresses available in this view
-        """
-        return []
-
-    def leaves(self, prefix):
-        """
-        Args:
-            prefix (str): an address prefix under which to look for leaves
-
-        Returns:
-            dict of str,bytes: the state entries at the leaves
-        """
-        return []
-
-
 class MockChainIdManager:
     """Mock for the ChainIdManager, which provides the value of the
     block-chain-id stored in the data_dir.
@@ -288,39 +182,6 @@ class MockChainIdManager:
 
     def get_block_chain_id(self):
         return self._block_chain_id
-
-
-# pylint: disable=invalid-name
-def CreateSetting(key, value):
-    """
-    Create a setting object to include in a MockStateFactory.
-    """
-    addr = SettingsView.setting_address(key)
-
-    setting = Setting()
-    setting.entries.add(key=key, value=str(value))
-    return addr, setting.SerializeToString()
-
-
-class MockPermissionVerifier:
-    def is_batch_signer_authorized(self, batch, state_root=None):
-        return True
-
-
-class MockBatchInjectorFactory(BatchInjectorFactory):
-    def __init__(self, batch):
-        self._batch = batch
-
-    def create_injectors(self, previous_block_id):
-        return [MockBatchInjector(self._batch)]
-
-
-class MockBatchInjector(BatchInjector):
-    def __init__(self, batch):
-        self._batch = batch
-
-    def block_start(self, previous_block_id):
-        return [self._batch]
 
 
 class MockConsensusNotifier(ConsensusNotifier):

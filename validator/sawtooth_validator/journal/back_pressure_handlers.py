@@ -35,9 +35,9 @@ class ClientBatchSubmitBackpressureHandler(Handler):
     able.  Otherwise it returns a QUEUE_FULL response.
     """
 
-    def __init__(self, whitelist_public_key, queue_info_fn):
+    def __init__(self, whitelist_public_key, is_batch_pool_full_fn):
         self._whitelist_public_key = whitelist_public_key
-        self._queue_info = queue_info_fn
+        self._is_batch_pool_full = is_batch_pool_full_fn
         self._applying_backpressure = False
 
         self._batches_rejected_count = COLLECTOR.counter(
@@ -56,14 +56,11 @@ class ClientBatchSubmitBackpressureHandler(Handler):
 
             batch_header.Clear()
 
-        pending, limit = self._queue_info()
-        if pending >= limit:
+        if self._is_batch_pool_full():
             if not self._applying_backpressure:
                 self._applying_backpressure = True
                 LOGGER.info(
-                    'Applying back pressure on client submitted batches: '
-                    'current depth: %s, limit: %s',
-                    pending, limit)
+                    'Applying back pressure on client submitted batches')
 
             self._batches_rejected_count.inc()
             self._batches_rejected_gauge.set_value(
@@ -80,9 +77,6 @@ class ClientBatchSubmitBackpressureHandler(Handler):
         if self._applying_backpressure:
             self._applying_backpressure = False
             self._batches_rejected_gauge.set_value(0)
-            LOGGER.info(
-                'Ending back pressure on client submitted batches: '
-                'current depth: %s, limit: %s',
-                pending, limit)
+            LOGGER.info('Ending back pressure on client submitted batches')
 
         return HandlerResult(status=HandlerStatus.PASS)

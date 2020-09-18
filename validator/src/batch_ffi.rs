@@ -65,7 +65,7 @@ impl From<PyObjectWrapper> for Batch {
 mod tests {
     use super::*;
 
-    use sawtooth::signing::hash::HashSigner;
+    use cylinder::{secp256k1::Secp256k1Context, Context, Signer};
     use transact::protocol::{
         batch::BatchBuilder,
         transaction::{HashMethod, TransactionBuilder},
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_basic() {
-        let signer = HashSigner::default();
+        let signer = new_signer();
         let txn = TransactionBuilder::new()
             .with_family_name("test".into())
             .with_family_version("1.0".into())
@@ -81,16 +81,22 @@ mod tests {
             .with_outputs(vec![])
             .with_payload_hash_method(HashMethod::SHA512)
             .with_payload(vec![])
-            .build(&signer)
+            .build(&*signer)
             .expect("Failed to build transaction");
         let batch = BatchBuilder::new()
             .with_transactions(vec![txn])
-            .build(&signer)
+            .build(&*signer)
             .expect("Failed to build batch");
 
         let py_obj_wrapper = PyObjectWrapper::from(batch.clone());
         let extracted_batch = Batch::from(py_obj_wrapper);
 
         assert_eq!(batch, extracted_batch);
+    }
+
+    fn new_signer() -> Box<dyn Signer> {
+        let context = Secp256k1Context::new();
+        let key = context.new_random_private_key();
+        context.new_signer(key)
     }
 }

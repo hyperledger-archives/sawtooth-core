@@ -16,4 +16,3 @@
  */
 
 pub mod notifier_ffi;
-pub mod registry_ffi;

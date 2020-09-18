@@ -21,27 +21,6 @@ class LocalConfigurationError(Exception):
     """
 
 
-class GenesisError(Exception):
-    """
-    General Error thrown when an error occurs as a result of an incomplete
-    or erroneous genesis action.
-    """
-
-
-class InvalidGenesisStateError(GenesisError):
-    """
-    Error thrown when there is an invalid initial state during the genesis
-    block generation process.
-    """
-
-
-class InvalidGenesisConsensusError(GenesisError):
-    """
-    Error thrown when the consensus algorithm refuses or fails to initialize
-    or finalize the genesis block.
-    """
-
-
 class NotAvailableException(Exception):
     """
     Indicates a required service is not available and the action should be
