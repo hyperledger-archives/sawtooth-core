@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import abc
 import json
 import logging
 import threading
@@ -524,23 +523,3 @@ class TransactionExecutor:
     def stop(self):
         self._cancel_threads()
         self._executing_threadpool.shutdown(wait=True)
-
-
-class InvalidTransactionObserver(metaclass=abc.ABCMeta):
-    """An interface class for components wishing to be notified when a
-    Transaction Processor finds a Transaction is invalid.
-    """
-
-    @abc.abstractmethod
-    def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
-        """This method will be called when a Transaction Processor sends back
-        a Transaction with the status INVALID_TRANSACTION, and includes any
-        error message or extended data sent back.
-
-        Args:
-            txn_id (str): The id of the invalid Transaction
-            message (str, optional): Message explaining why it is invalid
-            extended_data (bytes, optional): Additional error data
-        """
-        raise NotImplementedError('InvalidTransactionObservers must have a '
-                                  '"notify_txn_invalid" method')
