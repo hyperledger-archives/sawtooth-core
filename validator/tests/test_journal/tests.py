@@ -22,7 +22,6 @@
 import logging
 import unittest.mock
 
-from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.event_extractors \
@@ -44,29 +43,6 @@ from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class TestBlockCache(unittest.TestCase):
-    def test_load_from_block_store(self):
-        """ Test that misses will load from the block store.
-        """
-        bs = {}
-        block1 = Block(
-            header=BlockHeader(previous_block_id="000").SerializeToString(),
-            header_signature="test")
-        bs["test"] = BlockWrapper(block1)
-        block2 = Block(
-            header=BlockHeader(previous_block_id="000").SerializeToString(),
-            header_signature="test2")
-        blkw2 = BlockWrapper(block2)
-        bs["test2"] = blkw2
-        bc = BlockCache(bs)
-
-        self.assertTrue("test" in bc)
-        self.assertTrue(bc["test2"] == blkw2)
-
-        with self.assertRaises(KeyError):
-            bc["test-missing"]
 
 
 class TestTimedCache(unittest.TestCase):
