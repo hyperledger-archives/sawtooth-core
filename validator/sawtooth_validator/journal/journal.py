@@ -57,7 +57,7 @@ class Journal(OwnedPointer):
         if genesis_observers is None:
             genesis_observers = []
 
-        _pylibexec(
+        _libexec(
             'journal_new',
             block_store.pointer,
             block_manager.pointer,

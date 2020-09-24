@@ -186,66 +186,83 @@ pub unsafe extern "C" fn journal_new(
         Err(_) => return ErrorCode::InvalidDataDir,
     };
 
-    let py = Python::assume_gil_acquired();
-
     let consensus_notifier_service =
         Box::from_raw(consensus_notifier_service as *mut BackgroundConsensusNotifier);
     let block_status_store =
         (*(block_validation_result_cache as *const BlockValidationResultStore)).clone();
 
-    let block_broadcaster = PyBlockBroadcaster {
-        py_block_sender: PyObject::from_borrowed_ptr(py, block_sender),
-    };
-
-    let py_invalid_transaction_observers =
-        PyObject::from_borrowed_ptr(py, invalid_transaction_observers);
-    let invalid_transaction_observers = if let Ok(py_list) =
-        py_invalid_transaction_observers.extract::<PyList>(py)
-    {
-        let mut res: Vec<Box<dyn InvalidTransactionObserver>> = Vec::with_capacity(py_list.len(py));
-        py_list
-            .iter(py)
-            .for_each(|pyobj| res.push(Box::new(PyInvalidTransactionObserver::new(pyobj))));
-        res
-    } else {
-        return ErrorCode::InvalidPythonObject;
-    };
-
-    let py_batch_observers = PyObject::from_borrowed_ptr(py, batch_observers);
-    let batch_observers = if let Ok(py_list) = py_batch_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
-        py_list
-            .iter(py)
-            .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
-        res
-    } else {
-        return ErrorCode::InvalidPythonObject;
-    };
-
-    let py_observers = PyObject::from_borrowed_ptr(py, observers);
-    let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
-        py_list
-            .iter(py)
-            .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
-        res
-    } else {
-        return ErrorCode::InvalidPythonObject;
-    };
-
     let block_manager = (*(block_manager as *const BlockManager)).clone();
     let state_database = (*(state_database as *const LmdbDatabase)).clone();
 
-    let py_genesis_observers = PyObject::from_borrowed_ptr(py, genesis_observers);
-    let genesis_observer_wrappers = if let Ok(py_list) = py_genesis_observers.extract::<PyList>(py)
-    {
-        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
-        py_list
-            .iter(py)
-            .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
-        res
-    } else {
-        return ErrorCode::InvalidPythonObject;
+    let (
+        block_broadcaster,
+        invalid_transaction_observers,
+        batch_observers,
+        chain_observers,
+        genesis_observers,
+    ) = {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let block_broadcaster = PyBlockBroadcaster {
+            py_block_sender: PyObject::from_borrowed_ptr(py, block_sender),
+        };
+
+        let py_invalid_transaction_observers =
+            PyObject::from_borrowed_ptr(py, invalid_transaction_observers);
+        let invalid_transaction_observers =
+            if let Ok(py_list) = py_invalid_transaction_observers.extract::<PyList>(py) {
+                let mut res: Vec<Box<dyn InvalidTransactionObserver>> =
+                    Vec::with_capacity(py_list.len(py));
+                py_list
+                    .iter(py)
+                    .for_each(|pyobj| res.push(Box::new(PyInvalidTransactionObserver::new(pyobj))));
+                res
+            } else {
+                return ErrorCode::InvalidPythonObject;
+            };
+
+        let py_batch_observers = PyObject::from_borrowed_ptr(py, batch_observers);
+        let batch_observers = if let Ok(py_list) = py_batch_observers.extract::<PyList>(py) {
+            let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
+            py_list
+                .iter(py)
+                .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
+            res
+        } else {
+            return ErrorCode::InvalidPythonObject;
+        };
+
+        let py_observers = PyObject::from_borrowed_ptr(py, observers);
+        let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
+            let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
+            py_list
+                .iter(py)
+                .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
+            res
+        } else {
+            return ErrorCode::InvalidPythonObject;
+        };
+
+        let py_genesis_observers = PyObject::from_borrowed_ptr(py, genesis_observers);
+        let genesis_observer_wrappers =
+            if let Ok(py_list) = py_genesis_observers.extract::<PyList>(py) {
+                let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
+                py_list
+                    .iter(py)
+                    .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
+                res
+            } else {
+                return ErrorCode::InvalidPythonObject;
+            };
+
+        (
+            block_broadcaster,
+            invalid_transaction_observers,
+            batch_observers,
+            observer_wrappers,
+            genesis_observer_wrappers,
+        )
     };
 
     let state_view_factory = StateViewFactory::new(state_database.clone());
@@ -338,7 +355,7 @@ pub unsafe extern "C" fn journal_new(
         consensus_notifier_service.clone(),
         data_dir.into(),
         state_pruning_block_depth,
-        observer_wrappers,
+        chain_observers,
         state_pruning_manager,
         Duration::from_secs(u64::from(fork_cache_keep_time)),
         merkle_state.clone(),
@@ -366,7 +383,7 @@ pub unsafe extern "C" fn journal_new(
         .with_chain_reader(commit_store.clone())
         .with_state_view_factory(state_view_factory)
         .with_data_dir(data_dir.into())
-        .with_observers(genesis_observer_wrappers)
+        .with_observers(genesis_observers)
         .with_initial_state_root(initial_state_root)
         .with_merkle_state(merkle_state)
         .with_identity_signer(identity_signer)
