@@ -246,6 +246,8 @@ def _exec(library, name, *args):
         raise BlockNotInitialized()
     if res == ErrorCode.BlockEmpty:
         raise BlockEmpty()
+    if res == ErrorCode.VerifyStateError:
+        raise VerifyStateError()
 
     raise TypeError("Unknown error occurred")
 
@@ -266,6 +268,7 @@ class ErrorCode(IntEnum):
     MissingPredecessor = 0x12
     BlockNotInitialized = 0x13
     BlockEmpty = 0x14
+    VerifyStateError = 0x15
 
 
 class GenesisError(Exception):
@@ -305,3 +308,7 @@ class BlockNotInitialized(Exception):
 
 class BlockEmpty(Exception):
     """There are no batches in the block."""
+
+
+class VerifyStateError(Exception):
+    """Unable to verify state during journal creation"""

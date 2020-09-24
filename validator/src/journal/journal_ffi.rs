@@ -56,6 +56,7 @@ use sawtooth::{
             BlockCancellationError, BlockCompletionError, BlockInitializationError, BlockPublisher,
             BlockPublisherError, BlockPublishingDetails, InvalidTransactionObserver,
         },
+        state_verifier::verify_state,
     },
     protocol::block::BlockPair,
     protos::{FromBytes, IntoBytes},
@@ -134,6 +135,7 @@ pub enum ErrorCode {
     MissingPredecessor = 0x12,
     BlockNotInitialized = 0x13,
     BlockEmpty = 0x14,
+    VerifyStateError = 0x15,
 
     Unknown = 0xff,
 }
@@ -298,14 +300,29 @@ pub unsafe extern "C" fn journal_new(
         }
     };
 
+    let scheduler_factory = Box::new(SerialSchedulerFactory::new(Box::new(
+        context_manager.clone(),
+    )));
+
+    // Verify and rebuild state
+    if let Err(err) = verify_state(
+        &commit_store,
+        &state_view_factory,
+        &initial_state_root,
+        &task_submitter,
+        &merkle_state,
+        &*scheduler_factory,
+    ) {
+        error!("Unable to verify state: {}", err);
+        return ErrorCode::VerifyStateError;
+    }
+
     let block_validator = BlockValidator::new(
         block_manager.clone(),
         task_submitter.clone(),
         block_status_store.clone(),
         state_view_factory.clone(),
-        Box::new(SerialSchedulerFactory::new(Box::new(
-            context_manager.clone(),
-        ))),
+        scheduler_factory,
         initial_state_root.clone(),
         merkle_state.clone(),
     );
