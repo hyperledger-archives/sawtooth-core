@@ -26,7 +26,6 @@ use std::time::Duration;
 use cpython::{self, ObjectProtocol, PyBytes, PyList, PyObject, Python, PythonObject, ToPyObject};
 use py_ffi;
 use pylogger;
-use sawtooth::journal::commit_store::CommitStore;
 use transact::{
     context::manager::sync::ContextManager,
     database::lmdb::LmdbDatabase,
@@ -50,6 +49,7 @@ use sawtooth::{
         block_wrapper::BlockStatus,
         chain::*,
         chain_id_manager::ChainIdManager,
+        commit_store::CommitStore,
         genesis::{builder::GenesisControllerBuilder, GenesisController},
         publisher::{
             BatchObserver, BatchSubmitter, BatchSubmitterError, BlockBroadcaster,
