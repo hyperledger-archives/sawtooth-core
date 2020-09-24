@@ -22,7 +22,6 @@ import threading
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
-from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.consensus.notifier import ConsensusNotifier
 from sawtooth_validator.consensus.proxy import ConsensusProxy
 from sawtooth_validator.consensus.proxy import ConsensusActivationObserver
@@ -38,7 +37,6 @@ from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.networking.dispatch import Dispatcher
-from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.settings_view import SettingsViewFactory
@@ -206,23 +204,11 @@ class Validator:
             roles=roles)
 
         # -- Setup Transaction Execution Platform -- #
-        context_manager = ContextManager(global_state_db)
-
         batch_tracker = BatchTracker(block_store.has_batch)
 
         settings_cache = SettingsCache(
             SettingsViewFactory(state_view_factory),
         )
-
-        transaction_executor = TransactionExecutor(
-            service=component_service,
-            context_manager=context_manager,
-            settings_view_factory=SettingsViewFactory(state_view_factory),
-            scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker])
-
-        component_service.set_check_connections(
-            transaction_executor.check_connections)
 
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
@@ -344,8 +330,8 @@ class Validator:
             permission_verifier, consensus_notifier)
 
         component_handlers.add(
-            component_dispatcher, gossip, context_manager,
-            transaction_executor, completer, block_store, batch_tracker,
+            component_dispatcher, gossip,
+            completer, block_store, batch_tracker,
             global_state_db, self.get_chain_head_state_root_hash,
             receipt_store, event_broadcaster, permission_verifier,
             component_thread_pool, client_thread_pool,
@@ -387,8 +373,6 @@ class Validator:
         self._client_thread_pool = client_thread_pool
         self._sig_pool = sig_pool
 
-        self._context_manager = context_manager
-        self._transaction_executor = transaction_executor
         self._gossip = gossip
 
         self._journal = journal
@@ -431,9 +415,6 @@ class Validator:
         self._component_thread_pool.shutdown(wait=True)
         self._client_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
-
-        self._transaction_executor.stop()
-        self._context_manager.stop()
 
         self._journal.stop()
 

@@ -15,7 +15,6 @@
 import logging
 
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.execution import tp_state_handlers
 
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
@@ -24,7 +23,6 @@ from sawtooth_validator.journal.back_pressure_handlers import \
 
 from sawtooth_validator.gossip import structure_verifier
 
-from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 
 from sawtooth_validator.gossip import signature_verifier
@@ -52,8 +50,6 @@ LOGGER = logging.getLogger(__name__)
 def add(
         dispatcher,
         gossip,
-        context_manager,
-        executor,
         completer,
         block_store,
         batch_tracker,
@@ -68,49 +64,6 @@ def add(
         journal,
         public_key,
 ):
-
-    # -- Transaction Processor -- #
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_RECEIPT_ADD_DATA_REQUEST,
-        tp_state_handlers.TpReceiptAddDataHandler(context_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_EVENT_ADD_REQUEST,
-        tp_state_handlers.TpEventAddHandler(context_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_STATE_DELETE_REQUEST,
-        tp_state_handlers.TpStateDeleteHandler(context_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_STATE_GET_REQUEST,
-        tp_state_handlers.TpStateGetHandler(context_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_STATE_SET_REQUEST,
-        tp_state_handlers.TpStateSetHandler(context_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_REGISTER_REQUEST,
-        processor_handlers.ProcessorRegisterValidationHandler(),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_REGISTER_REQUEST,
-        processor_handlers.ProcessorRegisterHandler(
-            executor.processor_manager),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.TP_UNREGISTER_REQUEST,
-        processor_handlers.ProcessorUnRegisterHandler(
-            executor.processor_manager),
-        thread_pool)
 
     # -- Client -- #
     dispatcher.add_handler(

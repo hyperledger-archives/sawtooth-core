@@ -18,6 +18,8 @@
 import os
 import tempfile
 import unittest
+import hashlib
+import time
 from unittest.mock import Mock
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -47,17 +49,68 @@ from sawtooth_validator.server.events.handlers \
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
-from sawtooth_validator.execution.tp_state_handlers import TpEventAddHandler
-
 from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import client_event_pb2
+from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
-from sawtooth_validator.protobuf import state_context_pb2
+from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
-from test_scheduler.yaml_scheduler_tester import create_batch
-from test_scheduler.yaml_scheduler_tester import create_transaction
+
+def create_transaction(payload, signer, inputs=None,
+                       outputs=None, dependencies=None):
+    addr = '000000' + hashlib.sha512(payload).hexdigest()[:64]
+
+    if inputs is None:
+        inputs = [addr]
+
+    if outputs is None:
+        outputs = [addr]
+
+    if dependencies is None:
+        dependencies = []
+
+    header = transaction_pb2.TransactionHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        family_name='scheduler_test',
+        family_version='1.0',
+        inputs=inputs,
+        outputs=outputs,
+        dependencies=dependencies,
+        nonce=str(time.time()),
+        payload_sha512=hashlib.sha512(payload).hexdigest(),
+        batcher_public_key=signer.get_public_key().as_hex())
+
+    header_bytes = header.SerializeToString()
+
+    signature = signer.sign(header_bytes)
+
+    transaction = transaction_pb2.Transaction(
+        header=header_bytes,
+        payload=payload,
+        header_signature=signature)
+
+    return transaction, header
+
+
+def create_batch(transactions, signer):
+    transaction_ids = [t.header_signature for t in transactions]
+
+    header = batch_pb2.BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=transaction_ids)
+
+    header_bytes = header.SerializeToString()
+
+    signature = signer.sign(header_bytes)
+
+    batch = batch_pb2.Batch(
+        header=header_bytes,
+        transactions=transactions,
+        header_signature=signature)
+
+    return batch
 
 
 def create_block(block_num=85,
@@ -435,16 +488,3 @@ class EventBroadcasterTest(unittest.TestCase):
         mock_service.send.assert_called_with(
             validator_pb2.Message.CLIENT_EVENTS,
             event_list, connection_id="test_conn_id", one_way=True)
-
-
-class TpEventAddHandlerTest(unittest.TestCase):
-    def test_add_event(self):
-        event = events_pb2.Event(event_type="add_event")
-        mock_context_manager = Mock()
-        handler = TpEventAddHandler(mock_context_manager)
-        request = state_context_pb2.TpEventAddRequest(
-            event=event).SerializeToString()
-
-        response = handler.handle("test_conn_id", request)
-
-        self.assertEqual(HandlerStatus.RETURN, response.status)
