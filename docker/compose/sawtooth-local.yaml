@@ -17,32 +17,6 @@ version: "2.1"
 
 services:
 
-  settings-tp:
-    image: sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../../:/project/sawtooth-core
-    depends_on:
-      - validator
-    command: settings-tp -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
-  intkey-tp-python:
-    image: hyperledger/sawtooth-intkey-tp-python:nightly
-    container_name: sawtooth-intkey-tp-python-local
-    depends_on:
-      - validator
-    command: intkey-tp-python -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
-  xo-tp-python:
-    image: hyperledger/sawtooth-xo-tp-python:nightly
-    container_name: sawtooth-xo-tp-python-local
-    depends_on:
-      - validator
-    command: xo-tp-python -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
   validator:
     image: sawtooth-validator:latest
     container_name: sawtooth-validator-local

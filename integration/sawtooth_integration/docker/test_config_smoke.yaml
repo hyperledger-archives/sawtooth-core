@@ -17,24 +17,6 @@ version: "2.1"
 
 services:
 
-  settings-tp:
-    build:
-      context: ../../..
-      dockerfile: ./families/settings/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: settings-tp -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
   validator:
     build:
       context: ../../..

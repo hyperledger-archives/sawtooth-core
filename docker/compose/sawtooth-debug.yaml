@@ -75,31 +75,6 @@ services:
           --bind network:tcp://eth0:8800
       "
 
-  settings-tp:
-    build:
-      context: ../..
-      dockerfile: docker/sawtooth-debug-python
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    volumes:
-      - ../../:/project/sawtooth-core
-    image: debug-sawtooth-python
-    container_name: debug-settings-tp
-    cap_add:
-      - SYS_PTRACE
-    depends_on:
-      - validator
-    command: settings-tp -vv -C tcp://validator:4004
-
-  intkey-tp-python:
-    image: hyperledger/sawtooth-intkey-tp-python:nightly
-    container_name: intkey-tp-python
-    depends_on:
-      - validator
-    command: intkey-tp-python -vv -C tcp://validator:4004
-
   rest-api:
     build:
       context: ../..

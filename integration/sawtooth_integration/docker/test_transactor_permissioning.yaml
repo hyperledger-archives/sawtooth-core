@@ -17,59 +17,6 @@ version: "2.1"
 
 services:
 
-  settings-tp:
-    build:
-      context: ../../..
-      dockerfile: ./families/settings/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-settings-tp$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: settings-tp -vv -C tcp://validator:4004
-
-  identity-tp:
-    build:
-      context: ../../..
-      dockerfile: ./families/identity/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-identity-tp$INSTALL_TYPE:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: identity-tp -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
-  intkey-tp-python:
-    image: hyperledger/sawtooth-intkey-tp-python:nightly
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: intkey-tp-python -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
-  xo-tp-python:
-    image: hyperledger/sawtooth-xo-tp-python:nightly
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: xo-tp-python -vv -C tcp://validator:4004
-    stop_signal: SIGKILL
-
   #
   # This validator depends on test_transactor_permissioning.sh which runs
   # before the validator starts up. This script makes policy files and
