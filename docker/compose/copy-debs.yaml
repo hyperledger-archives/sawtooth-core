@@ -16,15 +16,6 @@ version: '3.6'
 
 services:
 
-  settings-tp:
-    image: sawtooth-settings-tp:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   validator:
     image: sawtooth-validator:${ISOLATION_ID}
     volumes:
@@ -70,35 +61,8 @@ services:
         cp /tmp/*.deb /build/debs
       "
 
-  block-info-tp:
-    image: sawtooth-block-info-tp:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  identity-tp:
-    image: sawtooth-identity-tp:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
   integration:
     image: sawtooth-integration:${ISOLATION_ID}
-    volumes:
-      - ../../build/debs:/build/debs
-    command: |
-      bash -c "
-        cp /tmp/*.deb /build/debs
-      "
-
-  smallbank-tp-rust:
-    image: sawtooth-smallbank-tp-rust:${ISOLATION_ID}
     volumes:
       - ../../build/debs:/build/debs
     command: |
