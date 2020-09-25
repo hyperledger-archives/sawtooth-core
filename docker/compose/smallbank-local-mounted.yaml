@@ -17,24 +17,6 @@ version: "2.1"
 
 services:
 
-  settings-tp:
-    image: sawtooth-settings-tp:latest
-    volumes:
-      - ../../:/project/sawtooth-core
-    container_name: sawtooth-settings-tp-default
-    depends_on:
-      - validator
-    command: settings-tp -vv --connect tcp://validator:4004
-
-  smallbank-tp-rust:
-    image: sawtooth-smallbank-tp-rust:latest
-    container_name: sawtooth-smallbank-tp-rust-default
-    volumes:
-      - ../../:/project/sawtooth-core
-    depends_on:
-      - validator
-    command: smallbank_rust -vv -C tcp://validator:4004
-
   validator:
     image: sawtooth-validator-mounted:latest
     container_name: sawtooth-validator-mounted

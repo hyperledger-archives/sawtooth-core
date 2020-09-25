@@ -14,11 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-from unittest.mock import Mock
 
 from sawtooth_validator.database.dict_database import DictDatabase
-from sawtooth_validator.execution.tp_state_handlers import \
-    TpReceiptAddDataHandler
 from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
 from sawtooth_validator.journal.receipt_store import \
     ClientReceiptGetRequestHandler
@@ -33,8 +30,6 @@ from sawtooth_validator.protobuf.client_receipt_pb2 import \
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetResponse
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.state_context_pb2 import \
-    TpReceiptAddDataRequest
 
 
 class ReceiptStoreTest(unittest.TestCase):
@@ -125,14 +120,3 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
         self.assertEqual(HandlerStatus.RETURN, response.status)
         self.assertEqual(ClientReceiptGetResponse.NO_RESOURCE,
                          response.message_out.status)
-
-
-class TpReceiptAddDataHandlerTest(unittest.TestCase):
-    def test_add_event(self):
-        mock_add_receipt_data = Mock()
-        handler = TpReceiptAddDataHandler(mock_add_receipt_data)
-        request = TpReceiptAddDataRequest().SerializeToString()
-
-        response = handler.handle("test_conn_id", request)
-
-        self.assertEqual(HandlerStatus.RETURN, response.status)

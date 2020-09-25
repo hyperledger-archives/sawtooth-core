@@ -21,10 +21,6 @@ from concurrent.futures import Executor
 
 from sawtooth_validator.consensus.notifier import ConsensusNotifier
 
-from sawtooth_validator.execution.scheduler import Scheduler
-from sawtooth_validator.execution.scheduler import BatchExecutionResult
-from sawtooth_validator.execution.scheduler import TxnExecutionResult
-
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
 
@@ -84,89 +80,6 @@ class MockNetwork:
 
     def clear(self):
         self.messages = []
-
-
-class MockScheduler(Scheduler):
-    def __init__(self, batch_execution_result=True):
-        self.batches = {}
-        self.batch_execution_result = batch_execution_result
-
-    def add_batch(self, batch, state_hash=None, required=False):
-        self.batches[batch.header_signature] = batch
-
-    def get_batch_execution_result(self, batch_signature):
-        result = True
-        if self.batch_execution_result is None:
-            batch = self.batches[batch_signature]
-            for txn in batch.transactions:
-                if txn.payload == b'BAD':
-                    result = False
-        else:
-            result = self.batch_execution_result
-
-        return BatchExecutionResult(
-            is_valid=result,
-            state_hash='0' * 70)
-
-    def get_transaction_execution_results(self, batch_signature):
-        txn_execution_results = []
-        is_valid_always_false = False
-        if not self.batch_execution_result:
-            is_valid_always_false = True
-
-        batch = self.batches[batch_signature]
-        for txn in batch.transactions:
-            if is_valid_always_false:
-                is_valid = False
-                context_id = None
-            else:
-                if txn.payload == b'BAD':
-                    is_valid = False
-                    context_id = None
-                else:
-                    is_valid = True
-                    context_id = "test"
-            txn_execution_results.append(
-                TxnExecutionResult(
-                    signature=txn.header_signature,
-                    is_valid=is_valid,
-                    context_id=context_id,
-                    state_hash=None))
-        return txn_execution_results
-
-    def set_transaction_execution_result(
-            self, txn_signature, is_valid, context_id):
-        raise NotImplementedError()
-
-    def next_transaction(self):
-        raise NotImplementedError()
-
-    def unschedule_incomplete_batches(self):
-        pass
-
-    def is_transaction_in_schedule(self, txn_id):
-        raise NotImplementedError()
-
-    def finalize(self):
-        pass
-
-    def complete(self, block):
-        return True
-
-    def __iter__(self):
-        raise NotImplementedError()
-
-    def get_transaction(self, index):
-        raise NotImplementedError()
-
-    def count(self):
-        raise NotImplementedError()
-
-    def cancel(self):
-        pass
-
-    def is_cancelled(self):
-        return False
 
 
 class MockChainIdManager:

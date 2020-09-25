@@ -16,31 +16,6 @@ version: '3.6'
 
 services:
 
-  settings-tp:
-    build:
-      context: .
-      dockerfile: families/settings/Dockerfile
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
-    image: sawtooth-settings-tp-local:${ISOLATION_ID}
-    volumes:
-      - ./:/project/sawtooth-core
-    container_name: sawtooth-settings-tp-local
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        cd families/settings/sawtooth_settings
-        cargo build --release
-        mkdir -p bin
-        cp target/release/settings-tp bin/settings-tp
-        settings-tp -vv -C tcp://validator:4004
-      "
-    stop_signal: SIGKILL
-
-
   client:
     build:
       context: .
@@ -146,26 +121,4 @@ services:
       - validator
     command: |
         devmode-engine-rust -v --connect tcp://validator:5050
-    stop_signal: SIGKILL
-
-  intkey-tp-python:
-    image: hyperledger/sawtooth-intkey-tp-python:nightly
-    container_name: sawtooth-intkey-tp-python
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        intkey-tp-python -vv -C tcp://validator:4004
-      "
-    stop_signal: SIGKILL
-
-  xo-tp-python:
-    image: hyperledger/sawtooth-xo-tp-python:nightly
-    container_name: sawtooth-xo-tp-python
-    depends_on:
-      - validator
-    command: |
-      bash -c "
-        xo-tp-python -vv -C tcp://validator:4004
-      "
     stop_signal: SIGKILL
