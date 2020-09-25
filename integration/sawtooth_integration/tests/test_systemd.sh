@@ -20,9 +20,6 @@
 services="
 validator
 rest-api
-settings-tp
-block-info-tp
-identity-tp
 "
 
 if [ -z $ISOLATION_ID ]
