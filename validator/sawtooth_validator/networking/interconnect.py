@@ -658,7 +658,8 @@ class _SendReceive:
         while True:
             try:
                 yield from self._monitor_sock.recv_multipart()
-                self._check_connections()
+                if self._check_connections is not None:
+                    self._check_connections()
             except CancelledError:  # pylint: disable=try-except-raise
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
