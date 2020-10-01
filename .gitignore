@@ -63,6 +63,7 @@
 /docs/source/sdks/
 
 /integration/**/__pycache__/
+/integration/.tmp
 
 /rest_api/build/
 /rest_api/sawtooth_rest_api/protobuf/

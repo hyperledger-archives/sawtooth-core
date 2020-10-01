@@ -29,9 +29,9 @@ import cbor
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 
-from sawtooth_validator.journal.block_info_injector \
+from sawtooth_validator.journal.injectors.block_info_injector \
     import CONFIG_ADDRESS
-from sawtooth_validator.journal.block_info_injector \
+from sawtooth_validator.journal.injectors.block_info_injector \
     import create_block_address
 from sawtooth_validator.protobuf import block_info_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
