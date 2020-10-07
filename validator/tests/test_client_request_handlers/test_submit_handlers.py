@@ -262,8 +262,9 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         def delayed_add():
             sleep(1)
+            block = self._store.make_mock_block('e')
             self._store.add_block('e')
-            self._tracker.chain_update(None, [])
+            self._tracker.chain_update(block, [])
 
         Thread(target=delayed_add).start()
 
