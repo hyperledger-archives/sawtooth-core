@@ -15,6 +15,7 @@
 
 import abc
 from threading import RLock
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.journal.publisher import InvalidTransactionObserver
@@ -61,9 +62,10 @@ class BatchTracker(ChainObserver,
         """Removes batches from the pending cache if found in the block store,
         and notifies any observers.
         """
+        block = BlockWrapper.wrap(block)
         with self._lock:
-            for batch_id in self._pending.copy():
-                if self._batch_committed(batch_id):
+            for batch_id in block.header.batch_ids:
+                if batch_id in self._pending:
                     self._pending.remove(batch_id)
                     self._update_observers(batch_id,
                                            ClientBatchStatus.COMMITTED)
