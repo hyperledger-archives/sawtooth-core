@@ -198,7 +198,7 @@ class MetricsCollectorHandle:
             identifier.insert(0, instance.__class__.__name__)
         if self._module_name is not None:
             identifier.insert(0, self._module_name)
-        return instance
+        return identifier
 
 
 class NoOpMetricsRegistry:
