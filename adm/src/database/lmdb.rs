@@ -20,7 +20,7 @@ use std::path::Path;
 
 use lmdb_zero as lmdb;
 
-use database::error::DatabaseError;
+use crate::database::error::DatabaseError;
 
 const DEFAULT_SIZE: usize = 1 << 40; // 1024 ** 4
 
@@ -238,7 +238,7 @@ impl<'a> LmdbDatabaseWriter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config;
+    use crate::config;
 
     /// Asserts that there are COUNT many objects in DB.
     fn assert_database_count(count: usize, db: &LmdbDatabase) {

@@ -24,15 +24,15 @@ use protobuf;
 use protobuf::Message;
 use serde_yaml;
 
-use proto::block::{Block, BlockHeader};
-use proto::transaction::TransactionHeader;
+use crate::proto::block::{Block, BlockHeader};
+use crate::proto::transaction::TransactionHeader;
 
-use blockstore::Blockstore;
-use config;
-use database::error::DatabaseError;
-use database::lmdb;
-use err::CliError;
-use wrappers::Block as BlockWrapper;
+use crate::blockstore::Blockstore;
+use crate::config;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb;
+use crate::err::CliError;
+use crate::wrappers::Block as BlockWrapper;
 
 const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
