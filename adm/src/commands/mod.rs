@@ -15,6 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
+#[cfg(feature = "client-cli")]
+pub mod batch;
+
 pub mod blockstore;
 pub mod genesis;
 pub mod keygen;
+
+#[cfg(feature = "client-cli")]
+pub use sawtooth;

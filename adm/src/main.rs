@@ -28,6 +28,9 @@ mod wrappers;
 
 use clap::{clap_app, ArgMatches};
 
+#[cfg(feature = "client-cli")]
+use clap::{AppSettings, Arg, SubCommand};
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
@@ -37,6 +40,8 @@ fn main() {
         ("blockstore", Some(args)) => commands::blockstore::run(args),
         ("keygen", Some(args)) => commands::keygen::run(args),
         ("genesis", Some(args)) => commands::genesis::run(args),
+        #[cfg(feature = "client-cli")]
+        ("batch", Some(args)) => commands::batch::run(args),
         _ => {
             println!("Invalid subcommand; Pass --help for usage.");
             Ok(())
@@ -106,6 +111,47 @@ fn parse_args<'a>() -> ArgMatches<'a> {
              "skip the check for settings that are required at genesis (necessary if using a
               settings transaction family other than sawtooth_settings)"))
         (@arg verbose: -v... "increase the logging level.")
+    );
+
+    #[cfg(feature = "client-cli")]
+    let app = app.subcommand(
+        SubCommand::with_name("batch")
+            .about(
+                "display batch information and submit batches to the
+                    validator via the REST API",
+            )
+            .setting(AppSettings::SubcommandRequiredElseHelp)
+            .subcommand(
+                SubCommand::with_name("list")
+                    .about(
+                        "display all information about all committed Batches for\n\
+                            the specified validator, including the Batch id, public\n\
+                            keys of all signers, and number of transactions in each Batch",
+                    )
+                    .arg(Arg::with_name("url").long("url").takes_value(true).help(
+                        "identify the URL of the validator's\n\
+                            REST API (default: http://localhost:8008)",
+                    ))
+                    .arg(
+                        Arg::with_name("username")
+                            .long("user")
+                            .short("u")
+                            .takes_value(true)
+                            .help(
+                                "specify the user to authorize\n\
+                                request\n\
+                                format: USERNAME[:PASSWORD]",
+                            ),
+                    )
+                    .arg(
+                        Arg::with_name("format")
+                            .long("format")
+                            .short("F")
+                            .takes_value(true)
+                            .possible_values(&["csv", "json", "yaml", "default"])
+                            .help("choose the output format"),
+                    ),
+            ),
     );
     app.get_matches()
 }
