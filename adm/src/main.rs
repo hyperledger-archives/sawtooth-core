@@ -16,15 +16,7 @@
  */
 
 #[macro_use]
-extern crate clap;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate sawtooth_sdk;
-extern crate serde;
-#[macro_use]
 extern crate serde_derive;
-extern crate serde_yaml;
 
 mod blockstore;
 mod commands;
@@ -34,7 +26,7 @@ mod err;
 mod proto;
 mod wrappers;
 
-use clap::ArgMatches;
+use clap::{clap_app, ArgMatches};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
