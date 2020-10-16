@@ -18,7 +18,7 @@ use std;
 
 use protobuf;
 
-use proto;
+use crate::proto;
 
 #[derive(Debug)]
 pub enum Error {

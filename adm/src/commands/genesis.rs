@@ -24,13 +24,13 @@ use clap::ArgMatches;
 use protobuf;
 use protobuf::Message;
 
-use proto::batch::{Batch, BatchList};
-use proto::genesis::GenesisData;
-use proto::settings::{SettingProposal, SettingsPayload, SettingsPayload_Action};
-use proto::transaction::TransactionHeader;
+use crate::proto::batch::{Batch, BatchList};
+use crate::proto::genesis::GenesisData;
+use crate::proto::settings::{SettingProposal, SettingsPayload, SettingsPayload_Action};
+use crate::proto::transaction::TransactionHeader;
 
-use config;
-use err::CliError;
+use crate::config;
+use crate::err::CliError;
 
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let genesis_file_path = if args.is_present("output") {
@@ -183,8 +183,8 @@ mod tests {
 
     use protobuf::RepeatedField;
 
-    use proto::batch::BatchHeader;
-    use proto::transaction::Transaction;
+    use crate::proto::batch::BatchHeader;
+    use crate::proto::transaction::Transaction;
 
     fn get_required_settings_batch() -> Batch {
         let required_settings = vec![
