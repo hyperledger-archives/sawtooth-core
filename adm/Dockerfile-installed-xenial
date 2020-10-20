@@ -44,7 +44,7 @@ COPY . /project
 WORKDIR /project/adm
 
 RUN export VERSION=$(../bin/get_version) \
- && sed -i -e s/version.*$/version\ =\ \"${VERSION}\"/ Cargo.toml \
+ && sed -i -e "0,/version.*$/ s/version.*$/version\ =\ \"${VERSION}\"/" Cargo.toml \
  && /root/.cargo/bin/cargo deb --deb-version $VERSION
 
 # -------------=== admin tools docker build ===-------------
