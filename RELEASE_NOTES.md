@@ -49,7 +49,7 @@
 ### sawtooth-core:
 - Support for raw transaction headers, as specified in [Sawtooth RFC #23](https://github.com/hyperledger/sawtooth-rfcs/blob/master/text/0023-raw-txn-header.md).
   This feature is backward compatible via the use of a protocol version indicator.
-- All core transaction families are compatible with [Sawtooth Sabre release 0.4](https://sawtooth.hyperledger.org/docs/sabre/releases/0.4.0/).
+- All core transaction families are compatible with [Sawtooth Sabre release 0.4](https://sawtooth.hyperledger.org/docs/1.2/sabre/sabre_transaction_family.html)
 - A new BlockManager has been implemented, as specified in [Sawtooth RFC #5](https://github.com/hyperledger/sawtooth-rfcs/pull/5).
   This new feature improves block management and helps remove a known race
   condition that can cause network nodes to fork.
@@ -75,14 +75,14 @@
 
 ### Documentation:
 - Improved summary of the supported consensus algorithms: PBFT, PoET, Raft, and
-  Devmode. See [Introduction](https://sawtooth.hyperledger.org/docs/core/releases/1.2.3/introduction.html).
+  Devmode. See [Introduction](https://sawtooth.hyperledger.org/docs/1.2/)
 - Complete procedures for configuring PBFT consensus on a Sawtooth node and
   changing network membership. For procedures to configure either PBFT or PoET
   consensus, see:
-  - [Creating a Sawtooth Test Network](https://sawtooth.hyperledger.org/docs/core/releases/1.2.3/app_developers_guide/creating_sawtooth_network.html) (Application Developer’s Guide)
-  - [Setting Up a Sawtooth Network](https://sawtooth.hyperledger.org/docs/core/releases/1.2.3/sysadmin_guide/setting_up_sawtooth_network.html) (System Administrator’s Guide)
+  - [Creating a Sawtooth Test Network](https://sawtooth.hyperledger.org/docs/1.2/app_developers_guide/creating_sawtooth_network.html) (Application Developer’s Guide)
+  - [Setting Up a Sawtooth Network](https://sawtooth.hyperledger.org/docs/1.2/sysadmin_guide/setting_up_sawtooth_network.html) (System Administrator’s Guide)
 - New Swift and Java tutorials, including SDK reference documentation, for
   writing native mobile client applications for Sawtooth. See the Java and Swift
-  links in [Using the Sawtooth SDKs](https://sawtooth.hyperledger.org/docs/core/releases/1.2.3/app_developers_guide/using_the_sdks.html)
+  links in [Using the Sawtooth SDKs](https://sawtooth.hyperledger.org/docs/1.2/app_developers_guide/using_the_sdks.html)
 - Technical corrections, bug fixes, and general improvements throughout the
   documentation.
