@@ -94,18 +94,12 @@ node ('master') {
             '''
         }
 
-        stage ("Build documentation") {
-            sh 'docker build . -f ci/sawtooth-build-docs -t sawtooth-build-docs:$ISOLATION_ID'
-            sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-docs:$ISOLATION_ID'
-        }
-
         stage("Archive Build artifacts") {
             archiveArtifacts artifacts: '*.tgz, *.zip'
             archiveArtifacts artifacts: 'build/debs/go/*.deb'
             archiveArtifacts artifacts: 'build/debs/python/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'coverage/html/*'
-            archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
         }
     }
 }
