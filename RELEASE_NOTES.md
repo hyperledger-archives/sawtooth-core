@@ -1,5 +1,24 @@
 # Release Notes
 
+## Changes in Sawtooth 1.2.6
+
+### sawtooth-core:
+
+  - Add context to the various EnvironmentErrors that can occur in the
+    blockstore operations, in order to make debugging easier.
+  - Reduce visibility of modules in validator library to crate-level
+  - Enable IPv6 support in the validator
+  - Support listening on an IPv6 address in REST API
+  - Handle an error in sawtooth-cli when schema is invalid
+  - Correct metric for "chain head moved"
+  - Fix reading from length-delimited input in sawadm
+
+### Documentation:
+
+  - Add missing documentation about Rust SDK
+  - Clarify consensus compatibility info
+  - Fix typos and broken links
+
 ## Changes in Sawtooth 1.2.5
 
 ### sawtooth-core:
