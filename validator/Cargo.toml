@@ -6,7 +6,7 @@ authors = ["Intel Corporation"]
 [dependencies]
 clap = "2"
 cpython = "0.2"
-cylinder = "0.1"
+cylinder = "0.2"
 hex = "0.3"
 log = { version = "0.4", features = ["std"] }
 libc = ">=0.2.35"
