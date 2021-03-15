@@ -234,7 +234,7 @@ def process_blocks(
             # If we can create the view, all is good, move on to next block
             state_view_factory.create_view(block.state_root_hash)
 
-        except KeyError:
+        except KeyError as e:
             # If creating the view fails, the root is missing so we should
             # recompute it and verify it
             new_root = execute_batches(
@@ -246,7 +246,7 @@ def process_blocks(
             if new_root != block.state_root_hash:
                 raise InvalidChainError(
                     "Computed state root {} does not match state root in block"
-                    " {}".format(new_root, block.state_root_hash))
+                    " {}".format(new_root, block.state_root_hash)) from e
 
         prev_state_root = block.state_root_hash
 

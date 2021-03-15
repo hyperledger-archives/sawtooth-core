@@ -22,7 +22,7 @@ from sawtooth_validator.ffi import OwnedPointer
 
 class NativeLmdbDatabase(OwnedPointer):
     def __init__(self, path, indexes=None, _size=1024**4):
-        super(NativeLmdbDatabase, self).__init__('lmdb_database_drop')
+        super().__init__('lmdb_database_drop')
 
         if indexes is None:
             indexes = []

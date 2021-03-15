@@ -199,18 +199,19 @@ class RestClient:
         except requests.exceptions.HTTPError as e:
             return (e.response.status_code, e.response.reason)
         except RemoteDisconnected as e:
-            raise CliException(e)
+            raise CliException(e) from e
         except (requests.exceptions.MissingSchema,
                 requests.exceptions.InvalidURL) as e:
-            raise CliException(e)
+            raise CliException(e) from e
         except requests.exceptions.InvalidSchema as e:
             raise CliException(
                 ('Schema not valid in "{}": '
-                 'make sure URL has valid schema').format(self._base_url))
+                 'make sure URL has valid schema').format(
+                    self._base_url)) from e
         except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
-                 'make sure URL is correct').format(self._base_url))
+                 'make sure URL is correct').format(self._base_url)) from e
 
     @staticmethod
     def _format_queries(queries):

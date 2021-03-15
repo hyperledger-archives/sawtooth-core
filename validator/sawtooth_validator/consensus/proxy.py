@@ -185,7 +185,7 @@ class ConsensusProxy:
                 previous_block = next(
                     self._block_manager.get([previous_id.hex()]))
             except StopIteration:
-                raise UnknownBlock()
+                raise UnknownBlock() from StopIteration
             self._block_publisher.initialize_block(previous_block)
         else:
             self._block_publisher.initialize_block(
@@ -217,35 +217,35 @@ class ConsensusProxy:
                 for block_id in block_ids
             ]
         except KeyError as key_error:
-            raise UnknownBlock(key_error.args[0])
+            raise UnknownBlock(key_error.args[0]) from KeyError
 
     def validate_block(self, block_id):
         """Instruct the chain controller to validate the given block."""
         try:
             block = next(self._block_manager.get([block_id]))
         except StopIteration as stop_iteration:
-            raise UnknownBlock(stop_iteration.args[0])
+            raise UnknownBlock(stop_iteration.args[0]) from stop_iteration
         self._chain_controller.validate_block(block)
 
     def commit_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration as stop_iteration:
-            raise UnknownBlock(stop_iteration.args[0])
+            raise UnknownBlock(stop_iteration.args[0]) from stop_iteration
         self._chain_controller.commit_block(block)
 
     def ignore_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration:
-            raise UnknownBlock()
+            raise UnknownBlock() from StopIteration
         self._chain_controller.ignore_block(block)
 
     def fail_block(self, block_id):
         try:
             block = next(self._block_manager.get([block_id.hex()]))
         except StopIteration:
-            raise UnknownBlock()
+            raise UnknownBlock() from StopIteration
         self._chain_controller.fail_block(block)
 
     # Using blockstore and state database
@@ -339,7 +339,7 @@ class ConsensusProxy:
 
     def _get_blocks(self, block_ids):
         block_iter = self._block_manager.get(block_ids)
-        blocks = [b for b in block_iter]
+        blocks = list(block_iter)
         if len(blocks) != len(block_ids):
             raise UnknownBlock()
 

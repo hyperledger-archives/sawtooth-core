@@ -62,7 +62,7 @@ class StateViewTest(unittest.TestCase):
 
         # test that the initial state view returns empty values
         self.assertEqual([], initial_state_view.addresses())
-        self.assertEqual({}, {k: v for k, v in initial_state_view.leaves('')})
+        self.assertEqual({}, dict(initial_state_view.leaves('')))
         with self.assertRaises(KeyError):
             initial_state_view.get('abcd')
 
@@ -78,4 +78,4 @@ class StateViewTest(unittest.TestCase):
         # Check that the values can be properly read back
         self.assertEqual('hello', next_state_view.get('abcd').decode())
         self.assertEqual({'abcd': 'hello'.encode()},
-                         {k: v for k, v in next_state_view.leaves('')})
+                         dict(next_state_view.leaves('')))

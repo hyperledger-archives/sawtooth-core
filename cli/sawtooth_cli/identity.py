@@ -263,7 +263,7 @@ def _do_identity_policy_create(args):
                 batch_file.write(batch_list.SerializeToString())
         except IOError as e:
             raise CliException(
-                'Unable to write to batch file: {}'.format(str(e)))
+                'Unable to write to batch file: {}'.format(str(e))) from e
     elif args.url is not None:
         rest_client = RestClient(args.url)
         rest_client.send_batches(batch_list)
@@ -336,7 +336,7 @@ def _do_identity_policy_list(args):
                         Policy.EntryType.Name(entry.type) + " " + entry.key)
                 writer.writerow(output)
         except csv.Error:
-            raise CliException('Error writing CSV')
+            raise CliException('Error writing CSV') from CliException
     elif args.format == 'json' or args.format == 'yaml':
         output = {}
         for policy in printable_policies:
@@ -379,7 +379,7 @@ def _do_identity_role_create(args):
                 batch_file.write(batch_list.SerializeToString())
         except IOError as e:
             raise CliException(
-                'Unable to write to batch file: {}'.format(str(e)))
+                'Unable to write to batch file: {}'.format(str(e))) from e
     elif args.url is not None:
         rest_client = RestClient(args.url)
         rest_client.send_batches(batch_list)
@@ -447,7 +447,7 @@ def _do_identity_role_list(args):
             for role in printable_roles:
                 writer.writerow([role.name, role.policy_name])
         except csv.Error:
-            raise CliException('Error writing CSV')
+            raise CliException('Error writing CSV') from CliException
     elif args.format == 'json' or args.format == 'yaml':
         roles_snapshot = {
             'head': head,
@@ -556,12 +556,13 @@ def _read_signer(key_filename):
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
     except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
+        raise CliException('Unable to read key file: {}'.format(str(e))) from e
 
     try:
         private_key = Secp256k1PrivateKey.from_hex(signing_key)
     except ParseError as e:
-        raise CliException('Unable to read key in file: {}'.format(str(e)))
+        raise CliException(
+            'Unable to read key in file: {}'.format(str(e))) from e
 
     context = create_context('secp256k1')
     crypto_factory = CryptoFactory(context)

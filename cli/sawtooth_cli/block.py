@@ -116,8 +116,7 @@ def do_block(args):
             fmt.print_csv(headers, blocks, parse_block_row)
 
         elif args.format == 'json' or args.format == 'yaml':
-            data = [{k: d for k, d in zip(keys, parse_block_row(b))}
-                    for b in blocks]
+            data = [dict(zip(keys, parse_block_row(b)))for b in blocks]
 
             if args.format == 'yaml':
                 fmt.print_yaml(data)

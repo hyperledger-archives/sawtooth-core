@@ -89,7 +89,7 @@ def do_transaction(args):
             fmt.print_csv(headers, transactions, parse_txn_row)
 
         elif args.format == 'json' or args.format == 'yaml':
-            data = [{k: d for k, d in zip(keys, parse_txn_row(b, False))}
+            data = [dict(zip(keys, parse_txn_row(b, False)))
                     for b in transactions]
 
             if args.format == 'yaml':

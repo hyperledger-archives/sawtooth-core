@@ -484,7 +484,7 @@ class _ContextReader(InstrumentedThread):
 
     def __init__(self, database, state_view_factory,
                  address_queue, inflated_addresses):
-        super(_ContextReader, self).__init__(name='_ContextReader')
+        super().__init__(name='_ContextReader')
         self._database = database
         self._state_view_factory = state_view_factory
         self._addresses = address_queue
@@ -523,7 +523,7 @@ class _ContextWriter(InstrumentedThread):
             contexts (_ThreadsafeContexts): The datastructures to write the
                 address-value pairs to.
         """
-        super(_ContextWriter, self).__init__(name='_ContextWriter')
+        super().__init__(name='_ContextWriter')
         self._inflated_addresses = inflated_addresses
         self._contexts = contexts
 
@@ -534,7 +534,7 @@ class _ContextWriter(InstrumentedThread):
             if context_id_list_tuple is _SHUTDOWN_SENTINEL:
                 break
             c_id, inflated_address_list = context_id_list_tuple
-            inflated_value_map = {k: v for k, v in inflated_address_list}
+            inflated_value_map = dict(inflated_address_list)
             if c_id in self._contexts:
                 self._contexts[c_id].set_from_tree(inflated_value_map)
 

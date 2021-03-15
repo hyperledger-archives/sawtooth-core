@@ -48,7 +48,7 @@ class BlockCache(MutableMapping):
             self.touch()
 
     def __init__(self, block_store=None, keep_time=30, purge_frequency=30):
-        super(BlockCache, self).__init__()
+        super().__init__()
         self._lock = RLock()
         self._cache = {}
         self._keep_time = keep_time

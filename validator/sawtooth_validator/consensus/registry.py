@@ -87,7 +87,7 @@ class ConsensusRegistry:
                     e for e in self._registry
                     if engine_handles_protocol(name, version, e))
             except StopIteration:
-                raise EngineNotRegistered()
+                raise EngineNotRegistered() from StopIteration
 
     def deactivate_current_engine(self):
         with self._lock:

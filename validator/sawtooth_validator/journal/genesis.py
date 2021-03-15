@@ -151,11 +151,11 @@ class GenesisController:
         except IOError:
             raise InvalidGenesisStateError(
                 "Genesis File {} specified, but unreadable".format(
-                    genesis_file))
+                    genesis_file)) from IOError
 
         initial_state_root = self._context_manager.get_first_root()
 
-        genesis_batches = [batch for batch in genesis_data.batches]
+        genesis_batches = list(genesis_data.batches)
         if genesis_batches:
             scheduler = SerialScheduler(
                 self._context_manager.get_squash_handler(),
@@ -272,7 +272,7 @@ class GenesisController:
                 config_dir=self._config_dir,
                 validator_id=self._identity_signer.get_public_key().as_hex())
         except UnknownConsensusModuleError as e:
-            raise InvalidGenesisStateError(e)
+            raise InvalidGenesisStateError(e) from e
 
     def _generate_genesis_block(self):
         """
@@ -300,7 +300,7 @@ class GenesisController:
         receipts = []
         for result in results:
             receipt = transaction_receipt_pb2.TransactionReceipt()
-            receipt.data.extend([data for data in result.data])
+            receipt.data.extend(list(result.data))
             receipt.state_changes.extend(result.state_changes)
             receipt.events.extend(result.events)
             receipt.transaction_id = result.signature

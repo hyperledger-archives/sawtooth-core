@@ -28,7 +28,7 @@ class BlockValidator(OwnedPointer):
                  block_status_store,
                  permission_verifier,
                  view_factory):
-        super(BlockValidator, self).__init__("block_validator_drop")
+        super().__init__("block_validator_drop")
 
         _to_exception(PY_LIBRARY.call("block_validator_new",
                                       block_manager.pointer,
@@ -49,7 +49,7 @@ class BlockValidator(OwnedPointer):
 class BlockValidationResultStore(OwnedPointer):
 
     def __init__(self):
-        super(BlockValidationResultStore, self).__init__(
+        super().__init__(
             "block_status_store_drop")
 
         _to_exception(LIBRARY.call("block_status_store_new",

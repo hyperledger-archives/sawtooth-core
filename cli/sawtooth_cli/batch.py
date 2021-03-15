@@ -172,8 +172,7 @@ def do_batch_list(args):
         fmt.print_csv(headers, batches, parse_batch_row)
 
     elif args.format == 'json' or args.format == 'yaml':
-        data = [{k: d for k, d in zip(keys, parse_batch_row(b))}
-                for b in batches]
+        data = [dict(zip(keys, parse_batch_row(b))) for b in batches]
 
         if args.format == 'yaml':
             fmt.print_yaml(data)
@@ -247,7 +246,7 @@ def do_batch_submit(args):
             batches = batch_pb2.BatchList()
             batches.ParseFromString(fd.read())
     except IOError as e:
-        raise CliException(e)
+        raise CliException(e) from e
 
     rest_client = RestClient(args.url, args.user)
 
