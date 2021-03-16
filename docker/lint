@@ -48,7 +48,7 @@ RUN apt-get install -y -q \
 
 RUN apt-get install -y -q --allow-downgrades \
     build-essential \
-    golang-1.11-go \
+    golang-1.13-go \
     git \
     libssl-dev \
     libzmq3-dev \
@@ -57,7 +57,7 @@ RUN apt-get install -y -q --allow-downgrades \
 
 ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/sdk/examples/xo_go
 
-ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin:/usr/lib/go-1.11/bin
+ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin:/usr/lib/go-1.13/bin
 
 RUN mkdir /go
 
