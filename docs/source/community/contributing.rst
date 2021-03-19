@@ -83,6 +83,12 @@ A pull request cannot merged until it has passed these status checks:
 * The build must pass on Jenkins
 * The PR must be approved by at least two reviewers without any
   outstanding requests for changes
+* If you are a new contributor, the PR build will fail because your GitHub ID is
+  not on the "authlist" for our Jenkins build server. But go ahead and submit
+  the PR anyway. Usually, a maintainer will restart the build, then begin the
+  process to add your GitHub ID to the authlist. To speed up the process,
+  please contact us on
+  `#sawtooth-core-dev <https://chat.hyperledger.org/channel/sawtooth-core-dev>`__.
 
 **Integrating GitHub Commits with JIRA**
 
