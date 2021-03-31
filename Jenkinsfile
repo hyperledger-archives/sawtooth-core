@@ -24,7 +24,7 @@ pipeline {
     }
 
     triggers {
-        cron(env.BRANCH_NAME == 'master' ? 'H 3 * * *' : '')
+        cron(env.BRANCH_NAME == 'main' ? 'H 3 * * *' : '')
     }
 
     options {
@@ -45,7 +45,7 @@ pipeline {
             }
             when {
                 not {
-                    branch 'master'
+                    branch 'main'
                 }
             }
         }
