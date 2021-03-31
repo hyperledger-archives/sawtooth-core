@@ -1,0 +1,29 @@
+# Copyright 2021 Cargill Incorporated
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+repository:
+  # See https://developer.github.com/v3/repos/#edit for all available settings.
+  name: sawtooth-core
+  description: Core repository for Sawtooth Distributed Ledger
+  homepage: https://wiki.hyperledger.org/display/sawtooth
+  topics: hyperledger, distributed-ledger, sawtooth, sawtooth-lake
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: false
+  default_branch: main
+  allow_squash_merge: false
+  allow_merge_commit: true
+  allow_rebase_merge: true
