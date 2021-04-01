@@ -24,7 +24,7 @@ pipeline {
     }
 
     triggers {
-        cron(env.BRANCH_NAME == 'master' ? 'H 3 * * *' : '')
+        cron(env.BRANCH_NAME == 'main' ? 'H 3 * * *' : '')
     }
 
     options {
@@ -45,33 +45,8 @@ pipeline {
             }
             when {
                 not {
-                    branch 'master'
+                    branch 'main'
                 }
-            }
-        }
-
-        stage('Check for Signed-Off Commits') {
-            steps {
-                sh '''#!/bin/bash -l
-                    if [ -v CHANGE_URL ] ;
-                    then
-                        temp_url="$(echo $CHANGE_URL |sed s#github.com/#api.github.com/repos/#)/commits"
-                        pull_url="$(echo $temp_url |sed s#pull#pulls#)"
-
-                        IFS=$'\n'
-                        for m in $(curl -s "$pull_url" | grep "message") ; do
-                            if echo "$m" | grep -qi signed-off-by:
-                            then
-                              continue
-                            else
-                              echo "FAIL: Missing Signed-Off Field"
-                              echo "$m"
-                              exit 1
-                            fi
-                        done
-                        unset IFS;
-                    fi
-                '''
             }
         }
 
