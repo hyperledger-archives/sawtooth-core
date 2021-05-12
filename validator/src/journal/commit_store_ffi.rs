@@ -21,13 +21,13 @@ use std::slice;
 
 use protobuf;
 
-use batch::Batch;
-use block::Block;
-use database::error::DatabaseError;
-use database::lmdb::LmdbDatabase;
-use journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
-use proto;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::LmdbDatabase;
+use crate::journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
+use crate::proto;
+use crate::transaction::Transaction;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -410,8 +410,8 @@ pub unsafe extern "C" fn commit_store_put_blocks(
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
-            let proto_block: proto::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
+            let proto_block: proto::block::Block = protobuf::Message::parse_from_bytes(&payload)
+                .expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
         })

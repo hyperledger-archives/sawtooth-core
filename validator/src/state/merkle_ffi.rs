@@ -14,11 +14,11 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
-use state::error::StateDatabaseError;
-use state::merkle::*;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::error::StateDatabaseError;
+use crate::state::merkle::*;
 /// This module contains all of the extern C functions for the Merkle trie
-use state::StateReader;
+use crate::state::StateReader;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::mem;

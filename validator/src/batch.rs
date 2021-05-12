@@ -15,10 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
+use crate::proto;
 use protobuf;
 
-use transaction::Transaction;
+use crate::transaction::Transaction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Batch {
@@ -50,7 +50,7 @@ impl From<Batch> for proto::batch::Batch {
 impl From<proto::batch::Batch> for Batch {
     fn from(mut proto_batch: proto::batch::Batch) -> Batch {
         let mut batch_header: proto::batch::BatchHeader =
-            protobuf::parse_from_bytes(proto_batch.get_header())
+            protobuf::Message::parse_from_bytes(proto_batch.get_header())
                 .expect("Unable to parse BatchHeader bytes");
 
         Batch {

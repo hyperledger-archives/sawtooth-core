@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#![allow(dead_code)]
+
 extern crate cbor;
 extern crate cpython;
 extern crate hex;

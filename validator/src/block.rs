@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use batch::Batch;
-use proto;
+use crate::batch::Batch;
+use crate::proto;
 use protobuf;
 use std::fmt;
 
@@ -63,7 +63,7 @@ impl From<Block> for proto::block::Block {
 impl From<proto::block::Block> for Block {
     fn from(mut proto_block: proto::block::Block) -> Self {
         let mut block_header: proto::block::BlockHeader =
-            protobuf::parse_from_bytes(proto_block.get_header())
+            protobuf::Message::parse_from_bytes(proto_block.get_header())
                 .expect("Unable to parse BlockHeader bytes");
 
         Block {

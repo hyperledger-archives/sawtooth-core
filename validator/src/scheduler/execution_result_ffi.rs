@@ -19,10 +19,10 @@ use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 
-use proto::events::Event;
-use proto::transaction_receipt::StateChange;
+use crate::proto::events::Event;
+use crate::proto::transaction_receipt::StateChange;
 
-use scheduler::TxnExecutionResult;
+use crate::scheduler::TxnExecutionResult;
 
 #[derive(Clone)]
 pub struct PyBatchExecutionResult {
@@ -113,7 +113,7 @@ impl<'source> FromPyObject<'source> for StateChange {
             .unwrap()
             .extract::<Vec<u8>>(py)?;
         let state_change: StateChange =
-            ::protobuf::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
+            ::protobuf::Message::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
         Ok(state_change)
     }
 }
@@ -124,7 +124,7 @@ impl<'source> FromPyObject<'source> for Event {
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)?;
-        let event: Event = ::protobuf::parse_from_bytes(event_bytes.as_slice()).unwrap();
+        let event: Event = ::protobuf::Message::parse_from_bytes(event_bytes.as_slice()).unwrap();
         Ok(event)
     }
 }

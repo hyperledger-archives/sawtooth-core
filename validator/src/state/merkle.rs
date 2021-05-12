@@ -29,21 +29,21 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use hashlib::sha512_digest_bytes;
+use crate::hashlib::sha512_digest_bytes;
 
 use protobuf;
 use protobuf::Message;
 
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
 
-use proto::merkle::ChangeLogEntry;
-use proto::merkle::ChangeLogEntry_Successor;
+use crate::proto::merkle::ChangeLogEntry;
+use crate::proto::merkle::ChangeLogEntry_Successor;
 
-use state::error::StateDatabaseError;
-use state::{StateIter, StateReader};
+use crate::state::error::StateDatabaseError;
+use crate::state::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
@@ -308,7 +308,7 @@ impl MerkleDatabase {
 
             if path != "" {
                 let (parent_address, path_branch) = parent_and_branch(&path);
-                let mut parent = path_map
+                let parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated or entry is deleted");
                 if let Some(old_hash_key) = parent
@@ -358,7 +358,7 @@ impl MerkleDatabase {
 
         let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
         if let Some(change_log) = current_change_log.as_mut() {
-            let mut successors = change_log.mut_successors();
+            let successors = change_log.mut_successors();
             let mut successor = ChangeLogEntry_Successor::new();
             successor.set_successor(Vec::from(successor_root_hash));
             successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
@@ -588,7 +588,7 @@ where
     let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
 
     Ok(match log_bytes {
-        Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+        Some(bytes) => Some(Message::parse_from_bytes(&bytes)?),
         None => None,
     })
 }
@@ -782,7 +782,7 @@ impl Node {
         };
 
         let children = match children_raw {
-            Some(Value::Map(mut child_map)) => {
+            Some(Value::Map(child_map)) => {
                 let mut result = BTreeMap::new();
                 for (k, v) in child_map {
                     result.insert(key_to_string(k)?, text_to_string(v)?);
@@ -823,13 +823,12 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::error::DatabaseError;
-    use database::lmdb::DatabaseReader;
-    use database::lmdb::LmdbContext;
-    use database::lmdb::LmdbDatabase;
-    use proto::merkle::ChangeLogEntry;
+    use crate::database::error::DatabaseError;
+    use crate::database::lmdb::DatabaseReader;
+    use crate::database::lmdb::LmdbContext;
+    use crate::database::lmdb::LmdbDatabase;
+    use crate::proto::merkle::ChangeLogEntry;
 
-    use protobuf;
     use rand::{seq, thread_rng};
     use std::env;
     use std::fs::remove_file;
@@ -935,7 +934,7 @@ mod tests {
                     .index_get(CHANGE_LOG_INDEX, new_root_bytes)
                     .expect("A database error occurred")
                     .expect("Did not return a change log entry");
-                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+                Message::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
             };
 
             assert_eq!(orig_root_bytes, &change_log.get_parent());
@@ -1485,7 +1484,7 @@ mod tests {
 
     fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
         let reader = db.reader().unwrap();
-        protobuf::parse_from_bytes(
+        Message::parse_from_bytes(
             &reader
                 .index_get(CHANGE_LOG_INDEX, root_hash)
                 .expect("No db errors")
@@ -1505,11 +1504,11 @@ mod tests {
                 }
             }
             if !has_root {
-                panic!(format!(
+                panic!(
                     "Root {} not found in change log {:?}",
                     ::hex::encode(successor_root),
                     change_log
-                ));
+                );
             }
         }
     }
@@ -1581,7 +1580,7 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), format!("Value not returned: {:?}", value));
+        assert!(value.is_ok(), "Value not returned: {:?}", value);
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 

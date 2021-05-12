@@ -16,8 +16,8 @@
  */
 use std::os::raw::c_void;
 
-use database::lmdb::LmdbDatabase;
-use state::state_view_factory::StateViewFactory;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::state_view_factory::StateViewFactory;
 
 #[repr(u32)]
 #[derive(Debug)]

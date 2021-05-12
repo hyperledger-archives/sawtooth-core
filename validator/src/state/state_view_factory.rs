@@ -14,10 +14,10 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
-use state::error::StateDatabaseError;
-use state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
-use state::StateReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::error::StateDatabaseError;
+use crate::state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
+use crate::state::StateReader;
 
 /// The StateViewFactory produces StateViews for a particular merkle root.
 ///
@@ -34,7 +34,7 @@ impl StateViewFactory {
     }
 
     /// Creates a state view for a given state root hash.
-    pub fn create_view<V: From<Box<StateReader>>>(
+    pub fn create_view<V: From<Box<dyn StateReader>>>(
         &self,
         state_root_hash: &str,
     ) -> Result<V, StateDatabaseError> {

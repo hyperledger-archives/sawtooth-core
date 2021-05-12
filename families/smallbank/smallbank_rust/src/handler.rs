@@ -102,7 +102,7 @@ impl TransactionHandler for SmallbankTransactionHandler {
 }
 
 fn unpack_payload(payload: &[u8]) -> Result<SmallbankTransactionPayload, ApplyError> {
-    protobuf::parse_from_bytes(&payload).map_err(|err| {
+    Message::parse_from_bytes(&payload).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal SmallbankTransaction: {:?}",
             err
@@ -260,7 +260,7 @@ fn apply_amalgamate(
 }
 
 fn unpack_account(account_data: &[u8]) -> Result<Account, ApplyError> {
-    protobuf::parse_from_bytes(&account_data).map_err(|err| {
+    Message::parse_from_bytes(&account_data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal Account: {:?}",
             err

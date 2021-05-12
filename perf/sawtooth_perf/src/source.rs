@@ -57,7 +57,7 @@ where
             let next_len = self.source.read_raw_varint32()?;
             let buf = self.source.read_raw_bytes(next_len)?;
 
-            let msg = protobuf::parse_from_bytes(&buf)?;
+            let msg = Message::parse_from_bytes(&buf)?;
             results.push(msg);
         }
         Ok(results)

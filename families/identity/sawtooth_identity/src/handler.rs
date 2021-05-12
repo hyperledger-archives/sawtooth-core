@@ -35,7 +35,7 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use protobuf;
 use protos::identities::{IdentityPayload, IdentityPayload_IdentityType};
-use state::IdentityState;
+use crate::state::IdentityState;
 use std::iter::repeat;
 
 #[cfg(target_arch = "wasm32")]
@@ -162,7 +162,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err

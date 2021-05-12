@@ -14,14 +14,14 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use py_ffi;
+use crate::py_ffi;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
 use cpython::{PyObject, Python};
 
-use batch::Batch;
-use journal::publisher::IncomingBatchSender;
+use crate::batch::Batch;
+use crate::journal::publisher::IncomingBatchSender;
 
 macro_rules! check_null {
     ($($arg:expr) , *) => {
