@@ -16,6 +16,7 @@
 # Exclude IDE and Editor files
 /.idea/
 *.sublime*
+*.vscode*
 
 # Everything else
 /adm/Cargo.lock
