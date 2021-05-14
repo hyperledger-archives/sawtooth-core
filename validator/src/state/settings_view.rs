@@ -20,7 +20,6 @@ use std::iter::repeat;
 use std::num::ParseIntError;
 
 use crate::hashlib::sha256_digest_str;
-use protobuf;
 
 use crate::state::StateDatabaseError;
 use crate::state::StateReader;
@@ -180,7 +179,7 @@ mod tests {
     use crate::proto::setting::Setting_Entry;
     use crate::state::StateDatabaseError;
     use crate::state::StateReader;
-    use protobuf;
+
     use protobuf::Message;
     use std::collections::HashMap;
 

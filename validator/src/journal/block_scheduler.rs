@@ -24,6 +24,8 @@ use crate::journal::block_wrapper::BlockStatus;
 use crate::journal::chain::COMMIT_STORE;
 use crate::journal::{block_manager::BlockManager, NULL_BLOCK_IDENTIFIER};
 use crate::metrics;
+use lazy_static::lazy_static;
+use log::{debug, info, warn};
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =

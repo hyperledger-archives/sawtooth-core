@@ -31,6 +31,7 @@ use crate::journal::commit_store::CommitStore;
 use crate::journal::publisher::{
     BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
+use lazy_static::lazy_static;
 
 use crate::state::state_view_factory::StateViewFactory;
 

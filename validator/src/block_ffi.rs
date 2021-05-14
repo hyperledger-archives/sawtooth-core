@@ -23,9 +23,9 @@ use crate::proto::block::BlockHeader;
 use crate::proto::transaction::Transaction as ProtoTxn;
 use crate::proto::transaction::TransactionHeader;
 use crate::transaction::Transaction;
-use cpython;
+
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python, PythonObject, ToPyObject};
-use protobuf;
+
 use protobuf::Message;
 
 impl<'source> FromPyObject<'source> for Block {

@@ -34,8 +34,6 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 
-use protobuf;
-
 use crate::batch::Batch;
 use crate::block::Block;
 use crate::consensus::notifier::ConsensusNotifier;
@@ -57,6 +55,8 @@ use crate::state::state_view_factory::StateViewFactory;
 
 use crate::proto::transaction_receipt::TransactionReceipt;
 use crate::scheduler::TxnExecutionResult;
+use lazy_static::lazy_static;
+use log::{debug, error, info, warn};
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -426,7 +426,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                     if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
@@ -446,7 +446,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
                 match state.block_manager.ref_block(&block_id) {
@@ -592,17 +592,13 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        let block_ref = match state.block_manager.ref_block(head) {
-            Ok(block_ref) => Some(block_ref),
-            Err(BlockManagerError::UnknownBlock) => None,
+        match state.block_manager.ref_block(head) {
+            Ok(_) => {}
+            Err(BlockManagerError::UnknownBlock) => return None,
             Err(err) => {
                 error!("Unexpected error occurred: {:?}", err);
-                None
+                return None;
             }
-        };
-
-        if block_ref.is_none() {
-            return None;
         }
 
         let mut forks: Vec<Block> = state
@@ -1002,7 +998,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
-            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+            self.start_commit_queue_thread(exit_flag, commit_queue_receiver);
         }
     }
 
@@ -1105,9 +1101,7 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     fn from(result: &'a TxnExecutionResult) -> Self {
         let mut receipt = TransactionReceipt::new();
 
-        receipt.set_data(protobuf::RepeatedField::from_vec(
-            result.data.iter().map(|data| data.clone()).collect(),
-        ));
+        receipt.set_data(protobuf::RepeatedField::from_vec(result.data.clone()));
         receipt.set_state_changes(protobuf::RepeatedField::from_vec(
             result.state_changes.clone(),
         ));

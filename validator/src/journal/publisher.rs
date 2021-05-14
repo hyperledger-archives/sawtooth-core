@@ -40,6 +40,8 @@ use crate::journal::commit_store::CommitStore;
 use crate::metrics;
 use crate::state::settings_view::SettingsView;
 use crate::state::state_view_factory::StateViewFactory;
+use lazy_static::lazy_static;
+use log::{error, info, warn};
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
@@ -401,13 +403,7 @@ impl SyncBlockPublisher {
         let result = match state.candidate_block {
             None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
             Some(ref mut candidate_block) => match candidate_block.summarize(force) {
-                Ok(summary) => {
-                    if let Some(s) = summary {
-                        Some(Ok(s))
-                    } else {
-                        None
-                    }
-                }
+                Ok(summary) => summary.map(Ok),
                 Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
             },
         };
@@ -926,7 +922,7 @@ impl QueueLimit {
             // b. Drained the queue, but the queue was not bigger than the
             //    current running average
 
-            let remainder = queue_length.checked_sub(consumed).unwrap_or(0);
+            let remainder = queue_length.saturating_sub(consumed);
 
             if remainder > self.avg.value() || consumed > self.avg.value() {
                 self.avg.update(consumed);

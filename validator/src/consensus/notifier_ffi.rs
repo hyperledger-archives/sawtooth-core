@@ -30,6 +30,7 @@ use crate::consensus::notifier::{
 use crate::proto::validator::Message_MessageType as MessageType;
 use crate::proto::{self, consensus::ConsensusPeerMessage};
 use crate::pylogger;
+use log::error;
 
 pub struct PyNotifierService {
     py_notifier_service: PyObject,

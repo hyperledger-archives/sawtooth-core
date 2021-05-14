@@ -23,7 +23,7 @@ use crate::journal::{
 };
 use crate::py_ffi;
 use crate::state::state_view_factory::StateViewFactory;
-use cpython;
+
 use std::os::raw::c_void;
 
 #[repr(u32)]

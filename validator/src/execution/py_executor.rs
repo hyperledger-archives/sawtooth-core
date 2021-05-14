@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::{ObjectProtocol, PyClone};
 
 use crate::execution::execution_platform::ExecutionPlatform;

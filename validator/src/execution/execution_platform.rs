@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
-
 use crate::scheduler::Scheduler;
 
 /// The logical state hash before state has been added to the

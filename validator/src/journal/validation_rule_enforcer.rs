@@ -18,6 +18,7 @@
 use crate::batch::Batch;
 use crate::state::settings_view::SettingsView;
 use crate::transaction::Transaction;
+use log::{debug, warn};
 
 /// Retrieve the validation rules stored in state and check that the
 /// given batches do not violate any of those rules. These rules include:

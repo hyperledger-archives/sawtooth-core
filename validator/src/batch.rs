@@ -16,7 +16,6 @@
  */
 
 use crate::proto;
-use protobuf;
 
 use crate::transaction::Transaction;
 

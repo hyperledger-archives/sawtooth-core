@@ -19,7 +19,6 @@
 
 use std::collections::HashSet;
 
-use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
@@ -38,6 +37,8 @@ use crate::state::settings_view::SettingsView;
 use crate::pylogger;
 
 use crate::scheduler::Scheduler;
+
+use log::{debug, warn};
 
 #[derive(Debug)]
 pub enum CandidateBlockError {
@@ -395,7 +396,7 @@ impl CandidateBlock {
                         "Batch {} is invalid, due to missing txn dependency",
                         header_signature
                     );
-                    bad_batches.push(batch.clone());
+                    bad_batches.push(batch);
                     pending_batches.clear();
                     pending_batches.append(
                         &mut self

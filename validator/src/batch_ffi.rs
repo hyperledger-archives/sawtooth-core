@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 use cpython::PythonObject;
@@ -120,7 +119,7 @@ mod tests {
     use super::Batch;
     use crate::proto;
     use crate::transaction::Transaction;
-    use cpython;
+
     use cpython::ToPyObject;
     use protobuf::Message;
 

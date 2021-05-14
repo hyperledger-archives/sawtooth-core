@@ -17,7 +17,7 @@
 
 use crate::batch::Batch;
 use crate::proto;
-use protobuf;
+
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Default)]

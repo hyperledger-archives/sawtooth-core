@@ -34,6 +34,7 @@ use crate::pylogger;
 use crate::state::state_pruning_manager::StatePruningManager;
 use crate::state::state_view_factory::StateViewFactory;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
+use log::{error, warn};
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};

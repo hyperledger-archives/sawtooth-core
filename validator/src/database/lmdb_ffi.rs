@@ -17,6 +17,7 @@
 use crate::database::lmdb::*;
 use crate::py_ffi;
 use cpython::{PyList, PyObject, Python};
+use log::error;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;

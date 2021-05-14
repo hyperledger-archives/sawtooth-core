@@ -16,7 +16,6 @@
  */
 
 use crate::proto;
-use protobuf;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Transaction {

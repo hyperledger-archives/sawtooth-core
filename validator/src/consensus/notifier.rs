@@ -22,7 +22,7 @@ use std::thread;
 use crate::block::Block;
 
 use crate::hashlib::sha256_digest_strs;
-use hex;
+
 use protobuf::{Message, RepeatedField};
 
 use crate::proto::consensus::{
@@ -233,11 +233,9 @@ impl BackgroundConsensusNotifier {
         let (tx, rx) = channel();
         let thread_builder = thread::Builder::new().name("BackgroundConsensusNotifier".into());
         thread_builder
-            .spawn(move || loop {
-                if let Ok(notification) = rx.recv() {
+            .spawn(move || {
+                while let Ok(notification) = rx.recv() {
                     handle_notification(&notifier, notification);
-                } else {
-                    break;
                 }
             })
             .expect("Failed to spawn BackgroundConsensusNotifier thread");

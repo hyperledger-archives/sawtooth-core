@@ -15,13 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Cursor;
+use std::{cmp::Reverse, collections::BTreeMap};
 
-use cbor;
 use cbor::decoder::GenericDecoder;
 use cbor::encoder::GenericEncoder;
 use cbor::value::Bytes;
@@ -31,7 +30,6 @@ use cbor::value::Value;
 
 use crate::hashlib::sha512_digest_bytes;
 
-use protobuf;
 use protobuf::Message;
 
 use crate::database::error::DatabaseError;
@@ -71,8 +69,8 @@ impl MerkleDatabase {
 
         Ok(MerkleDatabase {
             root_hash,
-            root_node,
             db,
+            root_node,
         })
     }
 
@@ -253,7 +251,7 @@ impl MerkleDatabase {
         for del_address in delete_items.iter() {
             path_map.remove(del_address);
             let (mut parent_address, mut path_branch) = parent_and_branch(del_address);
-            while parent_address != "" {
+            while !parent_address.is_empty() {
                 let remove_parent = {
                     let parent_node = path_map
                         .get_mut(parent_address)
@@ -280,7 +278,7 @@ impl MerkleDatabase {
                 parent_address = next_parent;
                 path_branch = next_branch;
 
-                if parent_address == "" {
+                if parent_address.is_empty() {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated or entry is deleted");
@@ -294,7 +292,7 @@ impl MerkleDatabase {
 
         let mut sorted_paths: Vec<_> = path_map.keys().cloned().collect();
         // Sort by longest to shortest
-        sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
+        sorted_paths.sort_by_key(|a| Reverse(a.len()));
 
         // initializing this to empty, to make the compiler happy
         let mut key_hash = Vec::with_capacity(0);
@@ -306,7 +304,7 @@ impl MerkleDatabase {
             let (hash_key, packed) = encode_and_hash(node)?;
             key_hash = hash_key.clone();
 
-            if path != "" {
+            if !path.is_empty() {
                 let (parent_address, path_branch) = parent_and_branch(&path);
                 let parent = path_map
                     .get_mut(parent_address)
@@ -661,7 +659,7 @@ fn delete_ignore_missing(
             if s == "MDB_NOTFOUND: No matching key/data pair found" =>
         {
             // This can be ignored, as the record doesn't exist
-            debug!(
+            log::debug!(
                 "Attempting to delete a missing entry: {}",
                 ::hex::encode(key)
             );
@@ -747,12 +745,7 @@ impl Node {
         let children = self
             .children
             .into_iter()
-            .map(|(k, v)| {
-                (
-                    Key::Text(Text::Text(k.to_string())),
-                    Value::Text(Text::Text(v.to_string())),
-                )
-            })
+            .map(|(k, v)| (Key::Text(Text::Text(k)), Value::Text(Text::Text(v))))
             .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));

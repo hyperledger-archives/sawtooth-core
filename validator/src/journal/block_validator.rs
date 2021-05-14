@@ -30,6 +30,7 @@ use crate::journal::validation_rule_enforcer::enforce_validation_rules;
 use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use crate::scheduler::TxnExecutionResult;
 use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+use log::{error, info, warn};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
@@ -37,7 +38,6 @@ use std::sync::{
 };
 use std::thread;
 use std::time::Duration;
-use uluru;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
@@ -449,7 +449,7 @@ impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationP
             .get(&[&block.previous_block_id])
             .next()
             .unwrap_or(None)
-            .map(|b| b.state_root_hash.clone());
+            .map(|b| b.state_root_hash);
 
         for validation in &self.validations {
             match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
@@ -499,8 +499,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
             })?;
 
         let greatest_batch_index = block.batches.len() - 1;
-        let mut index = 0;
-        for batch in &block.batches {
+        for (index, batch) in block.batches.iter().enumerate() {
             if index < greatest_batch_index {
                 scheduler
                     .add_batch(batch.clone(), None, false)
@@ -520,7 +519,6 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                         ))
                     })?;
             }
-            index += 1;
         }
         scheduler.finalize(false).map_err(|err| {
             ValidationError::BlockValidationError(format!(

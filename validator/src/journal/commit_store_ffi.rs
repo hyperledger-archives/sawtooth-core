@@ -19,8 +19,6 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use protobuf;
-
 use crate::batch::Batch;
 use crate::block::Block;
 use crate::database::error::DatabaseError;
@@ -28,6 +26,7 @@ use crate::database::lmdb::LmdbDatabase;
 use crate::journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
 use crate::proto;
 use crate::transaction::Transaction;
+use log::{error, warn};
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -406,7 +405,7 @@ pub unsafe extern "C" fn commit_store_put_blocks(
     check_null!(commit_store, blocks);
 
     let blocks_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(blocks, blocks_len)
-        .into_iter()
+        .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);

@@ -1,8 +1,3 @@
-extern crate clap;
-extern crate cpython;
-#[macro_use]
-extern crate log;
-
 mod pylogger;
 mod server;
 

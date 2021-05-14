@@ -82,7 +82,7 @@ pub unsafe extern "C" fn incoming_batch_sender_has_batch(
     *has = (*(sender_ptr as *mut IncomingBatchSender))
         .has_batch(batch_id)
         .unwrap_or_else(|e| {
-            warn!("Unable to check for batch {:?}", e);
+            log::warn!("Unable to check for batch {:?}", e);
             false
         });
 
