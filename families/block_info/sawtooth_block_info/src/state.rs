@@ -69,13 +69,13 @@ impl<'a> BlockInfoState<'a> {
         };
 
         match block_config {
-            Some(ref d) => Ok(Some(
-                ::protobuf::parse_from_bytes::<protos::block_info::BlockInfoConfig>(d)
+            Some(ref d) => {
+                let config: protos::block_info::BlockInfoConfig = Message::parse_from_bytes(d)
                     .map_err(|_| {
                         ApplyError::InternalError("Failed to deserialize BlockInfoConfig".into())
-                    })?
-                    .into(),
-            )),
+                    })?;
+                Ok(Some(config.into()))
+            }
             None => Ok(None),
         }
     }
@@ -96,12 +96,13 @@ impl<'a> BlockInfoState<'a> {
         };
 
         match block_data {
-            Some(ref d) => Ok(Some(
-                (&::protobuf::parse_from_bytes::<protos::block_info::BlockInfo>(d).map_err(
-                    |_| ApplyError::InternalError("Failed to deserialize BlockInfo".into()),
-                )?)
-                    .into(),
-            )),
+            Some(ref d) => {
+                let info: protos::block_info::BlockInfo =
+                    Message::parse_from_bytes(d).map_err(|_| {
+                        ApplyError::InternalError("Failed to deserialize BlockInfo".into())
+                    })?;
+                Ok(Some(info.into()))
+            }
             None => Ok(None),
         }
     }
@@ -201,6 +202,18 @@ impl From<Config> for protos::block_info::BlockInfoConfig {
 
 impl<'a> From<&'a protos::block_info::BlockInfo> for BlockInfo {
     fn from(other: &protos::block_info::BlockInfo) -> Self {
+        BlockInfo {
+            block_num: other.get_block_num(),
+            previous_block_id: other.get_previous_block_id().to_string(),
+            signer_public_key: other.get_signer_public_key().to_string(),
+            header_signature: other.get_header_signature().to_string(),
+            timestamp: other.get_timestamp(),
+        }
+    }
+}
+
+impl From<protos::block_info::BlockInfo> for BlockInfo {
+    fn from(other: protos::block_info::BlockInfo) -> Self {
         BlockInfo {
             block_num: other.get_block_num(),
             previous_block_id: other.get_previous_block_id().to_string(),

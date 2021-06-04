@@ -17,12 +17,10 @@
 
 //! Tools for generating signed batches from a stream of transactions
 
-extern crate protobuf;
-
 use std::io::Read;
 use std::marker::PhantomData;
 
-use self::protobuf::Message;
+use protobuf::{self, Message};
 
 /// Decodes Protocol Buffer messages from a length-delimited input reader.
 pub struct LengthDelimitedMessageSource<'a, T: 'a> {
@@ -57,7 +55,7 @@ where
             let next_len = self.source.read_raw_varint32()?;
             let buf = self.source.read_raw_bytes(next_len)?;
 
-            let msg = protobuf::parse_from_bytes(&buf)?;
+            let msg = Message::parse_from_bytes(&buf)?;
             results.push(msg);
         }
         Ok(results)

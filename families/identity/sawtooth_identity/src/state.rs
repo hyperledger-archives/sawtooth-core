@@ -12,7 +12,7 @@ cfg_if! {
 }
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::Message;
 use std::iter::repeat;
 
 pub struct IdentityState<'a> {
@@ -81,7 +81,7 @@ impl<'a> IdentityState<'a> {
         }
 
         let address = self.get_policy_address(&policy_name);
-        let data = protobuf::Message::write_to_bytes(&policy_list).map_err(|err| {
+        let data = Message::write_to_bytes(&policy_list).map_err(|err| {
             ApplyError::InternalError(format!("Failed to serialize PolicyList: {:?}", err))
         })?;
 
@@ -113,7 +113,7 @@ impl<'a> IdentityState<'a> {
         }
 
         let address = self.get_role_address(&role_name);
-        let data = protobuf::Message::write_to_bytes(&role_list).map_err(|err| {
+        let data = Message::write_to_bytes(&role_list).map_err(|err| {
             ApplyError::InternalError(format!("Failed to serialize RoleList: {:?}", err))
         })?;
 
@@ -176,9 +176,9 @@ impl<'a> IdentityState<'a> {
 
 fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
-    T: protobuf::Message,
+    T: Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err

@@ -17,14 +17,12 @@
 
 //! Tools for generating signed batches from a stream of transactions
 
-extern crate protobuf;
-
 use std::error;
 use std::fmt;
 use std::io::Read;
 use std::io::Write;
 
-use self::protobuf::Message;
+use protobuf::{self, Message};
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchHeader;
 use sawtooth_sdk::messages::transaction::Transaction;
@@ -218,11 +216,10 @@ impl<'a> Iterator for SignedBatchIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::protobuf;
-    use super::protobuf::Message;
     use super::LengthDelimitedMessageSource;
     use super::SignedBatchProducer;
     use super::TransactionSource;
+    use protobuf::Message;
     use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
     use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
     use sawtooth_sdk::signing;
@@ -294,7 +291,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
 
@@ -324,7 +321,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
@@ -339,7 +336,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
 
@@ -371,13 +368,13 @@ mod tests {
         let mut batch_source: BatchSource = LengthDelimitedMessageSource::new(&mut output);
 
         let batch = &(batch_source.next(1).unwrap())[0];
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
 
         let batch = &(batch_source.next(1).unwrap())[0];
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
     }
