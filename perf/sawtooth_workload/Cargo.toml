@@ -19,7 +19,7 @@ version = "0.1.0"
 [dependencies]
 sawtooth-sdk = "0.4"
 sawtooth_perf = { path = "../sawtooth_perf" }
-protobuf = "2.0"
+protobuf = "2.23"
 clap = "2"
 
 [features]

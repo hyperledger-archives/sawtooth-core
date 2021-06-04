@@ -32,7 +32,7 @@ path = "src/main.rs"
 [dependencies]
 cfg-if = "0.1"
 clap = "2"
-protobuf = "2.0"
+protobuf = "2.23"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 rust-crypto-wasm = "0.3"

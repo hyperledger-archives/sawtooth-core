@@ -12,7 +12,7 @@ path = "./src/main.rs"
 cbor-codec = "0.7.1"
 clap = "2.30"
 log = "0.4"
-protobuf = "2.0"
+protobuf = "2.23"
 rand = "0.6"
 rust-crypto = "^0.2"
 sawtooth_perf = { path = "../sawtooth_perf" }

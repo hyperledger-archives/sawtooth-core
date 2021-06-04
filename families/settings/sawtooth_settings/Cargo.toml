@@ -45,7 +45,7 @@ path = "./src/main.rs"
 [dependencies]
 cfg-if = "0.1"
 clap = "2"
-protobuf = "2.0"
+protobuf = "2.23"
 base64 = "0.10"
 log = "0.4"
 
