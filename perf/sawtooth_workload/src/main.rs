@@ -121,14 +121,14 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let mut in_file = File::open(args.value_of("input").unwrap())?;
     let mut out_file = File::create(args.value_of("output").unwrap())?;
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
-    let context = try!(signing::create_context("secp256k1"));
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+    let context = signing::create_context("secp256k1")?;
 
     if let Err(err) = generate_signed_batches(
         &mut in_file,
