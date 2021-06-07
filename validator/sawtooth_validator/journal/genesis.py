@@ -164,7 +164,7 @@ class GenesisController:
 
             LOGGER.debug('Adding %s batches', len(genesis_data.batches))
             for batch in genesis_data.batches:
-                scheduler.add_batch(batch)
+                scheduler.add_batch(0, batch)
 
             self._transaction_executor.execute(scheduler)
 

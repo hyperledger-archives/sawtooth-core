@@ -123,6 +123,8 @@ message TpProcessRequest {
     // The serialized header as received by client.
     // Controlled by a flag during transaction processor registration.
     bytes header_bytes = 5;
+
+    uint64 tip = 6; // The block number
 }
 
 

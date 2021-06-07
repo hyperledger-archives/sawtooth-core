@@ -307,7 +307,9 @@ class TransactionExecutorThread:
                 payload=txn.payload,
                 signature=txn.header_signature,
                 context_id=context_id,
-                header_bytes=txn.header)
+                header_bytes=txn.header,
+                tip=txn_info.tip
+                )
 
             # Since we have already checked if the transaction should be failed
             # all other cases should either be executed or waited for.

@@ -124,11 +124,13 @@ class SerialScheduler(Scheduler):
 
             self._condition.notify_all()
 
-    def add_batch(self, batch, state_hash=None, required=False):
+    def add_batch(self, tip, batch, state_hash=None, required=False):
         with self._condition:
             if self._final:
                 raise SchedulerError("Scheduler is finalized. Cannot take"
                                      " new batches")
+
+            self.tip = tip
             preserve = required
             if not required:
                 # If this is the first non-required batch, it is preserved for
@@ -260,6 +262,7 @@ class SerialScheduler(Scheduler):
             base_contexts = [] if self._previous_context_id is None \
                 else [self._previous_context_id]
             txn_info = TxnInformation(
+                tip=self.tip,
                 txn=txn,
                 state_hash=self._previous_state_hash,
                 base_context_ids=base_contexts)
