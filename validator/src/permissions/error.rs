@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Intel Corporation
+ * Copyright 2018 Bitwise IO
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,5 +14,20 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use std::error::Error;
+use std::fmt;
 
-pub mod permission_verifier;
+#[derive(Debug)]
+pub enum IdentityError {
+    ReadError(String),
+}
+
+impl Error for IdentityError {}
+
+impl fmt::Display for IdentityError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            IdentityError::ReadError(s) => write!(f, "Unable to read: {}", s),
+        }
+    }
+}

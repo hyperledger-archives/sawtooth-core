@@ -16,7 +16,7 @@
  */
 use database::lmdb::LmdbDatabase;
 use state::error::StateDatabaseError;
-use state::merkle::MerkleDatabase;
+use state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
 use state::StateReader;
 
 /// The StateViewFactory produces StateViews for a particular merkle root.
@@ -38,7 +38,10 @@ impl StateViewFactory {
         &self,
         state_root_hash: &str,
     ) -> Result<V, StateDatabaseError> {
-        let merkle_db = MerkleDatabase::new(self.state_database.clone(), Some(state_root_hash))?;
+        let merkle_db = DecodedMerkleStateReader::new(MerkleDatabase::new(
+            self.state_database.clone(),
+            Some(state_root_hash),
+        )?);
         Ok(V::from(Box::new(merkle_db)))
     }
 }
