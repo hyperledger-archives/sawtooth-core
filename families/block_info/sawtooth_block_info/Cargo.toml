@@ -45,7 +45,7 @@ path = "./src/lib.rs"
 
 [dependencies]
 clap = "2"
-protobuf = "2.0"
+protobuf = "2.23"
 cfg-if = "0.1"
 hex = "0.3"
 

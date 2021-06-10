@@ -17,7 +17,7 @@
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use protobuf;
+use protobuf::Message;
 
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::ApplyError;
@@ -102,7 +102,7 @@ impl TransactionHandler for SmallbankTransactionHandler {
 }
 
 fn unpack_payload(payload: &[u8]) -> Result<SmallbankTransactionPayload, ApplyError> {
-    protobuf::parse_from_bytes(&payload).map_err(|err| {
+    Message::parse_from_bytes(&payload).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal SmallbankTransaction: {:?}",
             err
@@ -260,7 +260,7 @@ fn apply_amalgamate(
 }
 
 fn unpack_account(account_data: &[u8]) -> Result<Account, ApplyError> {
-    protobuf::parse_from_bytes(&account_data).map_err(|err| {
+    Message::parse_from_bytes(&account_data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal Account: {:?}",
             err
@@ -287,7 +287,7 @@ fn load_account(
 
 fn save_account(account: &Account, context: &mut dyn TransactionContext) -> Result<(), ApplyError> {
     let address = create_smallbank_address(&format!("{}", account.get_customer_id()));
-    let data = protobuf::Message::write_to_bytes(account).map_err(|err| {
+    let data = Message::write_to_bytes(account).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to serialize Account: {:?}",
             err

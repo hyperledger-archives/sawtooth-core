@@ -20,7 +20,7 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-use protobuf::{self, Message, ProtobufEnum};
+use protobuf::{Message, ProtobufEnum};
 use py_ffi;
 use sawtooth::{
     consensus::notifier::{
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     check_null!(notifier, message_bytes, sender_id_bytes);
 
     let message_slice = slice::from_raw_parts(message_bytes, message_len);
-    let message: ConsensusPeerMessage = match protobuf::parse_from_bytes(&message_slice) {
+    let message: ConsensusPeerMessage = match Message::parse_from_bytes(&message_slice) {
         Ok(message) => message,
         Err(err) => {
             error!("Failed to parse ConsensusPeerMessage: {:?}", err);

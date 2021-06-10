@@ -20,7 +20,7 @@ authors = ["Intel Corporation"]
 [dependencies]
 sawtooth-sdk = "0.4"
 chrono = "0.4"
-protobuf = "2.0"
+protobuf = "2.23"
 futures = "0.1"
 hyper = "0.11"
 rand = "0.6"

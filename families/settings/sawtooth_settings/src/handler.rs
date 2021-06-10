@@ -37,7 +37,7 @@ cfg_if! {
 extern crate base64;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::{self, Message};
 use protos::settings::{
     SettingCandidate, SettingCandidate_VoteRecord, SettingCandidates, SettingProposal, SettingVote,
     SettingVote_Vote, SettingsPayload, SettingsPayload_Action,
@@ -249,9 +249,9 @@ fn apply_vote(
 
 fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
-    T: protobuf::Message,
+    T: Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid error: Failed to unmarshal SettingsTransaction: {:?}",
             err
@@ -282,7 +282,7 @@ fn save_settings_candidates(
     context: &mut dyn TransactionContext,
     setting_candidates: &SettingCandidates,
 ) -> Result<(), ApplyError> {
-    let data = protobuf::Message::write_to_bytes(setting_candidates).map_err(|err| {
+    let data = Message::write_to_bytes(setting_candidates).map_err(|err| {
         ApplyError::InternalError(format!("Failed to serialize SettingsCandidates: {:?}", err))
     })?;
     set_setting_value(
@@ -328,7 +328,7 @@ fn set_state(
     address: &str,
     setting: &Setting,
 ) -> Result<(), ApplyError> {
-    let data = protobuf::Message::write_to_bytes(setting).map_err(|err| {
+    let data = Message::write_to_bytes(setting).map_err(|err| {
         ApplyError::InternalError(format!("Failed to serialize Setting: {:?}", err))
     })?;
 

@@ -33,7 +33,7 @@ sawtooth-sdk = "0.5"
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
 clap = "2"
-protobuf = "2.0"
+protobuf = "2.23"
 log = "0.4"
 log4rs = "0.8"
 

@@ -22,7 +22,7 @@ description = "Workload generator for Sawtooth Smallbank"
 [dependencies]
 sawtooth-sdk = "0.4"
 sawtooth_perf = { path = "../sawtooth_perf" }
-protobuf = "2"
+protobuf = "2.23"
 clap = "2"
 yaml-rust = "0.4"
 rand = "0.6"
