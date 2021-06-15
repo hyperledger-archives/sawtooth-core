@@ -681,9 +681,10 @@ class _SendReceive:
         self._event_loop.stop()
 
     @asyncio.coroutine
-    def _stop(self):
-        self._dispatcher.remove_send_message(self._connection)
-        self._dispatcher.remove_send_last_message(self._connection)
+    def _stop(self, drop_functors=True):
+        if drop_functors:
+            self._dispatcher.remove_send_message(self._connection)
+            self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
 
         for task in self._cancellable_tasks:
@@ -698,20 +699,17 @@ class _SendReceive:
     def shutdown(self):
         self._dispatcher.remove_send_message(self._connection)
         self._dispatcher.remove_send_last_message(self._connection)
-        if self._event_loop is None:
-            return
-        if self._event_loop.is_closed():
+        if self._event_loop is None or self._event_loop.is_closed():
             return
 
         if self._event_loop.is_running():
             if self._auth is not None:
                 self._event_loop.call_soon_threadsafe(self._auth.stop)
+            asyncio.ensure_future(self._stop(drop_functors=False), loop=self._event_loop)
         else:
             # event loop was never started, so the only Task that is running
             # is the Auth Task.
             self._event_loop.run_until_complete(self._stop_auth())
-
-        asyncio.ensure_future(self._stop(), loop=self._event_loop)
 
 
 class Interconnect:
