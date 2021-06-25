@@ -44,7 +44,7 @@ pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
         py,
         "minimum_peer_connectivity",
         matches
-            .value_of("minimum-peer-connectivity")
+            .value_of("minimum_peer_connectivity")
             .and_then(|s| s.parse::<u32>().ok()),
     )?;
     pydict.set_item(py, "opentsdb_db", matches.value_of("opentsdb-db"))?;
