@@ -44,11 +44,11 @@ pub fn wrap_in_pydict(py: Python, matches: &ArgMatches) -> PyResult<PyDict> {
         py,
         "minimum_peer_connectivity",
         matches
-            .value_of("minimum-peer-connectivity")
+            .value_of("minimum_peer_connectivity")
             .and_then(|s| s.parse::<u32>().ok()),
     )?;
-    pydict.set_item(py, "opentsdb_db", matches.value_of("opentsdb-db"))?;
-    pydict.set_item(py, "opentsdb_url", matches.value_of("opentsdb-url"))?;
+    pydict.set_item(py, "opentsdb_db", matches.value_of("opentsdb_db"))?;
+    pydict.set_item(py, "opentsdb_url", matches.value_of("opentsdb_url"))?;
     pydict.set_item(py, "peering", matches.value_of("peering"))?;
     pydict.set_item(py, "peers", parse_comma_separated_args("peers", matches))?;
     pydict.set_item(py, "roles", parse_roles(matches, py))?;
@@ -169,7 +169,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 ),
         )
         .arg(
-            Arg::with_name("opentsdb-url")
+            Arg::with_name("opentsdb_url")
                 .long("opentsdb-url")
                 .takes_value(true)
                 .help(
@@ -178,7 +178,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
                 ),
         )
         .arg(
-            Arg::with_name("opentsdb-db")
+            Arg::with_name("opentsdb_db")
                 .long("opentsdb-db")
                 .takes_value(true)
                 .help("specify name of database used for storing metrics"),
