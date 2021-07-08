@@ -53,7 +53,7 @@ pub enum ValidationError {
 }
 
 type BlockValidationResultCache =
-    uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
+    uluru::LRUCache<BlockValidationResult, BLOCK_VALIDATION_RESULT_CACHE_SIZE>;
 
 #[derive(Clone, Default)]
 pub struct BlockValidationResultStore {

@@ -822,7 +822,8 @@ mod tests {
     use crate::database::lmdb::LmdbDatabase;
     use crate::proto::merkle::ChangeLogEntry;
 
-    use rand::{seq, thread_rng};
+    use rand::prelude::IteratorRandom;
+    use rand::thread_rng;
     use std::env;
     use std::fs::remove_file;
     use std::panic;
@@ -988,15 +989,14 @@ mod tests {
             let mut rng = thread_rng();
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
+            for i in (0..500).choose_multiple(&mut rng, 50) {
                 let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
 
             // perform some deletions on the upper keys
-            let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
-                .unwrap()
+            let delete_items = (500..1000).choose_multiple(&mut rng, 50)
                 .into_iter()
                 .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
                 .collect::<Vec<String>>();
