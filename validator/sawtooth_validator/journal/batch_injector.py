@@ -89,5 +89,8 @@ class DefaultBatchInjectorFactory:
 
             return block_info_injector.BlockInfoInjector(
                 self._state_view_factory, self._signer)
+        elif injector == "gluwa":
+            gluwa_injector = importlib.import_module("sawtooth_validator.journal.gluwa_injector")
+            return gluwa_injector.GluwaBatchInjector(self._signer)
 
         raise UnknownBatchInjectorError(injector)
