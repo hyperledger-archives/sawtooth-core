@@ -102,7 +102,7 @@ RUN apt-get update && apt-get install -y -q \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install \
     docutils==0.16 \
-    sphinx \
+    sphinx==4.0 \
     sphinxcontrib-httpdomain \
     sphinxcontrib-openapi \
     sphinx_rtd_theme
