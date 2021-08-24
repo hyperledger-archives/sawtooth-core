@@ -20,6 +20,7 @@
 use crate::batch::Batch;
 use crate::block::Block;
 use crate::execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use crate::ffi;
 use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal::block_scheduler::BlockScheduler;
 use crate::journal::chain_commit_state::{
@@ -30,6 +31,8 @@ use crate::journal::validation_rule_enforcer::enforce_validation_rules;
 use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use crate::scheduler::TxnExecutionResult;
 use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+
+use lazy_static::lazy_static;
 use log::{error, info, warn};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -38,6 +41,14 @@ use std::sync::{
 };
 use std::thread;
 use std::time::Duration;
+
+lazy_static! {
+    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
+        "sawtooth_validator.journal.batch_injector",
+        "GluwaBatchInjector",
+        "housekeeping_payload"
+    );
+}
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
@@ -511,7 +522,12 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     })?;
             } else {
                 scheduler
-                    .add_batch(block.block_num, batch.clone(), Some(ending_state_hash), false)
+                    .add_batch(
+                        block.block_num,
+                        batch.clone(),
+                        Some(ending_state_hash),
+                        false,
+                    )
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
                             "While adding the last batch to the schedule: {:?}",
@@ -711,6 +727,31 @@ impl BlockValidation for OnChainRulesValidation {
                         err
                     ))
                 })?;
+            //housekeeping validation
+            {
+                let gil = cpython::Python::acquire_gil();
+                let py = gil.python();
+
+                let injector_payload = PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+                let invalid_housekeeping = block.batches[1..]
+                    .iter()
+                    .map(|batch| batch.transactions.iter())
+                    .flatten()
+                    .find(|txn| {
+                        String::from_utf8(txn.payload.clone()).expect("utf8") == injector_payload
+                    })
+                    .and_then(|_| Some(()));
+
+                if let Some(..) = invalid_housekeeping {
+                    let msg = format!(
+                        "Block invalid {} due to unneeded housekeeping.",
+                        block.header_signature,
+                    );
+                    return Err(ValidationError::BlockValidationFailure(msg));
+                };
+
+                //#End of Housekeeping validation
+            }
             let batches: Vec<&Batch> = block.batches.iter().collect();
             if !enforce_validation_rules(&settings_view, &block.signer_public_key, &batches) {
                 return Err(ValidationError::BlockValidationFailure(format!(
