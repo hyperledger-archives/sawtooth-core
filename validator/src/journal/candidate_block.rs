@@ -19,9 +19,7 @@
 
 use std::collections::HashSet;
 
-use cpython::ObjectProtocol;
-use cpython::PyClone;
-use cpython::Python;
+use crate::ffi::{self, ObjectProtocol, PyClone, Python};
 
 use crate::hashlib::sha256_digest_strs;
 
@@ -37,6 +35,15 @@ use crate::state::settings_view::SettingsView;
 use crate::pylogger;
 
 use crate::scheduler::Scheduler;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
+        "sawtooth_validator.journal.batch_injector",
+        "GluwaBatchInjector",
+        "housekeeping_payload"
+    );
+}
 
 use log::{debug, warn};
 
@@ -87,7 +94,11 @@ impl CandidateBlock {
         identity_signer: cpython::PyObject,
         settings_view: SettingsView,
     ) -> Self {
-        CandidateBlock {
+        let consensus = settings_view
+            .get_setting_str("sawtooth.consensus.algorithm.name", None)
+            .expect("Consensus Algorithm");
+
+        let mut cb = CandidateBlock {
             previous_block,
             commit_store,
             scheduler,
@@ -102,7 +113,16 @@ impl CandidateBlock {
             pending_batches: vec![],
             pending_batch_ids: HashSet::new(),
             injected_batch_ids: HashSet::new(),
+        };
+        //only call when consensus is Gluwa PoW
+        //TODO move string literal to literal space
+        {
+            match consensus {
+                Some(c) if c == "PoW" => cb.add_batch(None),
+                _ => (),
+            };
         }
+        cb
     }
 
     pub fn cancel(&mut self) {
@@ -219,81 +239,121 @@ impl CandidateBlock {
         batches
     }
 
-    pub fn add_batch(&mut self, batch: Batch) {
-        let batch_header_signature = batch.header_signature.clone();
+    pub fn add_batch(&mut self, batch: Option<Batch>) {
+        //insert logic for batch injection, when the method is called without a batch, it is meant to insert housekeeping
+        match batch {
+            Some(batch) => {
+                let batch_header_signature = batch.header_signature.clone();
 
-        if batch.trace {
-            debug!(
-                "TRACE {}: {}",
-                batch_header_signature.as_str(),
-                "CandidateBlock, add_batch"
-            );
-        }
+                if batch.trace {
+                    debug!(
+                        "TRACE {}: {}",
+                        batch_header_signature.as_str(),
+                        "CandidateBlock, add_batch"
+                    );
+                }
 
-        if self.batch_is_already_committed(&batch) {
-            debug!(
-                "Dropping previously committed batch: {}",
-                batch_header_signature.as_str()
-            );
-        } else if self.check_batch_dependencies_add_batch(&batch) {
-            let mut batches_to_add = vec![];
+                if self.batch_is_already_committed(&batch) {
+                    debug!(
+                        "Dropping previously committed batch: {}",
+                        batch_header_signature.as_str()
+                    );
+                    return;
+                } else if self.check_batch_dependencies_add_batch(&batch) {
+                    let batches_to_add = vec![batch.clone()];
 
-            // Inject blocks at the beginning of a Candidate Block
-            if self.pending_batches.is_empty() {
-                let previous_block = self.previous_block.clone();
-                let mut injected_batches = self.poll_injectors(|injector: &cpython::PyObject| {
-                    let gil = cpython::Python::acquire_gil();
-                    let py = gil.python();
-                    match injector
-                        .call_method(py, "block_start", (previous_block.clone(),), None)
-                        .expect("BlockInjector.block_start failed")
-                        .extract::<cpython::PyList>(py)
+                    //enforce rules
                     {
-                        Ok(injected) => injected.iter(py).collect(),
-                        Err(err) => {
-                            pylogger::exception(
-                                py,
-                                "During block injection, calling block_start",
-                                err,
-                            );
-                            vec![]
+                        let batches_to_test = self
+                            .pending_batches
+                            .iter()
+                            .chain(batches_to_add.iter())
+                            .collect::<Vec<_>>();
+                        if !validation_rule_enforcer::enforce_validation_rules(
+                            &self.settings_view,
+                            &self.get_signer_public_key_hex(),
+                            &batches_to_test,
+                        ) {
+                            return;
                         }
                     }
-                });
-                batches_to_add.append(&mut injected_batches);
-            }
 
-            batches_to_add.push(batch);
+                    //filter housekeeping at candidate block, this does not replace checks at validation time
+                    {
+                        let gil = cpython::Python::acquire_gil();
+                        let py = gil.python();
 
-            {
-                let batches_to_test = self
-                    .pending_batches
-                    .iter()
-                    .chain(batches_to_add.iter())
-                    .collect::<Vec<_>>();
-                if !validation_rule_enforcer::enforce_validation_rules(
-                    &self.settings_view,
-                    &self.get_signer_public_key_hex(),
-                    &batches_to_test,
-                ) {
-                    return;
+                        let injector_payload =
+                            PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+
+                        if let Some(..) = batch
+                            .transactions
+                            .iter()
+                            .find(|txn| {
+                                String::from_utf8(txn.payload.clone()).expect("utf8")
+                                    == injector_payload
+                            })
+                            .and_then(|_| Some(true))
+                        {
+                            debug!("Ignoring unneeded housekeeping batch: {:?}", batch);
+                            return;
+                        }
+                    }
+                    self.add_batches(batches_to_add);
+                } else {
+                    debug!(
+                        "Dropping batch due to missing dependencies: {}",
+                        batch_header_signature.as_str()
+                    );
                 }
             }
-
-            for b in batches_to_add {
-                let batch_id = b.header_signature.clone();
-                self.pending_batches.push(b.clone());
-                self.pending_batch_ids.insert(batch_id.clone());
-
-                let injected = self.injected_batch_ids.contains(batch_id.as_str());
-                let tip = self.commit_store.get_chain_head().unwrap().block_num;
-                self.scheduler.add_batch( tip + 1, b, None, injected).unwrap()
+            None => {
+                if self.pending_batches.is_empty() {
+                    let previous_block = self.previous_block.clone();
+                    let injected_batches = self.poll_injectors(|injector: &cpython::PyObject| {
+                        let gil = cpython::Python::acquire_gil();
+                        let py = gil.python();
+                        match injector
+                            .call_method(py, "block_start", (previous_block.clone(),), None)
+                            .expect("BlockInjector.block_start failed")
+                            .extract::<cpython::PyList>(py)
+                        {
+                            Ok(injected) => injected.iter(py).collect(),
+                            Err(err) => {
+                                pylogger::exception(
+                                    py,
+                                    "During block injection, calling block_start",
+                                    err,
+                                );
+                                vec![]
+                            }
+                        }
+                    });
+                    if !injected_batches.is_empty() {
+                        self.add_batches(injected_batches);
+                    }
+                } else {
+                    debug!("Dead end. Don't call this method without a batch if there are pending_bathes already. Passing.");
+                }
             }
-        } else {
-            debug!(
-                "Dropping batch due to missing dependencies: {}",
-                batch_header_signature.as_str()
-            );
+        }
+    }
+
+    fn add_batches(&mut self, batches_to_add: Vec<Batch>) {
+        for b in batches_to_add {
+            let batch_id = b.header_signature.clone();
+            self.pending_batches.push(b.clone());
+            self.pending_batch_ids.insert(batch_id.clone());
+
+            let injected = self.injected_batch_ids.contains(batch_id.as_str());
+            let tip = self
+                .commit_store
+                .get_chain_head()
+                .expect("chain head")
+                .block_num;
+            self.scheduler
+                .add_batch(tip + 1, b, None, injected)
+                .expect("Add batch to scheduler")
         }
     }
 

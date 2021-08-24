@@ -307,7 +307,7 @@ impl SyncBlockPublisher {
 
         for batch in state.pending_batches.iter() {
             if candidate_block.can_add_batch() {
-                candidate_block.add_batch(batch.clone());
+                candidate_block.add_batch(Some(batch.clone()));
             } else {
                 break;
             }
@@ -489,7 +489,7 @@ impl SyncBlockPublisher {
                 // If currently building a block, add the batch to it
                 if let Some(ref mut candidate_block) = state.candidate_block {
                     if candidate_block.can_add_batch() {
-                        candidate_block.add_batch(batch);
+                        candidate_block.add_batch(Some(batch));
                     }
                 }
             }
