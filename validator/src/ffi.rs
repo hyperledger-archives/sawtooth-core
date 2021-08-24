@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{PyObject, Python};
+pub use cpython::{ObjectProtocol, PyClone, PyObject, PyString, Python};
 
 #[no_mangle]
 pub unsafe extern "C" fn ffi_reclaim_string(s_ptr: *mut u8, s_len: usize, s_cap: usize) -> isize {
@@ -31,7 +31,6 @@ pub unsafe extern "C" fn ffi_reclaim_vec(
     vec_cap: usize,
 ) -> isize {
     Vec::from_raw_parts(vec_ptr, vec_len, vec_cap);
-
     0
 }
 
@@ -43,4 +42,18 @@ pub fn py_import_class(module: &str, class: &str) -> PyObject {
         .unwrap_or_else(|_| panic!("Unable to import '{}'", module))
         .get(python, class)
         .unwrap_or_else(|_| panic!("Unable to import {} from '{}'", class, module))
+}
+
+pub fn py_import_class_static_attr(module: &str, class: &str, attr: &str) -> PyString {
+    let gil = Python::acquire_gil();
+    let python = gil.python();
+    python
+        .import(module)
+        .unwrap_or_else(|_| panic!("Unable to import '{}'", module))
+        .get(python, class)
+        .unwrap_or_else(|_| panic!("Unable to import {} from '{}'", class, module))
+        .getattr(python, attr)
+        .unwrap()
+        .repr(python)
+        .unwrap()
 }
