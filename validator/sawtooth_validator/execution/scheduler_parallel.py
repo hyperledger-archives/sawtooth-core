@@ -504,6 +504,7 @@ class ParallelScheduler(Scheduler):
 
         self._cancelled = False
         self._final = False
+        self.tip = None
 
     def _find_input_dependencies(self, inputs):
         """Use the predecessor tree to find dependencies based on inputs.
@@ -527,7 +528,7 @@ class ParallelScheduler(Scheduler):
                 self._predecessor_tree.find_write_predecessors(address))
         return dependencies
 
-    def add_batch(self, batch, state_hash=None, required=False):
+    def add_batch(self, tip, batch, state_hash=None, required=False):
         with self._condition:
             if self._final:
                 raise SchedulerError('Invalid attempt to add batch to '
@@ -535,6 +536,8 @@ class ParallelScheduler(Scheduler):
                                      .format(batch.header_signature))
             if not self._batches:
                 self._least_batch_id_wo_results = batch.header_signature
+
+            self.tip = tip
 
             preserve = required
             if not required:
@@ -1008,6 +1011,7 @@ class ParallelScheduler(Scheduler):
                 bases = self._get_initial_state_for_transaction(next_txn)
 
                 info = TxnInformation(
+                    tip=self.tip,
                     txn=next_txn,
                     state_hash=self._first_state_hash,
                     base_context_ids=bases)

@@ -502,7 +502,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
         for (index, batch) in block.batches.iter().enumerate() {
             if index < greatest_batch_index {
                 scheduler
-                    .add_batch(batch.clone(), None, false)
+                    .add_batch(block.block_num, batch.clone(), None, false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
                             "While adding a batch to the schedule: {:?}",
@@ -511,7 +511,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     })?;
             } else {
                 scheduler
-                    .add_batch(batch.clone(), Some(ending_state_hash), false)
+                    .add_batch(block.block_num, batch.clone(), Some(ending_state_hash), false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
                             "While adding the last batch to the schedule: {:?}",

@@ -286,8 +286,8 @@ impl CandidateBlock {
                 self.pending_batch_ids.insert(batch_id.clone());
 
                 let injected = self.injected_batch_ids.contains(batch_id.as_str());
-
-                self.scheduler.add_batch(b, None, injected).unwrap()
+                let tip = self.commit_store.get_chain_head().unwrap().block_num;
+                self.scheduler.add_batch( tip + 1, b, None, injected).unwrap()
             }
         } else {
             debug!(

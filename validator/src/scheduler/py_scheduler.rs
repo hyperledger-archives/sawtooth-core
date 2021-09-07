@@ -72,6 +72,7 @@ impl PyScheduler {
 impl Scheduler for PyScheduler {
     fn add_batch(
         &mut self,
+        tip: u64,
         batch: Batch,
         expected_state_hash: Option<&str>,
         required: bool,
@@ -84,7 +85,7 @@ impl Scheduler for PyScheduler {
             .call_method(
                 py,
                 "add_batch",
-                (batch, expected_state_hash, required),
+                (tip, batch, expected_state_hash, required),
                 None,
             )
             .expect("No method add_batch on python scheduler");

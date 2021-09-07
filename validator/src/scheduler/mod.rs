@@ -30,6 +30,7 @@ pub trait Scheduler: Sync + Send {
     /// the block are written to the database, otherwise not.
     fn add_batch(
         &mut self,
+        tip: u64,
         batch: Batch,
         expected_state_hash: Option<&str>,
         required: bool,

@@ -84,10 +84,10 @@ class DefaultBatchInjectorFactory:
     def _create_injector(self, injector):
         """Returns a new batch injector"""
         if injector == "block_info":
-            block_info_injector = importlib.import_module(
-                "sawtooth_validator.journal.block_info_injector")
-
-            return block_info_injector.BlockInfoInjector(
-                self._state_view_factory, self._signer)
+            from sawtooth_validator.journal.block_info_injector import BlockInfoInjector
+            return BlockInfoInjector(self._state_view_factory, self._signer)
+        elif injector == "gluwa":
+            from sawtooth_validator.journal.gluwa_injector import GluwaBatchInjector
+            return GluwaBatchInjector(self._signer)
 
         raise UnknownBatchInjectorError(injector)

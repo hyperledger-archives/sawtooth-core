@@ -24,7 +24,7 @@ class Scheduler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def add_batch(self, batch, state_hash=None, required=False):
+    def add_batch(self, tip, batch, state_hash=None, required=False):
         """Adds a batch to the scheduler.
 
         The batch, and thus its associated transactions, will be added to the
@@ -315,7 +315,8 @@ class TxnInformation:
                                  this txn should be applied against
     """
 
-    def __init__(self, txn, state_hash, base_context_ids):
+    def __init__(self, tip, txn, state_hash, base_context_ids):
+        self.tip = tip
         self.txn = txn
         self.state_hash = state_hash
         self.base_context_ids = base_context_ids
