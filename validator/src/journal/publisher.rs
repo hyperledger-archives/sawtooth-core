@@ -17,8 +17,8 @@
 
 #![allow(unknown_lints)]
 
-use batch::Batch;
-use block::Block;
+use crate::batch::Batch;
+use crate::block::Block;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -30,16 +30,18 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
-use execution::execution_platform::ExecutionPlatform;
-use ffi::py_import_class;
-use journal::block_manager::{BlockManager, BlockRef};
-use journal::candidate_block::{CandidateBlock, CandidateBlockError};
-use journal::chain_commit_state::TransactionCommitCache;
-use journal::chain_head_lock::ChainHeadLock;
-use journal::commit_store::CommitStore;
-use metrics;
-use state::settings_view::SettingsView;
-use state::state_view_factory::StateViewFactory;
+use crate::execution::execution_platform::ExecutionPlatform;
+use crate::ffi::py_import_class;
+use crate::journal::block_manager::{BlockManager, BlockRef};
+use crate::journal::candidate_block::{CandidateBlock, CandidateBlockError};
+use crate::journal::chain_commit_state::TransactionCommitCache;
+use crate::journal::chain_head_lock::ChainHeadLock;
+use crate::journal::commit_store::CommitStore;
+use crate::metrics;
+use crate::state::settings_view::SettingsView;
+use crate::state::state_view_factory::StateViewFactory;
+use lazy_static::lazy_static;
+use log::{error, info, warn};
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
@@ -88,8 +90,8 @@ pub trait BatchObserver: Send + Sync {
 }
 
 pub struct BlockPublisherState {
-    pub transaction_executor: Box<ExecutionPlatform>,
-    pub batch_observers: Vec<Box<BatchObserver>>,
+    pub transaction_executor: Box<dyn ExecutionPlatform>,
+    pub batch_observers: Vec<Box<dyn BatchObserver>>,
     pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
@@ -98,8 +100,8 @@ pub struct BlockPublisherState {
 
 impl BlockPublisherState {
     pub fn new(
-        transaction_executor: Box<ExecutionPlatform>,
-        batch_observers: Vec<Box<BatchObserver>>,
+        transaction_executor: Box<dyn ExecutionPlatform>,
+        batch_observers: Vec<Box<dyn BatchObserver>>,
         chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
@@ -401,13 +403,7 @@ impl SyncBlockPublisher {
         let result = match state.candidate_block {
             None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
             Some(ref mut candidate_block) => match candidate_block.summarize(force) {
-                Ok(summary) => {
-                    if let Some(s) = summary {
-                        Some(Ok(s))
-                    } else {
-                        None
-                    }
-                }
+                Ok(summary) => summary.map(Ok),
                 Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
             },
         };
@@ -431,7 +427,7 @@ impl SyncBlockPublisher {
         self.block_sender
             .call_method(py, "send", (block, injected_batches), None)
             .map_err(|py_err| {
-                ::pylogger::exception(py, "{:?}", py_err);
+                crate::pylogger::exception(py, "{:?}", py_err);
             })
             .expect("BlockSender.send() raised an exception");
 
@@ -532,7 +528,7 @@ impl BlockPublisher {
     pub fn new(
         commit_store: CommitStore,
         block_manager: BlockManager,
-        transaction_executor: Box<ExecutionPlatform>,
+        transaction_executor: Box<dyn ExecutionPlatform>,
         state_view_factory: StateViewFactory,
         block_sender: PyObject,
         batch_publisher: PyObject,
@@ -541,7 +537,7 @@ impl BlockPublisher {
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
-        batch_observers: Vec<Box<BatchObserver>>,
+        batch_observers: Vec<Box<dyn BatchObserver>>,
         batch_injector_factory: PyObject,
     ) -> Self {
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
@@ -926,7 +922,7 @@ impl QueueLimit {
             // b. Drained the queue, but the queue was not bigger than the
             //    current running average
 
-            let remainder = queue_length.checked_sub(consumed).unwrap_or(0);
+            let remainder = queue_length.saturating_sub(consumed);
 
             if remainder > self.avg.value() || consumed > self.avg.value() {
                 self.avg.update(consumed);

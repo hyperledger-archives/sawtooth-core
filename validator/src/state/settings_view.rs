@@ -19,13 +19,12 @@ use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
-use hashlib::sha256_digest_str;
-use protobuf;
+use crate::hashlib::sha256_digest_str;
 
-use state::StateDatabaseError;
-use state::StateReader;
+use crate::state::StateDatabaseError;
+use crate::state::StateReader;
 
-use proto::setting::Setting;
+use crate::proto::setting::Setting;
 
 const CONFIG_STATE_NAMESPACE: &str = "000000";
 const MAX_KEY_PARTS: usize = 4;
@@ -60,7 +59,7 @@ impl From<ParseIntError> for SettingsViewError {
 }
 
 pub struct SettingsView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
     cache: RefCell<HashMap<String, Option<String>>>,
 }
 
@@ -71,7 +70,7 @@ unsafe impl Sync for SettingsView {}
 
 impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView {
             state_reader,
             cache: RefCell::new(HashMap::new()),
@@ -121,7 +120,7 @@ impl SettingsView {
             Err(err) => return Err(SettingsViewError::from(err)),
         };
         let setting_opt = if let Some(bytes) = bytes_opt {
-            Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+            Some(<Setting as protobuf::Message>::parse_from_bytes(&bytes)?)
         } else {
             None
         };
@@ -148,8 +147,8 @@ impl SettingsView {
     }
 }
 
-impl From<Box<StateReader>> for SettingsView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for SettingsView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView::new(state_reader)
     }
 }
@@ -176,12 +175,12 @@ fn short_hash(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::setting::Setting;
-    use proto::setting::Setting_Entry;
-    use protobuf;
+    use crate::proto::setting::Setting;
+    use crate::proto::setting::Setting_Entry;
+    use crate::state::StateDatabaseError;
+    use crate::state::StateReader;
+
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]
@@ -312,7 +311,7 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self

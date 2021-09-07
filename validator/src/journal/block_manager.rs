@@ -18,13 +18,17 @@
 #![allow(unknown_lints)]
 
 use std::collections::{HashMap, HashSet};
-use std::iter::{FromIterator, Peekable};
+use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
 
-use block::Block;
-use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
-use journal::NULL_BLOCK_IDENTIFIER;
-use metrics;
+use crate::block::Block;
+use crate::journal::block_store::{
+    BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex,
+};
+use crate::journal::NULL_BLOCK_IDENTIFIER;
+use crate::metrics;
+use lazy_static::lazy_static;
+use log::{debug, error, warn};
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -150,7 +154,7 @@ enum BlockLocation {
 struct BlockManagerState {
     block_by_block_id: RwLock<HashMap<String, Block>>,
 
-    blockstore_by_name: RwLock<HashMap<String, Box<IndexedBlockStore>>>,
+    blockstore_by_name: RwLock<HashMap<String, Box<dyn IndexedBlockStore>>>,
 
     references_by_block_id: RwLock<HashMap<String, RefCount>>,
 }
@@ -158,7 +162,7 @@ struct BlockManagerState {
 impl BlockManagerState {
     fn contains(
         references_block_id: &HashMap<String, RefCount>,
-        blockstore_by_name: &HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
     ) -> Result<bool, BlockManagerError> {
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
@@ -275,7 +279,7 @@ impl BlockManagerState {
             );
             block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
-            blocks_with_references.into_iter().for_each(|block| {
+            blocks_with_references.iter().for_each(|block| {
                 block_by_block_id.insert(block.header_signature.clone(), block.clone());
 
                 references_by_block_id.insert(
@@ -305,8 +309,8 @@ impl BlockManagerState {
             .read()
             .expect("Acquiring blockstore by name read lock; lock poisoned");
         let block = block_by_block_id.get(block_id).cloned();
-        if block.is_some() {
-            BlockLocation::MainCache(block.unwrap())
+        if let Some(b) = block {
+            BlockLocation::MainCache(b)
         } else {
             let name: Option<String> = blockstore_by_name
                 .iter()
@@ -331,7 +335,7 @@ impl BlockManagerState {
         let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
             .get(&[block_id])?
-            .nth(0);
+            .next();
         Ok(block)
     }
 
@@ -367,7 +371,7 @@ impl BlockManagerState {
                 block.previous_block_id.clone(),
             );
             rc.increase_external_ref_count();
-            references_by_block_id.insert(block.header_signature.clone(), rc);
+            references_by_block_id.insert(block.header_signature, rc);
             return Ok(());
         }
 
@@ -479,7 +483,7 @@ impl BlockManagerState {
     fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         let mut references_by_block_id = self
             .references_by_block_id
@@ -497,7 +501,7 @@ impl BlockManagerState {
                     head.header_signature.clone(),
                     RefCount::new_unreffed_block(
                         head.header_signature.clone(),
-                        head.previous_block_id.clone(),
+                        head.previous_block_id,
                     ),
                 );
             }
@@ -531,7 +535,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn transaction_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -555,7 +559,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn batch_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -651,19 +655,19 @@ impl BlockManager {
     }
 
     fn block_contains_any_transaction(&self, block: &Block, ids: &[&String]) -> Option<String> {
-        let transaction_ids: HashSet<&String> = HashSet::from_iter(
-            block
-                .batches
-                .iter()
-                .fold(vec![], |mut arr, b| {
-                    for transaction in &b.transactions {
-                        arr.push(&transaction.header_signature)
-                    }
-                    arr
-                })
-                .into_iter(),
-        );
-        let comparison_transaction_ids: HashSet<&String> = HashSet::from_iter(ids.iter().cloned());
+        let transaction_ids: HashSet<&String> = block
+            .batches
+            .iter()
+            .fold(vec![], |mut arr, b| {
+                for transaction in &b.transactions {
+                    arr.push(&transaction.header_signature)
+                }
+                arr
+            })
+            .into_iter()
+            .collect();
+
+        let comparison_transaction_ids: HashSet<&String> = ids.iter().cloned().collect();
         transaction_ids
             .intersection(&comparison_transaction_ids)
             .next()
@@ -671,8 +675,9 @@ impl BlockManager {
     }
 
     fn block_contains_any_batch(&self, block: &Block, ids: &[&String]) -> Option<String> {
-        let batch_ids = HashSet::from_iter(block.batches.iter().map(|b| &b.header_signature));
-        let comparison_batch_ids: HashSet<&String> = HashSet::from_iter(ids.iter().cloned());
+        let batch_ids: HashSet<&String> =
+            block.batches.iter().map(|b| &b.header_signature).collect();
+        let comparison_batch_ids: HashSet<&String> = ids.iter().cloned().collect();
         batch_ids
             .intersection(&comparison_batch_ids)
             .next()
@@ -681,9 +686,9 @@ impl BlockManager {
 
     fn persisted_branch_contains_block<'a>(
         &self,
-        blockstore_by_name: &'a HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &'a HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
-    ) -> Result<Option<&'a IndexedBlockStore>, BlockManagerError> {
+    ) -> Result<Option<&'a dyn IndexedBlockStore>, BlockManagerError> {
         if let Some((_, store)) = blockstore_by_name
             .iter()
             .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
@@ -696,7 +701,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_transactions(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -710,7 +715,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_batches(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -751,7 +756,7 @@ impl BlockManager {
         self.state.put(branch)
     }
 
-    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Option<Block>>> {
+    pub fn get(&self, block_ids: &[&str]) -> Box<dyn Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
@@ -763,7 +768,7 @@ impl BlockManager {
         self.state.get_block_from_blockstore(block_id, store_name)
     }
 
-    pub fn branch(&self, tip: &str) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    pub fn branch(&self, tip: &str) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchIterator::new(
             Arc::clone(&self.state),
             tip.into(),
@@ -774,7 +779,7 @@ impl BlockManager {
         &self,
         tip: &str,
         exclude: &str,
-    ) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    ) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchDiffIterator::new(
             Arc::clone(&self.state),
             tip,
@@ -797,7 +802,7 @@ impl BlockManager {
     pub fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         self.state.add_store(store_name, store)
     }
@@ -815,7 +820,7 @@ impl BlockManager {
                 .blockstore_by_name
                 .write()
                 .expect("Acquiring blockstore write lock; lock poisoned");
-            let mut blockstore = blockstore_by_name
+            let blockstore = blockstore_by_name
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 
@@ -890,7 +895,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation")
                 .iter()?;
-            block_store_iter.nth(0).map(|b| b.header_signature.clone())
+            block_store_iter.next().map(|b| b.header_signature)
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
@@ -1026,7 +1031,7 @@ impl Iterator for BranchIterator {
             {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
-                    Some(block.clone())
+                    Some(block)
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.clone());
@@ -1050,7 +1055,7 @@ impl Iterator for BranchIterator {
 
             if let Some(block) = block_option {
                 self.next_block_id = block.previous_block_id.clone();
-                Some(block.clone())
+                Some(block)
             } else {
                 None
             }
@@ -1141,9 +1146,9 @@ impl Iterator for BranchDiffIterator {
 mod tests {
 
     use super::{BlockManager, BlockManagerError};
-    use block::Block;
-    use journal::block_store::InMemoryBlockStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::block::Block;
+    use crate::journal::block_store::InMemoryBlockStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
         Block {
@@ -1369,7 +1374,7 @@ mod tests {
         block_manager.persist("B", "commit").unwrap();
 
         {
-            let d_ref = block_manager.ref_block("D").unwrap();
+            let _d_ref = block_manager.ref_block("D").unwrap();
 
             block_manager.persist("C", "commit").unwrap();
             block_manager.unref_block("B").unwrap();
@@ -1414,7 +1419,7 @@ mod tests {
         // Ext. Ref. = 1
 
         {
-            let d_ref = blockman.ref_block("D").unwrap();
+            let _d_ref = blockman.ref_block("D").unwrap();
             // Ext. Ref. = 2
 
             blockman

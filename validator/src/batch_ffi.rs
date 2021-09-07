@@ -15,16 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 use cpython::PythonObject;
 use cpython::ToPyObject;
 use protobuf::Message;
 
-use batch::Batch;
-use proto;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::proto;
+use crate::transaction::Transaction;
 
 impl ToPyObject for Batch {
     type ObjectType = cpython::PyObject;
@@ -79,9 +78,9 @@ impl<'source> FromPyObject<'source> for Batch {
             .extract::<Vec<u8>>(py)
             .unwrap();
         let mut proto_batch: proto::batch::Batch =
-            ::protobuf::parse_from_bytes(batch_bytes.as_slice()).unwrap();
+            ::protobuf::Message::parse_from_bytes(batch_bytes.as_slice()).unwrap();
         let mut proto_batch_header: proto::batch::BatchHeader =
-            ::protobuf::parse_from_bytes(proto_batch.get_header()).unwrap();
+            ::protobuf::Message::parse_from_bytes(proto_batch.get_header()).unwrap();
         Ok(Batch {
             header_signature: proto_batch.take_header_signature(),
             header_bytes: proto_batch.take_header(),
@@ -90,7 +89,7 @@ impl<'source> FromPyObject<'source> for Batch {
                 .iter_mut()
                 .map(|t| {
                     let mut proto_header: proto::transaction::TransactionHeader =
-                        ::protobuf::parse_from_bytes(t.get_header()).unwrap();
+                        ::protobuf::Message::parse_from_bytes(t.get_header()).unwrap();
                     Ok(Transaction {
                         header_signature: t.take_header_signature(),
                         header_bytes: t.take_header(),
@@ -118,11 +117,11 @@ impl<'source> FromPyObject<'source> for Batch {
 mod tests {
 
     use super::Batch;
-    use cpython;
+    use crate::proto;
+    use crate::transaction::Transaction;
+
     use cpython::ToPyObject;
-    use proto;
     use protobuf::Message;
-    use transaction::Transaction;
 
     fn create_batch() -> Batch {
         let mut batch_header = proto::batch::BatchHeader::new();

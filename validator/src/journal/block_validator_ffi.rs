@@ -15,15 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
-use execution::py_executor::PyExecutor;
-use gossip::permission_verifier::PyPermissionVerifier;
-use journal::{
+use crate::execution::py_executor::PyExecutor;
+use crate::gossip::permission_verifier::PyPermissionVerifier;
+use crate::journal::{
     block_manager::BlockManager,
     block_validator::{BlockValidationResultStore, BlockValidator},
 };
-use py_ffi;
-use state::state_view_factory::StateViewFactory;
+use crate::py_ffi;
+use crate::state::state_view_factory::StateViewFactory;
+
 use std::os::raw::c_void;
 
 #[repr(u32)]

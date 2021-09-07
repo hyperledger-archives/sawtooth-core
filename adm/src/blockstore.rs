@@ -15,8 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::block::{Block, BlockHeader};
-use protobuf;
+use crate::proto::block::{Block, BlockHeader};
 use protobuf::Message;
 
 use database::error::DatabaseError;
@@ -36,7 +35,7 @@ impl<'a> Blockstore<'a> {
         let packed = reader.get(&block_id.as_bytes()).ok_or_else(|| {
             DatabaseError::NotFoundError(format!("Block not found: {}", block_id))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
                 err
@@ -58,7 +57,7 @@ impl<'a> Blockstore<'a> {
         let packed = reader.get(&block_id).ok_or_else(|| {
             DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
                 err
@@ -79,7 +78,7 @@ impl<'a> Blockstore<'a> {
         let packed = reader.get(&block_id).ok_or_else(|| {
             DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
                 err
@@ -103,7 +102,7 @@ impl<'a> Blockstore<'a> {
         let packed = reader.get(&block_id).ok_or_else(|| {
             DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
                 err
@@ -114,7 +113,7 @@ impl<'a> Blockstore<'a> {
 
     pub fn put(&self, block: &Block) -> Result<(), DatabaseError> {
         let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            Message::parse_from_bytes(&block.header).map_err(|err| {
                 DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
             })?;
         let mut writer = self.db.writer()?;
@@ -158,7 +157,7 @@ impl<'a> Blockstore<'a> {
         let block = self.get(block_id)?;
         let block_id = &block.header_signature;
         let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            Message::parse_from_bytes(&block.header).map_err(|err| {
                 DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
             })?;
         // Delete block from main db
@@ -217,8 +216,8 @@ mod tests {
     use super::*;
     use config;
     use database::lmdb::LmdbContext;
-    use proto::batch::{Batch, BatchHeader};
-    use proto::transaction::Transaction;
+    use crate::proto::batch::{Batch, BatchHeader};
+    use crate::proto::transaction::Transaction;
 
     /// Asserts that BLOCKSTORE has a current height of COUNT.
     fn assert_current_height(count: usize, blockstore: &Blockstore) {

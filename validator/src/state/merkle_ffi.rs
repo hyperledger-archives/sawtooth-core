@@ -14,11 +14,12 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
-use state::error::StateDatabaseError;
-use state::merkle::*;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::error::StateDatabaseError;
+use crate::state::merkle::*;
 /// This module contains all of the extern C functions for the Merkle trie
-use state::StateReader;
+use crate::state::StateReader;
+use log::error;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::mem;
@@ -380,11 +381,10 @@ pub unsafe extern "C" fn merkle_db_update(
             Ok(Vec::with_capacity(0))
         };
 
-        if update_vec.is_err() {
-            return update_vec.unwrap_err();
+        match update_vec {
+            Ok(v) => v.into_iter().collect(),
+            Err(e) => return e,
         }
-
-        update_vec.unwrap().into_iter().collect()
     };
 
     let deletes: Result<Vec<String>, ErrorCode> = if deletes_len > 0 {
@@ -401,8 +401,8 @@ pub unsafe extern "C" fn merkle_db_update(
         Ok(Vec::with_capacity(0))
     };
 
-    if deletes.is_err() {
-        return deletes.unwrap_err();
+    if let Err(e) = deletes {
+        return e;
     }
 
     match (*(merkle_db as *mut MerkleDatabase)).update(

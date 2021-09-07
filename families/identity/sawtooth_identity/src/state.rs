@@ -178,7 +178,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err

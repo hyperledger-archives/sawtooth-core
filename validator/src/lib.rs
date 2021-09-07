@@ -15,21 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate cbor;
-extern crate cpython;
-extern crate hex;
-extern crate libc;
-extern crate lmdb_zero;
-extern crate protobuf;
-extern crate python3_sys as py_ffi;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-extern crate openssl;
-#[cfg(test)]
-extern crate rand;
-extern crate uluru;
+#![allow(dead_code)]
+
+pub use python3_sys as py_ffi;
 
 // exported modules
 pub(crate) mod consensus;

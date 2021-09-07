@@ -15,13 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::{ObjectProtocol, PyClone};
 
-use execution::execution_platform::ExecutionPlatform;
+use crate::execution::execution_platform::ExecutionPlatform;
 
-use scheduler::py_scheduler::PyScheduler;
-use scheduler::Scheduler;
+use crate::scheduler::py_scheduler::PyScheduler;
+use crate::scheduler::Scheduler;
 
 pub struct PyExecutor {
     executor: cpython::PyObject,
@@ -34,7 +33,7 @@ impl PyExecutor {
 }
 
 impl ExecutionPlatform for PyExecutor {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr> {
+    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
         let scheduler = self

@@ -15,11 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::{FromPyObject, ObjectProtocol, PyClone, PyObject, Python, ToPyObject};
 
-use journal::block_wrapper::BlockStatus;
-use journal::block_wrapper::BlockWrapper;
+use crate::journal::block_wrapper::BlockStatus;
+use crate::journal::block_wrapper::BlockWrapper;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref PY_BLOCK_WRAPPER: PyObject = Python::acquire_gil()

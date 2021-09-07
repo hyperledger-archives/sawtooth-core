@@ -17,7 +17,7 @@
 
 use cpython::{self, ObjectProtocol, PyClone};
 
-use batch::Batch;
+use crate::batch::Batch;
 
 pub trait PermissionVerifier: Sync + Send {
     fn is_batch_signer_authorized(&self, batch: &Batch, state_root: &str) -> bool;

@@ -17,23 +17,24 @@
 
 #![allow(unknown_lints)]
 
-use block::Block;
-use consensus::notifier::BackgroundConsensusNotifier;
-use consensus::registry_ffi::PyConsensusRegistry;
+use crate::block::Block;
+use crate::consensus::notifier::BackgroundConsensusNotifier;
+use crate::consensus::registry_ffi::PyConsensusRegistry;
+use crate::database::lmdb::LmdbDatabase;
+use crate::execution::py_executor::PyExecutor;
+use crate::gossip::permission_verifier::PyPermissionVerifier;
+use crate::journal::block_manager::BlockManager;
+use crate::journal::block_validator::{BlockValidationResultStore, BlockValidator};
+use crate::journal::block_wrapper::BlockStatus;
+use crate::journal::chain::*;
+use crate::journal::chain_head_lock::ChainHeadLock;
+use crate::journal::commit_store::CommitStore;
+use crate::py_ffi;
+use crate::pylogger;
+use crate::state::state_pruning_manager::StatePruningManager;
+use crate::state::state_view_factory::StateViewFactory;
 use cpython::{self, ObjectProtocol, PyList, PyObject, Python, PythonObject, ToPyObject};
-use database::lmdb::LmdbDatabase;
-use execution::py_executor::PyExecutor;
-use gossip::permission_verifier::PyPermissionVerifier;
-use journal::block_manager::BlockManager;
-use journal::block_validator::{BlockValidationResultStore, BlockValidator};
-use journal::block_wrapper::BlockStatus;
-use journal::chain::*;
-use journal::chain_head_lock::ChainHeadLock;
-use journal::commit_store::CommitStore;
-use py_ffi;
-use pylogger;
-use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
+use log::{error, warn};
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -41,10 +42,10 @@ use std::ptr;
 use std::slice;
 use std::time::Duration;
 
-use protobuf::{self, Message};
+use protobuf::Message;
 
-use proto;
-use proto::transaction_receipt::TransactionReceipt;
+use crate::proto;
+use crate::proto::transaction_receipt::TransactionReceipt;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -110,7 +111,7 @@ pub unsafe extern "C" fn chain_controller_new(
     let py_consensus_registry = PyObject::from_borrowed_ptr(py, consensus_registry);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
@@ -214,7 +215,7 @@ macro_rules! chain_controller_block_ffi {
 
             let $block: Block = {
                 let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-                let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+                let proto_block: proto::block::Block = match Message::parse_from_bytes(&data) {
                     Ok(block) => block,
                     Err(err) => {
                         error!("Failed to parse block bytes: {:?}", err);

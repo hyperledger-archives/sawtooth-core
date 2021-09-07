@@ -19,20 +19,20 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use block::Block;
+use crate::block::Block;
 
-use hashlib::sha256_digest_strs;
-use hex;
+use crate::hashlib::sha256_digest_strs;
+
 use protobuf::{Message, RepeatedField};
 
-use proto::consensus::{
+use crate::proto::consensus::{
     ConsensusBlock, ConsensusNotifyBlockCommit, ConsensusNotifyBlockInvalid,
     ConsensusNotifyBlockNew, ConsensusNotifyBlockValid, ConsensusNotifyEngineActivated,
     ConsensusNotifyEngineDeactivated, ConsensusNotifyPeerConnected,
     ConsensusNotifyPeerDisconnected, ConsensusNotifyPeerMessage, ConsensusPeerInfo,
     ConsensusPeerMessage,
 };
-use proto::validator::Message_MessageType as MessageType;
+use crate::proto::validator::Message_MessageType as MessageType;
 
 pub trait ConsensusNotifier: Send + Sync {
     fn notify_peer_connected(&self, peer_id: &str);
@@ -233,11 +233,9 @@ impl BackgroundConsensusNotifier {
         let (tx, rx) = channel();
         let thread_builder = thread::Builder::new().name("BackgroundConsensusNotifier".into());
         thread_builder
-            .spawn(move || loop {
-                if let Ok(notification) = rx.recv() {
+            .spawn(move || {
+                while let Ok(notification) = rx.recv() {
                     handle_notification(&notifier, notification);
-                } else {
-                    break;
                 }
             })
             .expect("Failed to spawn BackgroundConsensusNotifier thread");

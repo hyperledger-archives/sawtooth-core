@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use state::BlockInfo;
+use crate::state::BlockInfo;
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -78,7 +78,7 @@ impl BlockInfoPayload {
 }
 
 fn parse_protobuf<M: protobuf::Message>(bytes: &[u8]) -> Result<M, ApplyError> {
-    protobuf::parse_from_bytes(bytes).map_err(|err| {
+    Message::parse_from_bytes(bytes).map_err(|err| {
         let warning_string = format!("Failed to serialize protobuf: {:?}", err);
         warn!("Invalid Transaction: {}", &warning_string);
         ApplyError::InvalidTransaction(warning_string)

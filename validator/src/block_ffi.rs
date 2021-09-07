@@ -14,19 +14,19 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use batch::Batch;
-use block::Block;
-use cpython;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::proto::batch::Batch as ProtoBatch;
+use crate::proto::batch::BatchHeader;
+use crate::proto::block::Block as ProtoBlock;
+use crate::proto::block::BlockHeader;
+use crate::proto::transaction::Transaction as ProtoTxn;
+use crate::proto::transaction::TransactionHeader;
+use crate::transaction::Transaction;
+
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python, PythonObject, ToPyObject};
-use proto::batch::Batch as ProtoBatch;
-use proto::batch::BatchHeader;
-use proto::block::Block as ProtoBlock;
-use proto::block::BlockHeader;
-use proto::transaction::Transaction as ProtoTxn;
-use proto::transaction::TransactionHeader;
-use protobuf;
+
 use protobuf::Message;
-use transaction::Transaction;
 
 impl<'source> FromPyObject<'source> for Block {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {
@@ -34,10 +34,10 @@ impl<'source> FromPyObject<'source> for Block {
             .call_method(py, "SerializeToString", cpython::NoArgs, None)?
             .extract(py)?;
 
-        let mut proto_block: ProtoBlock = protobuf::parse_from_bytes(&bytes)
+        let mut proto_block: ProtoBlock = Message::parse_from_bytes(&bytes)
             .expect("Unable to parse protobuf bytes from python protobuf object");
 
-        let mut block_header: BlockHeader = protobuf::parse_from_bytes(proto_block.get_header())
+        let mut block_header: BlockHeader = Message::parse_from_bytes(proto_block.get_header())
             .expect("Unable to parse protobuf bytes from python protobuf object");
         let block = Block {
             header_signature: proto_block.take_header_signature(),
@@ -61,7 +61,7 @@ impl<'source> FromPyObject<'source> for Block {
 }
 
 fn proto_batch_to_batch(proto_batch: &mut ProtoBatch) -> Batch {
-    let mut batch_header: BatchHeader = protobuf::parse_from_bytes(proto_batch.get_header())
+    let mut batch_header: BatchHeader = Message::parse_from_bytes(proto_batch.get_header())
         .expect("Unable to parse protobuf bytes from python protobuf object");
     Batch {
         header_signature: proto_batch.take_header_signature(),
@@ -79,7 +79,7 @@ fn proto_batch_to_batch(proto_batch: &mut ProtoBatch) -> Batch {
 }
 
 fn proto_txn_to_txn(proto_txn: &mut ProtoTxn) -> Transaction {
-    let mut txn_header: TransactionHeader = protobuf::parse_from_bytes(proto_txn.get_header())
+    let mut txn_header: TransactionHeader = Message::parse_from_bytes(proto_txn.get_header())
         .expect("Unable to parse protobuf bytes from python protobuf object");
 
     Transaction {

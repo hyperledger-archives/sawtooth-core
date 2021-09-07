@@ -14,14 +14,14 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use py_ffi;
+use crate::py_ffi;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
 use cpython::{PyObject, Python};
 
-use batch::Batch;
-use journal::publisher::IncomingBatchSender;
+use crate::batch::Batch;
+use crate::journal::publisher::IncomingBatchSender;
 
 macro_rules! check_null {
     ($($arg:expr) , *) => {
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn incoming_batch_sender_has_batch(
     *has = (*(sender_ptr as *mut IncomingBatchSender))
         .has_batch(batch_id)
         .unwrap_or_else(|e| {
-            warn!("Unable to check for batch {:?}", e);
+            log::warn!("Unable to check for batch {:?}", e);
             false
         });
 

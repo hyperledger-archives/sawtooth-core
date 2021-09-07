@@ -15,9 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
-
-use scheduler::Scheduler;
+use crate::scheduler::Scheduler;
 
 /// The logical state hash before state has been added to the
 /// merkle database. May not be the actual first state hash due to
@@ -25,5 +23,5 @@ use scheduler::Scheduler;
 pub const NULL_STATE_HASH: &str = "";
 
 pub trait ExecutionPlatform: Sync + Send {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<Scheduler>, cpython::PyErr>;
+    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
 }

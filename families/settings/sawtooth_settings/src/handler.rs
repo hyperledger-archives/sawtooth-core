@@ -251,7 +251,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    T::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid error: Failed to unmarshal SettingsTransaction: {:?}",
             err

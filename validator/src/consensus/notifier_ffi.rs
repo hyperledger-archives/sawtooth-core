@@ -19,17 +19,18 @@ use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
+use crate::py_ffi;
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-use protobuf::{self, Message, ProtobufEnum};
-use py_ffi;
+use protobuf::{Message, ProtobufEnum};
 
-use block::Block;
-use consensus::notifier::{
+use crate::block::Block;
+use crate::consensus::notifier::{
     BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
 };
-use proto::validator::Message_MessageType as MessageType;
-use proto::{self, consensus::ConsensusPeerMessage};
-use pylogger;
+use crate::proto::validator::Message_MessageType as MessageType;
+use crate::proto::{self, consensus::ConsensusPeerMessage};
+use crate::pylogger;
+use log::error;
 
 pub struct PyNotifierService {
     py_notifier_service: PyObject,
@@ -246,7 +247,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     check_null!(notifier, message_bytes, sender_id_bytes);
 
     let message_slice = slice::from_raw_parts(message_bytes, message_len);
-    let message: ConsensusPeerMessage = match protobuf::parse_from_bytes(&message_slice) {
+    let message: ConsensusPeerMessage = match Message::parse_from_bytes(&message_slice) {
         Ok(message) => message,
         Err(err) => {
             error!("Failed to parse ConsensusPeerMessage: {:?}", err);
@@ -270,7 +271,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(&data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);
@@ -327,7 +328,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(&data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);

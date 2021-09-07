@@ -24,10 +24,10 @@ use clap::ArgMatches;
 use protobuf;
 use protobuf::Message;
 
-use proto::batch::{Batch, BatchList};
-use proto::genesis::GenesisData;
-use proto::settings::{SettingProposal, SettingsPayload, SettingsPayload_Action};
-use proto::transaction::TransactionHeader;
+use crate::proto::batch::{Batch, BatchList};
+use crate::proto::genesis::GenesisData;
+use crate::proto::settings::{SettingProposal, SettingsPayload, SettingsPayload_Action};
+use crate::proto::transaction::TransactionHeader;
 
 use config;
 use err::CliError;
@@ -61,7 +61,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             file.read_to_end(&mut packed).map_err(|err| {
                 CliError::EnvironmentError(format!("Failed to read file: {}", err))
             })?;
-            let batch_list: BatchList = protobuf::parse_from_bytes(&packed).map_err(|err| {
+            let batch_list: BatchList = Message::parse_from_bytes(&packed).map_err(|err| {
                 CliError::ArgumentError(format!("Unable to read {}: {}", filepath, err))
             })?;
             Ok(batch_list)
@@ -109,7 +109,7 @@ fn validate_depedencies(batches: &[Batch]) -> Result<(), CliError> {
     for batch in batches.iter() {
         for txn in batch.transactions.iter() {
             let header: TransactionHeader =
-                protobuf::parse_from_bytes(&txn.header).map_err(|err| {
+                Message::parse_from_bytes(&txn.header).map_err(|err| {
                     CliError::ArgumentError(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
@@ -138,14 +138,14 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
     for batch in batches.iter() {
         for txn in batch.transactions.iter() {
             let txn_header: TransactionHeader =
-                protobuf::parse_from_bytes(&txn.header).map_err(|err| {
+                Message::parse_from_bytes(&txn.header).map_err(|err| {
                     CliError::ArgumentError(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
                     ))
                 })?;
             if txn_header.family_name == "sawtooth_settings" {
-                let settings_payload: SettingsPayload = protobuf::parse_from_bytes(&txn.payload)
+                let settings_payload: SettingsPayload = Message::parse_from_bytes(&txn.payload)
                     .map_err(|err| {
                         CliError::ArgumentError(format!(
                             "Invalid payload for settings txn {}: {}",
@@ -154,7 +154,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
                     })?;
                 if let SettingsPayload_Action::PROPOSE = settings_payload.action {
                     let proposal: SettingProposal =
-                        protobuf::parse_from_bytes(&settings_payload.data).map_err(|err| {
+                        Message::parse_from_bytes(&settings_payload.data).map_err(|err| {
                             CliError::ArgumentError(format!(
                                 "Invalid proposal for settings payload: {}",
                                 err
@@ -183,8 +183,8 @@ mod tests {
 
     use protobuf::RepeatedField;
 
-    use proto::batch::BatchHeader;
-    use proto::transaction::Transaction;
+    use crate::proto::batch::BatchHeader;
+    use crate::proto::transaction::Transaction;
 
     fn get_required_settings_batch() -> Batch {
         let required_settings = vec![

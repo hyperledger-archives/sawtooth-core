@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 
 use std::collections::HashMap;
 
-use block::Block;
+use crate::block::Block;
 
 #[derive(Debug)]
 pub enum BlockStoreError {
@@ -31,13 +31,13 @@ pub trait BlockStore: Sync + Send {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError>;
 
     fn delete(&mut self, block_ids: &[&str]) -> Result<Vec<Block>, BlockStoreError>;
 
     fn put(&mut self, blocks: Vec<Block>) -> Result<(), BlockStoreError>;
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError>;
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError>;
 }
 
 pub trait BatchIndex: Sync + Send {
@@ -79,8 +79,8 @@ impl BlockStore for InMemoryBlockStore {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
-        let block_ids_owned = block_ids.into_iter().map(|id| (*id).into()).collect();
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
+        let block_ids_owned = block_ids.iter().map(|id| (*id).into()).collect();
         Ok(Box::new(InMemoryGetBlockIterator::new(
             self.clone(),
             block_ids_owned,
@@ -101,7 +101,7 @@ impl BlockStore for InMemoryBlockStore {
             .put(blocks)
     }
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         let chain_head = self
             .state
             .lock()
@@ -251,8 +251,8 @@ impl Iterator for InMemoryIter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::block::Block;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
         Block {

@@ -1,6 +1,3 @@
-use hex;
-use openssl;
-
 pub fn sha256_digest_str(item: &str) -> String {
     hex::encode(openssl::sha::sha256(item.as_bytes()))
 }

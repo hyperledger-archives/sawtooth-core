@@ -1,13 +1,8 @@
-extern crate clap;
-extern crate cpython;
-#[macro_use]
-extern crate log;
-
 mod pylogger;
 mod server;
 
+use crate::server::cli;
 use cpython::Python;
-use server::cli;
 
 use std::process;
 

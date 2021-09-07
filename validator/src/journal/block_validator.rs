@@ -17,19 +17,20 @@
 
 #![allow(unknown_lints)]
 
-use batch::Batch;
-use block::Block;
-use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
-use gossip::permission_verifier::PermissionVerifier;
-use journal::block_scheduler::BlockScheduler;
-use journal::chain_commit_state::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use crate::gossip::permission_verifier::PermissionVerifier;
+use crate::journal::block_scheduler::BlockScheduler;
+use crate::journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
-use journal::validation_rule_enforcer::enforce_validation_rules;
-use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
-use scheduler::TxnExecutionResult;
-use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+use crate::journal::validation_rule_enforcer::enforce_validation_rules;
+use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
+use crate::scheduler::TxnExecutionResult;
+use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+use log::{error, info, warn};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc::{channel, Receiver, RecvTimeoutError, Sender},
@@ -37,7 +38,6 @@ use std::sync::{
 };
 use std::thread;
 use std::time::Duration;
-use uluru;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
@@ -53,7 +53,7 @@ pub enum ValidationError {
 }
 
 type BlockValidationResultCache =
-    uluru::LRUCache<[uluru::Entry<BlockValidationResult>; BLOCK_VALIDATION_RESULT_CACHE_SIZE]>;
+    uluru::LRUCache<BlockValidationResult, BLOCK_VALIDATION_RESULT_CACHE_SIZE>;
 
 #[derive(Clone, Default)]
 pub struct BlockValidationResultStore {
@@ -216,14 +216,14 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
         let validations = vec![validation1, validation2, validation3];
@@ -348,14 +348,14 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
         let validations = vec![validation1, validation2, validation3];
@@ -426,14 +426,14 @@ trait BlockValidation: Send {
 
 struct BlockValidationProcessor<SBV: BlockValidation<ReturnValue = BlockValidationResult>> {
     block_manager: BlockManager,
-    validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+    validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
     state_validation: SBV,
 }
 
 impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationProcessor<SBV> {
     fn new(
         block_manager: BlockManager,
-        validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+        validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
         state_validation: SBV,
     ) -> Self {
         BlockValidationProcessor {
@@ -449,7 +449,7 @@ impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationP
             .get(&[&block.previous_block_id])
             .next()
             .unwrap_or(None)
-            .map(|b| b.state_root_hash.clone());
+            .map(|b| b.state_root_hash);
 
         for validation in &self.validations {
             match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
@@ -499,8 +499,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
             })?;
 
         let greatest_batch_index = block.batches.len() - 1;
-        let mut index = 0;
-        for batch in &block.batches {
+        for (index, batch) in block.batches.iter().enumerate() {
             if index < greatest_batch_index {
                 scheduler
                     .add_batch(batch.clone(), None, false)
@@ -520,7 +519,6 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                         ))
                     })?;
             }
-            index += 1;
         }
         scheduler.finalize(false).map_err(|err| {
             ValidationError::BlockValidationError(format!(
@@ -729,7 +727,7 @@ impl BlockValidation for OnChainRulesValidation {
 mod test {
 
     use super::*;
-    use journal::{
+    use crate::journal::{
         block_store::{BlockStore, BlockStoreError},
         NULL_BLOCK_IDENTIFIER,
     };
@@ -740,9 +738,9 @@ mod test {
         let block_manager = BlockManager::new();
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(Mock2::new(Ok(()), Ok(())));
         let validations = vec![validation1, validation2];
         let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
@@ -837,14 +835,14 @@ mod test {
     }
 
     impl BlockStore for Mock1<Option<Block>> {
-        fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
+        fn iter(&self) -> Result<Box<dyn Iterator<Item = Block>>, BlockStoreError> {
             Ok(Box::new(self.result.clone().into_iter()))
         }
 
         fn get<'a>(
             &'a self,
             _block_ids: &[&str],
-        ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
             unimplemented!();
         }
 

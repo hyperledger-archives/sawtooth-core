@@ -17,9 +17,12 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use database::lmdb::LmdbDatabase;
-use metrics;
-use state::merkle::MerkleDatabase;
+use crate::database::lmdb::LmdbDatabase;
+use crate::metrics;
+use crate::state::merkle::MerkleDatabase;
+
+use lazy_static::lazy_static;
+use log::{debug, error, info};
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -38,12 +41,18 @@ pub struct StatePruningManager {
     state_database: LmdbDatabase,
 }
 
-#[derive(Eq, PartialEq, Debug, Ord)]
+#[derive(Eq, PartialEq, Debug)]
 struct PruneCandidate(u64, String);
 
 impl PartialOrd for PruneCandidate {
     fn partial_cmp(&self, other: &PruneCandidate) -> Option<Ordering> {
         Some(Ordering::reverse(self.0.cmp(&other.0)))
+    }
+}
+
+impl Ord for PruneCandidate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        <Self as PartialOrd>::partial_cmp(&self, other).unwrap()
     }
 }
 
@@ -73,7 +82,7 @@ impl StatePruningManager {
                 if !added_roots.contains(&candidate.1.as_str()) {
                     true
                 } else {
-                    debug!("Removing {} from pruning queue", candidate.1);
+                    log::debug!("Removing {} from pruning queue", candidate.1);
                     false
                 }
             })

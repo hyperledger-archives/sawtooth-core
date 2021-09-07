@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std;
-
 #[derive(Debug)]
 pub enum DatabaseError {
     InitError(String),
@@ -52,7 +50,7 @@ impl std::error::Error for DatabaseError {
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&dyn std::error::Error> {
         match *self {
             DatabaseError::InitError(_) => None,
             DatabaseError::ReaderError(_) => None,

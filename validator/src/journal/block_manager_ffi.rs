@@ -20,13 +20,14 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use block::Block;
-use journal::block_manager::{
+use crate::block::Block;
+use crate::journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::commit_store::CommitStore;
-use proto;
-use protobuf::{self, Message};
+use crate::journal::commit_store::CommitStore;
+use crate::proto;
+use log::error;
+use protobuf::Message;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -152,12 +153,12 @@ pub unsafe extern "C" fn block_manager_put(
     check_null!(block_manager, branch);
 
     let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
-        .into_iter()
+        .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
             let proto_block: proto::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
+                Message::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
         })
@@ -406,12 +407,12 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
-    use database::lmdb::{LmdbContext, LmdbDatabase};
-    use journal::block_store::BlockStore;
-    use journal::commit_store::CommitStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
-    use proto::block::BlockHeader;
+    use crate::block::Block;
+    use crate::database::lmdb::{LmdbContext, LmdbDatabase};
+    use crate::journal::block_store::BlockStore;
+    use crate::journal::commit_store::CommitStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
+    use crate::proto::block::BlockHeader;
 
     use protobuf::Message;
 
@@ -524,7 +525,7 @@ mod test {
         CommitStore::new(db)
     }
 
-    fn get_chain_head(store: &BlockStore) -> Option<Block> {
+    fn get_chain_head(store: &dyn BlockStore) -> Option<Block> {
         store.iter().expect("Failed to get BlockStore iter").next()
     }
 

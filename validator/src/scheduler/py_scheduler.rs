@@ -15,20 +15,19 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyResult;
 
-use batch::Batch;
+use crate::batch::Batch;
 
 use protobuf::ProtobufError;
 
-use scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
-use scheduler::{ExecutionResults, Scheduler, SchedulerError};
+use crate::scheduler::execution_result_ffi::{PyBatchExecutionResult, PyTxnExecutionResult};
+use crate::scheduler::{ExecutionResults, Scheduler, SchedulerError};
 
 impl From<ProtobufError> for SchedulerError {
     fn from(other: ProtobufError) -> SchedulerError {
-        SchedulerError::Other(other.to_string().into())
+        SchedulerError::Other(other.to_string())
     }
 }
 
@@ -185,7 +184,7 @@ impl Scheduler for PyScheduler {
                                 .collect(),
                         ),
                     ),
-                    None => (val.2.clone(), None),
+                    None => (val.2, None),
                 })
                 .collect();
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use py_ffi;
+use crate::py_ffi;
 use std::ffi::CStr;
 use std::mem;
 use std::os::raw::{c_char, c_void};
@@ -22,17 +22,18 @@ use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
-use batch::Batch;
-use block::Block;
-use execution::py_executor::PyExecutor;
-use ffi::py_import_class;
-use journal::block_manager::BlockManager;
-use journal::commit_store::CommitStore;
-use journal::publisher::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::execution::py_executor::PyExecutor;
+use crate::ffi::py_import_class;
+use crate::journal::block_manager::BlockManager;
+use crate::journal::commit_store::CommitStore;
+use crate::journal::publisher::{
     BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
+use lazy_static::lazy_static;
 
-use state::state_view_factory::StateViewFactory;
+use crate::state::state_view_factory::StateViewFactory;
 
 lazy_static! {
     static ref PY_BATCH_PUBLISHER_CLASS: PyObject = py_import_class(
@@ -119,7 +120,7 @@ pub unsafe extern "C" fn block_publisher_new(
     };
 
     let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));

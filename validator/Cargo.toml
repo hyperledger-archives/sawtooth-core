@@ -2,11 +2,12 @@
 name = "sawtooth_validator"
 version = "1.2.7"
 authors = ["Intel Corporation"]
+edition = "2018"
 
 [dependencies]
 clap = "2"
-cpython = "0.2"
-hex = "0.3"
+cpython = "0.6"
+hex = "0.4"
 lazy_static = "1.0"
 log = { version = "0.4", features = ["std"] }
 libc = ">=0.2.35"
@@ -14,15 +15,15 @@ lmdb-zero = ">=0.4.1"
 cbor-codec = "0.7"
 openssl = "0.10"
 protobuf = "2.0"
-python3-sys = "0.2"
-uluru = "0.2.0"
+python3-sys = "0.6"
+uluru = "2.1.1"
 
 [dev-dependencies]
-rand = "0.4"
+rand = "0.8"
 
 [build-dependencies]
 protoc-rust = "2.0"
-glob = "0.2"
+glob = "0.3"
 
 [lib]
 crate-type = ["dylib"]

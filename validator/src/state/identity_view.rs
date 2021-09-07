@@ -17,16 +17,15 @@
 
 use std::iter::repeat;
 
-use hashlib::sha256_digest_str;
-use protobuf;
+use crate::hashlib::sha256_digest_str;
 
-use proto::identity::Policy;
-use proto::identity::PolicyList;
-use proto::identity::Role;
-use proto::identity::RoleList;
+use crate::proto::identity::Policy;
+use crate::proto::identity::PolicyList;
+use crate::proto::identity::Role;
+use crate::proto::identity::RoleList;
 
-use state::StateDatabaseError;
-use state::StateReader;
+use crate::state::StateDatabaseError;
+use crate::state::StateReader;
 
 /// The namespace for storage
 const POLICY_NS: &str = "00001d00";
@@ -57,12 +56,12 @@ impl From<protobuf::ProtobufError> for IdentityViewError {
 /// into the corresponding addresses, and returns the deserialized values from
 /// state.
 pub struct IdentityView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
 }
 
 impl IdentityView {
     /// Creates an IdentityView from a given StateReader.
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView { state_reader }
     }
 
@@ -104,7 +103,7 @@ impl IdentityView {
             .map_err(IdentityViewError::StateDatabaseError)
             .and_then(|bytes_opt| {
                 Ok(if let Some(bytes) = bytes_opt {
-                    Some(protobuf::parse_from_bytes::<L>(&bytes)?)
+                    Some(L::parse_from_bytes(&bytes)?)
                 } else {
                     None
                 })
@@ -130,7 +129,7 @@ impl IdentityView {
         let mut res = Vec::new();
         for state_value in self.state_reader.leaves(Some(prefix))? {
             let (_, bytes) = state_value?;
-            let item_list = protobuf::parse_from_bytes::<L>(&bytes)?;
+            let item_list = L::parse_from_bytes(&bytes)?;
             for item in item_list.values() {
                 res.push(item.clone());
             }
@@ -140,8 +139,8 @@ impl IdentityView {
     }
 }
 
-impl From<Box<StateReader>> for IdentityView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for IdentityView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView::new(state_reader)
     }
 }
@@ -209,17 +208,17 @@ fn short_hash(s: &str, length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::identity::Policy;
-    use proto::identity::PolicyList;
-    use proto::identity::Policy_Entry;
-    use proto::identity::Policy_EntryType;
-    use proto::identity::Role;
-    use proto::identity::RoleList;
+    use crate::proto::identity::Policy;
+    use crate::proto::identity::PolicyList;
+    use crate::proto::identity::Policy_Entry;
+    use crate::proto::identity::Policy_EntryType;
+    use crate::proto::identity::Role;
+    use crate::proto::identity::RoleList;
 
-    use protobuf;
+    use crate::state::StateDatabaseError;
+    use crate::state::StateReader;
+
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]
@@ -395,7 +394,7 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self

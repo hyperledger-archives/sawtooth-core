@@ -16,6 +16,7 @@
 # Exclude IDE and Editor files
 /.idea/
 *.sublime*
+*.vscode*
 
 # Everything else
 /adm/Cargo.lock
@@ -46,6 +47,7 @@
 /families/smallbank/smallbank_rust/Cargo.lock
 /families/smallbank/smallbank_rust/bin/
 /families/identity/python/sawtooth_identity/protobuf/
+/families/block_info/python/sawtooth_block_info/protobuf/
 /families/identity/sawtooth_identity/bin/
 /families/identity/sawtooth_identity/target/
 /families/identity/sawtooth_identity/Cargo.lock

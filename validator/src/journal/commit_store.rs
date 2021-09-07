@@ -15,21 +15,22 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::block::{Block as ProtoBlock, BlockHeader};
-use protobuf;
+use crate::proto::block::{Block as ProtoBlock, BlockHeader};
+
 use protobuf::Message;
 
-use batch::Batch;
-use block::Block;
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
-use journal::block_store::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
+use crate::journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
-use journal::chain::{ChainReadError, ChainReader};
-use transaction::Transaction;
+use crate::journal::chain::{ChainReadError, ChainReader};
+use crate::transaction::Transaction;
+use log::error;
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]
@@ -45,13 +46,13 @@ impl CommitStore {
     // Get
 
     fn read_proto_block_from_main(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         block_id: &[u8],
     ) -> Result<ProtoBlock, DatabaseError> {
         let packed = reader.get(&block_id).ok_or_else(|| {
             DatabaseError::NotFoundError(format!("Block not found: {:?}", block_id))
         })?;
-        let proto_block: ProtoBlock = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let proto_block: ProtoBlock = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
                 err
@@ -61,7 +62,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_batch_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         batch_id: &[u8],
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -74,7 +75,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_transaction_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         transaction_id: &[u8],
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -90,7 +91,7 @@ impl CommitStore {
     }
 
     fn read_block_id_from_block_num_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
         block_num: u64,
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
@@ -106,7 +107,7 @@ impl CommitStore {
     }
 
     fn read_chain_head_id_from_block_num_index(
-        reader: &DatabaseReader,
+        reader: &dyn DatabaseReader,
     ) -> Result<Vec<u8>, DatabaseError> {
         let mut cursor = reader.index_cursor("index_block_num")?;
         let (_, val) = cursor
@@ -165,7 +166,7 @@ impl CommitStore {
     fn write_block_num_to_index(
         writer: &mut LmdbDatabaseWriter,
         block_num: u64,
-        header_signature: &String,
+        header_signature: &str,
     ) -> Result<(), DatabaseError> {
         let block_num_index = format!("0x{:0>16x}", block_num);
         writer.index_put(
@@ -271,7 +272,7 @@ impl CommitStore {
         block_id: &str,
     ) -> Result<Block, DatabaseError> {
         let proto_block = Self::read_proto_block_from_main(&*writer, block_id.as_bytes())?;
-        let block_header: BlockHeader = protobuf::parse_from_bytes(proto_block.get_header())
+        let block_header: BlockHeader = Message::parse_from_bytes(proto_block.get_header())
             .expect("Unable to parse BlockHeader bytes");
 
         Self::delete_proto_block_from_main_db(writer, &proto_block)?;
@@ -302,8 +303,7 @@ impl CommitStore {
             block
                 .batches
                 .into_iter()
-                .skip_while(|batch| batch.header_signature != batch_id)
-                .next()
+                .find(|batch| batch.header_signature == batch_id)
                 .ok_or_else(|| DatabaseError::CorruptionError("Batch index corrupted".into()))
         })
     }
@@ -315,8 +315,7 @@ impl CommitStore {
                     .batches
                     .into_iter()
                     .flat_map(|batch| batch.transactions.into_iter())
-                    .skip_while(|txn| txn.header_signature != transaction_id)
-                    .next()
+                    .find(|txn| txn.header_signature == transaction_id)
                     .ok_or_else(|| {
                         DatabaseError::CorruptionError("Transaction index corrupted".into())
                     })
@@ -329,13 +328,12 @@ impl CommitStore {
                 block
                     .batches
                     .into_iter()
-                    .skip_while(|batch| {
-                        batch
+                    .find(|batch| {
+                        !batch
                             .transaction_ids
                             .iter()
                             .any(|txn_id| txn_id == transaction_id)
                     })
-                    .next()
                     .ok_or_else(|| {
                         DatabaseError::CorruptionError("Transaction index corrupted".into())
                     })
@@ -415,10 +413,10 @@ impl BlockStore for CommitStore {
     fn get<'a>(
         &'a self,
         block_ids: &[&str],
-    ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         Ok(Box::new(CommitStoreGetIterator {
             store: self.clone(),
-            block_ids: block_ids.into_iter().map(|id| (*id).into()).collect(),
+            block_ids: block_ids.iter().map(|id| (*id).into()).collect(),
             index: 0,
         }))
     }
@@ -438,7 +436,7 @@ impl BlockStore for CommitStore {
         })
     }
 
-    fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+    fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
         match self.get_chain_head() {
             Ok(head) => Ok(Box::new(self.get_block_by_height_iter(
                 Some(head.block_num),

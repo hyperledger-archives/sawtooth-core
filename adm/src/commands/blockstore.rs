@@ -24,8 +24,8 @@ use protobuf;
 use protobuf::Message;
 use serde_yaml;
 
-use proto::block::{Block, BlockHeader};
-use proto::transaction::TransactionHeader;
+use crate::proto::block::{Block, BlockHeader};
+use crate::proto::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use config;
@@ -75,7 +75,7 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             CliError::EnvironmentError(format!("Block in chain missing from blockstore: {}", err))
         })?;
         backup_block(&block, &mut file)?;
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
+        let block_header: BlockHeader = Message::parse_from_bytes(&block.header)
             .map_err(|err| CliError::ParseError(format!("Unable to read block header: {}", err)))?;
         current = block_header.previous_block_id
     }
@@ -125,7 +125,7 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             CliError::EnvironmentError(format!("failed to read block {}: {}", block_id, err))
         })?;
         let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            Message::parse_from_bytes(&block.header).map_err(|err| {
                 CliError::ParseError(format!(
                     "failed to parse header for block {}: {}",
                     block_id, err
@@ -255,7 +255,7 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         if current.header_signature == block_id {
             break;
         }
-        let header: BlockHeader = protobuf::parse_from_bytes(&current.header).map_err(|err| {
+        let header: BlockHeader = Message::parse_from_bytes(&current.header).map_err(|err| {
             CliError::ParseError(format!(
                 "failed to parse block_header for block {}: {}",
                 current.header_signature, err
@@ -322,9 +322,9 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     file.read_to_end(&mut packed)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to read file: {}", err)))?;
 
-    let block: Block = protobuf::parse_from_bytes(&packed)
+    let block: Block = Message::parse_from_bytes(&packed)
         .map_err(|err| CliError::ParseError(format!("{}", err)))?;
-    let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
+    let block_header: BlockHeader = Message::parse_from_bytes(&block.header)
         .map_err(|err| CliError::ParseError(format!("{}", err)))?;
     let block_id = block.header_signature.clone();
 
@@ -381,7 +381,7 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         loop {
             for batch in &block.batches {
                 for txn in &batch.transactions {
-                    let txn_header: TransactionHeader = protobuf::parse_from_bytes(&txn.header)
+                    let txn_header: TransactionHeader = Message::parse_from_bytes(&txn.header)
                         .map_err(|err| {
                             CliError::ParseError(format!(
                                 "failed to parse header for transaction {}: {}",
@@ -392,7 +392,7 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
                     *count += 1;
                 }
             }
-            let header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            let header: BlockHeader = Message::parse_from_bytes(&block.header).map_err(|err| {
                 CliError::ParseError(format!(
                     "failed to parse header for block {}: {}",
                     block.header_signature, err

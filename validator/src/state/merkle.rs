@@ -15,13 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Cursor;
+use std::{cmp::Reverse, collections::BTreeMap};
 
-use cbor;
 use cbor::decoder::GenericDecoder;
 use cbor::encoder::GenericEncoder;
 use cbor::value::Bytes;
@@ -29,21 +28,20 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use hashlib::sha512_digest_bytes;
+use crate::hashlib::sha512_digest_bytes;
 
-use protobuf;
 use protobuf::Message;
 
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
 
-use proto::merkle::ChangeLogEntry;
-use proto::merkle::ChangeLogEntry_Successor;
+use crate::proto::merkle::ChangeLogEntry;
+use crate::proto::merkle::ChangeLogEntry_Successor;
 
-use state::error::StateDatabaseError;
-use state::{StateIter, StateReader};
+use crate::state::error::StateDatabaseError;
+use crate::state::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
@@ -71,8 +69,8 @@ impl MerkleDatabase {
 
         Ok(MerkleDatabase {
             root_hash,
-            root_node,
             db,
+            root_node,
         })
     }
 
@@ -253,7 +251,7 @@ impl MerkleDatabase {
         for del_address in delete_items.iter() {
             path_map.remove(del_address);
             let (mut parent_address, mut path_branch) = parent_and_branch(del_address);
-            while parent_address != "" {
+            while !parent_address.is_empty() {
                 let remove_parent = {
                     let parent_node = path_map
                         .get_mut(parent_address)
@@ -280,7 +278,7 @@ impl MerkleDatabase {
                 parent_address = next_parent;
                 path_branch = next_branch;
 
-                if parent_address == "" {
+                if parent_address.is_empty() {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated or entry is deleted");
@@ -294,7 +292,7 @@ impl MerkleDatabase {
 
         let mut sorted_paths: Vec<_> = path_map.keys().cloned().collect();
         // Sort by longest to shortest
-        sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
+        sorted_paths.sort_by_key(|a| Reverse(a.len()));
 
         // initializing this to empty, to make the compiler happy
         let mut key_hash = Vec::with_capacity(0);
@@ -306,9 +304,9 @@ impl MerkleDatabase {
             let (hash_key, packed) = encode_and_hash(node)?;
             key_hash = hash_key.clone();
 
-            if path != "" {
+            if !path.is_empty() {
                 let (parent_address, path_branch) = parent_and_branch(&path);
-                let mut parent = path_map
+                let parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated or entry is deleted");
                 if let Some(old_hash_key) = parent
@@ -358,7 +356,7 @@ impl MerkleDatabase {
 
         let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
         if let Some(change_log) = current_change_log.as_mut() {
-            let mut successors = change_log.mut_successors();
+            let successors = change_log.mut_successors();
             let mut successor = ChangeLogEntry_Successor::new();
             successor.set_successor(Vec::from(successor_root_hash));
             successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
@@ -588,7 +586,7 @@ where
     let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
 
     Ok(match log_bytes {
-        Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+        Some(bytes) => Some(Message::parse_from_bytes(&bytes)?),
         None => None,
     })
 }
@@ -661,7 +659,7 @@ fn delete_ignore_missing(
             if s == "MDB_NOTFOUND: No matching key/data pair found" =>
         {
             // This can be ignored, as the record doesn't exist
-            debug!(
+            log::debug!(
                 "Attempting to delete a missing entry: {}",
                 ::hex::encode(key)
             );
@@ -747,12 +745,7 @@ impl Node {
         let children = self
             .children
             .into_iter()
-            .map(|(k, v)| {
-                (
-                    Key::Text(Text::Text(k.to_string())),
-                    Value::Text(Text::Text(v.to_string())),
-                )
-            })
+            .map(|(k, v)| (Key::Text(Text::Text(k)), Value::Text(Text::Text(v))))
             .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));
@@ -782,7 +775,7 @@ impl Node {
         };
 
         let children = match children_raw {
-            Some(Value::Map(mut child_map)) => {
+            Some(Value::Map(child_map)) => {
                 let mut result = BTreeMap::new();
                 for (k, v) in child_map {
                     result.insert(key_to_string(k)?, text_to_string(v)?);
@@ -823,14 +816,14 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::error::DatabaseError;
-    use database::lmdb::DatabaseReader;
-    use database::lmdb::LmdbContext;
-    use database::lmdb::LmdbDatabase;
-    use proto::merkle::ChangeLogEntry;
+    use crate::database::error::DatabaseError;
+    use crate::database::lmdb::DatabaseReader;
+    use crate::database::lmdb::LmdbContext;
+    use crate::database::lmdb::LmdbDatabase;
+    use crate::proto::merkle::ChangeLogEntry;
 
-    use protobuf;
-    use rand::{seq, thread_rng};
+    use rand::prelude::IteratorRandom;
+    use rand::thread_rng;
     use std::env;
     use std::fs::remove_file;
     use std::panic;
@@ -935,7 +928,7 @@ mod tests {
                     .index_get(CHANGE_LOG_INDEX, new_root_bytes)
                     .expect("A database error occurred")
                     .expect("Did not return a change log entry");
-                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+                Message::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
             };
 
             assert_eq!(orig_root_bytes, &change_log.get_parent());
@@ -996,15 +989,14 @@ mod tests {
             let mut rng = thread_rng();
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
+            for i in (0..500).choose_multiple(&mut rng, 50) {
                 let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
 
             // perform some deletions on the upper keys
-            let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
-                .unwrap()
+            let delete_items = (500..1000).choose_multiple(&mut rng, 50)
                 .into_iter()
                 .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
                 .collect::<Vec<String>>();
@@ -1485,7 +1477,7 @@ mod tests {
 
     fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
         let reader = db.reader().unwrap();
-        protobuf::parse_from_bytes(
+        Message::parse_from_bytes(
             &reader
                 .index_get(CHANGE_LOG_INDEX, root_hash)
                 .expect("No db errors")
@@ -1505,11 +1497,11 @@ mod tests {
                 }
             }
             if !has_root {
-                panic!(format!(
+                panic!(
                     "Root {} not found in change log {:?}",
                     ::hex::encode(successor_root),
                     change_log
-                ));
+                );
             }
         }
     }
@@ -1581,7 +1573,7 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), format!("Value not returned: {:?}", value));
+        assert!(value.is_ok(), "Value not returned: {:?}", value);
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 

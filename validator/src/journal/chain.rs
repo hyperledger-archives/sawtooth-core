@@ -34,29 +34,29 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 
-use protobuf;
-
-use batch::Batch;
-use block::Block;
-use consensus::notifier::ConsensusNotifier;
-use consensus::registry::ConsensusRegistry;
-use execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
-use journal;
-use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
-use journal::block_validator::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::consensus::notifier::ConsensusNotifier;
+use crate::consensus::registry::ConsensusRegistry;
+use crate::execution::execution_platform::ExecutionPlatform;
+use crate::gossip::permission_verifier::PermissionVerifier;
+use crate::journal;
+use crate::journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
+use crate::journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
 };
-use journal::block_wrapper::BlockStatus;
-use journal::chain_head_lock::ChainHeadLock;
-use journal::chain_id_manager::ChainIdManager;
-use journal::fork_cache::ForkCache;
-use metrics;
-use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
+use crate::journal::block_wrapper::BlockStatus;
+use crate::journal::chain_head_lock::ChainHeadLock;
+use crate::journal::chain_id_manager::ChainIdManager;
+use crate::journal::fork_cache::ForkCache;
+use crate::metrics;
+use crate::state::state_pruning_manager::StatePruningManager;
+use crate::state::state_view_factory::StateViewFactory;
 
-use proto::transaction_receipt::TransactionReceipt;
-use scheduler::TxnExecutionResult;
+use crate::proto::transaction_receipt::TransactionReceipt;
+use crate::scheduler::TxnExecutionResult;
+use lazy_static::lazy_static;
+use log::{debug, error, info, warn};
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -153,10 +153,10 @@ struct ForkResolutionError(String);
 struct ChainControllerState {
     block_manager: BlockManager,
     block_references: HashMap<String, BlockRef>,
-    chain_reader: Box<ChainReader>,
+    chain_reader: Box<dyn ChainReader>,
     chain_head: Option<BlockRef>,
     chain_id_manager: ChainIdManager,
-    observers: Vec<Box<ChainObserver>>,
+    observers: Vec<Box<dyn ChainObserver>>,
     state_pruning_manager: StatePruningManager,
     fork_cache: ForkCache,
 }
@@ -249,8 +249,8 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
-    consensus_notifier: Arc<ConsensusNotifier>,
-    consensus_registry: Arc<ConsensusRegistry>,
+    consensus_notifier: Arc<dyn ConsensusNotifier>,
+    consensus_registry: Arc<dyn ConsensusRegistry>,
     state_view_factory: StateViewFactory,
     block_validator: BlockValidator<TEP, PV>,
     block_validation_results: BlockValidationResultStore,
@@ -271,15 +271,15 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV>,
-        chain_reader: Box<ChainReader>,
+        chain_reader: Box<dyn ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
-        consensus_notifier: Box<ConsensusNotifier>,
-        consensus_registry: Box<ConsensusRegistry>,
+        consensus_notifier: Box<dyn ConsensusNotifier>,
+        consensus_registry: Box<dyn ConsensusRegistry>,
         state_view_factory: StateViewFactory,
         data_dir: String,
         state_pruning_block_depth: u32,
-        observers: Vec<Box<ChainObserver>>,
+        observers: Vec<Box<dyn ChainObserver>>,
         state_pruning_manager: StatePruningManager,
         fork_cache_keep_time: Duration,
     ) -> Self {
@@ -426,7 +426,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                     if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
@@ -446,7 +446,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).next() {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
                 match state.block_manager.ref_block(&block_id) {
@@ -592,17 +592,13 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
             .read()
             .expect("No lock holder should have poisoned the lock");
 
-        let block_ref = match state.block_manager.ref_block(head) {
-            Ok(block_ref) => Some(block_ref),
-            Err(BlockManagerError::UnknownBlock) => None,
+        match state.block_manager.ref_block(head) {
+            Ok(_) => {}
+            Err(BlockManagerError::UnknownBlock) => return None,
             Err(err) => {
                 error!("Unexpected error occurred: {:?}", err);
-                None
+                return None;
             }
-        };
-
-        if block_ref.is_none() {
-            return None;
         }
 
         let mut forks: Vec<Block> = state
@@ -1002,7 +998,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                 .unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
-            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+            self.start_commit_queue_thread(exit_flag, commit_queue_receiver);
         }
     }
 
@@ -1105,9 +1101,7 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     fn from(result: &'a TxnExecutionResult) -> Self {
         let mut receipt = TransactionReceipt::new();
 
-        receipt.set_data(protobuf::RepeatedField::from_vec(
-            result.data.iter().map(|data| data.clone()).collect(),
-        ));
+        receipt.set_data(protobuf::RepeatedField::from_vec(result.data.clone()));
         receipt.set_state_changes(protobuf::RepeatedField::from_vec(
             result.state_changes.clone(),
         ));

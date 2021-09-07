@@ -15,8 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
-use protobuf;
+use crate::proto;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Transaction {
@@ -48,7 +47,7 @@ impl From<Transaction> for proto::transaction::Transaction {
 impl From<proto::transaction::Transaction> for Transaction {
     fn from(mut proto_txn: proto::transaction::Transaction) -> Self {
         let mut txn_header: proto::transaction::TransactionHeader =
-            protobuf::parse_from_bytes(proto_txn.get_header())
+            protobuf::Message::parse_from_bytes(proto_txn.get_header())
                 .expect("Unable to parse TransactionHeader bytes");
 
         Transaction {

@@ -70,7 +70,7 @@ impl<'a> BlockInfoState<'a> {
 
         match block_config {
             Some(ref d) => Ok(Some(
-                ::protobuf::parse_from_bytes::<protos::block_info::BlockInfoConfig>(d)
+                ::protobuf::Message::parse_from_bytes::<protos::block_info::BlockInfoConfig>(d)
                     .map_err(|_| {
                         ApplyError::InternalError("Failed to deserialize BlockInfoConfig".into())
                     })?
@@ -97,7 +97,7 @@ impl<'a> BlockInfoState<'a> {
 
         match block_data {
             Some(ref d) => Ok(Some(
-                (&::protobuf::parse_from_bytes::<protos::block_info::BlockInfo>(d).map_err(
+                (&::protobuf::Message::parse_from_bytes::<protos::block_info::BlockInfo>(d).map_err(
                     |_| ApplyError::InternalError("Failed to deserialize BlockInfo".into()),
                 )?)
                     .into(),
