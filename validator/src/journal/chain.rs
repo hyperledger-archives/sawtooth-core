@@ -39,6 +39,7 @@ use crate::block::Block;
 use crate::consensus::notifier::ConsensusNotifier;
 use crate::consensus::registry::ConsensusRegistry;
 use crate::execution::execution_platform::ExecutionPlatform;
+use crate::ffi;
 use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal;
 use crate::journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
@@ -50,13 +51,21 @@ use crate::journal::chain_head_lock::ChainHeadLock;
 use crate::journal::chain_id_manager::ChainIdManager;
 use crate::journal::fork_cache::ForkCache;
 use crate::metrics;
+use crate::proto::transaction_receipt::TransactionReceipt;
+use crate::scheduler::TxnExecutionResult;
 use crate::state::state_pruning_manager::StatePruningManager;
 use crate::state::state_view_factory::StateViewFactory;
 
-use crate::proto::transaction_receipt::TransactionReceipt;
-use crate::scheduler::TxnExecutionResult;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
+
+lazy_static! {
+    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
+        "sawtooth_validator.journal.batch_injector",
+        "GluwaBatchInjector",
+        "housekeeping_payload"
+    );
+}
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -182,11 +191,34 @@ impl ChainControllerState {
             batches.append(&mut block.batches.clone());
             batches
         });
-        let uncommitted_batches: Vec<Batch> =
-            current_chain.iter().fold(vec![], |mut batches, block| {
-                batches.append(&mut block.batches.clone());
-                batches
-            });
+
+        //inspect the first batch looking for the housekeeping transaction.
+        //this is not the place to validate for malformed blocks.
+        let uncommitted_batches: Vec<Batch> = {
+            let gil = cpython::Python::acquire_gil();
+            let py = gil.python();
+
+            current_chain
+                .iter()
+                .map(|block| {
+                    let payload = {
+                        let first_batch = block.batches.iter().next().expect("first batch");
+                        let first_transaction =
+                            first_batch.transactions.iter().next().expect("first txn");
+                        let bytes = first_transaction.payload.clone();
+                        String::from_utf8(bytes).expect("txn payload")
+                    };
+                    let bool = payload == PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+                    let starting_idx = match bool {
+                        true => 1,
+                        false => 0,
+                    };
+                    //housekeeping idx logic
+                    block.batches[starting_idx..].iter().cloned()
+                })
+                .flatten()
+                .collect()
+        };
 
         let transaction_count = committed_batches.iter().fold(0, |mut txn_count, batch| {
             txn_count += batch.transactions.len();
