@@ -17,7 +17,7 @@
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use protobuf;
+use protobuf::Message;
 
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::ApplyError;
