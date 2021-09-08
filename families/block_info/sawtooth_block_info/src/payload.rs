@@ -25,7 +25,7 @@ cfg_if! {
     }
 }
 
-use protobuf;
+use protobuf::Message;
 use protos::block_info::BlockInfoTxn;
 
 fn validate_hex(string: &str, length: usize) -> bool {
