@@ -483,7 +483,7 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                     );
                     payload.set_amalgamate(data);
                 }
-                Some(txn_type) => panic!(format!("unknown transaction_type: {}", txn_type)),
+                Some(txn_type) => panic!("unknown transaction_type: {}", txn_type),
                 None => panic!("No transaction_type specified"),
             }
             payload
