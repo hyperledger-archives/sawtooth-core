@@ -15,9 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 use transact::database::lmdb::LmdbDatabase;
-use transact::state::merkle::{
-    MerkleLeafIterator, MerkleRadixTree, StateDatabaseError as TransactStateDatabaseError,
-};
+use transact::state::merkle::{MerkleRadixTree, StateDatabaseError as TransactStateDatabaseError};
 use transact::state::StateChange;
 
 /// This module contains all of the extern C functions for the Merkle trie
@@ -509,7 +507,7 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
 
     match (*(merkle_db as *mut MerkleRadixTree)).leaves(Some(prefix)) {
         Ok(leaf_iterator) => {
-            *iterator = Box::into_raw(leaf_iterator) as *const c_void;
+            *iterator = Box::into_raw(Box::new(leaf_iterator)) as *const c_void;
 
             ErrorCode::Success
         }
@@ -525,13 +523,15 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
     }
 }
 
+type StateIter = dyn Iterator<Item = Result<(String, Vec<u8>), TransactStateDatabaseError>>;
+
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     if iterator.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(iterator as *mut MerkleLeafIterator);
+    let _ = Box::from_raw(iterator as *mut Box<StateIter>);
     ErrorCode::Success
 }
 
@@ -549,7 +549,7 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
         return ErrorCode::NullPointerProvided;
     }
 
-    match (*(iterator as *mut MerkleLeafIterator)).next() {
+    match (*(iterator as *mut Box<StateIter>)).next() {
         Some(Ok((entry_addr, entry_bytes))) => {
             *address_cap = entry_addr.capacity();
             *address_len = entry_addr.len();
