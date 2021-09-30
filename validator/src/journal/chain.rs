@@ -60,7 +60,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 
 lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
+    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyBytes = ffi::py_import_class_static_attr(
         "sawtooth_validator.journal.batch_injector",
         "GluwaBatchInjector",
         "housekeeping_payload"
@@ -205,10 +205,9 @@ impl ChainControllerState {
                         let first_batch = block.batches.iter().next().expect("first batch");
                         let first_transaction =
                             first_batch.transactions.iter().next().expect("first txn");
-                        let bytes = first_transaction.payload.clone();
-                        String::from_utf8(bytes).expect("txn payload")
+                        &first_transaction.payload
                     };
-                    let bool = payload == PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+                    let bool = payload == PY_GLUWA_BATCH_INJECTOR_PAYLOAD.data(py);
                     let starting_idx = match bool {
                         true => 1,
                         false => 0,

@@ -38,7 +38,7 @@ use crate::scheduler::Scheduler;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
+    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: cpython::PyBytes = ffi::py_import_class_static_attr(
         "sawtooth_validator.journal.batch_injector",
         "GluwaBatchInjector",
         "housekeeping_payload"
@@ -284,14 +284,13 @@ impl CandidateBlock {
                         let py = gil.python();
 
                         let injector_payload =
-                            PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+                            PY_GLUWA_BATCH_INJECTOR_PAYLOAD.data(py);
 
                         if let Some(..) = batch
                             .transactions
                             .iter()
                             .find(|txn| {
-                                String::from_utf8(txn.payload.clone()).expect("utf8")
-                                    == injector_payload
+                                txn.payload == injector_payload
                             })
                             .and_then(|_| Some(true))
                         {
