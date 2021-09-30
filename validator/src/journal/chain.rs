@@ -39,7 +39,6 @@ use crate::block::Block;
 use crate::consensus::notifier::ConsensusNotifier;
 use crate::consensus::registry::ConsensusRegistry;
 use crate::execution::execution_platform::ExecutionPlatform;
-use crate::ffi;
 use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal;
 use crate::journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
@@ -59,13 +58,7 @@ use crate::state::state_view_factory::StateViewFactory;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 
-lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyString = ffi::py_import_class_static_attr(
-        "sawtooth_validator.journal.batch_injector",
-        "GluwaBatchInjector",
-        "housekeeping_payload"
-    );
-}
+use super::candidate_block::PY_GLUWA_BATCH_INJECTOR_PAYLOAD;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 
@@ -205,10 +198,9 @@ impl ChainControllerState {
                         let first_batch = block.batches.iter().next().expect("first batch");
                         let first_transaction =
                             first_batch.transactions.iter().next().expect("first txn");
-                        let bytes = first_transaction.payload.clone();
-                        String::from_utf8(bytes).expect("txn payload")
+                        &first_transaction.payload
                     };
-                    let bool = payload == PY_GLUWA_BATCH_INJECTOR_PAYLOAD.to_string(py).unwrap();
+                    let bool = payload == PY_GLUWA_BATCH_INJECTOR_PAYLOAD.data(py);
                     let starting_idx = match bool {
                         true => 1,
                         false => 0,
