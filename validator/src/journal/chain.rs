@@ -39,7 +39,6 @@ use crate::block::Block;
 use crate::consensus::notifier::ConsensusNotifier;
 use crate::consensus::registry::ConsensusRegistry;
 use crate::execution::execution_platform::ExecutionPlatform;
-use crate::ffi;
 use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal;
 use crate::journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
@@ -59,13 +58,7 @@ use crate::state::state_view_factory::StateViewFactory;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 
-lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyBytes = ffi::py_import_class_static_attr(
-        "sawtooth_validator.journal.batch_injector",
-        "GluwaBatchInjector",
-        "housekeeping_payload"
-    );
-}
+use super::candidate_block::PY_GLUWA_BATCH_INJECTOR_PAYLOAD;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 

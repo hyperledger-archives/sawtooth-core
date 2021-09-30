@@ -38,7 +38,7 @@ use crate::scheduler::Scheduler;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: cpython::PyBytes = ffi::py_import_class_static_attr(
+    pub static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyBytes = ffi::py_import_class_static_attr(
         "sawtooth_validator.journal.batch_injector",
         "GluwaBatchInjector",
         "housekeeping_payload"

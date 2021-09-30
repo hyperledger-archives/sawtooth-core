@@ -20,7 +20,6 @@
 use crate::batch::Batch;
 use crate::block::Block;
 use crate::execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
-use crate::ffi;
 use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal::block_scheduler::BlockScheduler;
 use crate::journal::chain_commit_state::{
@@ -32,7 +31,6 @@ use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
 use crate::scheduler::TxnExecutionResult;
 use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
 
-use lazy_static::lazy_static;
 use log::{error, info, warn};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -42,13 +40,7 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-lazy_static! {
-    static ref PY_GLUWA_BATCH_INJECTOR_PAYLOAD: ffi::PyBytes = ffi::py_import_class_static_attr(
-        "sawtooth_validator.journal.batch_injector",
-        "GluwaBatchInjector",
-        "housekeeping_payload"
-    );
-}
+use super::candidate_block::PY_GLUWA_BATCH_INJECTOR_PAYLOAD;
 
 const BLOCKVALIDATION_QUEUE_RECV_TIMEOUT: u64 = 100;
 
