@@ -404,13 +404,17 @@ impl SyncBlockPublisher {
             None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
             Some(ref mut candidate_block) => match candidate_block.summarize(force) {
                 Ok(summary) => summary.map(Ok),
-                Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
+                Err(CandidateBlockError::BlockEmpty) => {
+                    error!("Summarize: Block empty ");
+                    Some(Err(FinalizeBlockError::BlockEmpty))
+                }
             },
         };
         if let Some(res) = result {
             res
         } else {
             self.restart_block(state);
+            error!("Summarize failed unexpectedly, restarted block ");
             Err(FinalizeBlockError::BlockEmpty)
         }
     }

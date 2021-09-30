@@ -427,10 +427,12 @@ impl CandidateBlock {
         let mut bad_batches = vec![];
         let mut pending_batches = vec![];
 
+        /* Lift empty block early exit.
         if self.injected_batch_ids == valid_batch_ids {
-            // There only injected batches in this block
+            // There's only injected batches in this block
             return Ok(None);
         }
+        */
 
         for batch in self.pending_batches.clone() {
             let header_signature = &batch.header_signature.clone();
