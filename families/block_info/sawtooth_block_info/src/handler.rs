@@ -17,9 +17,9 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::state::{BlockInfoState, Config, DEFAULT_SYNC_TOLERANCE, DEFAULT_TARGET_COUNT};
 use addressing::NAMESPACE;
 use payload::BlockInfoPayload;
-use crate::state::{BlockInfoState, Config, DEFAULT_SYNC_TOLERANCE, DEFAULT_TARGET_COUNT};
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {

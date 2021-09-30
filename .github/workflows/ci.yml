@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+
+env:
+  ISOLATION_ID: ${{ github.run_id }}
+  DISTRO: bionic
+
+jobs:
+  test-sawtooth-core:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # needed for `git describe --dirty` when building docker images
+        fetch-depth: 0
+
+    - name: Docker version
+      run: |
+        docker --version
+        docker-compose --version
+
+    - name: Build Test Dependencies
+      run: |
+        docker-compose -f docker-compose-installed.yaml build

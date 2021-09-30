@@ -39,27 +39,27 @@ name = "settings-tp"
 path = "./src/main.rs"
 
 [dependencies]
-cfg-if = "0.1"
+cfg-if = "1.0"
 clap = "2"
 protobuf = "2.0"
-base64 = "0.10"
+base64 = "0.13"
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 rust-crypto-wasm = "0.3"
-sabre-sdk = "0.3"
+sabre-sdk = "0.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-sawtooth-sdk = "0.3"
+sawtooth-sdk = "0.5"
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-log4rs = "0.8"
+log4rs = "1.0"
 
 
 [build-dependencies]
 protoc-rust = "2.0"
 glob = "0.3"
-cfg-if = "0.1"
+cfg-if = "1.0"
 
 [features]
 default = []
