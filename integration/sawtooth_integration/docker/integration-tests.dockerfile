@@ -42,7 +42,7 @@ RUN apt-get install -y -q \
     software-properties-common
 
 RUN pip3 install \
-    coverage --upgrade
+    coverage==5.5 --upgrade
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && add-apt-repository \

@@ -41,7 +41,7 @@ RUN apt-get install -y -q \
     python3-pip
 
 RUN pip3 install \
-    coverage --upgrade
+    coverage==5.5 --upgrade
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 

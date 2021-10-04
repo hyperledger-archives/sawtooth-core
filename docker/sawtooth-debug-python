@@ -81,7 +81,7 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/ci xenial universe" >>
     pylint \
     pycodestyle \
     bandit \
-    coverage --upgrade
+    coverage==5.5 --upgrade
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && add-apt-repository \
