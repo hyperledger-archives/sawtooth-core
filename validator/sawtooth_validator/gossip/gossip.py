@@ -393,13 +393,14 @@ class Gossip:
         with self._lock:
             if exclude is None:
                 exclude = []
+            message_as_string = gossip_message.SerializeToString()
             for connection_id in self._peers.copy():
                 if connection_id not in exclude and \
                         self._network.is_connection_handshake_complete(
                             connection_id):
                     self.send(
                         message_type,
-                        gossip_message.SerializeToString(),
+                        message_as_string,
                         connection_id,
                         one_way=True)
 
