@@ -239,6 +239,7 @@ def process_blocks(
             # recompute it and verify it
             new_root = execute_batches(
                 previous_state_root=prev_state_root,
+                block_num=block.block_num,
                 transaction_executor=transaction_executor,
                 context_manager=context_manager,
                 batches=block.batches)
@@ -253,6 +254,7 @@ def process_blocks(
 
 def execute_batches(
     previous_state_root,
+    block_num,
     transaction_executor,
     context_manager,
     batches
@@ -264,7 +266,7 @@ def execute_batches(
     transaction_executor.execute(scheduler)
 
     for batch in batches:
-        scheduler.add_batch(batch)
+        scheduler.add_batch(block_num, batch)
 
     scheduler.finalize()
     scheduler.complete(block=True)
