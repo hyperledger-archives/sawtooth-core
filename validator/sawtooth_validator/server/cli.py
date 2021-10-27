@@ -187,6 +187,16 @@ def main(args):
             if interface == parsed_endpoint.hostname:
                 LOGGER.error("Endpoint must be set when using %s", interface)
                 init_errors = True
+    else:
+        parsed_endpoint = urlparse(endpoint)
+        port = None
+        try:
+            port = parsed_endpoint.port
+        except:
+            pass
+        if parsed_endpoint.hostname == 'localhost' or parsed_endpoint.hostname == '0.0.0.0' or parsed_endpoint.hostname == '127.0.0.1' or parsed_endpoint.hostname == 'insert.your.ip' or port is None:
+            LOGGER.error("Invalid endpoint %s. The endpoint must be your public ip and contain a port (e.g. :8800).", endpoint)
+            init_errors = True
 
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "
