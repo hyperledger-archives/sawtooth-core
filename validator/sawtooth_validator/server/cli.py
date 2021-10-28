@@ -194,8 +194,9 @@ def main(args):
             port = parsed_endpoint.port
         except:
             pass
-        if parsed_endpoint.hostname == 'localhost' or parsed_endpoint.hostname == '0.0.0.0' or parsed_endpoint.hostname == '127.0.0.1' or parsed_endpoint.hostname == 'insert.your.ip' or port is None:
-            LOGGER.error("Invalid endpoint %s. The endpoint must be your public ip and contain a port (e.g. :8800).", endpoint)
+        if parsed_endpoint.hostname in ['localhost', '0.0.0.0', '127.0.0.1', 'insert.your.ip'] or port is None:
+            LOGGER.error(
+                "Invalid endpoint %s. The endpoint must be your public ip and contain a port (e.g. :8800).", endpoint)
             init_errors = True
 
     if init_errors:
