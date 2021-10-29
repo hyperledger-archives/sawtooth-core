@@ -14,16 +14,18 @@
 
 use clap::ArgMatches;
 use sawtooth::client::{
-    rest::RestApiSawtoothClientBuilder, Batch, SawtoothClient, SawtoothClientError as ClientError,
-    SawtoothClientError,
+    rest::{RestApiSawtoothClient, RestApiSawtoothClientBuilder},
+    Batch, Header, SawtoothClient, SawtoothClientError as ClientError, Transaction,
+    TransactionHeader,
 };
 use serde::Serialize;
 
 use crate::err::CliError;
 
-pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     match args.subcommand() {
-        ("list", Some(args)) => run_list_command(args),
+        ("list", Some(args)) => run_list(args),
+        ("show", Some(args)) => run_show(args),
         _ => {
             println!("Invalid subcommand; Pass --help for usage.");
             Ok(())
@@ -31,7 +33,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     }
 }
 
-fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn create_client(args: &ArgMatches) -> Result<RestApiSawtoothClient, CliError> {
     let mut url = args
         .value_of("url")
         .unwrap_or("http://localhost:8008")
@@ -51,6 +53,12 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         .build()
         .map_err(|err| CliError::EnvironmentError(format!("Failed to create client: {}", err)))?;
 
+    Ok(client)
+}
+
+fn run_list(args: &ArgMatches) -> Result<(), CliError> {
+    let client = create_client(args)?;
+
     let batches = client.list_batches().map_err(|err| {
         CliError::EnvironmentError(format!("Failed to retrieve batch list, {}", err))
     })?;
@@ -64,11 +72,11 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         }
     } else if format == "json" || format == "yaml" {
         let structured_output_batches = batches
-            .map(|item: Result<Batch, _>| item.map(|batch| StructuredOutputBatch::from(&batch)))
-            .collect::<Result<Vec<StructuredOutputBatch>, SawtoothClientError>>()
+            .map(|item: Result<Batch, _>| item.map(|batch| DisplayBatchListItem::from(&batch)))
+            .collect::<Result<Vec<DisplayBatchListItem>, ClientError>>()
             .map_err(|err| {
                 CliError::EnvironmentError(format!(
-                    "Failed to convert sawtooth::client::Batch to StructuredOutputBatch: {}",
+                    "Failed to convert sawtooth::client::Batch to DisplayBatchListItem: {}",
                     err
                 ))
             })?;
@@ -92,6 +100,56 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         print_table(data);
     }
     Ok(())
+}
+
+fn run_show(args: &ArgMatches) -> Result<(), CliError> {
+    let client = create_client(args)?;
+    let format = args.value_of("format").unwrap_or("default");
+    let key = args.value_of("key");
+    let batch_id = args.value_of("batch_id").unwrap().to_string();
+
+    let batch = client
+        .get_batch(batch_id)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to get batch: {}", err)))?;
+
+    match batch {
+        Some(b) => {
+            let display_batch = DisplayBatch::from(&b);
+            match format {
+                "json" => {
+                    let output = match key {
+                        Some(k) => single_property_json(k, &display_batch),
+                        None => serde_json::to_string_pretty(&display_batch),
+                    };
+                    println!(
+                        "{}",
+                        output.map_err(|err| {
+                            CliError::EnvironmentError(format!("Cannot format into json: {}", err))
+                        })?
+                    )
+                }
+                _ => {
+                    let output = match key {
+                        Some(k) => single_property_yaml(k, &display_batch),
+                        None => serde_yaml::to_string(&display_batch),
+                    };
+                    println!(
+                        "{}",
+                        output.map_err(|err| {
+                            CliError::EnvironmentError(format!(
+                                "Cannot format into yaml (default): {}",
+                                err
+                            ))
+                        })?
+                    )
+                }
+            }
+            Ok(())
+        }
+        None => Err(CliError::EnvironmentError(format!(
+            "No batch exists with batch id provided"
+        ))),
+    }
 }
 
 /// Parse batches into rows containing batch id, number of transactions, and signer pulic key
@@ -157,19 +215,130 @@ fn print_table(table: Vec<Vec<String>>) {
     }
 }
 
+fn single_property_json(
+    key: &str,
+    display_batch: &DisplayBatch,
+) -> Result<String, serde_json::Error> {
+    match key {
+        "header" => serde_json::to_string_pretty(&display_batch.header),
+        "header_signature" => serde_json::to_string_pretty(&display_batch.header_signature),
+        "trace" => serde_json::to_string_pretty(&display_batch.trace),
+        "transactions" => serde_json::to_string_pretty(&display_batch.transactions),
+        "signer_public_key" => {
+            serde_json::to_string_pretty(&display_batch.header.signer_public_key)
+        }
+        "transaction_ids" => serde_json::to_string_pretty(&display_batch.header.transaction_ids),
+        _ => serde_json::to_string_pretty(&display_batch),
+    }
+}
+
+fn single_property_yaml(
+    key: &str,
+    display_batch: &DisplayBatch,
+) -> Result<String, serde_yaml::Error> {
+    match key {
+        "header" => serde_yaml::to_string(&display_batch.header),
+        "header_signature" => serde_yaml::to_string(&display_batch.header_signature),
+        "trace" => serde_yaml::to_string(&display_batch.trace),
+        "transactions" => serde_yaml::to_string(&display_batch.transactions),
+        "signer_public_key" => serde_yaml::to_string(&display_batch.header.signer_public_key),
+        "transaction_ids" => serde_yaml::to_string(&display_batch.header.transaction_ids),
+        _ => serde_yaml::to_string(&display_batch),
+    }
+}
+
 #[derive(Debug, Serialize)]
-struct StructuredOutputBatch {
+struct DisplayBatchListItem {
     batch_id: String,
     signer: String,
     txns: usize,
 }
-
-impl<'a> From<&'a Batch> for StructuredOutputBatch {
+impl From<&Batch> for DisplayBatchListItem {
     fn from(batch: &Batch) -> Self {
-        StructuredOutputBatch {
+        DisplayBatchListItem {
             batch_id: batch.header_signature.to_string(),
             signer: batch.header.signer_public_key.to_string(),
             txns: batch.transactions.len(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayBatch {
+    header: DisplayHeader,
+    header_signature: String,
+    trace: bool,
+    transactions: Vec<DisplayTransaction>,
+}
+impl From<&Batch> for DisplayBatch {
+    fn from(batch: &Batch) -> Self {
+        DisplayBatch {
+            header: DisplayHeader::from(&batch.header),
+            header_signature: batch.header_signature.clone(),
+            trace: batch.trace,
+            transactions: batch
+                .transactions
+                .iter()
+                .map(|x| DisplayTransaction::from(x))
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayHeader {
+    signer_public_key: String,
+    transaction_ids: Vec<String>,
+}
+impl From<&Header> for DisplayHeader {
+    fn from(header: &Header) -> Self {
+        DisplayHeader {
+            signer_public_key: header.signer_public_key.clone(),
+            transaction_ids: header.transaction_ids.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayTransaction {
+    header: DisplayTransactionHeader,
+    header_signature: String,
+    payload: String,
+}
+impl From<&Transaction> for DisplayTransaction {
+    fn from(transaction: &Transaction) -> Self {
+        DisplayTransaction {
+            header: DisplayTransactionHeader::from(&transaction.header),
+            header_signature: transaction.header_signature.clone(),
+            payload: transaction.payload.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayTransactionHeader {
+    batcher_public_key: String,
+    dependencies: Vec<String>,
+    family_name: String,
+    family_version: String,
+    inputs: Vec<String>,
+    nonce: String,
+    outputs: Vec<String>,
+    payload_sha512: String,
+    signer_public_key: String,
+}
+impl From<&TransactionHeader> for DisplayTransactionHeader {
+    fn from(transaction_header: &TransactionHeader) -> Self {
+        DisplayTransactionHeader {
+            batcher_public_key: transaction_header.batcher_public_key.clone(),
+            dependencies: transaction_header.dependencies.clone(),
+            family_name: transaction_header.family_name.clone(),
+            family_version: transaction_header.family_version.clone(),
+            inputs: transaction_header.inputs.clone(),
+            nonce: transaction_header.nonce.clone(),
+            outputs: transaction_header.outputs.clone(),
+            payload_sha512: transaction_header.payload_sha512.clone(),
+            signer_public_key: transaction_header.signer_public_key.clone(),
         }
     }
 }
