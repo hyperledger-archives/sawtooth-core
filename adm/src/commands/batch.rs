@@ -15,17 +15,19 @@
 use clap::ArgMatches;
 use sawtooth::client::{
     rest::{RestApiSawtoothClient, RestApiSawtoothClientBuilder},
-    Batch, Header, SawtoothClient, SawtoothClientError as ClientError, Transaction,
-    TransactionHeader,
+    Batch, Header, InvalidTransaction, SawtoothClient, SawtoothClientError as ClientError,
+    SawtoothClientError, Status, Transaction, TransactionHeader,
 };
 use serde::Serialize;
+use std::time::Duration;
 
 use crate::err::CliError;
 
 pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     match args.subcommand() {
-        ("list", Some(args)) => run_list_command(args),
-        ("show", Some(args)) => run_show_command(args),
+        ("list", Some(args)) => run_list(args),
+        ("show", Some(args)) => run_show(args),
+        ("status", Some(args)) => run_status(args),
         _ => {
             println!("Invalid subcommand; Pass --help for usage.");
             Ok(())
@@ -56,7 +58,7 @@ fn create_client(args: &ArgMatches) -> Result<RestApiSawtoothClient, CliError> {
     Ok(client)
 }
 
-fn run_list_command(args: &ArgMatches) -> Result<(), CliError> {
+fn run_list(args: &ArgMatches) -> Result<(), CliError> {
     let client = create_client(args)?;
 
     let batches = client.list_batches().map_err(|err| {
@@ -102,7 +104,7 @@ fn run_list_command(args: &ArgMatches) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_show_command(args: &ArgMatches) -> Result<(), CliError> {
+fn run_show(args: &ArgMatches) -> Result<(), CliError> {
     let client = create_client(args)?;
     let format = args.value_of("format").unwrap_or("default");
     let key = args.value_of("key");
@@ -150,6 +152,45 @@ fn run_show_command(args: &ArgMatches) -> Result<(), CliError> {
             "No batch exists with batch id provided"
         ))),
     }
+}
+
+fn run_status(args: &ArgMatches) -> Result<(), CliError> {
+    let client = create_client(args)?;
+    let format = args.value_of("format").unwrap_or("default");
+    let batch_id_args = args.value_of("batch_ids").unwrap().to_string();
+    let batch_ids = batch_id_args.split(",").collect::<Vec<&str>>();
+    let wait: Option<Duration> = match args.value_of("wait") {
+        Some(w) => Some(Duration::from_secs(w.parse::<u64>().map_err(|err| {
+            CliError::EnvironmentError(format!("Failed to parse wait: {}", err))
+        })?)),
+        None => None,
+    };
+
+    let statuses = client
+        .list_batch_status(batch_ids, wait)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to get batch status: {}", err)))
+        .unwrap()
+        .unwrap()
+        .iter()
+        .map(|x| DisplayStatus::from(x))
+        .collect::<Vec<DisplayStatus>>();
+
+    match format {
+        "json" => println!(
+            "{}",
+            serde_json::to_string_pretty(&statuses).map_err(|err| {
+                CliError::EnvironmentError(format!("Cannot format statuses into json: {}", err))
+            })?
+        ),
+        _ => println!(
+            "{}",
+            serde_yaml::to_string(&statuses).map_err(|err| {
+                CliError::EnvironmentError(format!("Cannot format statuses into yaml: {}", err))
+            })?
+        ),
+    }
+
+    Ok(())
 }
 
 /// Parse batches into rows containing batch id, number of transactions, and signer pulic key
@@ -339,6 +380,42 @@ impl From<&TransactionHeader> for DisplayTransactionHeader {
             outputs: transaction_header.outputs.clone(),
             payload_sha512: transaction_header.payload_sha512.clone(),
             signer_public_key: transaction_header.signer_public_key.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayStatus {
+    id: String,
+    invalid_transactions: Vec<DisplayInvalidTransaction>,
+    status: String,
+}
+impl From<&Status> for DisplayStatus {
+    fn from(status: &Status) -> Self {
+        DisplayStatus {
+            id: status.id.clone(),
+            invalid_transactions: status
+                .invalid_transactions
+                .iter()
+                .map(|x| DisplayInvalidTransaction::from(x))
+                .collect(),
+            status: status.status.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct DisplayInvalidTransaction {
+    id: String,
+    message: String,
+    extended_data: Vec<u8>,
+}
+impl From<&InvalidTransaction> for DisplayInvalidTransaction {
+    fn from(invalid_transaction: &InvalidTransaction) -> Self {
+        DisplayInvalidTransaction {
+            id: invalid_transaction.id.clone(),
+            message: invalid_transaction.message.clone(),
+            extended_data: invalid_transaction.extended_data.clone(),
         }
     }
 }
