@@ -42,7 +42,7 @@ comments = {
     'default': {'line': '//'}}
 
 # Build globals
-conf = yaml.load(open(template_abs + '/template_config.yaml', 'r'))
+conf = yaml.safe_load(open(template_abs + '/template_config.yaml', 'r'))
 env = Environment(
     loader=FileSystemLoader(template_abs),
     trim_blocks=True,
