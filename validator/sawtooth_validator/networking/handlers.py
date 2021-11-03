@@ -69,13 +69,19 @@ class ConnectHandler(Handler):
         """
         result = urlparse(endpoint)
         hostname = result.hostname
-        if hostname is None:
+        port = None
+        try:
+            port = result.port
+        except:
+            pass
+        if hostname is None or port is None:
             return False
-
-        for interface in interfaces:
-            if interface == hostname:
+        else:
+            for interface in interfaces:
+                if interface == hostname:
+                    return False
+            if hostname == 'localhost' or hostname == '127.0.0.1' or hostname == 'insert.your.ip':
                 return False
-
         return True
 
     def handle(self, connection_id, message_content):

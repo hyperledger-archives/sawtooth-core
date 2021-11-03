@@ -63,6 +63,30 @@ message ClientBlockListResponse {
     ClientPagingResponse paging = 4;
 }
 
+//custom message to request signatures from validators to be rewarded.
+message ClientRewardBlockListRequest {
+    string head_id = 1;
+    uint64 first_predecessor_height = 2;
+    uint64 last_predecessor_height = 3;
+}
+
+//blocks in descending order
+message ClientRewardBlockListResponse {
+    enum Status {
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_ID = 8;
+    }
+
+    Status status = 1;
+    repeated Block blocks = 2;
+    string head_id = 3;
+}
+
 // A request to return a specific block from the validator. The block must be
 // specified by its unique id, in this case the block's header signature
 message ClientBlockGetByIdRequest {

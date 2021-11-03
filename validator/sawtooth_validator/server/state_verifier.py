@@ -22,6 +22,9 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 from sawtooth_validator.execution import tp_state_handlers
 from sawtooth_validator.execution import processor_handlers
 
+from sawtooth_validator.state import client_handlers
+from sawtooth_validator.networking.handlers import PingResponseHandler
+
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
@@ -165,6 +168,23 @@ def verify_state(global_state_db, blockstore, bind_component, scheduler_type):
         validator_pb2.Message.TP_UNREGISTER_REQUEST,
         processor_handlers.ProcessorUnRegisterHandler(
             transaction_executor.processor_manager),
+        component_thread_pool)
+
+    component_dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_STATE_LIST_REQUEST,
+        client_handlers.StateListRequest(
+            global_state_db,
+            blockstore),
+        component_thread_pool)
+
+    component_dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_BLOCK_GET_BY_NUM_REQUEST,
+        client_handlers.BlockGetByNumRequest(blockstore),
+        component_thread_pool)
+
+    component_dispatcher.add_handler(
+        validator_pb2.Message.PING_RESPONSE,
+        PingResponseHandler(),
         component_thread_pool)
 
     component_dispatcher.start()

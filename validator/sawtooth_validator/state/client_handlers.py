@@ -699,7 +699,17 @@ class StateListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         if request.state_root != '':
-            self._validate_state_root(request.state_root)
+            if request.state_root.startswith('#'):
+                block_num_str = request.state_root[1:]
+                try:
+                    block_num = int(block_num_str)
+                    block = self._block_store.get_block_by_number(block_num)
+                    request.state_root = block.header.state_root_hash
+                except ValueError:
+                    request.state_root = ''
+
+            if request.state_root != '':
+                self._validate_state_root(request.state_root)
         state_root = self._set_root(request)
 
         # Fetch entries and encode as protobuf

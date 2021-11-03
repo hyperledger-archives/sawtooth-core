@@ -115,7 +115,7 @@ class GluwaBatchInjector(BatchInjector):
 
     def block_start(self, previous_block):
         pub_key = self._signer.get_public_key().as_hex()
-        version = '1.7'
+        version = '2.0'
         ns = '8a1a04'
         payload = GluwaBatchInjector.housekeeping_payload
         tx_header = TransactionHeader(
