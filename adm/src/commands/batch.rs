@@ -19,7 +19,7 @@ use sawtooth::client::{
     SawtoothClientError, Status, Transaction, TransactionHeader,
 };
 use serde::Serialize;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::err::CliError;
 
@@ -28,6 +28,7 @@ pub fn run(args: &ArgMatches) -> Result<(), CliError> {
         ("list", Some(args)) => run_list(args),
         ("show", Some(args)) => run_show(args),
         ("status", Some(args)) => run_status(args),
+        ("submit", Some(args)) => run_submit(args),
         _ => {
             println!("Invalid subcommand; Pass --help for usage.");
             Ok(())
@@ -189,6 +190,47 @@ fn run_status(args: &ArgMatches) -> Result<(), CliError> {
             })?
         ),
     }
+
+    Ok(())
+}
+
+fn run_submit(args: &ArgMatches) -> Result<(), CliError> {
+    let client = create_client(args)?;
+    let filename = args
+        .value_of("filename")
+        .unwrap_or("batches.intkey")
+        .to_string();
+    let wait: Option<Duration> = match args.value_of("wait") {
+        Some(w) => Some(Duration::from_secs(w.parse::<u64>().map_err(|err| {
+            CliError::EnvironmentError(format!("Failed to parse wait: {}", err))
+        })?)),
+        None => None,
+    };
+    let size_limit = args
+        .value_of("batch_size_limit")
+        .unwrap_or("100")
+        .parse::<usize>()
+        .map_err(|err| {
+            CliError::EnvironmentError(format!("Failed to parse batch_size_limit: {}", err))
+        })?;
+
+    let start = Instant::now();
+
+    let batches = client
+        .submit_batches(filename, wait, size_limit)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to submit batches: {}", err)))?;
+
+    let batches_len = batches.len();
+
+    println!(
+        "batches: {},  batch/sec: {}",
+        batches_len,
+        if batches_len == 0 {
+            0.0f64
+        } else {
+            batches_len as f64 / (((start.elapsed()).as_millis() as f64) / 1000f64)
+        }
+    );
 
     Ok(())
 }

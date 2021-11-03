@@ -159,7 +159,7 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .help("id (header signature) of the batch"),
                     )
                     .arg(Arg::with_name("url").long("url").takes_value(true).help(
-                        "identify the URL of the validator's\
+                        "identify the URL of the validator's \
                             REST API (default: http://localhost:8008)",
                     ))
                     .arg(
@@ -168,7 +168,7 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .short("u")
                             .takes_value(true)
                             .help(
-                                "specify the user to authorize request;\
+                                "specify the user to authorize request; \
                                     format: USERNAME[:PASSWORD]",
                             ),
                     )
@@ -204,7 +204,7 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .help("single batch id or comma-separated list of batch ids"),
                     )
                     .arg(Arg::with_name("url").long("url").takes_value(true).help(
-                        "identify the URL of the validator's\
+                        "identify the URL of the validator's \
                             REST API (default: http://localhost:8008)",
                     ))
                     .arg(
@@ -213,7 +213,7 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .short("u")
                             .takes_value(true)
                             .help(
-                                "specify the user to authorize request;\
+                                "specify the user to authorize request; \
                                 format: USERNAME[:PASSWORD]",
                             ),
                     )
@@ -230,6 +230,54 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .takes_value(true)
                             .possible_values(&["json", "yaml"])
                             .help("choose the output format (default: yaml)"),
+                    ),
+                SubCommand::with_name("submit")
+                    .about(
+                        "Sends Batches to the REST API to be submitted to the validator. The \
+                        input must be a binary file containing a binary-encoded BatchList of \
+                        one or more batches with any number of transactions.",
+                    )
+                    .arg(Arg::with_name("url").long("url").takes_value(true).help(
+                        "identify the URL of the validator's \
+                            REST API (default: http://localhost:8008)",
+                    ))
+                    .arg(
+                        Arg::with_name("username")
+                            .long("user")
+                            .short("u")
+                            .takes_value(true)
+                            .help(
+                                "specify the user to authorize request; \
+                                format: USERNAME[:PASSWORD]",
+                            ),
+                    )
+                    .arg(
+                        Arg::with_name("verbose")
+                            .long("verbose")
+                            .short("verbose")
+                            .help("enable more verbose output"),
+                    )
+                    .arg(
+                        Arg::with_name("wait")
+                            .long("wait")
+                            .takes_value(true)
+                            .help("set time, in seconds, to wait for batches to commit"),
+                    )
+                    .arg(
+                        Arg::with_name("filename")
+                            .long("filename")
+                            .short("f")
+                            .takes_value(true)
+                            .help("specify location of input file"),
+                    )
+                    .arg(
+                        Arg::with_name("batch_size_limit")
+                            .long("batch-size-limit")
+                            .takes_value(true)
+                            .help(
+                                "set maximum batch size; batches are split for processing if \
+                                they exceed this size",
+                            ),
                     ),
             ]),
     );
