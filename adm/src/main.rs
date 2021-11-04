@@ -121,15 +121,15 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                     validator via the REST API",
             )
             .setting(AppSettings::SubcommandRequiredElseHelp)
-            .subcommand(
+            .subcommands(vec![
                 SubCommand::with_name("list")
                     .about(
-                        "display all information about all committed Batches for\n\
-                            the specified validator, including the Batch id, public\n\
+                        "display information about all committed Batches for \
+                            the specified validator, including the Batch id, public \
                             keys of all signers, and number of transactions in each Batch",
                     )
                     .arg(Arg::with_name("url").long("url").takes_value(true).help(
-                        "identify the URL of the validator's\n\
+                        "identify the URL of the validator's \
                             REST API (default: http://localhost:8008)",
                     ))
                     .arg(
@@ -138,9 +138,8 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .short("u")
                             .takes_value(true)
                             .help(
-                                "specify the user to authorize\n\
-                                request\n\
-                                format: USERNAME[:PASSWORD]",
+                                "specify the user to authorize request; \
+                                    format: USERNAME[:PASSWORD]",
                             ),
                     )
                     .arg(
@@ -151,7 +150,52 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .possible_values(&["csv", "json", "yaml", "default"])
                             .help("choose the output format"),
                     ),
-            ),
+                SubCommand::with_name("show")
+                    .about("Displays information for the specified Batch.")
+                    .arg(
+                        Arg::with_name("batch_id")
+                            .required(true)
+                            .takes_value(true)
+                            .help("id (header signature) of the batch"),
+                    )
+                    .arg(Arg::with_name("url").long("url").takes_value(true).help(
+                        "identify the URL of the validator's \
+                            REST API (default: http://localhost:8008)",
+                    ))
+                    .arg(
+                        Arg::with_name("username")
+                            .long("user")
+                            .short("u")
+                            .takes_value(true)
+                            .help(
+                                "specify the user to authorize request; \
+                                    format: USERNAME[:PASSWORD]",
+                            ),
+                    )
+                    .arg(
+                        Arg::with_name("key")
+                            .long("key")
+                            .short("k")
+                            .takes_value(true)
+                            .possible_values(&[
+                                "header",
+                                "header_signature",
+                                "trace",
+                                "transactions",
+                                "signer_public_key",
+                                "transaction_ids",
+                            ])
+                            .help("show a single property from the batch or header"),
+                    )
+                    .arg(
+                        Arg::with_name("format")
+                            .long("format")
+                            .short("F")
+                            .takes_value(true)
+                            .possible_values(&["json", "yaml"])
+                            .help("choose the output format (default: yaml)"),
+                    ),
+            ]),
     );
     app.get_matches()
 }
