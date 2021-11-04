@@ -124,7 +124,11 @@ message TpProcessRequest {
     // Controlled by a flag during transaction processor registration.
     bytes header_bytes = 5;
 
-    uint64 tip = 6; // The block number
+    // The block number
+    uint64 tip = 6;
+
+    // The signature of the block to be processed
+    string block_signature = 7;
 }
 
 

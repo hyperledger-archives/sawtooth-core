@@ -115,6 +115,10 @@ message Message {
         CLIENT_STATUS_GET_REQUEST = 129;
         // A response with the validator's status
         CLIENT_STATUS_GET_RESPONSE = 130;
+        // A request for reward blocks
+        CLIENT_REWARD_BLOCK_LIST_REQUEST = 131;
+        //A response for reward blocks
+        CLIENT_REWARD_BLOCK_LIST_RESPONSE = 132;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
