@@ -195,6 +195,42 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                             .possible_values(&["json", "yaml"])
                             .help("choose the output format (default: yaml)"),
                     ),
+                SubCommand::with_name("status")
+                    .about("Displays the status of the specified Batch id or ids.")
+                    .arg(
+                        Arg::with_name("batch_ids")
+                            .required(true)
+                            .takes_value(true)
+                            .help("single batch id or comma-separated list of batch ids"),
+                    )
+                    .arg(Arg::with_name("url").long("url").takes_value(true).help(
+                        "identify the URL of the validator's \
+                            REST API (default: http://localhost:8008)",
+                    ))
+                    .arg(
+                        Arg::with_name("username")
+                            .long("user")
+                            .short("u")
+                            .takes_value(true)
+                            .help(
+                                "specify the user to authorize request; \
+                                format: USERNAME[:PASSWORD]",
+                            ),
+                    )
+                    .arg(
+                        Arg::with_name("wait")
+                            .long("wait")
+                            .takes_value(true)
+                            .help("set time, in seconds, to wait for commit"),
+                    )
+                    .arg(
+                        Arg::with_name("format")
+                            .long("format")
+                            .short("F")
+                            .takes_value(true)
+                            .possible_values(&["json", "yaml"])
+                            .help("choose the output format (default: yaml)"),
+                    ),
             ]),
     );
     app.get_matches()
