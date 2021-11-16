@@ -729,9 +729,7 @@ impl BlockValidation for OnChainRulesValidation {
                     .iter()
                     .map(|batch| batch.transactions.iter())
                     .flatten()
-                    .find(|txn| {
-                        txn.payload == injector_payload
-                    })
+                    .find(|txn| txn.payload == injector_payload)
                     .and_then(|_| Some(()));
 
                 if let Some(..) = invalid_housekeeping {

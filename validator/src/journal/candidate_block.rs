@@ -283,15 +283,12 @@ impl CandidateBlock {
                         let gil = cpython::Python::acquire_gil();
                         let py = gil.python();
 
-                        let injector_payload =
-                            PY_GLUWA_BATCH_INJECTOR_PAYLOAD.data(py);
+                        let injector_payload = PY_GLUWA_BATCH_INJECTOR_PAYLOAD.data(py);
 
                         if let Some(..) = batch
                             .transactions
                             .iter()
-                            .find(|txn| {
-                                txn.payload == injector_payload
-                            })
+                            .find(|txn| txn.payload == injector_payload)
                             .and_then(|_| Some(true))
                         {
                             debug!("Ignoring unneeded housekeeping batch: {:?}", batch);

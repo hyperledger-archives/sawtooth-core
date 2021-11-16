@@ -34,12 +34,17 @@ impl PyExecutor {
 }
 
 impl ExecutionPlatform for PyExecutor {
-    fn create_scheduler(&self, state_hash: &str, block: Option<&Block>) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
+    fn create_scheduler(
+        &self,
+        state_hash: &str,
+        block: Option<&Block>,
+    ) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
         let kwargs = block.map(|block| {
             let dict = PyDict::new(py);
-            dict.set_item(py, "block_signature", block.header_signature.clone()).unwrap();
+            dict.set_item(py, "block_signature", block.header_signature.clone())
+                .unwrap();
             dict
         });
         let scheduler = self

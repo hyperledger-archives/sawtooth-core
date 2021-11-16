@@ -23,5 +23,9 @@ use crate::{block::Block, scheduler::Scheduler};
 pub const NULL_STATE_HASH: &str = "";
 
 pub trait ExecutionPlatform: Sync + Send {
-    fn create_scheduler(&self, state_hash: &str, block: Option<&Block>) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
+    fn create_scheduler(
+        &self,
+        state_hash: &str,
+        block: Option<&Block>,
+    ) -> Result<Box<dyn Scheduler>, cpython::PyErr>;
 }

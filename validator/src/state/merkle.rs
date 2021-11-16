@@ -996,7 +996,8 @@ mod tests {
             }
 
             // perform some deletions on the upper keys
-            let delete_items = (500..1000).choose_multiple(&mut rng, 50)
+            let delete_items = (500..1000)
+                .choose_multiple(&mut rng, 50)
                 .into_iter()
                 .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
                 .collect::<Vec<String>>();
