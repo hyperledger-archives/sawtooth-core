@@ -46,7 +46,7 @@ class SerialScheduler(Scheduler):
     schedulers - for tests related to performance, correctness, etc.
     """
 
-    def __init__(self, squash_handler, first_state_hash, always_persist):
+    def __init__(self, squash_handler, first_state_hash, always_persist, block_signature=None):
         self._txn_queue = deque()
         self._scheduled_transactions = []
         self._batch_statuses = {}
@@ -69,6 +69,11 @@ class SerialScheduler(Scheduler):
         self._required_state_hashes = {}
         self._already_calculated = False
         self._always_persist = always_persist
+        self._block_signature = block_signature
+    
+    @property
+    def block_signature(self):
+        return self._block_signature
 
     def __del__(self):
         self.cancel()

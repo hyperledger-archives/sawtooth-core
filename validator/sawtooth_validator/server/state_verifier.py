@@ -262,7 +262,8 @@ def process_blocks(
                 block_num=block.block_num,
                 transaction_executor=transaction_executor,
                 context_manager=context_manager,
-                batches=block.batches)
+                batches=block.batches,
+                block_signature=block.header_signature)
 
             if new_root != block.state_root_hash:
                 raise InvalidChainError(
@@ -277,11 +278,13 @@ def execute_batches(
     block_num,
     transaction_executor,
     context_manager,
-    batches
+    batches,
+    block_signature
 ):
     scheduler = transaction_executor.create_scheduler(
         previous_state_root,
-        always_persist=True)
+        always_persist=True,
+        block_signature=block_signature)
 
     transaction_executor.execute(scheduler)
 

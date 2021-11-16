@@ -443,7 +443,8 @@ class TransactionExecutor:
 
     def create_scheduler(self,
                          first_state_root,
-                         always_persist=False):
+                         always_persist=False,
+                         block_signature=None):
 
         # Useful for a logical first state root of ""
         if not first_state_root:
@@ -453,12 +454,14 @@ class TransactionExecutor:
             scheduler = SerialScheduler(
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
-                always_persist=always_persist)
+                always_persist=always_persist,
+                block_signature=block_signature)
         elif self._scheduler_type == "parallel":
             scheduler = ParallelScheduler(
                 squash_handler=self._context_manager.get_squash_handler(),
                 first_state_hash=first_state_root,
-                always_persist=always_persist)
+                always_persist=always_persist,
+                block_signature=block_signature)
 
         else:
             raise AssertionError(

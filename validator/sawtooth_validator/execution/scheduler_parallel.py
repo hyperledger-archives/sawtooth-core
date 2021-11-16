@@ -455,7 +455,7 @@ class PredecessorChain:
 
 
 class ParallelScheduler(Scheduler):
-    def __init__(self, squash_handler, first_state_hash, always_persist):
+    def __init__(self, squash_handler, first_state_hash, always_persist, block_signature=None):
         self._squash = squash_handler
         self._first_state_hash = first_state_hash
         self._last_state_hash = first_state_hash
@@ -505,6 +505,11 @@ class ParallelScheduler(Scheduler):
         self._cancelled = False
         self._final = False
         self.tip = None
+        self._block_signature = block_signature
+    
+    @property
+    def block_signature(self):
+        return self._block_signature
 
     def _find_input_dependencies(self, inputs):
         """Use the predecessor tree to find dependencies based on inputs.

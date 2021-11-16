@@ -15,8 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython::{ObjectProtocol, PyClone};
+use cpython::{ObjectProtocol, PyClone, PyDict};
 
+use crate::block::Block;
 use crate::execution::execution_platform::ExecutionPlatform;
 
 use crate::scheduler::py_scheduler::PyScheduler;
@@ -33,12 +34,17 @@ impl PyExecutor {
 }
 
 impl ExecutionPlatform for PyExecutor {
-    fn create_scheduler(&self, state_hash: &str) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
+    fn create_scheduler(&self, state_hash: &str, block: Option<&Block>) -> Result<Box<dyn Scheduler>, cpython::PyErr> {
         let gil = cpython::Python::acquire_gil();
         let py = gil.python();
+        let kwargs = block.map(|block| {
+            let dict = PyDict::new(py);
+            dict.set_item(py, "block_signature", block.header_signature.clone()).unwrap();
+            dict
+        });
         let scheduler = self
             .executor
-            .call_method(py, "create_scheduler", (state_hash,), None)
+            .call_method(py, "create_scheduler", (state_hash,), kwargs.as_ref())
             .expect(
                 "no method create_scheduler on sawtooth_validator.execution.py_executor.PyExecutor",
             );

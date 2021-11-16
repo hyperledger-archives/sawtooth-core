@@ -287,7 +287,7 @@ impl SyncBlockPublisher {
 
             let scheduler = state
                 .transaction_executor
-                .create_scheduler(&previous_block.state_root_hash)
+                .create_scheduler(&previous_block.state_root_hash, None)
                 .expect("Failed to create new scheduler");
 
             let committed_txn_cache = TransactionCommitCache::new(self.commit_store.clone());

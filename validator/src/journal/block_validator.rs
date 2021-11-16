@@ -493,7 +493,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
         let state_root = previous_state_root.unwrap_or(&null_state_hash);
         let mut scheduler = self
             .transaction_executor
-            .create_scheduler(state_root)
+            .create_scheduler(state_root, Some(block))
             .map_err(|err| {
                 ValidationError::BlockValidationError(format!(
                     "Error during validation of block {} batches: {:?}",
