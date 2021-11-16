@@ -308,7 +308,8 @@ class TransactionExecutorThread:
                 signature=txn.header_signature,
                 context_id=context_id,
                 header_bytes=txn.header,
-                tip=txn_info.tip
+                tip=txn_info.tip,
+                block_signature=self._scheduler.block_signature
                 )
 
             # Since we have already checked if the transaction should be failed
