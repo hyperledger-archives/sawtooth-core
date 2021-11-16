@@ -181,6 +181,11 @@ def add(
         client_thread_pool)
 
     dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_REWARD_BLOCK_LIST_REQUEST,
+        client_handlers.RewardListRequest(block_store, completer.block_cache),
+        client_thread_pool)
+
+    dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
         client_handlers.BlockGetByIdRequest(block_store),
         client_thread_pool)
