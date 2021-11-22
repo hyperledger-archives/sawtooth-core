@@ -15,7 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::sync::{Arc, Mutex};
+use std::{
+    any::Any,
+    sync::{Arc, Mutex},
+};
 
 use std::collections::HashMap;
 
@@ -52,7 +55,9 @@ pub trait TransactionIndex: Sync + Send {
     fn get_block_by_id(&self, id: &str) -> Result<Option<Block>, BlockStoreError>;
 }
 
-pub trait IndexedBlockStore: BlockStore + TransactionIndex + BatchIndex {}
+pub trait IndexedBlockStore: BlockStore + TransactionIndex + BatchIndex {
+    fn as_any(&self) -> &dyn Any;
+}
 
 #[derive(Clone, Default)]
 pub struct InMemoryBlockStore {
@@ -73,7 +78,11 @@ impl InMemoryBlockStore {
     }
 }
 
-impl IndexedBlockStore for InMemoryBlockStore {}
+impl IndexedBlockStore for InMemoryBlockStore {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
 
 impl BlockStore for InMemoryBlockStore {
     fn get<'a>(

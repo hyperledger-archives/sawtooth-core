@@ -111,6 +111,38 @@ pub unsafe extern "C" fn block_manager_add_commit_store(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn block_manager_get_block_id_by_block_num(
+    block_manager: *mut c_void,
+    block_num: u64,
+    string_ptr: *mut *const u8,
+    string_len: *mut usize,
+    string_cap: *mut usize,
+) -> ErrorCode {
+    check_null!(block_manager);
+
+    error!(
+        "block_manager_get_block_id_by_block_num:: block_num {}",
+        block_num
+    );
+
+    (*(block_manager as *const BlockManager))
+        .get_block_id_by_block_num_from_commit_store(block_num)
+        .map(String::from_utf8)
+        .map(|s| {
+            let string = s.unwrap();
+            let ptr = string.as_ptr();
+            let len = string.len();
+            let cap = string.capacity();
+            *string_ptr = ptr;
+            *string_len = len;
+            *string_cap = cap;
+            mem::forget(string);
+        })
+        .map(|_| ErrorCode::Success)
+        .unwrap_or(ErrorCode::Error)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn block_manager_persist(
     block_manager: *mut c_void,
     block_id: *const c_char,
