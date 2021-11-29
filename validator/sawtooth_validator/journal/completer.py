@@ -139,7 +139,7 @@ class Completer:
         self._gossip.broadcast_block_request(blkw.previous_block_id)
         return None
 
-    def _complete_block(self, block, is_block_response=False):
+    def _complete_block(self, block, is_gossip_message=False):
         """ Check the block to see if it is complete and if it can be passed to
             the journal. If the block's predecessor is not in the block_manager
             the predecessor is requested and the current block is added to the
@@ -169,13 +169,14 @@ class Completer:
 
         #SYNC_THRESHOLD = 2**13
         SYNC_THRESHOLD = 10
-        if is_block_response:
-            LOGGER.critical("Received block response from network: %s", block)
+        if is_gossip_message:
+            LOGGER.critical(
+                "Received gossip block message from network: %s", block)
             head = self.get_chain_head()
             head_height = BlockWrapper(head).block_num if head else 0
             height_diff = block.block_num - head_height
             if height_diff > SYNC_THRESHOLD:
-                LOGGER.critical("Received block response from network is too "
+                LOGGER.critical("block message from network is too "
                                 "far ahead of the chain head: %s", block)
                 block_id = "HEAD~" + str(head_height + SYNC_THRESHOLD)
                 LOGGER.critical("Request missing predecessor: %s", block_id)
@@ -341,10 +342,10 @@ class Completer:
     def set_on_batch_received(self, on_batch_received_func):
         self._on_batch_received = on_batch_received_func
 
-    def add_block(self, block, is_block_response=False):
+    def add_block(self, block, is_gossip_message=False):
         with self.lock:
             blkw = BlockWrapper(block)
-            block = self._complete_block(blkw, is_block_response)
+            block = self._complete_block(blkw, is_gossip_message)
             if block is not None:
                 self._send_block(block.block)
                 self._process_incomplete_blocks(block.header_signature)
@@ -437,7 +438,7 @@ class CompleterGossipHandler(Handler):
         obj, tag, _ = message_content
 
         if tag == network_pb2.GossipMessage.BLOCK:
-            self._completer.add_block(obj)
+            self._completer.add_block(obj, True)
         elif tag == network_pb2.GossipMessage.BATCH:
             self._completer.add_batch(obj)
         return HandlerResult(status=HandlerStatus.PASS)
@@ -449,7 +450,7 @@ class CompleterGossipBlockResponseHandler(Handler):
 
     def handle(self, connection_id, message_content):
         block, _ = message_content
-        self._completer.add_block(block, True)
+        self._completer.add_block(block)
 
         return HandlerResult(status=HandlerStatus.PASS)
 
