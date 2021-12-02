@@ -33,6 +33,7 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import PreprocessorResult
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf import client_block_pb2
@@ -780,13 +781,13 @@ class StateGetRequest(_ClientRequestHandler):
 
 class RewardListRequest(_ClientRequestHandler):
 
-    def __init__(self, block_store, block_cache):
+    def __init__(self, block_store, block_manager):
         super().__init__(
             client_block_pb2.ClientRewardBlockListRequest,
             client_block_pb2.ClientRewardBlockListResponse,
             validator_pb2.Message.CLIENT_REWARD_BLOCK_LIST_RESPONSE,
             block_store = block_store)
-        self._block_cache = block_cache
+        self._block_manager = block_manager
 
     class BoolWrapper:
         def __init__(self) -> None:
@@ -814,8 +815,8 @@ class RewardListRequest(_ClientRequestHandler):
         padding_traversal = True
         # Fetch the foreign head block.
         try:
-            head_block = self._block_cache[request.head_id]
-        except KeyError:
+            head_block = BlockWrapper(next(self._block_manager.get([request.head_id])))
+        except StopIteration:
             LOGGER.debug('Unable to find block "%s" in cache', request.head_id)
             raise _ResponseFailed(self._status.NO_ROOT)
         #malformed/malicious checks
@@ -854,7 +855,9 @@ class RewardListRequest(_ClientRequestHandler):
         try:
             #find tip to be rewarded
             while head_block.block_num != first_pred_height and head_block.block_num == height:
-                head_block = self._block_cache.__getitem__(head_block.previous_block_id, stored=is_block)
+                if head_block.header_signature in self._block_store:
+                    is_block.found_in_store = True
+                head_block = BlockWrapper(next(self._block_manager.get([head_block.previous_block_id])))
                 height -= 1
                 #predecessors are in the store already
                 if is_block.found_in_store:
@@ -871,7 +874,7 @@ class RewardListRequest(_ClientRequestHandler):
             # traverse blocks until we get the last desired block, push blocks until done
             while head_block.block_num != last_pred_height - 1 and head_block.block_num == height:
                 blocks.append(head_block.block)
-                head_block = self._block_cache[head_block.previous_block_id]
+                head_block = BlockWrapper(next(self._block_manager.get([head_block.previous_block_id])))
                 height -= 1
 
             if head_block.block_num != height:

@@ -182,7 +182,7 @@ def add(
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_REWARD_BLOCK_LIST_REQUEST,
-        client_handlers.RewardListRequest(block_store, completer.block_cache),
+        client_handlers.RewardListRequest(block_store, completer._block_manager),
         client_thread_pool)
 
     dispatcher.add_handler(
