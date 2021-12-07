@@ -789,10 +789,6 @@ class RewardListRequest(_ClientRequestHandler):
             block_store = block_store)
         self._block_manager = block_manager
 
-    class BoolWrapper:
-        def __init__(self) -> None:
-            self.found_in_store=False
-
     def _respond(self, request):
         """
         - If the distance between the head block and the first block of interest (padding)
@@ -817,7 +813,7 @@ class RewardListRequest(_ClientRequestHandler):
         try:
             head_block = BlockWrapper(next(self._block_manager.get([request.head_id])))
         except StopIteration:
-            LOGGER.debug('Unable to find block "%s" in cache', request.head_id)
+            LOGGER.debug('Unable to find block "%s" in the block manager', request.head_id)
             raise _ResponseFailed(self._status.NO_ROOT)
         #malformed/malicious checks
         try:
@@ -850,17 +846,16 @@ class RewardListRequest(_ClientRequestHandler):
                 raise _ResponseFailed(self._status.INTERNAL_ERROR)
 
         height = head_block.block_num
-        is_block = self.BoolWrapper()
-
+        found_in_store = False
         try:
             #find tip to be rewarded
             while head_block.block_num != first_pred_height and head_block.block_num == height:
-                if head_block.header_signature in self._block_store:
-                    is_block.found_in_store = True
                 head_block = BlockWrapper(next(self._block_manager.get([head_block.previous_block_id])))
+                if head_block.header_signature in self._block_store:
+                    found_in_store = True
                 height -= 1
                 #predecessors are in the store already
-                if is_block.found_in_store:
+                if found_in_store:
                     try:
                         head_block = self._block_store.get_block_by_number(first_pred_height)
                         height = first_pred_height
