@@ -21,6 +21,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.completer import SYNC_THRESHOLD
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -49,25 +50,45 @@ class Responder:
         # Ask Completer
         if block_id.startswith("HEAD"):
             block = self.completer.get_chain_head()
-            if block_id != "HEAD":
-                blkw = BlockWrapper(block)
-                LOGGER.critical(
-                    "check_for_block:: chain head dump %s", blkw)
-                # is block None, block or wrapper?
-                chainhead_height = blkw.block_num
+            if block is None:
+                return None
+            # block by num at
+            if block_id[4] == '@':
+                w_head = BlockWrapper(block)
+                chainhead_height = w_head.block_num
                 try:
-                    # account for "HEAD~"
+                    # account for "HEAD<op>"
                     at_height = int(block_id[5:])
                 except ValueError:
-                    LOGGER.critical("Wrong Chain Head request %s", block_id)
+                    LOGGER.critical("Wrong Chain Head request @ %s", block_id)
                     return None
 
                 if at_height < 1 or at_height > chainhead_height:
                     LOGGER.critical("Wrong input; %s", block_id)
                     return None
                 block_id = self.completer.get_block_id_by_num(at_height)
-                LOGGER.critical("We have found %s by block_num", block_id)
+                LOGGER.critical("Found %s by block_num", block_id)
                 block = self.completer.get_block(block_id)
+            elif block_id[4] == '~':
+                w_head = BlockWrapper(block)
+                head_height = w_head.block_num
+                try:
+                    # account for "HEAD<op>"
+                    req_height = int(block_id[5:])
+                except ValueError:
+                    LOGGER.critical("Wrong Chain Head request ~ %s", block_id)
+                    return None
+                if head_height > req_height + SYNC_THRESHOLD:
+                    at_height = req_height + SYNC_THRESHOLD
+                    if at_height < 1:
+                        LOGGER.critical("Wrong input; %s", block_id)
+                        return None
+                    block_id = self.completer.get_block_id_by_num(at_height)
+                    LOGGER.critical("Found %s by block_num", block_id)
+                    block = self.completer.get_block(block_id)
+                # skip, block of interest is the head
+                else:
+                    pass
         else:
             block = self.completer.get_block(block_id)
         return block
