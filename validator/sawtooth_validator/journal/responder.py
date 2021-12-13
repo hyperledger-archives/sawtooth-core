@@ -46,8 +46,6 @@ class Responder:
         self._lock = RLock()
 
     def check_for_block(self, block_id: str):
-        # what is block_id, convert from rust to this type
-        # Ask Completer
         if block_id.startswith("HEAD"):
             block = self.completer.get_chain_head()
             if block is None:
@@ -60,14 +58,13 @@ class Responder:
                     # account for "HEAD<op>"
                     at_height = int(block_id[5:])
                 except ValueError:
-                    LOGGER.critical("Wrong Chain Head request @ %s", block_id)
+                    LOGGER.debug("Wrong Chain Head request @ %s", block_id)
                     return None
 
                 if at_height < 1 or at_height > chainhead_height:
-                    LOGGER.critical("Wrong input; %s", block_id)
+                    LOGGER.debug("Wrong input; %s", block_id)
                     return None
                 block_id = self.completer.get_block_id_by_num(at_height)
-                LOGGER.critical("Found %s by block_num", block_id)
                 block = self.completer.get_block(block_id)
             elif block_id[4] == '~':
                 w_head = BlockWrapper(block)
@@ -76,15 +73,15 @@ class Responder:
                     # account for "HEAD<op>"
                     req_height = int(block_id[5:])
                 except ValueError:
-                    LOGGER.critical("Wrong Chain Head request ~ %s", block_id)
+                    LOGGER.debug("Wrong Chain Head request ~ %s", block_id)
                     return None
                 if head_height > req_height + SYNC_THRESHOLD:
                     at_height = req_height + SYNC_THRESHOLD
                     if at_height < 1:
-                        LOGGER.critical("Wrong input; %s", block_id)
+                        LOGGER.debug("Wrong input; %s", block_id)
                         return None
                     block_id = self.completer.get_block_id_by_num(at_height)
-                    LOGGER.critical("Found %s by block_num", block_id)
+                    LOGGER.debug("Found %s by block_num", block_id)
                     block = self.completer.get_block(block_id)
                 # skip, block of interest is the head
                 else:

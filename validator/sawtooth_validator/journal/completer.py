@@ -171,16 +171,16 @@ class Completer:
             return None
 
         if is_gossip_message:
-            LOGGER.critical(
+            LOGGER.debug(
                 "Received gossip block message from network: %s", block)
             head = self.get_chain_head()
             head_height = BlockWrapper(head).block_num if head else 0
             height_diff = block.block_num - head_height
             if height_diff > SYNC_THRESHOLD:
-                LOGGER.critical("block message from network is too "
+                LOGGER.debug("block message from network is too "
                                 "far ahead of the chain head: %s", block)
                 block_id = "HEAD@" + str(head_height + SYNC_THRESHOLD)
-                LOGGER.critical("Request missing predecessor: %s", block_id)
+                LOGGER.debug("Request missing predecessor: %s", block_id)
                 self._gossip.broadcast_block_request(block_id)
                 return None
 

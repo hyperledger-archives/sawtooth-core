@@ -284,7 +284,12 @@ where
                         }
                     }
                     Err(err) => {
-                        warn!("Error during block validation: {:?}", err);
+                        warn!(
+                            "Error during block {} {} validation: {:?}",
+                            block.block_num,
+                            &block_id[..16],
+                            err
+                        );
                         if let Err(err) = error_return_sender.send((block, results_sender)) {
                             warn!("During handling retry after an error: {:?}", err);
                             exit.store(true, Ordering::Relaxed);
