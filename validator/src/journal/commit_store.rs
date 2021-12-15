@@ -129,11 +129,6 @@ impl CommitStore {
         Ok(proto_block.into())
     }
 
-    pub fn get_block_id_by_block_num(&self, block_num: u64) -> Result<Vec<u8>, DatabaseError> {
-        let reader = self.db.reader()?;
-        Self::read_block_id_from_block_num_index(&reader, block_num)
-    }
-
     pub fn get_by_batch_id(&self, batch_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_id = Self::read_block_id_from_batch_index(&reader, batch_id.as_bytes())?;
@@ -485,11 +480,7 @@ impl TransactionIndex for CommitStore {
     }
 }
 
-impl IndexedBlockStore for CommitStore {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+impl IndexedBlockStore for CommitStore {}
 
 struct CommitStoreGetIterator {
     store: CommitStore,

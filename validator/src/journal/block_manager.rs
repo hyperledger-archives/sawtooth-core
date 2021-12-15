@@ -22,11 +22,10 @@ use std::iter::Peekable;
 use std::sync::{Arc, RwLock};
 
 use crate::block::Block;
-use crate::journal::NULL_BLOCK_IDENTIFIER;
-use crate::journal::{
-    block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex},
-    commit_store::CommitStore,
+use crate::journal::block_store::{
+    BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
+use crate::journal::NULL_BLOCK_IDENTIFIER;
 use crate::metrics;
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
@@ -922,33 +921,6 @@ impl BlockManager {
         }
 
         Ok(())
-    }
-
-    pub fn get_block_id_by_block_num_from_commit_store(
-        &self,
-        block_num: u64,
-    ) -> Result<Vec<u8>, BlockManagerError> {
-        let blockstore_by_name = self
-            .state
-            .blockstore_by_name
-            .read()
-            .expect("Acquiring blockstore read lock; lock poisoned");
-        let blockstore = blockstore_by_name
-            .get("commit_store")
-            .ok_or(BlockManagerError::UnknownBlockStore)?;
-        let commit_store = blockstore
-            .as_any()
-            .downcast_ref::<CommitStore>()
-            .ok_or(BlockManagerError::BlockStoreError)?;
-        commit_store
-            .get_block_id_by_block_num(block_num)
-            .map_err(|e| {
-                error!(
-                    "Error getting block id by block num from commit store: {:?}",
-                    e
-                );
-                BlockManagerError::BlockStoreError
-            })
     }
 }
 

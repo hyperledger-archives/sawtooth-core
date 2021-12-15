@@ -38,7 +38,7 @@ class Completer:
     complete block is a block whose predecessor is in the block cache and all
     the batches are present in the batch list and in the order specified by the
     block header. If the predecessor or a batch is missing, a request message
-    is sent out over the gossip network. It also checks that all batches
+    is sent sent out over the gossip network. It also checks that all batches
     have their dependencies satisifed, otherwise it will request the batch that
     has the missing transaction.
     """
@@ -139,7 +139,7 @@ class Completer:
         self._gossip.broadcast_block_request(blkw.previous_block_id)
         return None
 
-    def _complete_block(self, block, is_block_response=False):
+    def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
             the journal. If the block's predecessor is not in the block_manager
             the predecessor is requested and the current block is added to the
@@ -158,29 +158,11 @@ class Completer:
             and added to the block. Once a block has the correct batch list it
             is added to the block_manager and is returned.
 
-        Args:
-            block: BlockWrapper
-
         """
 
         if block.header_signature in self._block_manager:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
-
-        #SYNC_THRESHOLD = 2**13
-        SYNC_THRESHOLD = 10
-        if is_block_response:
-            LOGGER.critical("Received block response from network: %s", block)
-            head = self.get_chain_head()
-            head_height = BlockWrapper(head).block_num if head else 0
-            height_diff = block.block_num - head_height
-            if height_diff > SYNC_THRESHOLD:
-                LOGGER.critical("Received block response from network is too "
-                                "far ahead of the chain head: %s", block)
-                block_id = "HEAD~" + str(head_height + SYNC_THRESHOLD)
-                LOGGER.critical("Request missing predecessor: %s", block_id)
-                self._gossip.broadcast_block_request(block_id)
-                # return None
 
         # NOTE: We cannot assume that if the previous block _is_ in the block
         # manager, that it will still be in there when this block is complete.
@@ -341,10 +323,10 @@ class Completer:
     def set_on_batch_received(self, on_batch_received_func):
         self._on_batch_received = on_batch_received_func
 
-    def add_block(self, block, is_block_response=False):
+    def add_block(self, block):
         with self.lock:
             blkw = BlockWrapper(block)
-            block = self._complete_block(blkw, is_block_response)
+            block = self._complete_block(blkw)
             if block is not None:
                 self._send_block(block.block)
                 self._process_incomplete_blocks(block.header_signature)
@@ -380,9 +362,6 @@ class Completer:
         """
         with self.lock:
             return self._get_chain_head()
-
-    def get_block_id_by_num(self, block_num):
-        return self._block_manager.get_block_id_by_num(block_num)
 
     def get_block(self, block_id):
         with self.lock:
@@ -449,7 +428,7 @@ class CompleterGossipBlockResponseHandler(Handler):
 
     def handle(self, connection_id, message_content):
         block, _ = message_content
-        self._completer.add_block(block, True)
+        self._completer.add_block(block)
 
         return HandlerResult(status=HandlerStatus.PASS)
 

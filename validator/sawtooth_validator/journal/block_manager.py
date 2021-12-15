@@ -123,21 +123,6 @@ class BlockManager(OwnedPointer):
     def branch_diff(self, tip, exclude):
         return _BranchDiffIterator(self.pointer, tip, exclude)
 
-    def get_block_id_by_num(self, block_num: int):
-        c_block_num_ptr = ctypes.POINTER(
-            ctypes.c_uint64)(ctypes.c_uint64(block_num))
-
-        (string_ptr, string_len, string_cap) = ffi.prepare_string_result()
-        _libexec(
-            'block_manager_get_block_id_by_block_num',
-            self.pointer,
-            ctypes.c_uint64(block_num),
-            ctypes.byref(string_ptr),
-            ctypes.byref(string_len),
-            ctypes.byref(string_cap))
-
-        return ffi.from_rust_string(string_ptr, string_len, string_cap).decode("UTF-8")
-
 
 def _libexec(name, *args):
     return _exec(ffi.LIBRARY, name, *args)

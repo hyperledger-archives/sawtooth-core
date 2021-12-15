@@ -20,7 +20,6 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.journal.timed_cache import TimedCache
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -44,30 +43,10 @@ class Responder:
                                            cache_purge_frequency)
         self._lock = RLock()
 
-    def check_for_block(self, block_id: str):
-        # what is block_id, convert from rust to this type
+    def check_for_block(self, block_id):
         # Ask Completer
-        if block_id.startswith("HEAD"):
+        if block_id == "HEAD":
             block = self.completer.get_chain_head()
-            if block_id != "HEAD":
-                blkw = BlockWrapper(block)
-                LOGGER.critical(
-                    "check_for_block:: chain head dump %s", blkw)
-                # is block None, block or wrapper?
-                chainhead_height = blkw.block_num
-                try:
-                    # account for "HEAD~"
-                    at_height = int(block_id[5:])
-                except ValueError:
-                    LOGGER.critical("Wrong Chain Head request %s", block_id)
-                    return None
-
-                if at_height < 1 or at_height > chainhead_height:
-                    LOGGER.critical("Wrong input; %s", block_id)
-                    return None
-                block_id = self.completer.get_block_id_by_num(at_height)
-                LOGGER.critical("We have found %s by block_num", block_id)
-                block = self.completer.get_block(block_id)
         else:
             block = self.completer.get_block(block_id)
         return block
@@ -126,15 +105,13 @@ class BlockResponderHandler(Handler):
         if block is None:
             # No block found, broadcast original message to other peers
             # and add to pending requests
-            if block_id.startswith("HEAD"):
+            if block_id == "HEAD":
                 if not self._log_guard.chain_head_not_yet_set:
-                    LOGGER.debug("No chain %s available; cannot respond to "
-                                 "block requests", block_id)
+                    LOGGER.debug("No chain head available; cannot respond to "
+                                 "block requests")
                     self._log_guard.chain_head_not_yet_set = True
             else:
-                # block pending request
                 if not self._responder.already_requested(block_id):
-                    # if it can still hop, broadcast the request
                     if block_request_message.time_to_live > 0:
                         time_to_live = block_request_message.time_to_live
                         block_request_message.time_to_live = time_to_live - 1
@@ -142,12 +119,11 @@ class BlockResponderHandler(Handler):
                             block_request_message,
                             validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
                             exclude=[connection_id])
-                        # mark it seen
+
                         self._seen_requests[block_request_message.nonce] = \
                             block_request_message.block_id
-                        # add to pending requests
+
                         self._responder.add_request(block_id, connection_id)
-                # add connection to pending request
                 else:
                     LOGGER.debug("Block %s has already been requested",
                                  block_id)
