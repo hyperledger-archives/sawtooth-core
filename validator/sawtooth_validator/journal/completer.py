@@ -31,9 +31,6 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
-SYNC_THRESHOLD = 2**11
-
-
 class Completer:
     """
     The Completer is responsible for making sure blocks are formally
@@ -170,6 +167,7 @@ class Completer:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
+        SYNC_THRESHOLD = 2**11
         if is_gossip_message:
             LOGGER.critical(
                 "Received gossip block message from network: %s", block)
@@ -179,10 +177,10 @@ class Completer:
             if height_diff > SYNC_THRESHOLD:
                 LOGGER.critical("block message from network is too "
                                 "far ahead of the chain head: %s", block)
-                block_id = "HEAD@" + str(head_height + SYNC_THRESHOLD)
+                block_id = "HEAD~" + str(head_height + SYNC_THRESHOLD)
                 LOGGER.critical("Request missing predecessor: %s", block_id)
                 self._gossip.broadcast_block_request(block_id)
-                return None
+                # return None
 
         # NOTE: We cannot assume that if the previous block _is_ in the block
         # manager, that it will still be in there when this block is complete.
