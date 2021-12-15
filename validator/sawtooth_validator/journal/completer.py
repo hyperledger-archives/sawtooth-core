@@ -167,7 +167,8 @@ class Completer:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
-        SYNC_THRESHOLD = 2**11
+        #SYNC_THRESHOLD = 2**13
+        SYNC_THRESHOLD = 10
         if is_gossip_message:
             LOGGER.critical(
                 "Received gossip block message from network: %s", block)
