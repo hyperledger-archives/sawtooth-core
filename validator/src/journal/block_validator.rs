@@ -340,12 +340,22 @@ where
         }
     }
 
-    pub fn process_pending(&self, block: &Block, response_sender: &Sender<BlockValidationResult>) {
-        for block in self.block_scheduler.done(&block.header_signature) {
+    pub fn process_pending(
+        &self,
+        block: &Block,
+        response_sender: &Sender<BlockValidationResult>,
+        mark_descendants_invalid: bool,
+    ) {
+        let pending_descendants_marked_for_processing = self
+            .block_scheduler
+            .done(&block.header_signature, mark_descendants_invalid);
+        if !mark_descendants_invalid {
             let tx = self.return_sender();
-            if let Err(err) = tx.send((block, response_sender.clone())) {
-                warn!("During process pending: {:?}", err);
-                self.validation_thread_exit.store(true, Ordering::Relaxed);
+            for block in pending_descendants_marked_for_processing {
+                if let Err(err) = tx.send((block, response_sender.clone())) {
+                    warn!("During process pending: {:?}", err);
+                    self.validation_thread_exit.store(true, Ordering::Relaxed);
+                }
             }
         }
     }

@@ -709,13 +709,18 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
                     );
                 }
             }
-            _ => error!(
-                "on_block_validated() called for block {}, but result was {:?}",
-                block.header_signature, result.status,
-            ),
+            //shouldnt happen, only valid or invalid should be received and processed.
+            _ => {
+                error!(
+                    "on_block_validated() called for block {}, but result was {:?}",
+                    block.header_signature, result.status,
+                );
+                unreachable!()
+            }
         }
 
-        match self.notify_block_validation_results_received(&block) {
+        // Notify scheduler that the block is complete, so dependent blocks can begin validation.
+        match self.notify_block_validation_results_received(&block, &result.status) {
             Ok(_) => (),
             Err(err) => warn!("{:?}", err),
         }
@@ -925,13 +930,21 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     fn notify_block_validation_results_received(
         &self,
         block: &Block,
+        status: &BlockStatus,
     ) -> Result<(), ChainControllerError> {
         let sender = self
             .validation_result_sender
             .as_ref()
             .expect("Unable to ref validation_result_sender");
 
-        self.block_validator.process_pending(block, &sender);
+        //process pending descendants
+        let mark_descendants_invalid: bool = match status {
+            BlockStatus::Valid => false,
+            BlockStatus::Invalid => true,
+            _ => unreachable!(),
+        };
+        self.block_validator
+            .process_pending(block, &sender, mark_descendants_invalid);
         Ok(())
     }
 

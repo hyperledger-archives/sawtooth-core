@@ -60,12 +60,14 @@ impl<B: BlockStatusStore> BlockScheduler<B> {
     }
 
     /// Mark the block associated with block_id as having completed block
-    /// validation, returning any blocks that are not available for processing
-    pub fn done(&self, block_id: &str) -> Vec<Block> {
+    /// validation, returning any descendants marked for processing.
+    /// Will remove block_id from processing, take all descendants, and move
+    /// them to processing.
+    pub fn done(&self, block_id: &str, mark_descendants_invalid: bool) -> Vec<Block> {
         self.state
             .lock()
             .expect("The BlockScheduler Mutex was poisoned")
-            .done(block_id)
+            .done(block_id, mark_descendants_invalid)
     }
 
     pub fn contains(&self, block_id: &str) -> bool {
@@ -123,7 +125,9 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
                 continue;
             }
 
+            //block and pred are not in validation
             if block.previous_block_id != NULL_BLOCK_IDENTIFIER
+            //results not found though
                 && self.block_validity(&block.previous_block_id) == BlockStatus::Unknown
             {
                 info!(
@@ -194,7 +198,9 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         }
     }
 
-    fn done(&mut self, block_id: &str) -> Vec<Block> {
+    /// Remove from processing and move all descendants from pending to processing.
+    /// When a block is marked invalid, thus all descendants are invalid, do not process them.
+    fn done(&mut self, block_id: &str, mark_descendants_invalid: bool) -> Vec<Block> {
         self.processing.remove(block_id);
         let ready = self
             .descendants_by_previous_id
@@ -203,7 +209,14 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 
         for blk in &ready {
             self.pending.remove(&blk.header_signature);
-            self.processing.insert(blk.header_signature.clone());
+            if !mark_descendants_invalid {
+                self.processing.insert(blk.header_signature.clone());
+            } else {
+                info!(
+                    "Predecessor {} marked invalid, marking descendant {} invalid",
+                    block_id, &blk.header_signature
+                );
+            }
         }
 
         self.update_gauges();
@@ -214,6 +227,8 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
         self.pending.contains(block_id) || self.processing.contains(block_id)
     }
 
+    ///insert into pending and get back the pred's descendants, if its is not already there,
+    /// insert it.
     fn add_block_to_pending(&mut self, block: Block) {
         self.pending.insert(block.header_signature.clone());
         if let Some(ref mut waiting_descendants) = self
@@ -272,7 +287,7 @@ mod tests {
         );
 
         assert_eq!(
-            block_scheduler.done(&block_a.header_signature),
+            block_scheduler.done(&block_a.header_signature, false),
             vec![block_a1, block_a2]
         );
 
@@ -412,7 +427,7 @@ mod tests {
             .insert(block_a.header_signature.clone(), BlockStatus::Valid);
 
         assert_eq!(
-            block_scheduler.done(&block_a.header_signature),
+            block_scheduler.done(&block_a.header_signature, false),
             vec![block_b.clone()],
             "Now Block B is ready"
         );
@@ -420,7 +435,7 @@ mod tests {
         // We are not inserting a status for block b so there will be a later miss
 
         assert_eq!(
-            block_scheduler.done(&block_b.header_signature),
+            block_scheduler.done(&block_b.header_signature, false),
             vec![],
             "Block B is done and there are no further blocks"
         );
