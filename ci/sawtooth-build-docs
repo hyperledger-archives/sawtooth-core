@@ -102,6 +102,7 @@ RUN apt-get update && apt-get install -y -q \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install \
     docutils==0.16 \
+    mistune==0.8.4 \
     sphinx==4.0 \
     sphinxcontrib-httpdomain \
     sphinxcontrib-openapi \
