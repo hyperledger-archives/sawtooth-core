@@ -24,7 +24,7 @@ name = "sawadm"
 path = "src/main.rs"
 
 [dependencies]
-clap = ">=2.29.0"
+clap = "2.34.0"
 libc = ">=0.2.35"
 lmdb-zero = ">=0.4.1"
 protobuf = "2.0"
