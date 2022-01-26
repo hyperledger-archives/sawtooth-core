@@ -26,7 +26,7 @@ RUN apt-get install -y -q \
     python3-dev \
     python3-pip \
  && pip3 install \
-    bandit \
+    bandit==1.7.1 \
     coverage --upgrade
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
