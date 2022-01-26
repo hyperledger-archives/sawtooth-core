@@ -46,7 +46,7 @@ RUN apt-get install -y -q \
  && pip3 install \
     pylint==2.6.2 \
     pycodestyle \
-    bandit \
+    bandit==1.7.1 \
     coverage --upgrade
 
 RUN apt-get install -y -q \
