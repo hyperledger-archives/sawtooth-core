@@ -82,7 +82,7 @@ RUN echo "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly bionic univers
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
     pylint \
-    bandit
+    bandit==1.7.1
 
 
 ENV DEBIAN_FRONTEND=noninteractive
