@@ -128,13 +128,6 @@ pipeline {
             }
         }
 
-        stage ('Build Documentation') {
-            steps {
-                sh 'docker build . -f ci/sawtooth-build-docs -t sawtooth-build-docs:$ISOLATION_ID'
-                sh 'docker run --rm -v $(pwd):/project/sawtooth-core sawtooth-build-docs:$ISOLATION_ID'
-            }
-        }
-
         stage('Build Archive Artifacts') {
             steps {
                 sh 'docker-compose -f docker/compose/copy-debs.yaml up'
@@ -149,7 +142,7 @@ pipeline {
             sh 'docker-compose -f docker/compose/copy-debs.yaml down'
         }
         success {
-            archiveArtifacts '*.tgz, *.zip, build/debs/*.deb, build/bandit.html, coverage/html/*, docs/build/html/**, docs/build/latex/*.pdf'
+            archiveArtifacts '*.tgz, *.zip, build/debs/*.deb, build/bandit.html, coverage/html/*'
         }
         aborted {
             error "Aborted, exiting now"
