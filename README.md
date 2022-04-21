@@ -34,8 +34,4 @@ License
 
 Hyperledger Sawtooth software is licensed under the [Apache License Version 2.0](LICENSE) software license.
 
-Hyperledger Sawtooth documentation in the [docs](docs) subdirectory is licensed under
-a Creative Commons Attribution 4.0 International License.  You may obtain a copy of the
-license at: http://creativecommons.org/licenses/by/4.0/.
-
 ![Open Source Award Badge](images/rookies16-small.png)
