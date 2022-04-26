@@ -35,8 +35,8 @@ class ClientBatchSubmitBackpressureHandler(Handler):
     able.  Otherwise it returns a QUEUE_FULL response.
     """
 
-    def __init__(self, whitelist_public_key, is_batch_pool_full_fn):
-        self._whitelist_public_key = whitelist_public_key
+    def __init__(self, allowlist_public_key, is_batch_pool_full_fn):
+        self._allowlist_public_key = allowlist_public_key
         self._is_batch_pool_full = is_batch_pool_full_fn
         self._applying_backpressure = False
 
@@ -50,8 +50,8 @@ class ClientBatchSubmitBackpressureHandler(Handler):
         batch_header = BatchHeader()
         for batch in message_content.batches:
             batch_header.ParseFromString(batch.header)
-            if batch_header.signer_public_key == self._whitelist_public_key:
-                # There is a whitelisted batch, so allow it to continue
+            if batch_header.signer_public_key == self._allowlist_public_key:
+                # There is a allow-listed batch, so allow it to continue
                 return HandlerResult(status=HandlerStatus.PASS)
 
             batch_header.Clear()
