@@ -12,7 +12,7 @@ in addition, the code that implements it serves as a reference for building
 other transaction processors.
 
 This section introduces the concepts of a Sawtooth transaction family with XO,
-summarizes XO game rules, and describes how use the ``xo`` client application
+summarizes XO game rules, and describes how to use the ``xo`` client application
 to play a game of tic-tac-toe on the blockchain.
 
 
