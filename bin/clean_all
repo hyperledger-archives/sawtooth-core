@@ -20,7 +20,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 set -x
 set -e
 
-for pkg in cli validator docs families rest_api \
+for pkg in cli validator families rest_api \
     consensus/poet/cli consensus/poet/core consensus/poet/common consensus/poet/families consensus/poet/simulator
 do
     cd $top_dir/$pkg
