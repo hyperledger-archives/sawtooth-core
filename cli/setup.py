@@ -33,10 +33,7 @@ setup(
     author='Hyperledger Sawtooth',
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
-    install_requires=[
-        'colorlog', 'protobuf', 'sawtooth-sdk', 'toml', 'PyYAML',
-        'requests'
-    ],
+    install_requires=[],
     data_files=data_files,
     entry_points={
         'console_scripts': [

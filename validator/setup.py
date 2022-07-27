@@ -52,19 +52,6 @@ setup(
     author='Hyperledger Sawtooth',
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
-    install_requires=[
-        "cachetools",
-        "cbor>=0.1.23",
-        "colorlog",
-        "protobuf",
-        "lmdb",
-        "requests",
-        "sawtooth-sdk",
-        "toml",
-        "PyYAML",
-        "pyzmq",
-        "netifaces",
-        "pyformance"
-    ],
+    install_requires=[],
     data_files=data_files,
     entry_points={})
