@@ -1,25 +1,25 @@
 ## Maintainers
 
 ### Active Maintainers
-| Name | GitHub | RocketChat |
-| --- | --- | --- |
-| Andi Gunderson | agunde406 | agunde |
-| Anne Chenette | chenette | achenette |
-| Cian Montgomery | cianx | cianx |
-| Dan Middleton | dcmiddle | Dan |
-| Darian Plumb | dplumb94 | dplumb |
-| James Mitchell | jsmitchell | jsmitchell |
-| Logan Seeley | ltseeley | ltseeley |
-| Peter Schwarz | peterschwarz | pschwarz |
-| Richard Berg | rberg2 | rberg2 |
-| Ryan Beck-Buysse | rbuysse | rbuysse |
-| Shawn Amundson | vaporos | amundson |
+| Name | GitHub |
+| --- | --- |
+| Andi Gunderson | agunde406 |
+| Anne Chenette | chenette |
+| Cian Montgomery | cianx |
+| Dan Middleton | dcmiddle |
+| Darian Plumb | dplumb94 |
+| James Mitchell | jsmitchell |
+| Logan Seeley | ltseeley |
+| Peter Schwarz | peterschwarz |
+| Richard Berg | rberg2 |
+| Ryan Beck-Buysse | rbuysse |
+| Shawn Amundson | vaporos |
 
 ### Retired Maintainers
-| Name | GitHub | RocketChat |
-| --- | --- | --- |
-| Adam Ludvik | aludvik | adamludvik |
-| Boyd Johnson | boydjohnson | boydjohnson |
-| Jamie Jason | jjason | jjason |
-| Nick Drozd | nick-drozd | drozd |
-| Zac Delventhal | delventhalz | zac |
+| Name | GitHub |
+| --- | --- |
+| Adam Ludvik | aludvik |
+| Boyd Johnson | boydjohnson |
+| Jamie Jason | jjason |
+| Nick Drozd | nick-drozd |
+| Zac Delventhal | delventhalz |
