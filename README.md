@@ -1,5 +1,7 @@
 
 ![Hyperledger Sawtooth](images/sawtooth_logo_light_blue-small.png)
+[![kandi X-Ray](https://kandi.openweaver.com/badges/xray.svg)](https://kandi.openweaver.com/python/hyperledger/sawtooth-core)
+[![kandi Featured](https://kandi.openweaver.com/badges/featured.svg)](https://kandi.openweaver.com/collections/blockchain/python-blockchain)
 
 Hyperledger Sawtooth
 -------------
