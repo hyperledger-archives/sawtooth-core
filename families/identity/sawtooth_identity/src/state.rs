@@ -70,7 +70,7 @@ impl<'a> IdentityState<'a> {
             .find(|(_i, policy)| policy.get_name() == policy_name)
         {
             // If policy with same name exists, replace old policy with new policy
-            let mut policy_slice = policy_list.policies.as_mut_slice();
+            let policy_slice = policy_list.policies.as_mut_slice();
             policy_slice[i] = new_policy;
         } else {
             // If policy with same name does not exist, insert new policy
@@ -102,7 +102,7 @@ impl<'a> IdentityState<'a> {
             .find(|(_i, role)| role.get_name() == role_name)
         {
             // If role with same name exists, replace old role with new role
-            let mut role_slice = role_list.roles.as_mut_slice();
+            let role_slice = role_list.roles.as_mut_slice();
             role_slice[i] = new_role;
         } else {
             // If role with same name does not exist, insert new role
