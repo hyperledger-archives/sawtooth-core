@@ -49,16 +49,15 @@ fn main() {
     let proto_src_files = glob_simple(&format!("{PROTO_FILES_DIR}/*.proto"));
     let last_build_time = read_last_build_time();
 
-    let latest_change =
-        proto_src_files
-            .iter()
-            .fold(Duration::from_secs(0), |max, ref proto_file| {
-                if proto_file.last_modified > max {
-                    proto_file.last_modified
-                } else {
-                    max
-                }
-            });
+    let latest_change = proto_src_files
+        .iter()
+        .fold(Duration::from_secs(0), |max, proto_file| {
+            if proto_file.last_modified > max {
+                proto_file.last_modified
+            } else {
+                max
+            }
+        });
 
     let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
@@ -82,11 +81,7 @@ fn main() {
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
         let mut file = match fs::File::create(&mod_file_path) {
-            Err(err) => panic!(
-                "Unable to create file {}: {}",
-                mod_file_name,
-                err
-            ),
+            Err(err) => panic!("Unable to create file {}: {}", mod_file_name, err),
             Ok(file) => file,
         };
 
@@ -100,11 +95,7 @@ fn main() {
                 .join("\n")
         );
         match file.write_all(content.as_bytes()) {
-            Err(err) => panic!(
-                "Unable to write to {}: {}",
-                mod_file_name,
-                err
-            ),
+            Err(err) => panic!("Unable to write to {}: {}", mod_file_name, err),
             Ok(_) => println!("generated {mod_file_name}"),
         }
     } else {
@@ -148,9 +139,7 @@ fn read_last_build_time() -> Duration {
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME).join("mod.rs");
     match fs::File::open(Path::new(&dest_path.to_str().unwrap())) {
         Err(err) => {
-            println!(
-                "unable to open {dest_path:?}: {err}; defaulting to 0"
-            );
+            println!("unable to open {dest_path:?}: {err}; defaulting to 0");
             Duration::new(0, 0)
         }
         Ok(file) => get_modified_time(file),
