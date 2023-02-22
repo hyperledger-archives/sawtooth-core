@@ -33,7 +33,7 @@ use sawtooth_sdk::signing;
 use config;
 use err::CliError;
 
-pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     let path_config = config::get_path_config();
     let key_dir = &path_config.key_dir;
     if !key_dir.exists() {
