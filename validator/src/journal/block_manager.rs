@@ -1087,7 +1087,7 @@ impl BranchDiffIterator {
         };
         if difference < 0 {
             // seek to the same height on the exclude side
-            right_iterator.nth(difference.abs() as usize - 1);
+            right_iterator.nth(difference.unsigned_abs() as usize - 1);
         }
 
         Ok(BranchDiffIterator {
