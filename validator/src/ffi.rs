@@ -48,7 +48,7 @@ pub fn py_import_class(module: &str, class: &str) -> PyObject {
     let python = gil.python();
     python
         .import(module)
-        .expect(&format!("Unable to import '{module}'"))
+        .unwrap_or_else(|_| panic!("Unable to import '{}'", module))
         .get(python, class)
-        .expect(&format!("Unable to import {class} from '{module}'"))
+        .unwrap_or_else(|_| panic!("Unable to import {} from '{}'", class, module))
 }
