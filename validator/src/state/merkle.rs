@@ -346,7 +346,7 @@ impl MerkleDatabase {
         // We expect this to be hex, since we generated it
         let root_hash_bytes = ::hex::decode(&self.root_hash).expect("Improper hex");
 
-        for &(ref key, ref value) in batch {
+        for (key, value) in batch {
             match db_writer.put(::hex::encode(key).as_bytes(), value) {
                 Ok(_) => continue,
                 Err(DatabaseError::DuplicateEntry) => {
@@ -370,7 +370,7 @@ impl MerkleDatabase {
         next_change_log.set_additions(protobuf::RepeatedField::from(
             batch
                 .iter()
-                .map(|&(ref hash, _)| hash.clone())
+                .map(|(hash, _)| hash.clone())
                 .collect::<Vec<Vec<u8>>>(),
         ));
 
@@ -979,7 +979,7 @@ mod tests {
                 .collect::<Vec<_>>();
 
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
+            for (key, hashed) in key_hashes.iter() {
                 let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.clone(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
