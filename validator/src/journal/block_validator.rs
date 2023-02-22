@@ -496,8 +496,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
             })?;
 
         let greatest_batch_index = block.batches.len() - 1;
-        let mut index = 0;
-        for batch in &block.batches {
+        for (index, batch) in block.batches.iter().enumerate() {
             if index < greatest_batch_index {
                 scheduler
                     .add_batch(batch.clone(), None, false)
@@ -515,7 +514,6 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                         ))
                     })?;
             }
-            index += 1;
         }
         scheduler.finalize(false).map_err(|err| {
             ValidationError::BlockValidationError(format!(
