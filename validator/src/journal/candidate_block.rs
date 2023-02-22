@@ -93,7 +93,7 @@ pub struct CandidateBlock {
 }
 
 impl CandidateBlock {
-    #![allow(too_many_arguments)]
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         previous_block: Block,
         commit_store: CommitStore,
