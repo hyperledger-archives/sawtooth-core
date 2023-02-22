@@ -815,7 +815,7 @@ impl BlockManager {
                 .blockstore_by_name
                 .write()
                 .expect("Acquiring blockstore write lock; lock poisoned");
-            let mut blockstore = blockstore_by_name
+            let blockstore = blockstore_by_name
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 

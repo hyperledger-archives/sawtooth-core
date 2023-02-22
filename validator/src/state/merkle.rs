@@ -308,7 +308,7 @@ impl MerkleDatabase {
 
             if !path.is_empty() {
                 let (parent_address, path_branch) = parent_and_branch(&path);
-                let mut parent = path_map
+                let parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated or entry is deleted");
                 if let Some(old_hash_key) = parent
@@ -358,7 +358,7 @@ impl MerkleDatabase {
 
         let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
         if let Some(change_log) = current_change_log.as_mut() {
-            let mut successors = change_log.mut_successors();
+            let successors = change_log.mut_successors();
             let mut successor = ChangeLogEntry_Successor::new();
             successor.set_successor(Vec::from(successor_root_hash));
             successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
@@ -777,7 +777,7 @@ impl Node {
         };
 
         let children = match children_raw {
-            Some(Value::Map(mut child_map)) => {
+            Some(Value::Map(child_map)) => {
                 let mut result = BTreeMap::new();
                 for (k, v) in child_map {
                     result.insert(key_to_string(k)?, text_to_string(v)?);
