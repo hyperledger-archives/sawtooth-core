@@ -27,7 +27,7 @@ impl Error for IdentityError {}
 impl fmt::Display for IdentityError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            IdentityError::ReadError(s) => write!(f, "Unable to read: {}", s),
+            IdentityError::ReadError(s) => write!(f, "Unable to read: {s}"),
         }
     }
 }

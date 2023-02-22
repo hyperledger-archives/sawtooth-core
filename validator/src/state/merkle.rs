@@ -80,7 +80,7 @@ impl MerkleDatabase {
     /// Returns a list of addresses that were deleted
     pub fn prune(db: &LmdbDatabase, merkle_root: &str) -> Result<Vec<String>, StateDatabaseError> {
         let root_bytes = ::hex::decode(merkle_root).map_err(|_| {
-            StateDatabaseError::InvalidHash(format!("{} is not a valid hash", merkle_root))
+            StateDatabaseError::InvalidHash(format!("{merkle_root} is not a valid hash"))
         })?;
         let mut db_writer = db.writer()?;
         let change_log = get_change_log(&db_writer, &root_bytes)?;
@@ -850,7 +850,7 @@ mod tests {
             .into_bytes()
             .unwrap()
             .iter()
-            .map(|b| format!("{:x}", b))
+            .map(|b| format!("{b:x}"))
             .collect::<Vec<_>>()
             .join("");
         // This expected output was generated using the python structures
@@ -977,7 +977,7 @@ mod tests {
 
             let key_hashes = (0..1000)
                 .map(|i| {
-                    let key = format!("{:016x}", i);
+                    let key = format!("{i:016x}");
                     let hash = hex_hash(key.as_bytes());
                     (key, hash)
                 })
@@ -996,7 +996,7 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
-                let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
+                let hash_key = hex_hash(format!("{i:016x}").as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
@@ -1005,7 +1005,7 @@ mod tests {
             let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
                 .unwrap()
                 .into_iter()
-                .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
+                .map(|i| hex_hash(format!("{i:016x}").as_bytes()))
                 .collect::<Vec<String>>();
 
             for hash in delete_items.iter() {
@@ -1580,7 +1580,7 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), format!("Value not returned: {:?}", value));
+        assert!(value.is_ok(), format!("Value not returned: {value:?}"));
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
@@ -1590,10 +1590,10 @@ mod tests {
             INDEXES.len(),
             Some(120 * 1024 * 1024),
         )
-        .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        .map_err(|err| DatabaseError::InitError(format!("{err}")))
         .unwrap();
         LmdbDatabase::new(ctx, &INDEXES)
-            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .map_err(|err| DatabaseError::InitError(format!("{err}")))
             .unwrap()
     }
 
@@ -1605,7 +1605,7 @@ mod tests {
         let mut temp_dir = env::temp_dir();
 
         let thread_id = thread::current().id();
-        temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
+        temp_dir.push(format!("merkle-{thread_id:?}.lmdb"));
         temp_dir.to_str().unwrap().to_string()
     }
 

@@ -391,16 +391,16 @@ mod tests {
             .map(|i| Transaction {
                 batcher_public_key: pub_key.to_string(),
                 signer_public_key: pub_key.to_string(),
-                header_signature: format!("signature-{}", i),
+                header_signature: format!("signature-{i}"),
                 payload: vec![],
                 dependencies: vec![],
                 family_name: "intkey".into(),
                 family_version: "1.0".into(),
                 inputs: vec![],
                 outputs: vec![],
-                payload_sha512: format!("nonesense-{}", i),
+                payload_sha512: format!("nonesense-{i}"),
                 header_bytes: vec![],
-                nonce: format!("{}", i),
+                nonce: format!("{i}"),
             })
             .collect()
     }
@@ -417,7 +417,7 @@ mod tests {
                     signer_public_key: pub_key.to_string(),
                     transactions: txns,
                     transaction_ids: txn_ids,
-                    header_signature: format!("batch-signature-{}", i),
+                    header_signature: format!("batch-signature-{i}"),
                     header_bytes: vec![],
                     trace: false,
                 }

@@ -51,7 +51,7 @@ impl NotifierService for PyNotifierService {
     ) -> Result<(), NotifierServiceError> {
         let payload = message
             .write_to_bytes()
-            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+            .map_err(|err| NotifierServiceError(format!("{err:?}")))?;
 
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
@@ -73,7 +73,7 @@ impl NotifierService for PyNotifierService {
     ) -> Result<(), NotifierServiceError> {
         let payload = message
             .write_to_bytes()
-            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+            .map_err(|err| NotifierServiceError(format!("{err:?}")))?;
 
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();

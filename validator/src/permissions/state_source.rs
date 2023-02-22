@@ -23,7 +23,7 @@ use super::{IdentityError, IdentitySource, Permission, Policy, Role};
 impl IdentitySource for IdentityView {
     fn get_role(&self, name: &str) -> Result<Option<Role>, IdentityError> {
         let role = IdentityView::get_role(self, name).map_err(|err| {
-            IdentityError::ReadError(format!("unable to read role from state: {:?}", err))
+            IdentityError::ReadError(format!("unable to read role from state: {err:?}"))
         })?;
 
         Ok(role.map(|mut role| Role::new(role.take_name(), role.take_policy_name())))
@@ -31,7 +31,7 @@ impl IdentitySource for IdentityView {
 
     fn get_policy(&self, name: &str) -> Result<Option<Policy>, IdentityError> {
         let policy = IdentityView::get_policy(self, name).map_err(|err| {
-            IdentityError::ReadError(format!("unable to read policy from state: {:?}", err))
+            IdentityError::ReadError(format!("unable to read policy from state: {err:?}"))
         })?;
 
         if let Some(mut policy) = policy {
