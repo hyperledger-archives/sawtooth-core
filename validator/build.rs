@@ -24,8 +24,6 @@ use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
-use protoc_rust::Customize;
-
 const PROTO_FILES_DIR: &str = "../protos";
 const PROTO_DIR_NAME: &str = "proto";
 const GENERATED_SOURCE_HEADER: &str = r#"
@@ -65,16 +63,17 @@ fn main() {
     if latest_change > last_build_time {
         println!("{proto_src_files:?}");
         fs::create_dir_all(&dest_path).unwrap();
-        protoc_rust::run(protoc_rust::Args {
-            out_dir: dest_path.to_str().expect("Invalid proto destination path"),
-            input: &proto_src_files
-                .iter()
-                .map(|proto_file| proto_file.file_path.as_ref())
-                .collect::<Vec<&str>>(),
-            includes: &["src", PROTO_FILES_DIR],
-            customize: Customize::default(),
-        })
-        .expect("unable to run protoc");
+        protoc_rust::Codegen::new()
+            .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
+            .inputs(
+                &proto_src_files
+                    .iter()
+                    .map(|proto_file| proto_file.file_path.as_ref())
+                    .collect::<Vec<&str>>(),
+            )
+            .include(PROTO_FILES_DIR)
+            .run()
+            .expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);

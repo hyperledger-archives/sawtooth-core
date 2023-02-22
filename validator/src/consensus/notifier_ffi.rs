@@ -20,7 +20,7 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-use protobuf::{self, Message, ProtobufEnum};
+use protobuf::{Message, ProtobufEnum};
 use py_ffi;
 
 use block::Block;
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     check_null!(notifier, message_bytes, sender_id_bytes);
 
     let message_slice = slice::from_raw_parts(message_bytes, message_len);
-    let message: ConsensusPeerMessage = match protobuf::parse_from_bytes(&message_slice) {
+    let message: ConsensusPeerMessage = match Message::parse_from_bytes(message_slice) {
         Ok(message) => message,
         Err(err) => {
             error!("Failed to parse ConsensusPeerMessage: {:?}", err);
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     };
 
     let sender_id = slice::from_raw_parts(sender_id_bytes, sender_id_len);
-    (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_message(message, &sender_id);
+    (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_message(message, sender_id);
 
     ErrorCode::Success
 }
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);
@@ -363,7 +363,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);
