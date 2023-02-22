@@ -36,7 +36,7 @@ use wrappers::Block as BlockWrapper;
 
 const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
-pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     match args.subcommand() {
         ("backup", Some(args)) => run_backup_command(args),
         ("restore", Some(args)) => run_restore_command(args),
@@ -53,7 +53,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     }
 }
 
-fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_backup_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -82,7 +82,7 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_restore_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -102,7 +102,7 @@ fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_list_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -172,7 +172,7 @@ fn print_block_store_list_row(
     );
 }
 
-fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_show_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -218,7 +218,7 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_prune_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -270,7 +270,7 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_export_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -305,7 +305,7 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     }
 }
 
-fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_import_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
@@ -349,7 +349,7 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     Ok(())
 }
 
-fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+fn run_stats_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
