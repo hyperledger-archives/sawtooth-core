@@ -22,6 +22,7 @@ use std::num::ParseIntError;
 use hashlib::sha256_digest_str;
 use protobuf;
 
+use protobuf::Message;
 use state::StateDatabaseError;
 use state::StateReader;
 
@@ -121,12 +122,12 @@ impl SettingsView {
             Err(err) => return Err(SettingsViewError::from(err)),
         };
         let setting_opt = if let Some(bytes) = bytes_opt {
-            Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+            Some(Message::parse_from_bytes(&bytes)?)
         } else {
             None
         };
 
-        let optional_str_value: Option<String> = setting_opt.and_then(|setting| {
+        let optional_str_value: Option<String> = setting_opt.and_then(|setting: Setting| {
             setting
                 .get_entries()
                 .iter()

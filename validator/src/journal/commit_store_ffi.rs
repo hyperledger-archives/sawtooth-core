@@ -19,7 +19,7 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use protobuf;
+use protobuf::{self, Message};
 
 use batch::Batch;
 use block::Block;
@@ -491,7 +491,7 @@ pub unsafe extern "C" fn commit_store_put_blocks(
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
             let proto_block: proto::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
+                Message::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
         })

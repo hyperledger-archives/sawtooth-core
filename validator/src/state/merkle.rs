@@ -588,7 +588,7 @@ where
     let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
 
     Ok(match log_bytes {
-        Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+        Some(bytes) => Some(Message::parse_from_bytes(&bytes)?),
         None => None,
     })
 }
@@ -829,7 +829,6 @@ mod tests {
     use database::lmdb::LmdbDatabase;
     use proto::merkle::ChangeLogEntry;
 
-    use protobuf;
     use rand::{seq, thread_rng};
     use std::env;
     use std::fs::remove_file;
@@ -935,7 +934,7 @@ mod tests {
                     .index_get(CHANGE_LOG_INDEX, new_root_bytes)
                     .expect("A database error occurred")
                     .expect("Did not return a change log entry");
-                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+                Message::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
             };
 
             assert_eq!(orig_root_bytes, &change_log.get_parent());
@@ -1485,7 +1484,7 @@ mod tests {
 
     fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
         let reader = db.reader().unwrap();
-        protobuf::parse_from_bytes(
+        Message::parse_from_bytes(
             &reader
                 .index_get(CHANGE_LOG_INDEX, root_hash)
                 .expect("No db errors")

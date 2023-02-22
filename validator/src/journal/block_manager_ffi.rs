@@ -26,7 +26,7 @@ use journal::block_manager::{
 };
 use journal::commit_store::CommitStore;
 use proto;
-use protobuf::{self, Message};
+use protobuf::Message;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn block_manager_put(
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
             let proto_block: proto::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
+                Message::parse_from_bytes(payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
         })
