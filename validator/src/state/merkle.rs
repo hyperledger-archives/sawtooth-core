@@ -1080,8 +1080,8 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for (_, key_hash) in key_hashes.iter() {
-                set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
-                values.insert(key_hash.clone().to_string(), "2.0".to_string());
+                set_items.insert(key_hash.to_string(), "2.0".as_bytes().to_vec());
+                values.insert(key_hash.to_string(), "2.0".to_string());
             }
 
             // The first item below(e55420...89b9) shares a common prefix
@@ -1172,8 +1172,8 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for (_, key_hash) in key_hash_to_be_inserted.iter() {
-                set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
-                values.insert(key_hash.clone().to_string(), "2.0".to_string());
+                set_items.insert(key_hash.to_string(), "2.0".as_bytes().to_vec());
+                values.insert(key_hash.to_string(), "2.0".to_string());
             }
 
             // The first item below(e55420...89b9) shares a common prefix
