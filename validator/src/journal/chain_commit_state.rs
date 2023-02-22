@@ -612,9 +612,7 @@ mod test {
             })
             .collect();
 
-        let block = create_block(block_id, previous_block_id, block_num, batches);
-
-        block
+        create_block(block_id, previous_block_id, block_num, batches)
     }
 
     fn create_block(
