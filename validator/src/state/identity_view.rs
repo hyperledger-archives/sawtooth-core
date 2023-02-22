@@ -96,12 +96,12 @@ impl IdentityView {
         I: Named,
         L: ProtobufList<I>,
     {
-        if !self.state_reader.contains(&address)? {
+        if !self.state_reader.contains(address)? {
             return Ok(None);
         }
 
         self.state_reader
-            .get(&address)
+            .get(address)
             .map_err(IdentityViewError::StateDatabaseError)
             .and_then(|bytes_opt| {
                 Ok(if let Some(bytes) = bytes_opt {
