@@ -1070,7 +1070,7 @@ mod tests {
                 ),
             ];
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
+            for (key, hashed) in key_hashes.iter() {
                 let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
@@ -1079,7 +1079,7 @@ mod tests {
             assert_ne!(init_root, merkle_db.get_merkle_root());
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for &(_, ref key_hash) in key_hashes.iter() {
+            for (_, key_hash) in key_hashes.iter() {
                 set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
                 values.insert(key_hash.clone().to_string(), "2.0".to_string());
             }
@@ -1157,7 +1157,7 @@ mod tests {
                 ),
             ];
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
+            for (key, hashed) in key_hashes.iter() {
                 let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
@@ -1171,7 +1171,7 @@ mod tests {
             )];
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for &(_, ref key_hash) in key_hash_to_be_inserted.iter() {
+            for (_, key_hash) in key_hash_to_be_inserted.iter() {
                 set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
                 values.insert(key_hash.clone().to_string(), "2.0".to_string());
             }
