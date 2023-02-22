@@ -380,7 +380,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Err(_) => String::new(),
     };
 
-    if target == "" {
+    if target.is_empty() {
         return arg_error("target must be a valid http uri");
     }
 
@@ -389,7 +389,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Err(_) => String::new(),
     };
 
-    if input == "" {
+    if input.is_empty() {
         return arg_error("an input file must be specified");
     }
 
