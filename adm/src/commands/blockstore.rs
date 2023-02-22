@@ -106,7 +106,7 @@ fn run_list_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let mut count = u64::from_str_radix(args.value_of("count").unwrap_or("100"), 10).unwrap();
+    let mut count = args.value_of("count").unwrap_or("100").parse::<u64>().unwrap();
 
     // Get the chain head
     let head_sig = match args.value_of("start") {
