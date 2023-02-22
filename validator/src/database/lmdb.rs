@@ -87,9 +87,7 @@ impl LmdbDatabase {
                 Some(name.as_ref()),
                 &lmdb::DatabaseOptions::new(lmdb::db::CREATE),
             )
-            .map_err(|err| {
-                DatabaseError::InitError(format!("Failed to open database: {err:?}"))
-            })?;
+            .map_err(|err| DatabaseError::InitError(format!("Failed to open database: {err:?}")))?;
             index_dbs.insert(String::from(name.as_ref()), db);
         }
         Ok(LmdbDatabase {
@@ -100,16 +98,14 @@ impl LmdbDatabase {
     }
 
     pub fn reader(&self) -> Result<LmdbDatabaseReader, DatabaseError> {
-        let txn = lmdb::ReadTransaction::new(self.ctx.env.clone()).map_err(|err| {
-            DatabaseError::ReaderError(format!("Failed to create reader: {err}"))
-        })?;
+        let txn = lmdb::ReadTransaction::new(self.ctx.env.clone())
+            .map_err(|err| DatabaseError::ReaderError(format!("Failed to create reader: {err}")))?;
         Ok(LmdbDatabaseReader { db: self, txn })
     }
 
     pub fn writer(&self) -> Result<LmdbDatabaseWriter, DatabaseError> {
-        let txn = lmdb::WriteTransaction::new(self.ctx.env.clone()).map_err(|err| {
-            DatabaseError::WriterError(format!("Failed to create writer: {err}"))
-        })?;
+        let txn = lmdb::WriteTransaction::new(self.ctx.env.clone())
+            .map_err(|err| DatabaseError::WriterError(format!("Failed to create writer: {err}")))?;
         Ok(LmdbDatabaseWriter { db: self, txn })
     }
 }

@@ -330,7 +330,8 @@ impl BlockManagerState {
         let blockstore = blockstore_by_name.get(store_name);
         let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
-            .get(&[block_id])?.next();
+            .get(&[block_id])?
+            .next();
         Ok(block)
     }
 
@@ -1178,7 +1179,9 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![d]),
-            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block D: C".to_string()))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block D: C".to_string()
+            ))
         );
 
         let e = create_block("E", "B", 2);
@@ -1217,7 +1220,9 @@ mod tests {
         let g = create_block("G", "A", 1);
         assert_eq!(
             block_manager.put(vec![g]),
-            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block G: A".to_string()))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block G: A".to_string()
+            ))
         );
     }
 
@@ -1237,7 +1242,9 @@ mod tests {
         let b = create_block("B", "A", 55);
         assert_eq!(
             block_manager.put(vec![a, b]),
-            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block A: o".to_string()))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block A: o".to_string()
+            ))
         );
     }
 
@@ -1248,9 +1255,7 @@ mod tests {
         let b = create_block("B", "A", 1);
         let c = create_block("C", "B", 2);
 
-        block_manager
-            .put(vec![a.clone(), b, c.clone()])
-            .unwrap();
+        block_manager.put(vec![a.clone(), b, c.clone()]).unwrap();
 
         let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
 
@@ -1350,9 +1355,7 @@ mod tests {
         let p = create_block("P", "E", 4);
 
         block_manager.put(vec![a, b]).unwrap();
-        block_manager
-            .put(vec![c, d, e])
-            .unwrap();
+        block_manager.put(vec![c, d, e]).unwrap();
         block_manager.put(vec![f]).unwrap();
 
         let blockstore = Box::new(InMemoryBlockStore::new());
@@ -1379,12 +1382,16 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![q]),
-            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block Q: F".to_string()))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block Q: F".to_string()
+            ))
         );
 
         assert_eq!(
             block_manager.put(vec![p]),
-            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block P: E".to_string()))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block P: E".to_string()
+            ))
         );
     }
 
@@ -1406,9 +1413,7 @@ mod tests {
             let _d_ref = blockman.ref_block("D").unwrap();
             // Ext. Ref. = 2
 
-            blockman
-                .put(vec![a, b, c, d])
-                .unwrap();
+            blockman.put(vec![a, b, c, d]).unwrap();
             // Ext. Ref. = 2
         }
         // Ext. Ref. = 1 (dropped d_ref)
