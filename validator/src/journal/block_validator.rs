@@ -449,14 +449,14 @@ impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationP
             .map(|b| b.state_root_hash);
 
         for validation in &self.validations {
-            match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
+            match validation.validate_block(block, previous_blocks_state_hash.as_ref()) {
                 Ok(()) => (),
                 Err(err) => return Err(err),
             }
         }
 
         self.state_validation
-            .validate_block(&block, previous_blocks_state_hash.as_ref())
+            .validate_block(block, previous_blocks_state_hash.as_ref())
     }
 }
 

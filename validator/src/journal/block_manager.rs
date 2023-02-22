@@ -459,7 +459,7 @@ impl BlockManagerState {
         let mut block_id = tip;
         let pointed_to;
         loop {
-            if let Some(ref ref_block) = references_by_block_id.get(block_id) {
+            if let Some(ref_block) = references_by_block_id.get(block_id) {
                 if ref_block.internal_ref_count >= 2 || ref_block.external_ref_count >= 1 {
                     pointed_to = Some(block_id.into());
                     break;
@@ -946,7 +946,7 @@ impl Iterator for GetBlockIterator {
         let block_id = &self.block_ids[self.index];
         let block: Option<Block> = match self
             .state
-            .get_block_from_main_cache_or_blockstore_name(&block_id)
+            .get_block_from_main_cache_or_blockstore_name(block_id)
         {
             BlockLocation::MainCache(block) => Some(block),
 
