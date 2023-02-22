@@ -19,7 +19,6 @@ extern crate glob;
 extern crate protoc_rust;
 
 use std::env;
-use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -84,7 +83,7 @@ fn main() {
             Err(err) => panic!(
                 "Unable to create file {}: {}",
                 mod_file_name,
-                err.description()
+                err
             ),
             Ok(file) => file,
         };
@@ -102,7 +101,7 @@ fn main() {
             Err(err) => panic!(
                 "Unable to write to {}: {}",
                 mod_file_name,
-                err.description()
+                err
             ),
             Ok(_) => println!("generated {}", mod_file_name),
         }
