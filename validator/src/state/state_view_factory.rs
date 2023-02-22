@@ -34,7 +34,7 @@ impl StateViewFactory {
     }
 
     /// Creates a state view for a given state root hash.
-    pub fn create_view<V: From<Box<StateReader>>>(
+    pub fn create_view<V: From<Box<dyn StateReader>>>(
         &self,
         state_root_hash: &str,
     ) -> Result<V, StateDatabaseError> {

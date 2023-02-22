@@ -213,11 +213,11 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
         let validation3: Box<BlockValidation<ReturnValue = ()>> =
@@ -345,11 +345,11 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
         let validation3: Box<BlockValidation<ReturnValue = ()>> =
@@ -423,14 +423,14 @@ trait BlockValidation: Send {
 
 struct BlockValidationProcessor<SBV: BlockValidation<ReturnValue = BlockValidationResult>> {
     block_manager: BlockManager,
-    validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+    validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
     state_validation: SBV,
 }
 
 impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationProcessor<SBV> {
     fn new(
         block_manager: BlockManager,
-        validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+        validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
         state_validation: SBV,
     ) -> Self {
         BlockValidationProcessor {
@@ -732,9 +732,9 @@ mod test {
         let block_manager = BlockManager::new();
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(Mock2::new(Ok(()), Ok(())));
         let validations = vec![validation1, validation2];
         let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
@@ -829,14 +829,14 @@ mod test {
     }
 
     impl BlockStore for Mock1<Option<Block>> {
-        fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
+        fn iter(&self) -> Result<Box<dyn Iterator<Item = Block>>, BlockStoreError> {
             Ok(Box::new(self.result.clone().into_iter()))
         }
 
         fn get<'a>(
             &'a self,
             _block_ids: &[&str],
-        ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
             unimplemented!();
         }
 

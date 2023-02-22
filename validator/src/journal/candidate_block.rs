@@ -55,7 +55,7 @@ pub struct FinalizeBlockResult {
 pub struct CandidateBlock {
     previous_block: Block,
     commit_store: CommitStore,
-    scheduler: Box<Scheduler>,
+    scheduler: Box<dyn Scheduler>,
     max_batches: usize,
     block_builder: cpython::PyObject,
     batch_injectors: Vec<cpython::PyObject>,
@@ -78,7 +78,7 @@ impl CandidateBlock {
     pub fn new(
         previous_block: Block,
         commit_store: CommitStore,
-        scheduler: Box<Scheduler>,
+        scheduler: Box<dyn Scheduler>,
         committed_txn_cache: TransactionCommitCache,
         block_builder: cpython::PyObject,
         max_batches: usize,

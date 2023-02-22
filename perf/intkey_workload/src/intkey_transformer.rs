@@ -71,10 +71,7 @@ impl<'a> IntKeyTransformer<'a> {
         }
     }
 
-    fn payload_to_cbor_bytes(
-        &mut self,
-        payload: &IntKeyPayload,
-    ) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn payload_to_cbor_bytes(&mut self, payload: &IntKeyPayload) -> Result<Vec<u8>, Box<dyn Error>> {
         let mut encoder = GenericEncoder::new(Vec::new());
         encoder.value(&payload.construct())?;
         Ok(encoder.into_inner().into_writer())

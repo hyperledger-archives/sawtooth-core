@@ -58,12 +58,12 @@ impl From<protobuf::ProtobufError> for IdentityViewError {
 /// into the corresponding addresses, and returns the deserialized values from
 /// state.
 pub struct IdentityView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
 }
 
 impl IdentityView {
     /// Creates an IdentityView from a given StateReader.
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView { state_reader }
     }
 
@@ -141,8 +141,8 @@ impl IdentityView {
     }
 }
 
-impl From<Box<StateReader>> for IdentityView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for IdentityView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView::new(state_reader)
     }
 }
@@ -396,14 +396,14 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self
                 .state
                 .iter()
                 .filter(|(key, _)| key.starts_with(prefix.unwrap_or("")))
-                .map(|(key, value)| Ok((key.clone().to_string(), value.clone())))
+                .map(|(key, value)| Ok((key.clone(), value.clone())))
                 .collect();
 
             Ok(Box::new(iterable.into_iter()))
