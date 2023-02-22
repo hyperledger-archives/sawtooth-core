@@ -100,7 +100,7 @@ impl TransactionHandler for SettingsTransactionHandler {
     fn apply(
         &self,
         transaction: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let public_key = transaction.get_header().get_signer_public_key();
         let auth_keys = get_auth_keys(context)?;
@@ -137,7 +137,7 @@ fn apply_proposal(
     auth_keys: &[String],
     public_key: &str,
     setting_proposal_data: &[u8],
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let setting_proposal: SettingProposal = unpack_data(setting_proposal_data)?;
 
@@ -186,7 +186,7 @@ fn apply_vote(
     auth_keys: &[String],
     public_key: &str,
     setting_vote_data: &[u8],
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let setting_vote: SettingVote = unpack_data(setting_vote_data)?;
     let proposal_id = setting_vote.get_proposal_id();
@@ -283,7 +283,7 @@ fn get_candidate_index(
 }
 
 fn save_settings_candidates(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     setting_candidates: &SettingCandidates,
 ) -> Result<(), ApplyError> {
     let data = protobuf::Message::write_to_bytes(setting_candidates).map_err(|err| {
@@ -297,7 +297,7 @@ fn save_settings_candidates(
 }
 
 fn set_setting_value(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
     value: &str,
 ) -> Result<(), ApplyError> {
@@ -326,7 +326,7 @@ fn set_setting_value(
 }
 
 fn set_state(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
     value: &str,
     address: &str,
@@ -369,7 +369,7 @@ fn get_entry_index(setting: &Setting, key: &str) -> Option<usize> {
 }
 
 fn get_setting_candidates(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<SettingCandidates, ApplyError> {
     let value = get_setting_value(context, "sawtooth.settings.vote.proposals")?;
     match value {
@@ -418,7 +418,7 @@ fn validate_setting(auth_keys: &[String], setting: &str, value: &str) -> Result<
     Ok(())
 }
 
-fn get_auth_keys(context: &mut TransactionContext) -> Result<Vec<String>, ApplyError> {
+fn get_auth_keys(context: &mut dyn TransactionContext) -> Result<Vec<String>, ApplyError> {
     let auth_keys = get_setting_value(context, "sawtooth.settings.vote.authorized_keys")?;
     match auth_keys {
         None => Ok(vec![]),
@@ -439,7 +439,7 @@ fn proposal_to_hash(value: &[u8]) -> String {
     sha.result_str()
 }
 
-fn get_approval_threshold(context: &mut TransactionContext) -> Result<i32, ApplyError> {
+fn get_approval_threshold(context: &mut dyn TransactionContext) -> Result<i32, ApplyError> {
     let settings_value = get_setting_value(context, "sawtooth.settings.vote.approval_threshold")?;
     match settings_value {
         None => Ok(1), //1 is the default_value for approval_threshold
@@ -455,7 +455,7 @@ fn get_approval_threshold(context: &mut TransactionContext) -> Result<i32, Apply
 }
 
 fn get_setting_value(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
 ) -> Result<Option<String>, ApplyError> {
     let address = make_settings_key(key);
@@ -477,7 +477,7 @@ fn get_setting_value(
 
 fn get_setting_data(
     address: &str,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
     context.get_state_entry(address).map_err(|err| {
         warn!("Internal Error: Failed to load state: {:?}", err);

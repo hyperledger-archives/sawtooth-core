@@ -61,7 +61,7 @@ impl From<ParseIntError> for SettingsViewError {
 }
 
 pub struct SettingsView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
     cache: RefCell<HashMap<String, Option<String>>>,
 }
 
@@ -72,7 +72,7 @@ unsafe impl Sync for SettingsView {}
 
 impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView {
             state_reader,
             cache: RefCell::new(HashMap::new()),
@@ -149,8 +149,8 @@ impl SettingsView {
     }
 }
 
-impl From<Box<StateReader>> for SettingsView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for SettingsView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView::new(state_reader)
     }
 }
@@ -326,7 +326,7 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self

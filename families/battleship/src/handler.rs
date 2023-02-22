@@ -42,7 +42,7 @@ impl BattleshipTransactionHandler {
 
     /// Retrieves a single game by name
     fn get_game(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
     ) -> Result<Option<game::Game>, ApplyError> {
         let address = game::get_battleship_address(name);
@@ -61,7 +61,7 @@ impl BattleshipTransactionHandler {
 
     /// Stores a single game
     fn store_game(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         game: &game::Game,
     ) -> Result<(), ApplyError> {
@@ -80,7 +80,7 @@ impl BattleshipTransactionHandler {
 
     /// Handles CREATE action
     fn handle_create(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         ships: Vec<String>,
     ) -> Result<(), ApplyError> {
@@ -118,7 +118,7 @@ impl BattleshipTransactionHandler {
 
     /// Handles JOIN action
     fn handle_join(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         player: String,
         board: Vec<Vec<String>>,
@@ -188,7 +188,7 @@ impl BattleshipTransactionHandler {
 
     /// Handles FIRE action
     fn handle_fire(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         player: &str,
         column: String,
@@ -340,7 +340,7 @@ impl TransactionHandler for BattleshipTransactionHandler {
     fn apply(
         &self,
         request: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let payload = request.get_payload();
         let action: game::Action = serde_json::from_slice(payload).map_err(|err| {

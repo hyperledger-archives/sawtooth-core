@@ -208,7 +208,7 @@ fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
     Ok(val)
 }
 
-fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let batch_size: usize = args
         .value_of("batch-size")
         .unwrap_or("1")
@@ -296,7 +296,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let context = signing::create_context("secp256k1")?;
 
-    let private_key: Result<Box<signing::PrivateKey>, Box<Error>> = match args.value_of("key") {
+    let private_key: Result<Box<dyn signing::PrivateKey>, Box<dyn Error>> = match args.value_of("key") {
         Some(file) => {
             let mut key_file = File::open(file)?;
             let mut buf = String::new();
