@@ -420,8 +420,8 @@ pub unsafe extern "C" fn merkle_db_update(
             Ok(Vec::with_capacity(0))
         };
 
-        if update_vec.is_err() {
-            return update_vec.unwrap_err();
+        if let Err(e) = update_vec {
+            return e;
         }
 
         update_vec.unwrap().into_iter().collect()
@@ -441,8 +441,8 @@ pub unsafe extern "C" fn merkle_db_update(
         Ok(Vec::with_capacity(0))
     };
 
-    if deletes.is_err() {
-        return deletes.unwrap_err();
+    if let Err(e) = deletes {
+        return e;
     }
 
     match (*(merkle_db as *mut MerkleDatabase)).update(

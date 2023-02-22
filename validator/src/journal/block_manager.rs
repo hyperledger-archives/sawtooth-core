@@ -305,8 +305,8 @@ impl BlockManagerState {
             .read()
             .expect("Acquiring blockstore by name read lock; lock poisoned");
         let block = block_by_block_id.get(block_id).cloned();
-        if block.is_some() {
-            BlockLocation::MainCache(block.unwrap())
+        if let Some(block) = block {
+            BlockLocation::MainCache(block)
         } else {
             let name: Option<String> = blockstore_by_name
                 .iter()
