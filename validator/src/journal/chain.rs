@@ -1105,7 +1105,7 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
         let mut receipt = TransactionReceipt::new();
 
         receipt.set_data(protobuf::RepeatedField::from_vec(
-            result.data.iter().map(|data| data.clone()).collect(),
+            result.data.iter().cloned().collect(),
         ));
         receipt.set_state_changes(protobuf::RepeatedField::from_vec(
             result.state_changes.clone(),
