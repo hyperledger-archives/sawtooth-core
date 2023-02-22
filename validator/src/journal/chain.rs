@@ -112,7 +112,7 @@ impl From<ForkResolutionError> for ChainControllerError {
 
 impl From<BlockManagerError> for ChainControllerError {
     fn from(err: BlockManagerError) -> Self {
-        ChainControllerError::ChainUpdateError(format!("{:?}", err))
+        ChainControllerError::ChainUpdateError(format!("{err:?}"))
     }
 }
 

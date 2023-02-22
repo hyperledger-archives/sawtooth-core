@@ -22,6 +22,7 @@ use cpython::ObjectProtocol;
 use proto::events::Event;
 use proto::transaction_receipt::StateChange;
 
+use protobuf::Message;
 use scheduler::TxnExecutionResult;
 
 #[derive(Clone)]
@@ -113,7 +114,7 @@ impl<'source> FromPyObject<'source> for StateChange {
             .unwrap()
             .extract::<Vec<u8>>(py)?;
         let state_change: StateChange =
-            ::protobuf::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
+            Message::parse_from_bytes(state_change_bytes.as_slice()).unwrap();
         Ok(state_change)
     }
 }
@@ -124,7 +125,7 @@ impl<'source> FromPyObject<'source> for Event {
             .call_method(py, "SerializeToString", cpython::NoArgs, None)
             .unwrap()
             .extract::<Vec<u8>>(py)?;
-        let event: Event = ::protobuf::parse_from_bytes(event_bytes.as_slice()).unwrap();
+        let event: Event = Message::parse_from_bytes(event_bytes.as_slice()).unwrap();
         Ok(event)
     }
 }

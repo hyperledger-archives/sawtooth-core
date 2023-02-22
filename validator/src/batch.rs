@@ -16,7 +16,7 @@
  */
 
 use proto;
-use protobuf;
+use protobuf::{self, Message};
 
 use transaction::Transaction;
 
@@ -50,7 +50,7 @@ impl From<Batch> for proto::batch::Batch {
 impl From<proto::batch::Batch> for Batch {
     fn from(mut proto_batch: proto::batch::Batch) -> Batch {
         let mut batch_header: proto::batch::BatchHeader =
-            protobuf::parse_from_bytes(proto_batch.get_header())
+            Message::parse_from_bytes(proto_batch.get_header())
                 .expect("Unable to parse BatchHeader bytes");
 
         Batch {

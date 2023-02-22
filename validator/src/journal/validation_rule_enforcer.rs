@@ -384,7 +384,7 @@ mod tests {
                 dependencies: vec![],
                 payload: vec![],
                 payload_sha512: String::new(),
-                header_signature: format!("{}_{}", family, i),
+                header_signature: format!("{family}_{i}"),
                 nonce: String::new(),
 
                 header_bytes: vec![],
