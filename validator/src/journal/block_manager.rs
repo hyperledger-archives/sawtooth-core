@@ -1362,7 +1362,7 @@ mod tests {
         block_manager.persist("B", "commit").unwrap();
 
         {
-            let d_ref = block_manager.ref_block("D").unwrap();
+            let _d_ref = block_manager.ref_block("D").unwrap();
 
             block_manager.persist("C", "commit").unwrap();
             block_manager.unref_block("B").unwrap();
@@ -1403,7 +1403,7 @@ mod tests {
         // Ext. Ref. = 1
 
         {
-            let d_ref = blockman.ref_block("D").unwrap();
+            let _d_ref = blockman.ref_block("D").unwrap();
             // Ext. Ref. = 2
 
             blockman
