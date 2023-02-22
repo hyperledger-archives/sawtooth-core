@@ -1178,9 +1178,7 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![d]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block D: C"
-            )))
+            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block D: C".to_string()))
         );
 
         let e = create_block("E", "B", 2);
@@ -1219,9 +1217,7 @@ mod tests {
         let g = create_block("G", "A", 1);
         assert_eq!(
             block_manager.put(vec![g]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block G: A"
-            )))
+            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block G: A".to_string()))
         );
     }
 
@@ -1241,9 +1237,7 @@ mod tests {
         let b = create_block("B", "A", 55);
         assert_eq!(
             block_manager.put(vec![a, b]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block A: o"
-            )))
+            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block A: o".to_string()))
         );
     }
 
@@ -1385,16 +1379,12 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![q]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block Q: F"
-            )))
+            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block Q: F".to_string()))
         );
 
         assert_eq!(
             block_manager.put(vec![p]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block P: E"
-            )))
+            Err(BlockManagerError::MissingPredecessor("During Put, missing predecessor of block P: E".to_string()))
         );
     }
 
