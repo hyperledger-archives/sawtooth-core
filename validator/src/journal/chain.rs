@@ -423,7 +423,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                if let Some(Some(block)) = state.block_manager.get(&[block_id]).next() {
                     if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
@@ -443,7 +443,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            if let Some(Some(block)) = state.block_manager.get(&[block_id]).next() {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
                 match state.block_manager.ref_block(block_id) {
