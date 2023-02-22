@@ -156,7 +156,7 @@ fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
         return true;
     };
 
-    let txn = get_transaction_from_index(&transactions, position, "XatY".to_string());
+    let txn = get_transaction_from_index(transactions, position, "XatY".to_string());
 
     match txn {
         Some(transaction) => {
@@ -194,7 +194,7 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
     }
 
     for index in indices.unwrap() {
-        let txn = get_transaction_from_index(&transactions, index, "local".to_string());
+        let txn = get_transaction_from_index(transactions, index, "local".to_string());
         match txn {
             Some(transaction) => {
                 if transaction.signer_public_key != expected_signer {

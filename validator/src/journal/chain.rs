@@ -366,7 +366,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                     block.header_signature
                 );
             } else {
-                self.block_validator.validate_block(&block)?;
+                self.block_validator.validate_block(block)?;
 
                 if chain_id.is_none() {
                     state
@@ -394,7 +394,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                             .map(TransactionReceipt::from)
                             .collect();
                         for observer in &mut state.observers {
-                            observer.chain_update(&block, receipts.as_slice());
+                            observer.chain_update(block, receipts.as_slice());
                         }
                     }
                     None => {
@@ -446,7 +446,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
-                match state.block_manager.ref_block(&block_id) {
+                match state.block_manager.ref_block(block_id) {
                     Ok(block_ref) => {
                         state
                             .block_references
@@ -485,7 +485,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             // point the block may be dropped if no other ext. ref's exist.
             if let Some(previous_block_id) = state
                 .fork_cache
-                .insert(&block_id, Some(&block.previous_block_id))
+                .insert(block_id, Some(&block.previous_block_id))
             {
                 // Drop Ref-B: This fork was extended and so this block has an int. ref. count of
                 // at least one, so we can drop the ext. ref. placed on the block to keep the fork
@@ -542,7 +542,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             "Attempted to submit block for validation before starting the chain controller",
         );
         self.block_validator
-            .submit_blocks_for_verification(&[block.clone()], &sender);
+            .submit_blocks_for_verification(&[block.clone()], sender);
     }
 
     pub fn ignore_block(&self, block: &Block) {
@@ -598,9 +598,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             }
         };
 
-        if block_ref.is_none() {
-            return None;
-        }
+        block_ref.as_ref()?;
 
         let mut forks: Vec<Block> = state
             .fork_cache
@@ -692,7 +690,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             ),
         }
 
-        match self.notify_block_validation_results_received(&block) {
+        match self.notify_block_validation_results_received(block) {
             Ok(_) => (),
             Err(err) => warn!("{:?}", err),
         }
@@ -825,7 +823,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                                 .map(TransactionReceipt::from)
                                 .collect();
                             for observer in &mut state.observers {
-                                observer.chain_update(&block, receipts.as_slice());
+                                observer.chain_update(block, receipts.as_slice());
                             }
                         }
                         None => {
@@ -908,7 +906,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             .as_ref()
             .expect("Unable to ref validation_result_sender");
 
-        self.block_validator.process_pending(block, &sender);
+        self.block_validator.process_pending(block, sender);
         Ok(())
     }
 
@@ -958,7 +956,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             gauge.set_value(&chain_head.header_signature[0..8]);
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(&chain_head.block_num);
+            block_num_guage.set_value(chain_head.block_num);
             let mut guard = self.chain_head_lock.acquire();
 
             guard.notify_on_chain_updated(chain_head, vec![], vec![]);

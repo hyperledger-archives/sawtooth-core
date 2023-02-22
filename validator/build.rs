@@ -66,7 +66,7 @@ fn main() {
         println!("{proto_src_files:?}");
         fs::create_dir_all(&dest_path).unwrap();
         protoc_rust::run(protoc_rust::Args {
-            out_dir: &dest_path.to_str().expect("Invalid proto destination path"),
+            out_dir: dest_path.to_str().expect("Invalid proto destination path"),
             input: &proto_src_files
                 .iter()
                 .map(|proto_file| proto_file.file_path.as_ref())

@@ -897,7 +897,7 @@ mod tests {
     #[test]
     fn merkle_trie_root_advance() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).unwrap();
 
             let orig_root = merkle_db.get_merkle_root();
@@ -946,7 +946,7 @@ mod tests {
     #[test]
     fn merkle_trie_delete() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let mut merkle_db = make_db(merkle_path);
 
             let new_root = merkle_db.set("1234", "deletable".as_bytes()).unwrap();
             merkle_db.set_merkle_root(new_root).unwrap();
@@ -967,7 +967,7 @@ mod tests {
     #[test]
     fn merkle_trie_update() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let mut merkle_db = make_db(merkle_path);
             let init_root = merkle_db.get_merkle_root();
 
             let key_hashes = (0..1000)
@@ -980,7 +980,7 @@ mod tests {
 
             let mut values = HashMap::new();
             for (key, hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.clone(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -1071,7 +1071,7 @@ mod tests {
             ];
             let mut values = HashMap::new();
             for &(ref key, ref hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -1158,7 +1158,7 @@ mod tests {
             ];
             let mut values = HashMap::new();
             for &(ref key, ref hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -1223,7 +1223,7 @@ mod tests {
     /// - verifies that the parent trie's ChangeLogEntry is deleted
     fn merkle_trie_pruning_parent() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
             updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
@@ -1305,7 +1305,7 @@ mod tests {
     ///   persisted
     fn merkle_trie_pruinng_successors() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
             updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
@@ -1366,7 +1366,7 @@ mod tests {
     /// initial root, the duplicate leaf node is not pruned as well.
     fn merkle_trie_pruning_duplicate_leaves() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
@@ -1426,7 +1426,7 @@ mod tests {
     /// last root, the duplicate leaf node is not pruned as well.
     fn merkle_trie_pruning_successor_duplicate_leaves() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),

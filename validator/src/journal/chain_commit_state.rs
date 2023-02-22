@@ -96,7 +96,7 @@ pub fn validate_transaction_dependencies(
 
         for dep in &txn.dependencies {
             if !dependencies.contains(&dep) {
-                dependencies.push(&dep);
+                dependencies.push(dep);
             }
         }
     }
