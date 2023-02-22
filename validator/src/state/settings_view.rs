@@ -110,7 +110,7 @@ impl SettingsView {
             let cache = self.cache.borrow();
             if cache.contains_key(key) {
                 return if let Some(str_value) = cache.get(key).unwrap() {
-                    Ok(Some(value_parser(&str_value)?))
+                    Ok(Some(value_parser(str_value)?))
                 } else {
                     Ok(default_value)
                 };
