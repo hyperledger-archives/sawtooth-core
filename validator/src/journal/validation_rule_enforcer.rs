@@ -209,7 +209,7 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
             _ => continue,
         }
     }
-    return true;
+    true
 }
 
 /// Splits up a rule string in the form of "<rule_type>:<rule_arg>,*"
@@ -250,7 +250,7 @@ fn get_transaction_from_index(
         return Some(transactions[transactions.len() - absolute_index].clone());
     }
 
-    return Some(transactions[absolute_index].clone());
+    Some(transactions[absolute_index].clone())
 }
 
 #[cfg(test)]

@@ -1394,9 +1394,7 @@ mod tests {
                 .expect("Update failed to work");
 
             // create the last root
-            merkle_db
-                .set_merkle_root(successor_root_middle)
-                .unwrap();
+            merkle_db.set_merkle_root(successor_root_middle).unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db
                 .set("ab0000", "0001".as_bytes())
@@ -1453,9 +1451,7 @@ mod tests {
                 .expect("Update failed to work");
 
             // create the last root
-            merkle_db
-                .set_merkle_root(successor_root_middle)
-                .unwrap();
+            merkle_db.set_merkle_root(successor_root_middle).unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db
                 .set("ab0000", "0001".as_bytes())

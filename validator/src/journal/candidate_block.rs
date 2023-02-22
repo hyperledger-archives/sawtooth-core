@@ -245,7 +245,7 @@ impl CandidateBlock {
         let previous_block = self.previous_block.clone();
         let pending_batches = self.pending_batches.clone();
 
-        return self.poll_injectors(|injector: &cpython::PyObject| {
+        self.poll_injectors(|injector: &cpython::PyObject| {
             let gil = cpython::Python::acquire_gil();
             let py = gil.python();
             let injector_call = match stage {
@@ -256,7 +256,7 @@ impl CandidateBlock {
                     .call_method(
                         py,
                         stage.value(),
-                        (previous_block.clone(), batch_opt.clone().unwrap()),
+                        (previous_block.clone(), batch_opt.unwrap()),
                         None,
                     ),
                 BatchInjectionStage::BlockEnd => injector.call_method(
@@ -265,11 +265,10 @@ impl CandidateBlock {
                     (previous_block.clone(), pending_batches.clone()),
                     None,
                 ),
-                _ => return vec![],
             };
 
             let result = injector_call
-                .expect(&format!("BlockInjector.{} failed", &stage.value()))
+                .unwrap_or_else(|_| panic!("BlockInjector.{} failed", &stage.value()))
                 .extract::<cpython::PyList>(py);
 
             match result {
@@ -283,7 +282,7 @@ impl CandidateBlock {
                     vec![]
                 }
             }
-        });
+        })
     }
 
     pub fn add_batch(&mut self, batch: Batch) {
@@ -302,7 +301,6 @@ impl CandidateBlock {
                 "Dropping previously committed batch: {}",
                 batch_header_signature.as_str()
             );
-            return;
         } else if self.check_batch_dependencies_add_batch(&batch) {
             let mut batches_to_add = vec![];
 
