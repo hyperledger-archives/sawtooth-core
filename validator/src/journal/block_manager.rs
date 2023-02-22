@@ -275,7 +275,7 @@ impl BlockManagerState {
             );
             block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
-            blocks_with_references.into_iter().for_each(|block| {
+            blocks_with_references.iter().for_each(|block| {
                 block_by_block_id.insert(block.header_signature.clone(), block.clone());
 
                 references_by_block_id.insert(

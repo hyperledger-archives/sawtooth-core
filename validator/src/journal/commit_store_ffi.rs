@@ -486,7 +486,7 @@ pub unsafe extern "C" fn commit_store_put_blocks(
     check_null!(commit_store, blocks);
 
     let blocks_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(blocks, blocks_len)
-        .into_iter()
+        .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
