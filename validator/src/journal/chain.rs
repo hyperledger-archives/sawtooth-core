@@ -132,6 +132,7 @@ pub trait ChainReader: Send + Sync {
 }
 
 /// Holds the results of Block Validation.
+#[allow(dead_code)]
 struct ForkResolutionResult<'a> {
     pub block: &'a Block,
     pub chain_head: Option<&'a Block>,
