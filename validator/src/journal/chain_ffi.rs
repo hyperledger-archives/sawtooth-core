@@ -371,8 +371,7 @@ impl ChainObserver for PyChainObserver {
             .call_method(py, "chain_update", (block, receipts), None)
             .map(|_| ())
             .map_err(|py_err| {
-                pylogger::exception(py, "Unable to call observer.chain_update", py_err);
-                ()
+                pylogger::exception(py, "Unable to call observer.chain_update", py_err);             
             })
             .unwrap_or(())
     }
