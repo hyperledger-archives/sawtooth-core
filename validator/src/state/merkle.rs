@@ -1559,9 +1559,9 @@ mod tests {
         })
     }
 
-    fn run_test<T>(test: T) -> ()
+    fn run_test<T>(test: T)
     where
-        T: FnOnce(&str) -> () + panic::UnwindSafe,
+        T: FnOnce(&str) + panic::UnwindSafe,
     {
         let dbpath = temp_db_path();
 

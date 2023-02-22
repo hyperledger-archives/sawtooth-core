@@ -596,9 +596,9 @@ mod test {
         store.iter().expect("Failed to get BlockStore iter").next()
     }
 
-    fn run_test<T>(test: T) -> ()
+    fn run_test<T>(test: T)
     where
-        T: FnOnce(&str) -> () + panic::UnwindSafe,
+        T: FnOnce(&str) + panic::UnwindSafe,
     {
         let dbpath = temp_db_path();
 
