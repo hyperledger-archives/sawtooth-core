@@ -294,7 +294,7 @@ impl MerkleDatabase {
 
         let mut sorted_paths: Vec<_> = path_map.keys().cloned().collect();
         // Sort by longest to shortest
-        sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
+        sorted_paths.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
         // initializing this to empty, to make the compiler happy
         let mut key_hash = Vec::with_capacity(0);
