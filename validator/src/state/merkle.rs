@@ -1499,11 +1499,11 @@ mod tests {
                 }
             }
             if !has_root {
-                panic!(format!(
+                panic!(
                     "Root {} not found in change log {:?}",
                     ::hex::encode(successor_root),
                     change_log
-                ));
+                );
             }
         }
     }
@@ -1575,7 +1575,7 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), format!("Value not returned: {value:?}"));
+        assert!(value.is_ok(), "Value not returned: {value:?}");
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
