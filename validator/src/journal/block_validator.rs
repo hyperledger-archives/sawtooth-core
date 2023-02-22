@@ -108,20 +108,17 @@ impl From<ChainCommitStateError> for ValidationError {
         match other {
             ChainCommitStateError::DuplicateBatch(ref batch_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, duplicate batch {}",
-                    batch_id
+                    "Validation failure, duplicate batch {batch_id}"
                 ))
             }
             ChainCommitStateError::DuplicateTransaction(ref txn_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, duplicate transaction {}",
-                    txn_id
+                    "Validation failure, duplicate transaction {txn_id}"
                 ))
             }
             ChainCommitStateError::MissingDependency(ref txn_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, missing dependency {}",
-                    txn_id
+                    "Validation failure, missing dependency {txn_id}"
                 ))
             }
             ChainCommitStateError::Error(reason) => ValidationError::BlockValidationError(reason),
@@ -506,8 +503,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     .add_batch(batch.clone(), None, false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
-                            "While adding a batch to the schedule: {:?}",
-                            err
+                            "While adding a batch to the schedule: {err:?}"
                         ))
                     })?;
             } else {
@@ -515,8 +511,7 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     .add_batch(batch.clone(), Some(ending_state_hash), false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
-                            "While adding the last batch to the schedule: {:?}",
-                            err
+                            "While adding the last batch to the schedule: {err:?}"
                         ))
                     })?;
             }
@@ -524,16 +519,14 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
         }
         scheduler.finalize(false).map_err(|err| {
             ValidationError::BlockValidationError(format!(
-                "During call to scheduler.finalize: {:?}",
-                err
+                "During call to scheduler.finalize: {err:?}"
             ))
         })?;
         let execution_results = scheduler
             .complete(true)
             .map_err(|err| {
                 ValidationError::BlockValidationError(format!(
-                    "During call to scheduler.complete: {:?}",
-                    err
+                    "During call to scheduler.complete: {err:?}"
                 ))
             })?
             .ok_or_else(|| {
@@ -709,8 +702,7 @@ impl BlockValidation for OnChainRulesValidation {
             let settings_view: SettingsView =
                 self.view_factory.create_view(state_root).map_err(|err| {
                     ValidationError::BlockValidationError(format!(
-                        "During validate_on_chain_rules, error creating settings view: {:?}",
-                        err
+                        "During validate_on_chain_rules, error creating settings view: {err:?}"
                     ))
                 })?;
             let batches: Vec<&Batch> = block.batches.iter().collect();

@@ -39,25 +39,25 @@ pub enum StateDatabaseError {
 impl fmt::Display for StateDatabaseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            StateDatabaseError::NotFound(ref msg) => write!(f, "Value not found: {}", msg),
+            StateDatabaseError::NotFound(ref msg) => write!(f, "Value not found: {msg}"),
             StateDatabaseError::DeserializationError(ref err) => {
-                write!(f, "Unable to deserialize entry: {}", err)
+                write!(f, "Unable to deserialize entry: {err}")
             }
             StateDatabaseError::SerializationError(ref err) => {
-                write!(f, "Unable to serialize entry: {}", err)
+                write!(f, "Unable to serialize entry: {err}")
             }
             StateDatabaseError::ChangeLogEncodingError(ref msg) => {
-                write!(f, "Unable to serialize change log entry: {}", msg)
+                write!(f, "Unable to serialize change log entry: {msg}")
             }
             StateDatabaseError::InvalidRecord => write!(f, "A node was malformed"),
             StateDatabaseError::InvalidHash(ref msg) => {
-                write!(f, "The given hash is invalid: {}", msg)
+                write!(f, "The given hash is invalid: {msg}")
             }
             StateDatabaseError::InvalidChangeLogIndex(ref msg) => {
-                write!(f, "A change log entry was missing or malformed: {}", msg)
+                write!(f, "A change log entry was missing or malformed: {msg}")
             }
             StateDatabaseError::DatabaseError(ref err) => {
-                write!(f, "A database error occurred: {}", err)
+                write!(f, "A database error occurred: {err}")
             }
             StateDatabaseError::UnknownError => write!(f, "An unknown error occurred"),
         }
@@ -102,9 +102,9 @@ impl From<ProtobufError> for StateDatabaseError {
     fn from(error: ProtobufError) -> Self {
         use self::ProtobufError::*;
         match error {
-            IoError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{}", err)),
-            WireError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{:?}", err)),
-            Utf8(err) => StateDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            IoError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err}")),
+            WireError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err:?}")),
+            Utf8(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err}")),
             MessageNotInitialized { message: err } => {
                 StateDatabaseError::ChangeLogEncodingError(err.to_string())
             }

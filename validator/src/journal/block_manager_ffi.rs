@@ -567,7 +567,7 @@ mod test {
         let mut block_header = BlockHeader::new();
         block_header.set_previous_block_id(previous_block_id.to_string());
         block_header.set_block_num(block_num);
-        block_header.set_state_root_hash(format!("state-{}", block_num));
+        block_header.set_state_root_hash(format!("state-{block_num}"));
         Block {
             header_signature: header_signature.into(),
             previous_block_id: block_header.get_previous_block_id().to_string(),
@@ -614,7 +614,7 @@ mod test {
         let mut temp_dir = env::temp_dir();
 
         let thread_id = thread::current().id();
-        temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
+        temp_dir.push(format!("merkle-{thread_id:?}.lmdb"));
         temp_dir.to_str().unwrap().to_string()
     }
 }
