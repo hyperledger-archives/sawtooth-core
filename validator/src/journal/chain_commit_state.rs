@@ -20,6 +20,7 @@ use std::collections::HashSet;
 use batch::Batch;
 use journal::block_manager::BlockManager;
 use journal::commit_store::CommitStore;
+use std::sync::{Arc, RwLock};
 use transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
@@ -124,21 +125,26 @@ pub fn validate_transaction_dependencies(
     Ok(())
 }
 
+type TransactionCommitCacheLRU = uluru::LRUCache<String, 300>;
+
 pub struct TransactionCommitCache {
-    committed: HashSet<String>,
+    committed: Arc<RwLock<TransactionCommitCacheLRU>>,
     commit_store: CommitStore,
 }
 
 impl TransactionCommitCache {
     pub fn new(commit_store: CommitStore) -> Self {
         TransactionCommitCache {
-            committed: HashSet::new(),
+            committed: Arc::new(RwLock::new(TransactionCommitCacheLRU::default())),
             commit_store,
         }
     }
 
     pub fn add(&mut self, transaction_id: String) {
-        self.committed.insert(transaction_id);
+        self.committed
+            .write()
+            .expect("Failed to acquire write lock on commit cache")
+            .insert(transaction_id);
     }
 
     pub fn add_batch(&mut self, batch: &Batch) {
@@ -148,8 +154,8 @@ impl TransactionCommitCache {
             .for_each(|txn| self.add(txn.header_signature.clone()));
     }
 
-    pub fn remove(&mut self, transaction_id: &str) {
-        self.committed.remove(transaction_id);
+    fn remove(&mut self, transaction_id: &str) {
+        ()
     }
 
     pub fn remove_batch(&mut self, batch: &Batch) {
@@ -161,7 +167,11 @@ impl TransactionCommitCache {
 
     pub fn contains(&self, transaction_id: &str) -> bool {
         // Shouldn't expect here
-        self.committed.contains(transaction_id)
+        self.committed
+            .write()
+            .expect("Failed to acquire write lock on commit cache")
+            .find(|x| x == transaction_id)
+            .is_some()
             || self
                 .commit_store
                 .contains_transaction(transaction_id)
@@ -281,7 +291,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B2b0t0".into()]))
             .collect();
 
@@ -300,7 +310,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
             .collect();
 
@@ -319,7 +329,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B3-1b0t0", "B3-1b0t1", "B3-1b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B1b0t0".into()]))
             .collect();
 
@@ -338,7 +348,7 @@ mod test {
         let block_manager = setup_state();
 
         let transactions: Vec<Transaction> = ["B6b0t0", "B6b0t1", "B6b0t2"]
-            .into_iter()
+            .iter()
             .map(|t_id| create_transaction((*t_id).into(), vec!["B4-3b0t0".into()]))
             .collect();
 
