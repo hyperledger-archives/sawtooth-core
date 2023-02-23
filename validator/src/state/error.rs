@@ -104,7 +104,7 @@ impl From<ProtobufError> for StateDatabaseError {
         match error {
             IoError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err}")),
             WireError(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err:?}")),
-            Utf8(err) => StateDatabaseError::ChangeLogEncodingError(format!("{}", err)),
+            Utf8(err) => StateDatabaseError::ChangeLogEncodingError(format!("{err}")),
             MessageNotInitialized { message: err } => {
                 StateDatabaseError::ChangeLogEncodingError(err.to_string())
             }

@@ -46,10 +46,9 @@ struct ProtoFile {
 
 fn main() {
     // Generate protobuf files
-    let mut proto_src_files = glob_simple(&format!("{}/*.proto", PROTO_FILES_DIR));
+    let mut proto_src_files = glob_simple(&format!("{PROTO_FILES_DIR}/*.proto"));
     proto_src_files.append(&mut glob_simple(&format!(
-        "{}/*.proto",
-        SETTINGS_PROTO_FILES_DIR
+        "{SETTINGS_PROTO_FILES_DIR}/*.proto"
     )));
     let last_build_time = read_last_build_time();
 
@@ -68,7 +67,7 @@ fn main() {
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
 
     if latest_change > last_build_time {
-        println!("{:?}", proto_src_files);
+        println!("{proto_src_files:?}");
         fs::create_dir_all(&dest_path).unwrap();
         protoc_rust::Codegen::new()
             .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
@@ -101,7 +100,7 @@ fn main() {
         );
         match file.write_all(content.as_bytes()) {
             Err(err) => panic!("Unable to write to {}: {}", mod_file_name, err),
-            Ok(_) => println!("generated {}", mod_file_name),
+            Ok(_) => println!("generated {mod_file_name}"),
         }
     } else {
         println!(
@@ -144,7 +143,7 @@ fn read_last_build_time() -> Duration {
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME).join("mod.rs");
     match fs::File::open(Path::new(&dest_path.to_str().unwrap())) {
         Err(err) => {
-            println!("unable to open {:?}: {}; defaulting to 0", dest_path, err);
+            println!("unable to open {dest_path:?}: {err}; defaulting to 0");
             Duration::new(0, 0)
         }
         Ok(file) => get_modified_time(file),
