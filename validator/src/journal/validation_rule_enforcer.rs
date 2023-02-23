@@ -232,7 +232,7 @@ fn get_transaction_from_index(
     rule: String,
 ) -> Option<Transaction> {
     let absolute_index: usize = if index < 0 {
-        (index * -1) as usize
+        -index as usize
     } else {
         index as usize
     };
