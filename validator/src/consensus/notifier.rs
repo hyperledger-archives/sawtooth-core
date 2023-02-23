@@ -233,11 +233,9 @@ impl BackgroundConsensusNotifier {
         let (tx, rx) = channel();
         let thread_builder = thread::Builder::new().name("BackgroundConsensusNotifier".into());
         thread_builder
-            .spawn(move || loop {
-                if let Ok(notification) = rx.recv() {
+            .spawn(move || {
+                while let Ok(notification) = rx.recv() {
                     handle_notification(&notifier, notification);
-                } else {
-                    break;
                 }
             })
             .expect("Failed to spawn BackgroundConsensusNotifier thread");
