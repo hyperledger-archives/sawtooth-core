@@ -85,7 +85,7 @@ impl BattleshipTransactionHandler {
         ships: Vec<String>,
     ) -> Result<(), ApplyError> {
         match name.len() {
-            1...255 => {}
+            1..=255 => {}
             len => Err(ApplyError::InvalidTransaction(format!(
                 "Game name must be between 1 - 255 characters, {} is too many",
                 len
