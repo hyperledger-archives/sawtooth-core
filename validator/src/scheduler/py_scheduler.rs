@@ -185,7 +185,7 @@ impl Scheduler for PyScheduler {
                                 .collect(),
                         ),
                     ),
-                    None => (val.2.clone(), None),
+                    None => (val.2, None),
                 })
                 .collect();
 

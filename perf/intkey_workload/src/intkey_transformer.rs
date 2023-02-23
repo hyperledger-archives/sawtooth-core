@@ -132,11 +132,11 @@ impl<'a> IntKeyTransformer<'a> {
 
         txn_header.set_inputs(addresses.clone());
 
-        txn_header.set_outputs(addresses.clone());
+        txn_header.set_outputs(addresses);
 
         if payload.verb == "inc" || payload.verb == "dec" {
             if let Some(txn_id) = self.txn_id_by_name.get(&payload.name) {
-                let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
+                let dependencies = RepeatedField::from_vec(vec![txn_id.clone()]);
                 txn_header.set_dependencies(dependencies);
             }
         }

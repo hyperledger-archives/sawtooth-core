@@ -517,7 +517,7 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
+            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
 
             let chain_head = get_chain_head(&store);
 

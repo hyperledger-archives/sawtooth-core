@@ -40,6 +40,6 @@ impl IntKeyAddresser {
         let prefix = self.namespace.clone();
         let mut hasher = Sha512::new();
         hasher.input(name.as_bytes());
-        (prefix + &hasher.result_str()[64..]).to_string()
+        (prefix + &hasher.result_str()[64..])
     }
 }

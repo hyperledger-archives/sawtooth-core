@@ -28,7 +28,7 @@ impl Default for BattleshipTransactionHandler {
         Self {
             family_name: "battleship".to_string(),
             family_versions: vec!["1.0".to_string()],
-            namespaces: vec![game::get_battleship_prefix().to_string()],
+            namespaces: vec![game::get_battleship_prefix()],
         }
     }
 }

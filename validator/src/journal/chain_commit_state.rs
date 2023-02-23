@@ -681,7 +681,7 @@ mod test {
         }
         let block_store = Box::new(InMemoryBlockStore::new());
         block_manager
-            .add_store("commit", block_store.clone())
+            .add_store("commit", block_store)
             .expect("The block manager failed to add a blockstore");
 
         block_manager

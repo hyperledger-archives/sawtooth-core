@@ -108,7 +108,7 @@ impl<'a> SBPayloadTransformer<'a> {
         let addresses = protobuf::RepeatedField::from_vec(make_addresses(&payload));
 
         txn_header.set_inputs(addresses.clone());
-        txn_header.set_outputs(addresses.clone());
+        txn_header.set_outputs(addresses);
 
         let dependencies = protobuf::RepeatedField::from_vec(self.get_dependencies(&payload));
         txn_header.set_dependencies(dependencies);
