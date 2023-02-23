@@ -221,10 +221,10 @@ pub fn form_request_from_batchlist(
 
     let batchlist_unwrapped = batch_list?;
 
-    let batch_id = match batchlist_unwrapped.batches.last() {
-        Some(batch) => Some(batch.header_signature.clone()),
-        None => None,
-    };
+    let batch_id = batchlist_unwrapped
+        .batches
+        .last()
+        .map(|batch| batch.header_signature.clone());
     let bytes = batchlist_unwrapped.write_to_bytes()?;
     let mut req = Request::new(Method::Post, Uri::from_str(&batch_url)?);
     let content_len = bytes.len() as u64;

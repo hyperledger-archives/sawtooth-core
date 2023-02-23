@@ -401,13 +401,7 @@ impl SyncBlockPublisher {
         let result = match state.candidate_block {
             None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
             Some(ref mut candidate_block) => match candidate_block.summarize(force) {
-                Ok(summary) => {
-                    if let Some(s) = summary {
-                        Some(Ok(s))
-                    } else {
-                        None
-                    }
-                }
+                Ok(summary) => summary.map(Ok),
                 Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
             },
         };

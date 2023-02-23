@@ -91,10 +91,7 @@ impl CommitStore {
         block_num: u64,
     ) -> Result<Vec<u8>, DatabaseError> {
         reader
-            .index_get(
-                "index_block_num",
-                format!("0x{block_num:0>16x}").as_bytes(),
-            )
+            .index_get("index_block_num", format!("0x{block_num:0>16x}").as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
                     DatabaseError::NotFoundError(format!("Block not found: {block_num}"))
@@ -235,10 +232,7 @@ impl CommitStore {
         writer: &mut LmdbDatabaseWriter,
         block_num: u64,
     ) -> Result<(), DatabaseError> {
-        writer.index_delete(
-            "index_block_num",
-            format!("0x{block_num:0>16x}").as_bytes(),
-        )
+        writer.index_delete("index_block_num", format!("0x{block_num:0>16x}").as_bytes())
     }
 
     fn delete_proto_batches_from_index(
