@@ -36,12 +36,14 @@ enum TransactionState {
     UNKNOWN,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct InvalidTransaction {
     id: String,
     message: String,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct TransactionData {
     id: String,
@@ -49,6 +51,7 @@ struct TransactionData {
     status: TransactionState,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct TransactionStatus {
     data: Vec<TransactionData>,
