@@ -47,6 +47,7 @@ use batch_submit::BatchReadingError;
 
 use batch_map::BatchMap;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum WorkloadError {
     HttpError(HyperError),
