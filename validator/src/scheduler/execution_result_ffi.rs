@@ -56,7 +56,7 @@ impl<'source> FromPyObject<'source> for PyBatchExecutionResult {
 
 impl<'source> FromPyObject<'source> for PyTxnExecutionResult {
     fn extract(py: cpython::Python, obj: &'source cpython::PyObject) -> cpython::PyResult<Self> {
-        Ok(try_pyobj_to_transaction_result(py, obj)?)
+        try_pyobj_to_transaction_result(py, obj)
     }
 }
 
