@@ -293,8 +293,7 @@ impl CommitStore {
             block
                 .batches
                 .into_iter()
-                .skip_while(|batch| batch.header_signature != batch_id)
-                .next()
+                .find(|batch| batch.header_signature == batch_id)
                 .ok_or_else(|| DatabaseError::CorruptionError("Batch index corrupted".into()))
         })
     }
@@ -306,8 +305,7 @@ impl CommitStore {
                     .batches
                     .into_iter()
                     .flat_map(|batch| batch.transactions.into_iter())
-                    .skip_while(|txn| txn.header_signature != transaction_id)
-                    .next()
+                    .find(|txn| txn.header_signature == transaction_id)
                     .ok_or_else(|| {
                         DatabaseError::CorruptionError("Transaction index corrupted".into())
                     })
@@ -320,13 +318,12 @@ impl CommitStore {
                 block
                     .batches
                     .into_iter()
-                    .skip_while(|batch| {
-                        batch
+                    .find(|batch| {
+                        !batch
                             .transaction_ids
                             .iter()
                             .any(|txn_id| txn_id == transaction_id)
                     })
-                    .next()
                     .ok_or_else(|| {
                         DatabaseError::CorruptionError("Transaction index corrupted".into())
                     })
