@@ -1571,7 +1571,9 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), "Value not returned: {value:?}");
+        if value.is_err() {
+            panic!("Value not returned: {:?}", value.unwrap())
+        }
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
