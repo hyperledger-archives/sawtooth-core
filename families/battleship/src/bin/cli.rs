@@ -182,8 +182,8 @@ fn run() -> Result<(), Error> {
             for (name, game) in games {
                 table.add_row(row![
                     name,
-                    game.player_1.unwrap_or_else(String::new),
-                    game.player_2.unwrap_or_else(String::new),
+                    game.player_1.unwrap_or_default(),
+                    game.player_2.unwrap_or_default(),
                     game.state
                 ]);
             }

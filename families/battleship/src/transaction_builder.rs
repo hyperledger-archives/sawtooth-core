@@ -196,12 +196,8 @@ impl<'a> TransactionBuilder<'a> {
         txn_header.set_nonce(self.nonce.unwrap_or(default_nonce).to_string());
         txn_header.set_signer_public_key(signer.get_public_key()?.as_hex());
 
-        txn_header.set_inputs(RepeatedField::from_vec(
-            self.inputs.unwrap_or_else(Vec::new),
-        ));
-        txn_header.set_outputs(RepeatedField::from_vec(
-            self.outputs.unwrap_or_else(Vec::new),
-        ));
+        txn_header.set_inputs(RepeatedField::from_vec(self.inputs.unwrap_or_default()));
+        txn_header.set_outputs(RepeatedField::from_vec(self.outputs.unwrap_or_default()));
 
         let mut sha = Sha512::new();
         sha.input(&payload);
