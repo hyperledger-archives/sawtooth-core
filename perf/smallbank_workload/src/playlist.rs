@@ -562,6 +562,7 @@ fn next_non_matching_in_range(rng: &mut StdRng, max: u32, exclude: u32) -> u32 {
     selected
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum PlaylistError {
     IoError(StdIoError),
