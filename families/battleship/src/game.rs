@@ -61,7 +61,7 @@ pub fn get_space_hash(space: char, nonce: &str) -> String {
 /// Returns `None` if parsed number isn't in `[0, 10)`.
 pub fn parse_column(col: &str) -> Option<usize> {
     match col.parse::<usize>().ok()?.checked_sub(1) {
-        Some(num @ 0...9) => Some(num),
+        Some(num @ 0..9) => Some(num),
         _ => None,
     }
 }
@@ -71,7 +71,7 @@ pub fn parse_column(col: &str) -> Option<usize> {
 /// `None` if parsed number isn't in `[0, 10)`.
 pub fn parse_row(row: &str) -> Option<usize> {
     match (row.chars().next()? as usize).checked_sub('A' as usize) {
-        Some(num @ 0...9) => Some(num),
+        Some(num @ 0..9) => Some(num),
         _ => None,
     }
 }
@@ -332,7 +332,7 @@ impl Board {
     pub fn render(&self) -> String {
         self.spaces
             .iter()
-            .map(|ref row| row.iter().collect::<String>())
+            .map(|row| row.iter().collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
     }
