@@ -367,7 +367,7 @@ impl BlockManagerState {
                 block.previous_block_id.clone(),
             );
             rc.increase_external_ref_count();
-            references_by_block_id.insert(block.header_signature.clone(), rc);
+            references_by_block_id.insert(block.header_signature, rc);
             return Ok(());
         }
 
@@ -497,7 +497,7 @@ impl BlockManagerState {
                     head.header_signature.clone(),
                     RefCount::new_unreffed_block(
                         head.header_signature.clone(),
-                        head.previous_block_id.clone(),
+                        head.previous_block_id,
                     ),
                 );
             }
@@ -890,7 +890,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation")
                 .iter()?;
-            block_store_iter.nth(0).map(|b| b.header_signature.clone())
+            block_store_iter.nth(0).map(|b| b.header_signature)
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
@@ -1026,7 +1026,7 @@ impl Iterator for BranchIterator {
             {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
-                    Some(block.clone())
+                    Some(block)
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.clone());
@@ -1050,7 +1050,7 @@ impl Iterator for BranchIterator {
 
             if let Some(block) = block_option {
                 self.next_block_id = block.previous_block_id.clone();
-                Some(block.clone())
+                Some(block)
             } else {
                 None
             }
@@ -1203,7 +1203,7 @@ mod tests {
         let f_block_id = &f.header_signature.clone();
 
         let block_manager = BlockManager::new();
-        block_manager.put(vec![a.clone(), b, c]).unwrap();
+        block_manager.put(vec![a, b, c]).unwrap();
         block_manager.put(vec![d]).unwrap();
         block_manager.put(vec![e, f]).unwrap();
 
@@ -1256,7 +1256,7 @@ mod tests {
         let c = create_block("C", "B", 2);
 
         block_manager
-            .put(vec![a.clone(), b.clone(), c.clone()])
+            .put(vec![a.clone(), b, c.clone()])
             .unwrap();
 
         let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
@@ -1268,9 +1268,9 @@ mod tests {
 
         // Should only return the items that are found.
         let mut get_block_with_unknowns = block_manager.get(&["A", "X", "C"]);
-        assert_eq!(get_block_with_unknowns.next(), Some(Some(a.clone())));
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(a)));
         assert_eq!(get_block_with_unknowns.next(), Some(None));
-        assert_eq!(get_block_with_unknowns.next(), Some(Some(c.clone())));
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(c)));
         assert_eq!(get_block_with_unknowns.next(), None);
     }
 
@@ -1308,18 +1308,18 @@ mod tests {
         let d = create_block("D", "C", 2);
         let e = create_block("E", "D", 3);
 
-        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
+        block_manager.put(vec![a, b.clone()]).unwrap();
         block_manager.put(vec![c.clone()]).unwrap();
         block_manager.put(vec![d.clone(), e.clone()]).unwrap();
 
         let mut branch_diff_iter = block_manager.branch_diff("C", "B").unwrap();
 
-        assert_eq!(branch_diff_iter.next(), Some(c.clone()));
+        assert_eq!(branch_diff_iter.next(), Some(c));
         assert_eq!(branch_diff_iter.next(), None);
 
         let mut branch_diff_iter2 = block_manager.branch_diff("B", "E").unwrap();
 
-        assert_eq!(branch_diff_iter2.next(), Some(b.clone()));
+        assert_eq!(branch_diff_iter2.next(), Some(b));
         assert_eq!(branch_diff_iter2.next(), None);
 
         let mut branch_diff_iter3 = block_manager.branch_diff("C", "E").unwrap();
@@ -1328,8 +1328,8 @@ mod tests {
 
         let mut branch_diff_iter4 = block_manager.branch_diff("E", "C").unwrap();
 
-        assert_eq!(branch_diff_iter4.next(), Some(e.clone()));
-        assert_eq!(branch_diff_iter4.next(), Some(d.clone()));
+        assert_eq!(branch_diff_iter4.next(), Some(e));
+        assert_eq!(branch_diff_iter4.next(), Some(d));
         assert_eq!(branch_diff_iter4.next(), None);
 
         // Test that it will return an error if a block is missing
@@ -1356,11 +1356,11 @@ mod tests {
         let q = create_block("Q", "F", 3);
         let p = create_block("P", "E", 4);
 
-        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
+        block_manager.put(vec![a, b]).unwrap();
         block_manager
-            .put(vec![c.clone(), d.clone(), e.clone()])
+            .put(vec![c, d, e])
             .unwrap();
-        block_manager.put(vec![f.clone()]).unwrap();
+        block_manager.put(vec![f]).unwrap();
 
         let blockstore = Box::new(InMemoryBlockStore::new());
         block_manager.add_store("commit", blockstore).unwrap();
@@ -1418,7 +1418,7 @@ mod tests {
             // Ext. Ref. = 2
 
             blockman
-                .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
+                .put(vec![a, b, c, d])
                 .unwrap();
             // Ext. Ref. = 2
         }

@@ -264,7 +264,7 @@ mod tests {
                 block_a.clone(),
                 block_a1.clone(),
                 block_a2.clone(),
-                block_b2.clone(),
+                block_b2,
             ]),
             vec![block_a.clone()]
         );
@@ -367,7 +367,7 @@ mod tests {
 
         assert_eq!(
             block_scheduler.done(&block_c1.header_signature),
-            vec![block_d1.clone(), block_d2.clone(), block_d3.clone()],
+            vec![block_d1, block_d2, block_d3],
             "Blocks D1, D2, D3 are available"
         );
     }
@@ -426,8 +426,8 @@ mod tests {
         // Now a cache miss
 
         assert_eq!(
-            block_scheduler.schedule(vec![block_c1.clone(), block_c2.clone(), block_c3.clone()]),
-            vec![block_b.clone()],
+            block_scheduler.schedule(vec![block_c1, block_c2, block_c3]),
+            vec![block_b],
             "Since there was a cache miss, block b must be scheduled again"
         );
     }

@@ -747,12 +747,7 @@ impl Node {
         let children = self
             .children
             .into_iter()
-            .map(|(k, v)| {
-                (
-                    Key::Text(Text::Text(k.to_string())),
-                    Value::Text(Text::Text(v.to_string())),
-                )
-            })
+            .map(|(k, v)| (Key::Text(Text::Text(k)), Value::Text(Text::Text(v))))
             .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));
@@ -1322,7 +1317,7 @@ mod tests {
                 .expect("Update failed to work");
             let parent_root_bytes = ::hex::decode(parent_root.clone()).expect("Proper hex");
 
-            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+            merkle_db.set_merkle_root(parent_root).unwrap();
             assert_value_at_address(&merkle_db, "ab0000", "0001");
             assert_value_at_address(&merkle_db, "ab0a01", "0002");
             assert_value_at_address(&merkle_db, "abff00", "0003");
@@ -1337,7 +1332,7 @@ mod tests {
                 .set("ab0a01", "right".as_bytes())
                 .expect("Set failed to work");
             let successor_root_right_bytes =
-                ::hex::decode(successor_root_right.clone()).expect("proper hex");
+                ::hex::decode(successor_root_right).expect("proper hex");
 
             let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
             let successor_left_change_log = expect_change_log(&db, &successor_root_left_bytes);
@@ -1400,7 +1395,7 @@ mod tests {
 
             // create the last root
             merkle_db
-                .set_merkle_root(successor_root_middle.clone())
+                .set_merkle_root(successor_root_middle)
                 .unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db
@@ -1459,7 +1454,7 @@ mod tests {
 
             // create the last root
             merkle_db
-                .set_merkle_root(successor_root_middle.clone())
+                .set_merkle_root(successor_root_middle)
                 .unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db

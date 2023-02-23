@@ -261,7 +261,7 @@ mod tests {
             let mut on_chain_identities = TestIdentitySource::default();
             on_chain_identities.add_policy(Policy::new(
                 "policy1",
-                vec![Permission::DenyKey(pub_key.clone())],
+                vec![Permission::DenyKey(pub_key)],
             ));
             on_chain_identities.add_role(Role::new("transactor", "policy1"));
 
@@ -297,7 +297,7 @@ mod tests {
             let mut on_chain_identities = TestIdentitySource::default();
             on_chain_identities.add_policy(Policy::new(
                 "policy1",
-                vec![Permission::DenyKey(pub_key.clone())],
+                vec![Permission::DenyKey(pub_key)],
             ));
             on_chain_identities.add_role(Role::new("transactor.batch_signer", "policy1"));
 
@@ -320,7 +320,7 @@ mod tests {
             let mut on_chain_identities = TestIdentitySource::default();
             on_chain_identities.add_policy(Policy::new(
                 "policy1",
-                vec![Permission::PermitKey(pub_key.clone())],
+                vec![Permission::PermitKey(pub_key)],
             ));
             on_chain_identities.add_role(Role::new("transactor.transaction_signer", "policy1"));
 
@@ -356,7 +356,7 @@ mod tests {
             let mut on_chain_identities = TestIdentitySource::default();
             on_chain_identities.add_policy(Policy::new(
                 "policy1",
-                vec![Permission::PermitKey(pub_key.clone())],
+                vec![Permission::PermitKey(pub_key)],
             ));
             on_chain_identities
                 .add_role(Role::new("transactor.transaction_signer.intkey", "policy1"));

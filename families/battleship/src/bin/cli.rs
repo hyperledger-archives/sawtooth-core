@@ -244,7 +244,7 @@ fn run() -> Result<(), Error> {
 
             match (
                 game.player_1 == Some(pub_key.clone()),
-                game.player_2 == Some(pub_key.clone()),
+                game.player_2 == Some(pub_key),
                 board,
             ) {
                 (true, true, _) => Err(format_err!("You can't play with yourself!"))?,

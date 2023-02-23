@@ -238,7 +238,7 @@ fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
 fn load_yaml_array(yaml_str: &str) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
     let mut yaml = try!(YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError));
     let element = yaml.remove(0);
-    let yaml_array = element.as_vec().cloned().unwrap().clone();
+    let yaml_array = element.as_vec().cloned().unwrap();
 
     Ok(Cow::Owned(yaml_array))
 }

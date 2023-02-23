@@ -333,7 +333,7 @@ mod tests {
                 .state
                 .iter()
                 .filter(|(key, _)| key.starts_with(prefix.unwrap_or("")))
-                .map(|(key, value)| Ok((key.clone().to_string(), value.clone())))
+                .map(|(key, value)| Ok((key.clone(), value.clone())))
                 .collect();
 
             Ok(Box::new(iterable.into_iter()))
