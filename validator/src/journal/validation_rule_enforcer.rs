@@ -478,7 +478,7 @@ mod tests {
                 .iter()
                 .map(|t| t.header_signature.clone())
                 .collect(),
-            transactions: transactions,
+            transactions,
             signer_public_key: pubkey.to_string(),
             trace: false,
             header_bytes: vec![],
