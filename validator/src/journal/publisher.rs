@@ -726,14 +726,14 @@ impl IncomingBatchSender {
 
 #[derive(Debug)]
 pub enum BatchQueueError {
-    SenderError(SendError<Batch>),
+    SenderError(Box<SendError<Batch>>),
     Timeout,
     MutexPoisonError(String),
 }
 
 impl From<SendError<Batch>> for BatchQueueError {
     fn from(e: SendError<Batch>) -> Self {
-        BatchQueueError::SenderError(e)
+        BatchQueueError::SenderError(Box::from(e))
     }
 }
 
