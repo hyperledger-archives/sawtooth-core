@@ -60,7 +60,7 @@ struct TransactionStatus {
 /// Handles talking to the REST API
 pub struct BattleshipClient<'a> {
     url: String,
-    key: Box<PrivateKey>,
+    key: Box<dyn PrivateKey>,
     client: Client,
     builder: TransactionBuilder<'a>,
 }
@@ -99,7 +99,7 @@ impl<'a> BattleshipClient<'a> {
     /// Creates a new client with the given in-memory key
     pub fn new_with_key<S: Into<String>>(
         url: S,
-        key: Box<PrivateKey>,
+        key: Box<dyn PrivateKey>,
     ) -> Result<BattleshipClient<'a>, Error> {
         Ok(BattleshipClient {
             url: url.into(),
