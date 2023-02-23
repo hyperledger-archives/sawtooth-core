@@ -190,10 +190,11 @@ mod tests {
     /// permit all is used.
     fn allow_all_with_no_permissions() {
         let batch = create_batches(1, 1, "test_pubkey")
-            .into_iter().next()
+            .into_iter()
+            .next()
             .unwrap();
 
-        let permission_verifier = PermissionVerifier::new(Box::new(TestIdentitySource::default()));
+        let permission_verifier = PermissionVerifier::new(Box::from(TestIdentitySource::default()));
 
         assert!(permission_verifier
             .is_batch_signer_authorized(&batch)
