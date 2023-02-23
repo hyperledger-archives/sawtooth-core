@@ -54,7 +54,7 @@ fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("Error: {err}");
             1
         }
     });
