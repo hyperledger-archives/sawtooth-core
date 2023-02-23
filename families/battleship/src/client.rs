@@ -28,6 +28,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use transaction_builder::TransactionBuilder;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug)]
 enum TransactionState {
     COMMITTED,
