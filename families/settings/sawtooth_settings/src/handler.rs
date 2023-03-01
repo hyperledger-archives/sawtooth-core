@@ -16,22 +16,22 @@
  */
 
 cfg_if! {
-     if #[cfg(target_arch = "wasm32")] {
-         use sabre_sdk::ApplyError;
-         use sabre_sdk::TransactionContext;
-         use sabre_sdk::TransactionHandler;
-         use sabre_sdk::TpProcessRequest;
-         use sabre_sdk::{WasmPtr, execute_entrypoint};
-         use protos::setting::{ Setting,
-                        Setting_Entry};
-     } else {
-         use sawtooth_sdk::messages::processor::TpProcessRequest;
-         use sawtooth_sdk::processor::handler::ApplyError;
-         use sawtooth_sdk::processor::handler::TransactionContext;
-         use sawtooth_sdk::processor::handler::TransactionHandler;
-         use sawtooth_sdk::messages::setting::{ Setting,
-                                                 Setting_Entry};
-    }
+    if #[cfg(target_arch = "wasm32")] {
+        use sabre_sdk::ApplyError;
+        use sabre_sdk::TransactionContext;
+        use sabre_sdk::TransactionHandler;
+        use sabre_sdk::TpProcessRequest;
+        use sabre_sdk::{WasmPtr, execute_entrypoint};
+        use protos::setting::{ Setting,
+                       Setting_Entry};
+    } else {
+        use sawtooth_sdk::messages::processor::TpProcessRequest;
+        use sawtooth_sdk::processor::handler::ApplyError;
+        use sawtooth_sdk::processor::handler::TransactionContext;
+        use sawtooth_sdk::processor::handler::TransactionHandler;
+        use sawtooth_sdk::messages::setting::{ Setting,
+                                                Setting_Entry};
+   }
 }
 
 extern crate base64;
