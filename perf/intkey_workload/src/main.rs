@@ -371,9 +371,7 @@ impl fmt::Display for IntKeyCliError {
 
 impl Error for IntKeyCliError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match *self {
-            _ => None,
-        }
+        None
     }
 }
 

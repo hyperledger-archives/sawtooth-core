@@ -18,8 +18,6 @@
 extern crate glob;
 extern crate protoc_rust;
 
-use protoc_rust::Customize;
-
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -34,16 +32,17 @@ fn main() {
     let proto_src_files = glob_simple("../../families/smallbank/protos/*.proto");
     println!("{:?}", proto_src_files);
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &dest_path.to_str().unwrap(),
-        input: &proto_src_files
-            .iter()
-            .map(|proto_file| proto_file.as_ref())
-            .collect::<Vec<&str>>(),
-        includes: &["../../families/smallbank/protos"],
-        customize: Customize::default(),
-    })
-    .expect("Error generating rust files from smallbank protos");
+    protoc_rust::Codegen::new()
+        .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
+        .inputs(
+            &proto_src_files
+                .iter()
+                .map(|proto_file| proto_file.as_ref())
+                .collect::<Vec<&str>>(),
+        )
+        .include("../../families/smallbank/protos")
+        .run()
+        .expect("Error generating rust files from smallbank protos");
 
     // Create mod.rs accordingly
     let mod_file_content = proto_src_files
