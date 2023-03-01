@@ -530,7 +530,7 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> 
         &mut *output_writer,
         num_accounts,
         num_transactions,
-        random_seed
+        random_seed,
     )?;
 
     Ok(())
@@ -557,7 +557,7 @@ fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<dyn Error>>
         &mut output_writer,
         &mut in_file,
         context.as_ref(),
-        &private_key
+        &private_key,
     )?;
 
     Ok(())
