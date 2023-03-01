@@ -55,7 +55,7 @@ fn main() {
     let latest_change =
         proto_src_files
             .iter()
-            .fold(Duration::from_secs(0), |max, ref proto_file| {
+            .fold(Duration::from_secs(0), |max, proto_file| {
                 if proto_file.last_modified > max {
                     proto_file.last_modified
                 } else {
