@@ -45,7 +45,7 @@ impl SmallbankTransactionHandler {
         SmallbankTransactionHandler {
             family_name: "smallbank".to_string(),
             family_versions: vec!["1.0".to_string()],
-            namespaces: vec![get_smallbank_prefix().to_string()],
+            namespaces: vec![get_smallbank_prefix()],
         }
     }
 }
@@ -310,5 +310,5 @@ fn get_smallbank_prefix() -> String {
 fn create_smallbank_address(payload: &str) -> String {
     let mut sha = Sha512::new();
     sha.input(payload.as_bytes());
-    get_smallbank_prefix() + &sha.result_str()[..64].to_string()
+    get_smallbank_prefix() + &sha.result_str()[..64]
 }
