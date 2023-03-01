@@ -75,7 +75,7 @@ pub unsafe extern "C" fn commit_store_new(
 pub unsafe extern "C" fn commit_store_drop(commit_store: *mut c_void) -> ErrorCode {
     check_null!(commit_store);
 
-    Box::from_raw(commit_store as *mut CommitStore);
+    let _commit_store = Box::from_raw(commit_store as *mut CommitStore);
     ErrorCode::Success
 }
 
@@ -462,7 +462,7 @@ pub unsafe extern "C" fn commit_store_block_by_height_iter_drop(
 ) -> ErrorCode {
     check_null!(block_iter_ptr);
 
-    Box::from_raw(block_iter_ptr as *mut CommitStoreByHeightIterator);
+    let _block_iter_ptr = Box::from_raw(block_iter_ptr as *mut CommitStoreByHeightIterator);
     ErrorCode::Success
 }
 

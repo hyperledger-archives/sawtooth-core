@@ -69,7 +69,7 @@ pub unsafe extern "C" fn block_manager_new(block_manager_ptr: *mut *const c_void
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> ErrorCode {
     check_null!(block_manager);
-    Box::from_raw(block_manager as *mut BlockManager);
+    let _ = Box::from_raw(block_manager as *mut BlockManager);
     ErrorCode::Success
 }
 
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn block_manager_get_iterator_new(
 pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
 
-    Box::from_raw(iterator as *mut GetBlockIterator);
+    let _ = Box::from_raw(iterator as *mut GetBlockIterator);
     ErrorCode::Success
 }
 
@@ -361,7 +361,7 @@ pub unsafe extern "C" fn block_manager_branch_iterator_new(
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
-    Box::from_raw(iterator as *mut BranchIterator);
+    let _ = Box::from_raw(iterator as *mut BranchIterator);
     ErrorCode::Success
 }
 
@@ -436,7 +436,7 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
     iterator: *mut c_void,
 ) -> ErrorCode {
     check_null!(iterator);
-    Box::from_raw(iterator as *mut BranchDiffIterator);
+    let _ = Box::from_raw(iterator as *mut BranchDiffIterator);
     ErrorCode::Success
 }
 

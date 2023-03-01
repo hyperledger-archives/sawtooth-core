@@ -166,7 +166,7 @@ pub unsafe extern "C" fn chain_controller_new(
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    Box::from_raw(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>);
+    let _ = Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
     ErrorCode::Success
 }
 

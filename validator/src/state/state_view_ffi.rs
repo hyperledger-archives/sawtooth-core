@@ -57,6 +57,7 @@ pub unsafe extern "C" fn state_view_factory_drop(state_view_factory: *mut c_void
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(state_view_factory as *mut StateViewFactory);
+    let _state_view_factory = Box::from_raw(state_view_factory as *mut StateViewFactory);
+
     ErrorCode::Success
 }

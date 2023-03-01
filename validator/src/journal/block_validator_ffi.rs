@@ -63,7 +63,7 @@ pub unsafe extern "C" fn block_status_store_new(
 pub unsafe extern "C" fn block_status_store_drop(block_status_store_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_status_store_ptr);
 
-    Box::from_raw(block_status_store_ptr as *mut BlockValidationResultStore);
+    let _ = Box::from_raw(block_status_store_ptr as *mut BlockValidationResultStore);
     ErrorCode::Success
 }
 
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) 
 pub unsafe extern "C" fn block_validator_drop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
 
-    Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor, PyPermissionVerifier>);
+    let _ = Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor>);
 
     ErrorCode::Success
 }

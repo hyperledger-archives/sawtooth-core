@@ -97,6 +97,6 @@ pub unsafe extern "C" fn lmdb_database_drop(lmdb_database: *mut c_void) -> Error
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(lmdb_database as *mut LmdbDatabase);
+    let _lmdb_database = Box::from_raw(lmdb_database as *mut LmdbDatabase);
     ErrorCode::Success
 }

@@ -207,7 +207,7 @@ pub unsafe extern "C" fn consensus_notifier_new(
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> ErrorCode {
     check_null!(notifier);
-    Box::from_raw(notifier as *mut BackgroundConsensusNotifier);
+    let _ = Box::from_raw(notifier as *mut BackgroundConsensusNotifier);
     ErrorCode::Success
 }
 

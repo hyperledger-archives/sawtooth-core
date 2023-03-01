@@ -107,6 +107,6 @@ pub unsafe extern "C" fn incoming_batch_sender_drop(sender_ptr: *mut c_void) -> 
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(sender_ptr as *mut IncomingBatchSender);
+    let _sender_ptr = Box::from_raw(sender_ptr as *mut IncomingBatchSender);
     ErrorCode::Success
 }
