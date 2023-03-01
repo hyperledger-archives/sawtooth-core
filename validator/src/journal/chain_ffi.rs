@@ -59,10 +59,10 @@ pub enum ErrorCode {
 }
 
 macro_rules! check_null {
-    ($($arg:expr) , *) => {
-        $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
-    }
-}
+     ($($arg:expr) , *) => {
+         $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
+     }
+ }
 
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_new(
@@ -200,33 +200,33 @@ pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) ->
 }
 
 macro_rules! chain_controller_block_ffi {
-    ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
-        #[no_mangle]
-        pub unsafe extern "C" fn $ffi_fn_name(
-            chain_controller: *mut c_void,
-            block_bytes: *const u8,
-            block_bytes_len: usize,
-        ) -> ErrorCode {
-            check_null!(chain_controller, block_bytes);
+     ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+         #[no_mangle]
+         pub unsafe extern "C" fn $ffi_fn_name(
+             chain_controller: *mut c_void,
+             block_bytes: *const u8,
+             block_bytes_len: usize,
+         ) -> ErrorCode {
+             check_null!(chain_controller, block_bytes);
 
-            let $block: Block = {
-                let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-                let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
-                    Ok(block) => block,
-                    Err(err) => {
-                        error!("Failed to parse block bytes: {:?}", err);
-                        return ErrorCode::Unknown;
-                    }
-                };
-                proto_block.into()
-            };
+             let $block: Block = {
+                 let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+                 let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+                     Ok(block) => block,
+                     Err(err) => {
+                         error!("Failed to parse block bytes: {:?}", err);
+                         return ErrorCode::Unknown;
+                     }
+                 };
+                 proto_block.into()
+             };
 
-            (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
+             (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
 
-            ErrorCode::Success
-        }
-    }
-}
+             ErrorCode::Success
+         }
+     }
+ }
 
 chain_controller_block_ffi!(
     chain_controller_validate_block,
