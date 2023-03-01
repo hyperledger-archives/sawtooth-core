@@ -366,7 +366,7 @@ struct IntKeyCliError {
 
 impl fmt::Display for IntKeyCliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("IntKeyCliError {}", self.msg))
+        write!(f, "{}", format_args!("IntKeyCliError {}", self.msg))
     }
 }
 
