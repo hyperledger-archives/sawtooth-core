@@ -123,7 +123,7 @@ pub unsafe extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(merkle_db as *mut MerkleDatabase);
+    let _ = Box::from_raw(merkle_db as *mut MerkleDatabase);
     ErrorCode::Success
 }
 
@@ -581,7 +581,7 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> 
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(iterator as *mut MerkleLeafIterator);
+    let _ = Box::from_raw(iterator as *mut MerkleLeafIterator);
     ErrorCode::Success
 }
 

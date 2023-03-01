@@ -167,7 +167,7 @@ pub unsafe extern "C" fn block_publisher_new(
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_drop(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);
-    Box::from_raw(publisher as *mut BlockPublisher);
+    let _publisher = Box::from_raw(publisher as *mut BlockPublisher);
     ErrorCode::Success
 }
 
