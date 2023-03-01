@@ -182,7 +182,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
 }
 
 fn err_if_out_of_range(val: f32) -> Result<f32, IntKeyCliError> {
-    if val < 0.0 || val > 1.0 {
+    if !(0.0..=1.0).contains(&val) {
         return Err(IntKeyCliError {
             msg: "Value must be between 0.0 and 1.0, inclusively".to_string(),
         });
