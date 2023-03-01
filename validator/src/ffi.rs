@@ -17,6 +17,10 @@
 
 use cpython::{PyObject, Python};
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn ffi_reclaim_string(s_ptr: *mut u8, s_len: usize, s_cap: usize) -> isize {
     String::from_raw_parts(s_ptr, s_len, s_cap);
@@ -24,6 +28,10 @@ pub unsafe extern "C" fn ffi_reclaim_string(s_ptr: *mut u8, s_len: usize, s_cap:
     0
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn ffi_reclaim_vec(
     vec_ptr: *mut u8,

@@ -64,6 +64,10 @@ macro_rules! check_null {
      }
  }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_new(
     commit_store: *mut c_void,
@@ -152,6 +156,10 @@ pub unsafe extern "C" fn chain_controller_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
@@ -160,6 +168,10 @@ pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) ->
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
@@ -169,6 +181,10 @@ pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_block_validation_result(
     chain_controller: *mut c_void,
@@ -190,6 +206,10 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
@@ -201,6 +221,10 @@ pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) ->
 
 macro_rules! chain_controller_block_ffi {
      ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+        /// # Safety
+        ///
+        /// This function is unsafe because it takes raw pointers and performs several operations that may cause
+        /// undefined behavior if the pointers are not valid.
          #[no_mangle]
          pub unsafe extern "C" fn $ffi_fn_name(
              chain_controller: *mut c_void,
@@ -238,6 +262,10 @@ chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, 
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_queue_block(
     chain_controller: *mut c_void,
@@ -257,6 +285,13 @@ pub unsafe extern "C" fn chain_controller_queue_block(
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
+/// This is only exposed for the current python tests, it should be removed
+/// when proper rust tests are written for the ChainController
+///
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_on_block_received(
     chain_controller: *mut c_void,
@@ -279,6 +314,10 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_chain_head(
     chain_controller: *mut c_void,

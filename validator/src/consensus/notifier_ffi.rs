@@ -179,6 +179,10 @@ pub enum ErrorCode {
     InvalidArgument = 0x02,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_new(
     py_notifier_service_ptr: *mut py_ffi::PyObject,
@@ -196,6 +200,10 @@ pub unsafe extern "C" fn consensus_notifier_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> ErrorCode {
     check_null!(notifier);
@@ -203,6 +211,10 @@ pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> Error
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
     notifier: *mut c_void,
@@ -219,6 +231,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
     notifier: *mut c_void,
@@ -235,6 +251,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     notifier: *mut c_void,
@@ -260,6 +280,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_new(
     notifier: *mut c_void,
@@ -285,6 +309,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
     notifier: *mut c_void,
@@ -301,6 +329,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
     notifier: *mut c_void,
@@ -317,6 +349,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
     notifier: *mut c_void,
@@ -341,6 +377,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_engine_deactivated(
     notifier: *mut c_void,
@@ -358,6 +398,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_deactivated(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn deref_cstr<'a>(cstr: *const c_char) -> Result<&'a str, ErrorCode> {
     CStr::from_ptr(cstr)
         .to_str()

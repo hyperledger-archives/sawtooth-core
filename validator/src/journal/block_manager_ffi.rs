@@ -49,6 +49,10 @@ macro_rules! check_null {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_new(block_manager_ptr: *mut *const c_void) -> ErrorCode {
     let block_manager = BlockManager::new();
@@ -58,6 +62,10 @@ pub unsafe extern "C" fn block_manager_new(block_manager_ptr: *mut *const c_void
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> ErrorCode {
     check_null!(block_manager);
@@ -65,6 +73,10 @@ pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> Error
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_contains(
     block_manager: *mut c_void,
@@ -90,6 +102,10 @@ pub unsafe extern "C" fn block_manager_contains(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_add_commit_store(
     block_manager: *mut c_void,
@@ -109,6 +125,10 @@ pub unsafe extern "C" fn block_manager_add_commit_store(
     rc
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_persist(
     block_manager: *mut c_void,
@@ -143,6 +163,10 @@ pub struct PutEntry {
     block_bytes_len: usize,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_put(
     block_manager: *mut c_void,
@@ -181,6 +205,10 @@ pub unsafe extern "C" fn block_manager_put(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_ref_block(
     block_manager: *mut c_void,
@@ -204,6 +232,10 @@ pub unsafe extern "C" fn block_manager_ref_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_unref_block(
     block_manager: *mut c_void,
@@ -226,6 +258,10 @@ pub unsafe extern "C" fn block_manager_unref_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_new(
     block_manager: *mut c_void,
@@ -250,6 +286,10 @@ pub unsafe extern "C" fn block_manager_get_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
@@ -258,6 +298,10 @@ pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) 
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_next(
     iterator: *mut c_void,
@@ -285,6 +329,10 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
     ErrorCode::StopIteration
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_new(
     block_manager: *mut c_void,
@@ -306,6 +354,10 @@ pub unsafe extern "C" fn block_manager_branch_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
@@ -313,6 +365,10 @@ pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_voi
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_next(
     iterator: *mut c_void,
@@ -340,6 +396,10 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
     ErrorCode::StopIteration
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
     block_manager: *mut c_void,
@@ -367,6 +427,10 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
     iterator: *mut c_void,
@@ -376,6 +440,10 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     iterator: *mut c_void,
