@@ -52,16 +52,15 @@ fn main() {
     )));
     let last_build_time = read_last_build_time();
 
-    let latest_change =
-        proto_src_files
-            .iter()
-            .fold(Duration::from_secs(0), |max, proto_file| {
-                if proto_file.last_modified > max {
-                    proto_file.last_modified
-                } else {
-                    max
-                }
-            });
+    let latest_change = proto_src_files
+        .iter()
+        .fold(Duration::from_secs(0), |max, proto_file| {
+            if proto_file.last_modified > max {
+                proto_file.last_modified
+            } else {
+                max
+            }
+        });
 
     let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
