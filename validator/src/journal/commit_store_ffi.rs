@@ -51,6 +51,10 @@ macro_rules! check_null {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_new(
     database: *const c_void,
@@ -63,6 +67,10 @@ pub unsafe extern "C" fn commit_store_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_drop(commit_store: *mut c_void) -> ErrorCode {
     check_null!(commit_store);
@@ -71,6 +79,10 @@ pub unsafe extern "C" fn commit_store_drop(commit_store: *mut c_void) -> ErrorCo
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_by_block_id(
     commit_store: *mut c_void,
@@ -90,6 +102,10 @@ pub unsafe extern "C" fn commit_store_get_by_block_id(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_chain_head(
     commit_store: *mut c_void,
@@ -105,6 +121,10 @@ pub unsafe extern "C" fn commit_store_get_chain_head(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_by_batch_id(
     commit_store: *mut c_void,
@@ -124,6 +144,10 @@ pub unsafe extern "C" fn commit_store_get_by_batch_id(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_by_transaction_id(
     commit_store: *mut c_void,
@@ -145,6 +169,10 @@ pub unsafe extern "C" fn commit_store_get_by_transaction_id(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_by_block_num(
     commit_store: *mut c_void,
@@ -161,6 +189,10 @@ pub unsafe extern "C" fn commit_store_get_by_block_num(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_batch(
     commit_store: *mut c_void,
@@ -180,6 +212,10 @@ pub unsafe extern "C" fn commit_store_get_batch(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_transaction(
     commit_store: *mut c_void,
@@ -206,6 +242,10 @@ pub unsafe extern "C" fn commit_store_get_transaction(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_batch_by_transaction(
     commit_store: *mut c_void,
@@ -227,6 +267,10 @@ pub unsafe extern "C" fn commit_store_get_batch_by_transaction(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_contains_block(
     commit_store: *mut c_void,
@@ -247,6 +291,10 @@ pub unsafe extern "C" fn commit_store_contains_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_contains_batch(
     commit_store: *mut c_void,
@@ -267,6 +315,10 @@ pub unsafe extern "C" fn commit_store_contains_batch(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_contains_transaction(
     commit_store: *mut c_void,
@@ -289,6 +341,10 @@ pub unsafe extern "C" fn commit_store_contains_transaction(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_block_count(
     commit_store: *mut c_void,
@@ -305,6 +361,10 @@ pub unsafe extern "C" fn commit_store_get_block_count(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_batch_count(
     commit_store: *mut c_void,
@@ -321,6 +381,10 @@ pub unsafe extern "C" fn commit_store_get_batch_count(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_transaction_count(
     commit_store: *mut c_void,
@@ -337,6 +401,10 @@ pub unsafe extern "C" fn commit_store_get_transaction_count(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_get_block_iter(
     commit_store: *mut c_void,
@@ -364,6 +432,10 @@ pub unsafe extern "C" fn commit_store_get_block_iter(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_block_by_height_iter_next(
     block_iter_ptr: *mut c_void,
@@ -380,6 +452,10 @@ pub unsafe extern "C" fn commit_store_block_by_height_iter_next(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_block_by_height_iter_drop(
     block_iter_ptr: *mut c_void,
@@ -397,6 +473,10 @@ pub struct PutEntry {
     block_bytes_len: usize,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn commit_store_put_blocks(
     commit_store: *mut c_void,
@@ -434,6 +514,10 @@ pub unsafe extern "C" fn commit_store_put_blocks(
 
 // FFI Helpers
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn return_block(
     block: Block,
     block_ptr: *mut *const u8,
@@ -443,6 +527,10 @@ unsafe fn return_block(
     return_proto::<_, proto::block::Block>(block, block_ptr, block_len, block_cap)
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn return_batch(
     batch: Batch,
     batch_ptr: *mut *const u8,
@@ -452,6 +540,10 @@ unsafe fn return_batch(
     return_proto::<_, proto::batch::Batch>(batch, batch_ptr, batch_len, batch_cap)
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn return_transaction(
     transaction: Transaction,
     transaction_ptr: *mut *const u8,
@@ -466,6 +558,10 @@ unsafe fn return_transaction(
     )
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn return_proto<I, O: protobuf::Message + From<I>>(
     input: I,
     output_ptr: *mut *const u8,
@@ -499,6 +595,10 @@ fn map_database_error(err: DatabaseError) -> ErrorCode {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn deref_cstr<'a>(cstr: *const c_char) -> Result<&'a str, ErrorCode> {
     CStr::from_ptr(cstr)
         .to_str()

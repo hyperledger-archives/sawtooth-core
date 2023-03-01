@@ -33,6 +33,10 @@ pub enum ErrorCode {
     InitializeDatabaseError = 0x12,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn lmdb_database_new(
     path: *const c_char,
@@ -83,6 +87,10 @@ pub unsafe extern "C" fn lmdb_database_new(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn lmdb_database_drop(lmdb_database: *mut c_void) -> ErrorCode {
     if lmdb_database.is_null() {

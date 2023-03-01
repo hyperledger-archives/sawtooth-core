@@ -41,6 +41,10 @@ macro_rules! check_null {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_status_store_new(
     block_status_store_ptr: *mut *const c_void,
@@ -51,6 +55,10 @@ pub unsafe extern "C" fn block_status_store_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_status_store_drop(block_status_store_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_status_store_ptr);
@@ -59,6 +67,10 @@ pub unsafe extern "C" fn block_status_store_drop(block_status_store_ptr: *mut c_
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_validator_new(
     block_manager_ptr: *const c_void,
@@ -100,6 +112,10 @@ pub unsafe extern "C" fn block_validator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_validator_start(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
@@ -109,6 +125,10 @@ pub unsafe extern "C" fn block_validator_start(block_validator_ptr: *mut c_void)
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
@@ -117,6 +137,10 @@ pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) 
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_validator_drop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);

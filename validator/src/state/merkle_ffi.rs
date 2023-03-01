@@ -52,6 +52,10 @@ pub struct Entry {
     data_len: usize,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_new(
     database: *const c_void,
@@ -60,6 +64,10 @@ pub unsafe extern "C" fn merkle_db_new(
     make_merkle_db(database, None, merkle_db)
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_new_with_root(
     database: *const c_void,
@@ -105,6 +113,10 @@ unsafe fn make_merkle_db(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
     if merkle_db.is_null() {
@@ -115,6 +127,10 @@ pub unsafe extern "C" fn merkle_db_drop(merkle_db: *mut c_void) -> ErrorCode {
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_get_merkle_root(
     merkle_db: *mut c_void,
@@ -136,6 +152,10 @@ pub unsafe extern "C" fn merkle_db_get_merkle_root(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_set_merkle_root(
     merkle_db: *mut c_void,
@@ -167,6 +187,10 @@ pub unsafe extern "C" fn merkle_db_set_merkle_root(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 /// Returns ErrorCode.Success if the address is contained, error otherwise.
 /// Most likely, this error is ErrorCode.NotFound
@@ -201,6 +225,10 @@ pub unsafe extern "C" fn merkle_db_contains(
     }
 }
 
+/// # Safety
+///
+/// This function is marked as unsafe because it takes raw pointers as arguments, and it is the
+/// caller's responsibility to ensure that the pointers are valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_get(
     merkle_db: *mut c_void,
@@ -245,6 +273,10 @@ pub unsafe extern "C" fn merkle_db_get(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_set(
     merkle_db: *mut c_void,
@@ -294,6 +326,10 @@ pub unsafe extern "C" fn merkle_db_set(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_delete(
     merkle_db: *mut c_void,
@@ -336,6 +372,10 @@ pub unsafe extern "C" fn merkle_db_delete(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_update(
     merkle_db: *mut c_void,
@@ -442,6 +482,10 @@ pub unsafe extern "C" fn merkle_db_update(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_prune(
     state_database: *mut c_void,
@@ -486,6 +530,10 @@ pub unsafe extern "C" fn merkle_db_prune(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
     merkle_db: *mut c_void,
@@ -523,6 +571,10 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_new(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     if iterator.is_null() {
@@ -533,6 +585,10 @@ pub unsafe extern "C" fn merkle_db_leaf_iterator_drop(iterator: *mut c_void) -> 
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn merkle_db_leaf_iterator_next(
     iterator: *mut c_void,

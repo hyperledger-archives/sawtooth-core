@@ -27,6 +27,10 @@ pub enum ErrorCode {
     Unknown = 0xFF,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn state_view_factory_new(
     database: *const c_void,
@@ -43,6 +47,10 @@ pub unsafe extern "C" fn state_view_factory_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn state_view_factory_drop(state_view_factory: *mut c_void) -> ErrorCode {
     if state_view_factory.is_null() {
