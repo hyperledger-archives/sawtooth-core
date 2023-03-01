@@ -47,7 +47,7 @@ fn main() {
         0 => LevelFilter::Warn,
         1 => LevelFilter::Info,
         2 => LevelFilter::Debug,
-        3 | _ => LevelFilter::Trace,
+        _ => LevelFilter::Trace,
     };
 
     let stdout = ConsoleAppender::builder()
