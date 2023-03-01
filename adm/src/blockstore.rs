@@ -33,7 +33,7 @@ impl<'a> Blockstore<'a> {
     pub fn get(&self, block_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let packed = reader
-            .get(&block_id.as_bytes())
+            .get(block_id.as_bytes())
             .ok_or_else(|| DatabaseError::NotFoundError(format!("Block not found: {block_id}")))?;
         let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
@@ -47,7 +47,7 @@ impl<'a> Blockstore<'a> {
         let reader = self.db.reader()?;
         let block_num = format!("0x{height:0>16x}");
         let block_id = reader
-            .index_get("index_block_num", &block_num.as_bytes())
+            .index_get("index_block_num", block_num.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
                     DatabaseError::NotFoundError(format!("Block not found: {height}"))
@@ -67,7 +67,7 @@ impl<'a> Blockstore<'a> {
     pub fn get_by_batch(&self, batch_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_id = reader
-            .index_get("index_batch", &batch_id.as_bytes())
+            .index_get("index_batch", batch_id.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
                     DatabaseError::NotFoundError(format!("Batch not found: {batch_id}"))
@@ -87,7 +87,7 @@ impl<'a> Blockstore<'a> {
     pub fn get_by_transaction(&self, transaction_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_id = reader
-            .index_get("index_transaction", &transaction_id.as_bytes())
+            .index_get("index_transaction", transaction_id.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
                     DatabaseError::NotFoundError(format!("Transaction not found: {transaction_id}"))
@@ -114,22 +114,22 @@ impl<'a> Blockstore<'a> {
         let packed = block.write_to_bytes().map_err(|err| {
             DatabaseError::WriterError(format!("Failed to serialize block: {err}"))
         })?;
-        writer.put(&block.header_signature.as_bytes(), &packed)?;
+        writer.put(block.header_signature.as_bytes(), &packed)?;
 
         // Add block to block num index
         let block_num_index = format!("0x{:0>16x}", block_header.block_num);
         writer.index_put(
             "index_block_num",
-            &block_num_index.as_bytes(),
-            &block.header_signature.as_bytes(),
+            block_num_index.as_bytes(),
+            block.header_signature.as_bytes(),
         )?;
 
         for batch in block.batches.iter() {
             for txn in batch.transactions.iter() {
                 writer.index_put(
                     "index_transaction",
-                    &txn.header_signature.as_bytes(),
-                    &block.header_signature.as_bytes(),
+                    txn.header_signature.as_bytes(),
+                    block.header_signature.as_bytes(),
                 )?;
             }
         }
@@ -138,8 +138,8 @@ impl<'a> Blockstore<'a> {
         for batch in block.batches.iter() {
             writer.index_put(
                 "index_batch",
-                &batch.header_signature.as_bytes(),
-                &block.header_signature.as_bytes(),
+                batch.header_signature.as_bytes(),
+                block.header_signature.as_bytes(),
             )?;
         }
 
@@ -155,22 +155,22 @@ impl<'a> Blockstore<'a> {
             })?;
         // Delete block from main db
         let mut writer = self.db.writer()?;
-        writer.delete(&block_id.as_bytes())?;
+        writer.delete(block_id.as_bytes())?;
 
         // Delete block from block_num index
         let block_num_index = format!("0x{:0>16x}", block_header.block_num);
-        writer.index_delete("index_block_num", &block_num_index.as_bytes())?;
+        writer.index_delete("index_block_num", block_num_index.as_bytes())?;
 
         // Delete block from transaction index
         for batch in block.batches.iter() {
             for txn in batch.transactions.iter() {
-                writer.index_delete("index_transaction", &txn.header_signature.as_bytes())?;
+                writer.index_delete("index_transaction", txn.header_signature.as_bytes())?;
             }
         }
 
         // Delete block from batch index
         for batch in block.batches.iter() {
-            writer.index_delete("index_batch", &batch.header_signature.as_bytes())?;
+            writer.index_delete("index_batch", batch.header_signature.as_bytes())?;
         }
         writer.commit()
     }

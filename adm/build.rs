@@ -55,7 +55,7 @@ fn main() {
     let latest_change =
         proto_src_files
             .iter()
-            .fold(Duration::from_secs(0), |max, ref proto_file| {
+            .fold(Duration::from_secs(0), |max, proto_file| {
                 if proto_file.last_modified > max {
                     proto_file.last_modified
                 } else {
@@ -84,7 +84,7 @@ fn main() {
 
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
-        let mut file = match fs::File::create(&mod_file_path) {
+        let mut file = match fs::File::create(mod_file_path) {
             Err(err) => panic!("Unable to create file {}: {}", mod_file_name, err),
             Ok(file) => file,
         };

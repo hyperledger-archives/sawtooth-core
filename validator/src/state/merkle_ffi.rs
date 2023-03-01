@@ -506,7 +506,7 @@ pub unsafe extern "C" fn merkle_db_prune(
 
     let db_ref = (state_database as *const LmdbDatabase).as_ref().unwrap();
 
-    match MerkleDatabase::prune(db_ref, &state_root) {
+    match MerkleDatabase::prune(db_ref, state_root) {
         Ok(results) => {
             *result = !results.is_empty();
             ErrorCode::Success

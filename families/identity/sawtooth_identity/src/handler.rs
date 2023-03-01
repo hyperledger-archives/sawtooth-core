@@ -151,8 +151,8 @@ impl TransactionHandler for IdentityTransactionHandler {
         let data = payload.get_data();
 
         match payload.get_field_type() {
-            IdentityPayload_IdentityType::ROLE => set_role(&data, &mut state),
-            IdentityPayload_IdentityType::POLICY => set_policy(&data, &mut state),
+            IdentityPayload_IdentityType::ROLE => set_role(data, &mut state),
+            IdentityPayload_IdentityType::POLICY => set_policy(data, &mut state),
             IdentityPayload_IdentityType::IDENTITY_TYPE_UNSET => {
                 Err(ApplyError::InvalidTransaction(String::from(
                     "The IdentityType must be either a ROLE or a POLICY",
@@ -166,7 +166,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    Message::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err
