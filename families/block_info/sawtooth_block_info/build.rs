@@ -18,7 +18,6 @@
 extern crate glob;
 extern crate protoc_rust;
 
-use protoc_rust::Customize;
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -56,7 +55,7 @@ fn main() {
 
     protoc_rust::Codegen::new()
         .out_dir(
-            &dest_path
+            dest_path
                 .to_str()
                 .expect("Unable to create 'dest_path' as str"),
         )
@@ -66,12 +65,10 @@ fn main() {
                 .map(|a| a.as_ref())
                 .collect::<Vec<&str>>(),
         )
-        .includes(&["../protos", "../../../protos"])
-        .customize(Customize {
-            ..Default::default()
-        })
+        .include("../protos")
+        .include("../../../protos")
         .run()
-        .expect("Error generating rust files from block info protos");
+        .expect("unable to run protoc");
 }
 
 fn glob_simple(pattern: &str) -> Vec<String> {

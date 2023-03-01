@@ -18,8 +18,6 @@
 extern crate glob;
 extern crate protoc_rust;
 
-use protoc_rust::Customize;
-
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -35,15 +33,14 @@ fn main() {
     println!("{:?}", proto_src_files);
 
     protoc_rust::Codegen::new()
-        .out_dir(&dest_path.to_str().unwrap())
+        .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
         .inputs(
             &proto_src_files
                 .iter()
                 .map(|proto_file| proto_file.as_ref())
                 .collect::<Vec<&str>>(),
         )
-        .includes(&["../protos"])
-        .customize(Customize::default())
+        .include("../protos")
         .run()
         .expect("Error generating rust files from smallbank protos");
 

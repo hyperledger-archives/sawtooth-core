@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use base64::decode;
+use base64::{Engine as _, engine::general_purpose};
 use dirs::home_dir;
 use failure::Error;
 use game::{Action, Game};
@@ -209,7 +209,8 @@ impl<'a> BattleshipClient<'a> {
             .iter()
             .map(|json| {
                 let entry: HashMap<String, Game> =
-                    from_slice(&decode(json["data"].as_str().unwrap()).unwrap()).unwrap();
+                    from_slice(&general_purpose::STANDARD
+                        .decode(json["data"].as_str().unwrap()).unwrap()).unwrap();
                 let key = entry.keys().next().unwrap();
                 (key.clone(), entry[key].clone())
             })
