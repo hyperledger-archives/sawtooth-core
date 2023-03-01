@@ -228,10 +228,10 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
         .unwrap_or("http://127.0.0.1:8008")
         .parse()
         .map_err(|_| String::from("urls are a comma separated list of strings"))
-        .and_then(|st| {
+        .map(|st| {
             let s: String = st;
             let split: Split<char> = s.split(',');
-            Ok(split.map(|s| s.to_string()).collect())
+            split.map(|s| s.to_string()).collect()
         })?;
 
     let rate: usize = args
