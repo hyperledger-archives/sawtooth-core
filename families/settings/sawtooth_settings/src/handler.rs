@@ -114,18 +114,12 @@ impl TransactionHandler for SettingsTransactionHandler {
         let settings_payload: SettingsPayload = unpack_data(transaction.get_payload())?;
 
         match settings_payload.get_action() {
-            SettingsPayload_Action::PROPOSE => apply_proposal(
-                &auth_keys,
-                public_key,
-                settings_payload.get_data(),
-                context,
-            ),
-            SettingsPayload_Action::VOTE => apply_vote(
-                &auth_keys,
-                public_key,
-                settings_payload.get_data(),
-                context,
-            ),
+            SettingsPayload_Action::PROPOSE => {
+                apply_proposal(&auth_keys, public_key, settings_payload.get_data(), context)
+            }
+            SettingsPayload_Action::VOTE => {
+                apply_vote(&auth_keys, public_key, settings_payload.get_data(), context)
+            }
             SettingsPayload_Action::ACTION_UNSET => Err(ApplyError::InvalidTransaction(
                 String::from("'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode"),
             )),
