@@ -41,18 +41,7 @@ impl std::fmt::Display for DatabaseError {
 }
 
 impl std::error::Error for DatabaseError {
-    fn description(&self) -> &str {
-        match *self {
-            DatabaseError::InitError(ref msg) => msg,
-            DatabaseError::ReaderError(ref msg) => msg,
-            DatabaseError::WriterError(ref msg) => msg,
-            DatabaseError::CorruptionError(ref msg) => msg,
-            DatabaseError::NotFoundError(ref msg) => msg,
-            DatabaseError::DuplicateEntry => "DuplicateEntry",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn std::error::Error> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             DatabaseError::InitError(_) => None,
             DatabaseError::ReaderError(_) => None,

@@ -150,7 +150,8 @@ pub fn process_smallbank_playlist(
         txn.set_header_signature(signature);
         txn.set_payload(payload_bytes);
 
-        txn.write_length_delimited_to_writer(output)
+        txn
+            .write_length_delimited_to_writer(output)
             .map_err(PlaylistError::MessageError)?
     }
 
@@ -590,7 +591,7 @@ impl fmt::Display for PlaylistError {
 }
 
 impl error::Error for PlaylistError {
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             PlaylistError::IoError(ref err) => Some(err),
             PlaylistError::YamlOutputError(_) => None,

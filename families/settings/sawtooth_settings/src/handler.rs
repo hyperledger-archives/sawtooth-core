@@ -37,7 +37,7 @@ cfg_if! {
 extern crate base64;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::Message;
 use protos::settings::{
     SettingCandidate, SettingCandidate_VoteRecord, SettingCandidates, SettingProposal, SettingVote,
     SettingVote_Vote, SettingsPayload, SettingsPayload_Action,
@@ -255,7 +255,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(&data).map_err(|err| {
         warn!(
             "Invalid error: Failed to unmarshal SettingsTransaction: {:?}",
             err

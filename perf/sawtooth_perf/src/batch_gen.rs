@@ -218,7 +218,6 @@ impl<'a> Iterator for SignedBatchIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::protobuf;
     use super::protobuf::Message;
     use super::LengthDelimitedMessageSource;
     use super::SignedBatchProducer;
@@ -294,7 +293,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
 
@@ -324,7 +323,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
@@ -339,7 +338,7 @@ mod tests {
 
         let batch = batch_result.unwrap().unwrap();
 
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
 
@@ -371,13 +370,13 @@ mod tests {
         let mut batch_source: BatchSource = LengthDelimitedMessageSource::new(&mut output);
 
         let batch = &(batch_source.next(1).unwrap())[0];
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
 
         let batch = &(batch_source.next(1).unwrap())[0];
-        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        let batch_header: BatchHeader = Message::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
     }

@@ -530,7 +530,7 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> 
         &mut *output_writer,
         num_accounts,
         num_transactions,
-        random_seed,
+        random_seed
     )?;
 
     Ok(())
@@ -557,7 +557,7 @@ fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<dyn Error>>
         &mut output_writer,
         &mut in_file,
         context.as_ref(),
-        &private_key,
+        &private_key
     )?;
 
     Ok(())
@@ -577,7 +577,7 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {
-    fn cause(&self) -> Option<&dyn Error> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             CliError::ArgumentError(_) => None,
         }
