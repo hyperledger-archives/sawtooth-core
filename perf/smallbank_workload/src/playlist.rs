@@ -602,14 +602,12 @@ impl error::Error for PlaylistError {
 }
 
 struct FmtWriter<'a> {
-    writer: Box<&'a mut dyn Write>,
+    writer: &'a mut dyn Write,
 }
 
 impl<'a> FmtWriter<'a> {
     pub fn new(writer: &'a mut dyn Write) -> Self {
-        FmtWriter {
-            writer: Box::new(writer),
-        }
+        FmtWriter { writer }
     }
 }
 
