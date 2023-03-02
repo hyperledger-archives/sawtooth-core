@@ -156,17 +156,20 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("1").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let max_txns: usize = args
+        .value_of("max-batch-size")
+        .unwrap_or("1")
+        .parse()
+        .unwrap_or(0);
+
     if max_txns == 0 {
         return arg_error("max-batch-size must be a number greater than 0");
     }
-    let accounts: usize = match args.value_of("num-accounts").unwrap_or("100").parse() {
-        Ok(n) => n,
-        Err(_) => 100,
-    };
+    let accounts: usize = args
+        .value_of("num-accounts")
+        .unwrap_or("100")
+        .parse()
+        .unwrap_or(100);
     if accounts == 0 {
         return arg_error("The number of accounts must be greater than 0.");
     }
@@ -296,10 +299,11 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let max_txns: usize = args
+        .value_of("max-batch-size")
+        .unwrap_or("100")
+        .parse()
+        .unwrap_or(0);
 
     if max_txns == 0 {
         return arg_error("max-batch-size must be a number greater than 0");
@@ -362,10 +366,7 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let rate: usize = args.value_of("rate").unwrap_or("1").parse().unwrap_or(0);
 
     if rate == 0 {
         return arg_error("rate must be a number greater than 0");
@@ -495,19 +496,13 @@ fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let num_accounts = match args.value_of("accounts").unwrap().parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let num_accounts = args.value_of("accounts").unwrap().parse().unwrap_or(0);
 
     if num_accounts < 2 {
         return arg_error("'accounts' must be a number greater than 2");
     }
 
-    let num_transactions = match args.value_of("transactions").unwrap().parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let num_transactions = args.value_of("transactions").unwrap().parse().unwrap_or(0);
 
     if num_transactions == 0 {
         return arg_error("'transactions' must be a number greater than 0");
