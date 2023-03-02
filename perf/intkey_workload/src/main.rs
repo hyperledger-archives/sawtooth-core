@@ -51,14 +51,14 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn main() {
     match SimpleLogger::init(LevelFilter::Warn, Config::default()) {
         Ok(_) => (),
-        Err(err) => println!("Failed to load logger: {}", err.description()),
+        Err(err) => println!("Failed to load logger: {}", err),
     }
 
     let arg_matches = get_arg_matches();
 
     match run_load_command(&arg_matches) {
         Ok(_) => (),
-        Err(err) => println!("{}", err.description()),
+        Err(err) => println!("{}", err),
     }
 }
 
@@ -363,22 +363,24 @@ struct IntKeyCliError {
     msg: String,
 }
 
-impl Error for IntKeyCliError {
-    fn description(&self) -> &str {
-        self.msg.as_str()
-    }
-}
-
 impl fmt::Display for IntKeyCliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format!("IntKeyCliError {}", self.msg))
     }
 }
 
+impl Error for IntKeyCliError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match *self {
+            _ => None,
+        }
+    }
+}
+
 impl From<ParseIntError> for IntKeyCliError {
     fn from(error: ParseIntError) -> Self {
         IntKeyCliError {
-            msg: error.description().to_string(),
+            msg: error.to_string(),
         }
     }
 }
@@ -386,7 +388,7 @@ impl From<ParseIntError> for IntKeyCliError {
 impl From<ParseFloatError> for IntKeyCliError {
     fn from(error: ParseFloatError) -> Self {
         IntKeyCliError {
-            msg: error.description().to_string(),
+            msg: error.to_string(),
         }
     }
 }

@@ -84,31 +84,15 @@ impl fmt::Display for WorkloadError {
 }
 
 impl error::Error for WorkloadError {
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            WorkloadError::HttpError(ref err) => err.cause(),
-            WorkloadError::UriError(ref err) => err.cause(),
-            WorkloadError::IoError(ref err) => err.cause(),
-            WorkloadError::ProtobufError(ref err) => err.cause(),
-            WorkloadError::BatchReadingError(ref err) => err.cause(),
+            WorkloadError::HttpError(ref err) => Some(err),
+            WorkloadError::UriError(ref err) => Some(err),
+            WorkloadError::IoError(ref err) => Some(err),
+            WorkloadError::ProtobufError(ref err) => Some(err),
+            WorkloadError::BatchReadingError(ref err) => Some(err),
             WorkloadError::NoBatchError => Some(&WorkloadError::NoBatchError),
             WorkloadError::UnknownRestApiError => Some(&WorkloadError::UnknownRestApiError),
-        }
-    }
-
-    fn description(&self) -> &str {
-        match *self {
-            WorkloadError::HttpError(ref err) => err.description(),
-            WorkloadError::UriError(ref err) => err.description(),
-            WorkloadError::IoError(ref err) => err.description(),
-            WorkloadError::ProtobufError(ref err) => err.description(),
-            WorkloadError::BatchReadingError(ref err) => err.description(),
-            WorkloadError::NoBatchError => {
-                "There was an error resulting in lacking a batch to submit."
-            }
-            WorkloadError::UnknownRestApiError => {
-                "The rest api produced an error response that we were not expecting."
-            }
         }
     }
 }

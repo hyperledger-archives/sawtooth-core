@@ -65,7 +65,7 @@ impl fmt::Display for StateDatabaseError {
 }
 
 impl Error for StateDatabaseError {
-    fn cause(&self) -> Option<&dyn Error> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         match *self {
             StateDatabaseError::NotFound(_) => None,
             StateDatabaseError::DeserializationError(ref err) => Some(err),

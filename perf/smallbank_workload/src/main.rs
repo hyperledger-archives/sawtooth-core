@@ -245,7 +245,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     ) {
         Ok(_) => Ok(()),
         Err(err) => {
-            println!("{}", err.description());
+            println!("{}", err);
             Err(Box::new(err))
         }
     }
@@ -308,14 +308,14 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let mut in_file = File::open(args.value_of("input").unwrap())?;
     let mut out_file = File::create(args.value_of("output").unwrap())?;
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
-    let context = try!(signing::create_context("secp256k1"));
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+    let context = signing::create_context("secp256k1")?;
 
     if let Err(err) = generate_signed_batches(
         &mut in_file,
@@ -522,43 +522,43 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> 
     };
 
     let mut output_writer: Box<dyn Write> = match args.value_of("output") {
-        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+        Some(file_name) => File::create(file_name).map(Box::new)?,
         None => Box::new(std::io::stdout()),
     };
 
-    try!(generate_smallbank_playlist(
+    generate_smallbank_playlist(
         &mut *output_writer,
         num_accounts,
         num_transactions,
         random_seed
-    ));
+    )?;
 
     Ok(())
 }
 
 fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let mut in_file = try!(File::open(args.value_of("input").unwrap()));
+    let mut in_file = File::open(args.value_of("input").unwrap())?;
 
     let mut output_writer: Box<dyn Write> = match args.value_of("output") {
-        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+        Some(file_name) => File::create(file_name).map(Box::new)?,
         None => Box::new(std::io::stdout()),
     };
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let context = try!(signing::create_context("secp256k1"));
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
+    let context = signing::create_context("secp256k1")?;
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
 
-    try!(process_smallbank_playlist(
+    process_smallbank_playlist(
         &mut output_writer,
         &mut in_file,
         context.as_ref(),
         &private_key
-    ));
+    )?;
 
     Ok(())
 }
@@ -577,13 +577,7 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             CliError::ArgumentError(_) => None,
         }
