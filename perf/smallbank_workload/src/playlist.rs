@@ -150,8 +150,7 @@ pub fn process_smallbank_playlist(
         txn.set_header_signature(signature);
         txn.set_payload(payload_bytes);
 
-        txn
-            .write_length_delimited_to_writer(output)
+        txn.write_length_delimited_to_writer(output)
             .map_err(PlaylistError::MessageError)?
     }
 

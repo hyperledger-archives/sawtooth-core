@@ -296,20 +296,21 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
 
     let context = signing::create_context("secp256k1")?;
 
-    let private_key: Result<Box<dyn signing::PrivateKey>, Box<dyn Error>> = match args.value_of("key") {
-        Some(file) => {
-            let mut key_file = File::open(file)?;
-            let mut buf = String::new();
-            key_file.read_to_string(&mut buf)?;
-            buf.pop(); // remove the new line
-            let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
-            Ok(Box::new(private_key))
-        }
-        None => {
-            let private_key = context.new_random_private_key()?;
-            Ok(private_key)
-        }
-    };
+    let private_key: Result<Box<dyn signing::PrivateKey>, Box<dyn Error>> =
+        match args.value_of("key") {
+            Some(file) => {
+                let mut key_file = File::open(file)?;
+                let mut buf = String::new();
+                key_file.read_to_string(&mut buf)?;
+                buf.pop(); // remove the new line
+                let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+                Ok(Box::new(private_key))
+            }
+            None => {
+                let private_key = context.new_random_private_key()?;
+                Ok(private_key)
+            }
+        };
 
     let priv_key = private_key?;
 
