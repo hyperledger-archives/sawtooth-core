@@ -109,10 +109,11 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let max_txns: usize = args
+        .value_of("max-batch-size")
+        .unwrap_or("100")
+        .parse()
+        .unwrap_or(0);
 
     if max_txns == 0 {
         return arg_error("max-batch-size must be a number greater than 0");
@@ -175,10 +176,7 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+    let rate: usize = args.value_of("rate").unwrap_or("1").parse().unwrap_or(0);
 
     if rate == 0 {
         return arg_error("rate must be a number greater than 0");
