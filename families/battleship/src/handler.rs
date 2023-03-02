@@ -248,15 +248,15 @@ impl BattleshipTransactionHandler {
             // Every turn after the first should hit this, unless the client tried giving
             // incomplete information.
             (Some(lfc), Some(lfr), Some(rs), Some(rn)) => {
-                let last_row = game::parse_row(&lfr).ok_or_else(|| {
+                let last_row = game::parse_row(lfr).ok_or_else(|| {
                     ApplyError::InvalidTransaction(format!("Invalid row {}", row))
                 })?;
 
-                let last_col = game::parse_column(&lfc).ok_or_else(|| {
+                let last_col = game::parse_column(lfc).ok_or_else(|| {
                     ApplyError::InvalidTransaction(format!("Invalid column {}", column))
                 })?;
 
-                let space_hash = game::get_space_hash(rs, &rn);
+                let space_hash = game::get_space_hash(rs, rn);
 
                 let hashed_board = match game.state.as_ref() {
                     "P1-NEXT" => &game.hashed_board_1,

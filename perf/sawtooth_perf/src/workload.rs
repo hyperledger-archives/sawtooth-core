@@ -234,7 +234,7 @@ pub fn form_request_from_batchlist(
 
     if let Some(ref basic_auth) = *basic_auth {
         req.headers_mut()
-            .set(Authorization(Basic::from_str(&basic_auth)?));
+            .set(Authorization(Basic::from_str(basic_auth)?));
     }
 
     Ok((req, batch_id))

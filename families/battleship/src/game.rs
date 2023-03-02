@@ -332,7 +332,7 @@ impl Board {
     pub fn render(&self) -> String {
         self.spaces
             .iter()
-            .map(|ref row| row.iter().collect::<String>())
+            .map(|row| row.iter().collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
     }

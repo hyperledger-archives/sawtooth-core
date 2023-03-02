@@ -105,12 +105,12 @@ impl<'a> SBPayloadTransformer<'a> {
         let elapsed = Instant::now().elapsed();
         txn_header.set_nonce(format!("{}{}", elapsed.as_secs(), elapsed.subsec_nanos()));
 
-        let addresses = protobuf::RepeatedField::from_vec(make_addresses(&payload));
+        let addresses = protobuf::RepeatedField::from_vec(make_addresses(payload));
 
         txn_header.set_inputs(addresses.clone());
         txn_header.set_outputs(addresses);
 
-        let dependencies = protobuf::RepeatedField::from_vec(self.get_dependencies(&payload));
+        let dependencies = protobuf::RepeatedField::from_vec(self.get_dependencies(payload));
         txn_header.set_dependencies(dependencies);
 
         let payload_bytes = payload.clone().write_to_bytes()?;
@@ -127,7 +127,7 @@ impl<'a> SBPayloadTransformer<'a> {
         let header_bytes = txn_header.write_to_bytes()?;
 
         let signature = self.signer.sign(&header_bytes.to_vec())?;
-        self.add_signature_if_create_account(&payload, signature.clone());
+        self.add_signature_if_create_account(payload, signature.clone());
 
         txn.set_header(header_bytes);
         txn.set_header_signature(signature);
