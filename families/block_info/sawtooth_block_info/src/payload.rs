@@ -25,7 +25,7 @@ cfg_if! {
     }
 }
 
-use protobuf;
+use protobuf::Message;
 use protos::block_info::BlockInfoTxn;
 
 fn validate_hex(string: &str, length: usize) -> bool {
@@ -78,7 +78,7 @@ impl BlockInfoPayload {
 }
 
 fn parse_protobuf<M: protobuf::Message>(bytes: &[u8]) -> Result<M, ApplyError> {
-    protobuf::parse_from_bytes(bytes).map_err(|err| {
+    Message::parse_from_bytes(bytes).map_err(|err| {
         let warning_string = format!("Failed to serialize protobuf: {:?}", err);
         warn!("Invalid Transaction: {}", &warning_string);
         ApplyError::InvalidTransaction(warning_string)

@@ -25,8 +25,6 @@ use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
-use protoc_rust::Customize;
-
 const PROTO_FILES_DIR: &str = "../protos";
 const SETTINGS_PROTO_FILES_DIR: &str = "../families/settings/protos";
 const PROTO_DIR_NAME: &str = "proto";
@@ -73,22 +71,26 @@ fn main() {
         println!("{:?}", proto_src_files);
         fs::create_dir_all(&dest_path).unwrap();
         protoc_rust::Codegen::new()
-            .out_dir(&dest_path.to_str().expect("Invalid proto destination path"))
+            .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
             .inputs(
                 &proto_src_files
                     .iter()
                     .map(|proto_file| proto_file.file_path.as_ref())
                     .collect::<Vec<&str>>(),
             )
-            .includes(&["src", PROTO_FILES_DIR, SETTINGS_PROTO_FILES_DIR])
-            .customize(Customize::default())
+            .include(PROTO_FILES_DIR)
+            .include(SETTINGS_PROTO_FILES_DIR)
             .run()
             .expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
         let mut file = match fs::File::create(&mod_file_path) {
-            Err(err) => panic!("Unable to create file {}: {}", mod_file_name, err,),
+            Err(err) => panic!(
+                "Unable to create file {}: {}",
+                mod_file_name,
+                err.description()
+            ),
             Ok(file) => file,
         };
 

@@ -16,7 +16,7 @@
  */
 use std;
 
-use protobuf;
+use protobuf::Message;
 
 use proto;
 
@@ -60,7 +60,7 @@ pub struct Block {
 
 impl Block {
     pub fn try_from(block: proto::block::Block) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&block.header)
+        Message::parse_from_bytes(&block.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid BlockHeader {}: {}",
@@ -94,7 +94,7 @@ pub struct Batch {
 
 impl Batch {
     pub fn try_from(batch: proto::batch::Batch) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&batch.header)
+        Message::parse_from_bytes(&batch.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid BatchHeader {}: {}",
@@ -134,7 +134,7 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn try_from(transaction: &proto::transaction::Transaction) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&transaction.header)
+        Message::parse_from_bytes(&transaction.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid TransactionHeader {}: {}",
