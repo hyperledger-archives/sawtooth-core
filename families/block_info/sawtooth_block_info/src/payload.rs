@@ -40,7 +40,7 @@ pub struct BlockInfoPayload {
 
 impl BlockInfoPayload {
     pub fn new(payload_data: &[u8]) -> Result<BlockInfoPayload, ApplyError> {
-        let payload: BlockInfoTxn = parse_protobuf(&payload_data)?;
+        let payload: BlockInfoTxn = parse_protobuf(payload_data)?;
 
         {
             let next_block = payload.get_block();

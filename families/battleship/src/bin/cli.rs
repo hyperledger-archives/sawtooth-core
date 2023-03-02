@@ -154,7 +154,7 @@ fn run() -> Result<(), Error> {
             let col = fire_matches.value_of("col").expect("Column is required!");
             let wait = parse_wait_flag(fire_matches)?;
 
-            let game = client.get_game(&name)?;
+            let game = client.get_game(name)?;
             let board = Board::load_or_generate(format!("{}-{}", name, key), &game.ships)?;
             let (reveal_space, reveal_nonce) = game.get_last_fire_row_col(&board)?;
 

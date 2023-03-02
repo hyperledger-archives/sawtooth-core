@@ -103,7 +103,7 @@ impl<'a> IntKeyTransformer<'a> {
                 .collect(),
         );
 
-        let payload_bytes = self.payload_to_cbor_bytes(&payload)?;
+        let payload_bytes = self.payload_to_cbor_bytes(payload)?;
 
         let mut sha = Sha512::new();
         sha.input(payload_bytes.as_slice());

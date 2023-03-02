@@ -86,7 +86,7 @@ impl<'a> BattleshipClient<'a> {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
             Box::new(
-                Secp256k1PrivateKey::from_hex(&contents.trim())
+                Secp256k1PrivateKey::from_hex(contents.trim())
                     .map_err(|e| format_err!("{}", e))?,
             )
         };

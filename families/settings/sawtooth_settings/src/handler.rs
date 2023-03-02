@@ -116,13 +116,13 @@ impl TransactionHandler for SettingsTransactionHandler {
         match settings_payload.get_action() {
             SettingsPayload_Action::PROPOSE => apply_proposal(
                 &auth_keys,
-                &public_key,
+                public_key,
                 settings_payload.get_data(),
                 context,
             ),
             SettingsPayload_Action::VOTE => apply_vote(
                 &auth_keys,
-                &public_key,
+                public_key,
                 settings_payload.get_data(),
                 context,
             ),
@@ -255,7 +255,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    Message::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(data).map_err(|err| {
         warn!(
             "Invalid error: Failed to unmarshal SettingsTransaction: {:?}",
             err
