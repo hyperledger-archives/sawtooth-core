@@ -36,7 +36,7 @@ sabre-sdk = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 log = "0.4"
-log4rs = "0.8"
+log4rs = "1.2.0"
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
 sawtooth-sdk = "0.3"
