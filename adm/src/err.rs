@@ -34,21 +34,3 @@ impl std::fmt::Display for CliError {
         }
     }
 }
-
-impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-            CliError::EnvironmentError(ref msg) => msg,
-            CliError::ParseError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn std::error::Error> {
-        match *self {
-            CliError::ArgumentError(_) => None,
-            CliError::EnvironmentError(_) => None,
-            CliError::ParseError(_) => None,
-        }
-    }
-}

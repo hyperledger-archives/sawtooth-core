@@ -64,9 +64,9 @@ fn run_backup_command(args: &ArgMatches) -> Result<(), CliError> {
         .map_err(|err| CliError::EnvironmentError(format!("Failed to create file: {err}")))?;
 
     let mut current = match args.value_of("start") {
-        None => blockstore.get_chain_head().map_err(|err| {
-            CliError::EnvironmentError(format!("unable to read chain head: {err}"))
-        }),
+        None => blockstore
+            .get_chain_head()
+            .map_err(|err| CliError::EnvironmentError(format!("unable to read chain head: {err}"))),
         Some(sig) => Ok(sig.into()),
     }?;
 
@@ -106,7 +106,11 @@ fn run_list_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let mut count = args.value_of("count").unwrap_or("100").parse::<u64>().unwrap();
+    let mut count = args
+        .value_of("count")
+        .unwrap_or("100")
+        .parse::<u64>()
+        .unwrap();
 
     // Get the chain head
     let head_sig = match args.value_of("start") {
@@ -231,14 +235,12 @@ fn run_prune_command(args: &ArgMatches) -> Result<(), CliError> {
         .map_err(|_| CliError::ArgumentError(format!("Block not found: {block_id}")))?;
 
     // Get the chain head
-    let chain_head = blockstore.get_chain_head().map_err(|err| {
-        CliError::EnvironmentError(format!("failed to get chain head id: {err}"))
-    })?;
+    let chain_head = blockstore
+        .get_chain_head()
+        .map_err(|err| CliError::EnvironmentError(format!("failed to get chain head id: {err}")))?;
 
     let mut current = blockstore.get(&chain_head).map_err(|err| {
-        CliError::EnvironmentError(format!(
-            "failed to get chain head ({chain_head}): {err}"
-        ))
+        CliError::EnvironmentError(format!("failed to get chain head ({chain_head}): {err}"))
     })?;
 
     loop {
@@ -318,8 +320,8 @@ fn run_import_command(args: &ArgMatches) -> Result<(), CliError> {
     file.read_to_end(&mut packed)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to read file: {err}")))?;
 
-    let block: Block = Message::parse_from_bytes(&packed)
-        .map_err(|err| CliError::ParseError(format!("{err}")))?;
+    let block: Block =
+        Message::parse_from_bytes(&packed).map_err(|err| CliError::ParseError(format!("{err}")))?;
     let block_header: BlockHeader = Message::parse_from_bytes(&block.header)
         .map_err(|err| CliError::ParseError(format!("{err}")))?;
     let block_id = block.header_signature.clone();
@@ -353,12 +355,12 @@ fn run_stats_command(args: &ArgMatches) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_count = blockstore.get_current_height().map_err(|err| {
-        CliError::EnvironmentError(format!("failed to read block count: {err}"))
-    })?;
-    let batch_count = blockstore.get_batch_count().map_err(|err| {
-        CliError::EnvironmentError(format!("failed to read batch count: {err}"))
-    })?;
+    let block_count = blockstore
+        .get_current_height()
+        .map_err(|err| CliError::EnvironmentError(format!("failed to read block count: {err}")))?;
+    let batch_count = blockstore
+        .get_batch_count()
+        .map_err(|err| CliError::EnvironmentError(format!("failed to read batch count: {err}")))?;
     let txn_count = blockstore.get_transaction_count().map_err(|err| {
         CliError::EnvironmentError(format!("failed to read transaction count: {err}"))
     })?;
