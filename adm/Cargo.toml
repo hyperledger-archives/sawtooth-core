@@ -17,6 +17,12 @@
 name = "sawadm"
 version = "0.1.0"
 authors = ["sawtooth"]
+description = "The sawadm command is used for Sawtooth administration tasks."
+edition = '2021'
+
+[[bin]]
+name = "sawadm"
+path = "src/main.rs"
 
 [dependencies]
 clap = "2.34.0"
