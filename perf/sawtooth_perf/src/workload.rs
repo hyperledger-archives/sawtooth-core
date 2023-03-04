@@ -42,10 +42,10 @@ use tokio_core::reactor::Handle;
 
 use sawtooth_sdk::messages::batch::BatchList;
 
-use batch_submit::BatchListResult;
-use batch_submit::BatchReadingError;
+use crate::batch_submit::BatchListResult;
+use crate::batch_submit::BatchReadingError;
 
-use batch_map::BatchMap;
+use crate::batch_map::BatchMap;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]

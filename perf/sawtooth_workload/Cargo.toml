@@ -15,6 +15,7 @@
 [package]
 name = "sawtooth_workload"
 version = "0.1.0"
+edition = '2021'
 
 [dependencies]
 sawtooth-sdk = "0.3"
