@@ -35,13 +35,13 @@ cfg_if! {
 }
 
 extern crate base64;
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
-use protobuf::Message;
-use protos::settings::{
+use crate::protos::settings::{
     SettingCandidate, SettingCandidate_VoteRecord, SettingCandidates, SettingProposal, SettingVote,
     SettingVote_Vote, SettingsPayload, SettingsPayload_Action,
 };
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use protobuf::Message;
 use std::iter::repeat;
 
 #[cfg(target_arch = "wasm32")]

@@ -19,6 +19,7 @@ authors = ["Bitwise IO"]
 build = "build.rs"
 description = "The Sawtooth Settings transaction processor for validating on-chain settings."
 license = "Apache-2.0"
+edition = '2021'
 
 [package.metadata.deb]
 depends = "$auto"
