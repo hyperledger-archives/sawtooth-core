@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::game::{Action, Game};
+use crate::transaction_builder::TransactionBuilder;
 use base64::{engine::general_purpose, Engine as _};
 use dirs::home_dir;
 use failure::Error;
-use game::{Action, Game};
 use reqwest::{Client, Url};
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 use sawtooth_sdk::signing::{create_context, PrivateKey, Signer};
@@ -26,7 +27,6 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
-use transaction_builder::TransactionBuilder;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug)]

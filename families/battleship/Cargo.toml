@@ -16,6 +16,7 @@
 name = "battleship"
 version = "0.1.0"
 authors = ["Bitwise IO, Inc."]
+edition = '2021'
 
 [[example]]
 name = "play"

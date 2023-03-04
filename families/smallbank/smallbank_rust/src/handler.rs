@@ -24,7 +24,7 @@ use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
 
-use protos::smallbank::{
+use crate::protos::smallbank::{
     Account, SmallbankTransactionPayload, SmallbankTransactionPayload_AmalgamateTransactionData,
     SmallbankTransactionPayload_CreateAccountTransactionData,
     SmallbankTransactionPayload_DepositCheckingTransactionData,
