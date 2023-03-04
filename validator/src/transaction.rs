@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
+use crate::proto;
 use protobuf;
 
 #[derive(Clone, Debug, PartialEq)]

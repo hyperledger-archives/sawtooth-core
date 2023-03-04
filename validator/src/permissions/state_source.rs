@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::identity::Policy_EntryType;
-use state::identity_view::IdentityView;
+use crate::proto::identity::Policy_EntryType;
+use crate::state::identity_view::IdentityView;
 
 use super::{IdentityError, IdentitySource, Permission, Policy, Role};
 

@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use lmdb_zero as lmdb;
 
-use database::error::DatabaseError;
+use crate::database::error::DatabaseError;
 
 const DEFAULT_SIZE: usize = 1 << 40; // 1024 ** 4
 

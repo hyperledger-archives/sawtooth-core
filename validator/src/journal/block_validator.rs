@@ -17,23 +17,21 @@
 
 #![allow(unknown_lints)]
 
-use batch::Batch;
-use block::Block;
-use execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
 use gossip::permission_verifier::PermissionVerifier;
-use journal::block_scheduler::BlockScheduler;
-use journal::chain_commit_state::{
+use crate::journal::block_scheduler::BlockScheduler;
+use crate::journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
     validate_transaction_dependencies, ChainCommitStateError,
 };
-use journal::validation_rule_enforcer::enforce_validation_rules;
-use journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
-use scheduler::TxnExecutionResult;
-use state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
-use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
-    mpsc::{channel, Receiver, RecvTimeoutError, Sender},
-    Arc, Mutex,
+use crate::journal::validation_rule_enforcer::enforce_validation_rules;
+use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
+use crate::permissions::verifier::PermissionVerifier;
+use crate::scheduler::TxnExecutionResult;
+use crate::state::{
+    identity_view::IdentityView, settings_view::SettingsView, state_view_factory::StateViewFactory,
 };
 use std::thread;
 use std::time::Duration;
@@ -719,7 +717,7 @@ impl BlockValidation for OnChainRulesValidation {
 mod test {
 
     use super::*;
-    use journal::{
+    use crate::journal::{
         block_store::{BlockStore, BlockStoreError},
         NULL_BLOCK_IDENTIFIER,
     };

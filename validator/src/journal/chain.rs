@@ -36,13 +36,16 @@ use std::time::Duration;
 
 use protobuf;
 
-use batch::Batch;
-use block::Block;
-use consensus::notifier::ConsensusNotifier;
-use consensus::registry::ConsensusRegistry;
-use execution::execution_platform::ExecutionPlatform;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::consensus::notifier::ConsensusNotifier;
+use crate::consensus::registry::ConsensusRegistry;
+use crate::execution::execution_platform::ExecutionPlatform;
 use gossip::permission_verifier::PermissionVerifier;
-use journal;
+use crate::journal;
+use crate::metrics;
+use crate::state::state_pruning_manager::StatePruningManager;
+use crate::state::state_view_factory::StateViewFactory;
 use journal::block_manager::{BlockManager, BlockManagerError, BlockRef};
 use journal::block_validator::{
     BlockValidationResult, BlockValidationResultStore, BlockValidator, ValidationError,
@@ -51,12 +54,9 @@ use journal::block_wrapper::BlockStatus;
 use journal::chain_head_lock::ChainHeadLock;
 use journal::chain_id_manager::ChainIdManager;
 use journal::fork_cache::ForkCache;
-use metrics;
-use state::state_pruning_manager::StatePruningManager;
-use state::state_view_factory::StateViewFactory;
 
-use proto::transaction_receipt::TransactionReceipt;
-use scheduler::TxnExecutionResult;
+use crate::proto::transaction_receipt::TransactionReceipt;
+use crate::scheduler::TxnExecutionResult;
 
 const RECV_TIMEOUT_MILLIS: u64 = 100;
 

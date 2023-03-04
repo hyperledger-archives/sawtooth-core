@@ -23,13 +23,13 @@ use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
 use protobuf::{Message, ProtobufEnum};
 use py_ffi;
 
-use block::Block;
-use consensus::notifier::{
+use crate::block::Block;
+use crate::consensus::notifier::{
     BackgroundConsensusNotifier, ConsensusNotifier, NotifierService, NotifierServiceError,
 };
-use proto::validator::Message_MessageType as MessageType;
-use proto::{self, consensus::ConsensusPeerMessage};
-use pylogger;
+use crate::proto::validator::Message_MessageType as MessageType;
+use crate::proto::{self, consensus::ConsensusPeerMessage};
+use crate::pylogger;
 
 pub struct PyNotifierService {
     py_notifier_service: PyObject,

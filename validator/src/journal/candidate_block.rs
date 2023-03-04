@@ -24,20 +24,20 @@ use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
 
-use hashlib::sha256_digest_strs;
+use crate::hashlib::sha256_digest_strs;
 
-use batch::Batch;
-use block::Block;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::transaction::Transaction;
 
-use journal::chain_commit_state::TransactionCommitCache;
-use journal::commit_store::CommitStore;
-use journal::validation_rule_enforcer;
-use state::settings_view::SettingsView;
+use crate::journal::chain_commit_state::TransactionCommitCache;
+use crate::journal::commit_store::CommitStore;
+use crate::journal::validation_rule_enforcer;
+use crate::state::settings_view::SettingsView;
 
-use pylogger;
+use crate::pylogger;
 
-use scheduler::Scheduler;
+use crate::scheduler::Scheduler;
 
 #[derive(Debug)]
 pub enum CandidateBlockError {

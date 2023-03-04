@@ -15,16 +15,15 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 use cpython::PythonObject;
 use cpython::ToPyObject;
 use protobuf::Message;
 
-use batch::Batch;
-use proto;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::proto;
+use crate::transaction::Transaction;
 
 impl ToPyObject for Batch {
     type ObjectType = cpython::PyObject;
@@ -118,11 +117,10 @@ impl<'source> FromPyObject<'source> for Batch {
 mod tests {
 
     use super::Batch;
-    use cpython;
+    use crate::proto;
+    use crate::transaction::Transaction;
     use cpython::ToPyObject;
-    use proto;
     use protobuf::Message;
-    use transaction::Transaction;
 
     fn create_batch() -> Batch {
         let mut batch_header = proto::batch::BatchHeader::new();
