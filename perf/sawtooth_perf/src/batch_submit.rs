@@ -42,10 +42,10 @@ use tokio_timer;
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchList;
 
-use batch_gen::{BatchResult, BatchingError};
-use batch_map::BatchMap;
-use source::LengthDelimitedMessageSource;
-use workload;
+use crate::batch_gen::{BatchResult, BatchingError};
+use crate::batch_map::BatchMap;
+use crate::source::LengthDelimitedMessageSource;
+use crate::workload;
 
 /// Populates a channel from a stream of length-delimited batches.
 /// Starts one workload submitter of the appropriate type (http, zmq)

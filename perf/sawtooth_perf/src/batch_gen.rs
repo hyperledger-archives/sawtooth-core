@@ -31,7 +31,7 @@ use sawtooth_sdk::messages::transaction::Transaction;
 
 use sawtooth_sdk::signing;
 
-use source::LengthDelimitedMessageSource;
+use crate::source::LengthDelimitedMessageSource;
 
 /// Generates signed batches from a stream of length-delimited transactions.
 /// Constrains the batches to `max_batch_size` number of transactions per

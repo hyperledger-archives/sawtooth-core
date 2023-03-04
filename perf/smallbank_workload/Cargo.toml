@@ -18,6 +18,7 @@ version = "0.1.0"
 build = "build.rs"
 authors = ["Intel Corporation"]
 description = "Workload generator for Sawtooth Smallbank"
+edition = '2021'
 
 [dependencies]
 sawtooth-sdk = "0.3"
