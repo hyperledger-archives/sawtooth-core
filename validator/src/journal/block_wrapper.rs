@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use batch::Batch;
-use block::Block;
+use crate::batch::Batch;
+use crate::block::Block;
 use std::fmt;
 
 use cpython::{self, ObjectProtocol, PyClone, PyObject};

@@ -15,11 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::events::Event;
-use proto::transaction_receipt::StateChange;
+use crate::proto::events::Event;
+use crate::proto::transaction_receipt::StateChange;
 
 mod execution_result_ffi;
-use batch::Batch;
+use crate::batch::Batch;
 
 pub mod py_scheduler;
 

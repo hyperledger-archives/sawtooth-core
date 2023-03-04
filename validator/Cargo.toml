@@ -2,6 +2,7 @@
 name = "sawtooth_validator"
 version = "1.3.0"
 authors = ["Intel Corporation"]
+edition = '2021'
 
 [dependencies]
 clap = "2"

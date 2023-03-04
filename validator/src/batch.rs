@@ -15,10 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto;
+use crate::proto;
 use protobuf::{self, Message};
 
-use transaction::Transaction;
+use crate::transaction::Transaction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Batch {

@@ -15,13 +15,12 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::collections::HashSet;
-
-use batch::Batch;
-use journal::block_manager::BlockManager;
-use journal::commit_store::CommitStore;
 use std::sync::{Arc, RwLock};
-use transaction::Transaction;
+
+use crate::batch::Batch;
+use crate::journal::block_manager::BlockManager;
+use crate::journal::commit_store::CommitStore;
+use crate::transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
 pub enum ChainCommitStateError {
@@ -152,9 +151,7 @@ impl TransactionCommitCache {
             .for_each(|txn| self.add(txn.header_signature.clone()));
     }
 
-    fn remove(&mut self, transaction_id: &str) {
-        ()
-    }
+    fn remove(&mut self, _transaction_id: &str) {}
 
     pub fn remove_batch(&mut self, batch: &Batch) {
         batch
@@ -180,10 +177,10 @@ impl TransactionCommitCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
-    use journal::block_store::InMemoryBlockStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
-    use transaction::Transaction;
+    use crate::block::Block;
+    use crate::journal::block_store::InMemoryBlockStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
+    use crate::transaction::Transaction;
 
     /// Creates Chains of blocks that match this diagram
     /// chain4                    B4-4  - B5-4
@@ -200,7 +197,7 @@ mod test {
     ///  the transactions in b0, are B2-1b0t0, B2'b0t1, and B2-1b0t2
     ///
     fn create_chains_to_put_in_block_manager() -> Vec<Vec<Block>> {
-        let mut previous_block_id = ::journal::NULL_BLOCK_IDENTIFIER;
+        let mut previous_block_id = crate::journal::NULL_BLOCK_IDENTIFIER;
         let mut block_num = 0;
         let chain0 = ["B0", "B1", "B2", "B3", "B4", "B5"]
             .iter()

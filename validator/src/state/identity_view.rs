@@ -17,17 +17,17 @@
 
 use std::iter::repeat;
 
-use hashlib::sha256_digest_str;
+use crate::hashlib::sha256_digest_str;
 use protobuf;
 
-use proto::identity::Policy;
-use proto::identity::PolicyList;
-use proto::identity::Role;
-use proto::identity::RoleList;
+use crate::proto::identity::Policy;
+use crate::proto::identity::PolicyList;
+use crate::proto::identity::Role;
+use crate::proto::identity::RoleList;
 
+use crate::state::StateDatabaseError;
+use crate::state::StateReader;
 use protobuf::Message;
-use state::StateDatabaseError;
-use state::StateReader;
 
 /// The namespace for storage
 const POLICY_NS: &str = "00001d00";
@@ -210,17 +210,17 @@ fn short_hash(s: &str, length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::identity::Policy;
-    use proto::identity::PolicyList;
-    use proto::identity::Policy_Entry;
-    use proto::identity::Policy_EntryType;
-    use proto::identity::Role;
-    use proto::identity::RoleList;
+    use crate::proto::identity::Policy;
+    use crate::proto::identity::PolicyList;
+    use crate::proto::identity::Policy_Entry;
+    use crate::proto::identity::Policy_EntryType;
+    use crate::proto::identity::Role;
+    use crate::proto::identity::RoleList;
 
+    use crate::state::StateDatabaseError;
+    use crate::state::StateReader;
     use protobuf;
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]

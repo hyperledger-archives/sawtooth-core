@@ -21,13 +21,13 @@ use std::slice;
 
 use protobuf::{self, Message};
 
-use batch::Batch;
-use block::Block;
-use database::error::DatabaseError;
-use database::lmdb::LmdbDatabase;
-use journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
-use proto;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::LmdbDatabase;
+use crate::journal::commit_store::{ByHeightDirection, CommitStore, CommitStoreByHeightIterator};
+use crate::proto;
+use crate::transaction::Transaction;
 
 #[repr(u32)]
 #[derive(Debug)]

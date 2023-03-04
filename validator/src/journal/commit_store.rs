@@ -15,20 +15,20 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::block::{Block as ProtoBlock, BlockHeader};
+use crate::proto::block::{Block as ProtoBlock, BlockHeader};
 use protobuf::Message;
 
-use batch::Batch;
-use block::Block;
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
-use journal::block_store::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
+use crate::journal::block_store::{
     BatchIndex, BlockStore, BlockStoreError, IndexedBlockStore, TransactionIndex,
 };
-use journal::chain::{ChainReadError, ChainReader};
-use transaction::Transaction;
+use crate::journal::chain::{ChainReadError, ChainReader};
+use crate::transaction::Transaction;
 
 /// Contains all committed blocks for the current chain
 #[derive(Clone)]

@@ -18,10 +18,10 @@
 use cpython;
 use cpython::{ObjectProtocol, PyClone};
 
-use execution::execution_platform::ExecutionPlatform;
+use crate::execution::execution_platform::ExecutionPlatform;
 
-use scheduler::py_scheduler::PyScheduler;
-use scheduler::Scheduler;
+use crate::scheduler::py_scheduler::PyScheduler;
+use crate::scheduler::Scheduler;
 
 pub struct PyExecutor {
     executor: cpython::PyObject,

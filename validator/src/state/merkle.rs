@@ -29,21 +29,21 @@ use cbor::value::Key;
 use cbor::value::Text;
 use cbor::value::Value;
 
-use hashlib::sha512_digest_bytes;
+use crate::hashlib::sha512_digest_bytes;
 
 use protobuf;
 use protobuf::Message;
 
-use database::error::DatabaseError;
-use database::lmdb::DatabaseReader;
-use database::lmdb::LmdbDatabase;
-use database::lmdb::LmdbDatabaseWriter;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::DatabaseReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::database::lmdb::LmdbDatabaseWriter;
 
-use proto::merkle::ChangeLogEntry;
-use proto::merkle::ChangeLogEntry_Successor;
+use crate::proto::merkle::ChangeLogEntry;
+use crate::proto::merkle::ChangeLogEntry_Successor;
 
-use state::error::StateDatabaseError;
-use state::{StateIter, StateReader};
+use crate::state::error::StateDatabaseError;
+use crate::state::{StateIter, StateReader};
 
 const TOKEN_SIZE: usize = 2;
 
@@ -818,11 +818,11 @@ fn hash(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use database::error::DatabaseError;
-    use database::lmdb::DatabaseReader;
-    use database::lmdb::LmdbContext;
-    use database::lmdb::LmdbDatabase;
-    use proto::merkle::ChangeLogEntry;
+    use crate::database::error::DatabaseError;
+    use crate::database::lmdb::DatabaseReader;
+    use crate::database::lmdb::LmdbContext;
+    use crate::database::lmdb::LmdbDatabase;
+    use crate::proto::merkle::ChangeLogEntry;
 
     use rand::{seq, thread_rng};
     use std::env;

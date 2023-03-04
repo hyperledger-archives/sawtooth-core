@@ -15,8 +15,8 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use batch::Batch;
-use transaction::Transaction;
+use crate::batch::Batch;
+use crate::transaction::Transaction;
 
 use super::error::IdentityError;
 use super::{IdentitySource, Permission, Policy, Role};
@@ -182,8 +182,8 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    use permissions::error::IdentityError;
-    use permissions::{IdentitySource, Permission, Policy, Role};
+    use crate::permissions::error::IdentityError;
+    use crate::permissions::{IdentitySource, Permission, Policy, Role};
 
     #[test]
     /// Test that if no roles are set and no default policy is set,

@@ -18,12 +18,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use block::Block;
-use journal::block_validator::BlockStatusStore;
-use journal::block_wrapper::BlockStatus;
-use journal::chain::COMMIT_STORE;
-use journal::{block_manager::BlockManager, NULL_BLOCK_IDENTIFIER};
-use metrics;
+use crate::block::Block;
+use crate::journal::block_validator::BlockStatusStore;
+use crate::journal::block_wrapper::BlockStatus;
+use crate::journal::chain::COMMIT_STORE;
+use crate::journal::{block_manager::BlockManager, NULL_BLOCK_IDENTIFIER};
+use crate::metrics;
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -239,7 +239,7 @@ impl<B: BlockStatusStore> BlockSchedulerState<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
     use std::sync::{Arc, Mutex};
 
     #[test]
