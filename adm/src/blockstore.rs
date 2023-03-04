@@ -15,11 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 
-use proto::block::{Block, BlockHeader};
+use crate::proto::block::{Block, BlockHeader};
 use protobuf::Message;
 
-use database::error::DatabaseError;
-use database::lmdb::LmdbDatabase;
+use crate::database::error::DatabaseError;
+use crate::database::lmdb::LmdbDatabase;
 
 pub struct Blockstore<'a> {
     db: LmdbDatabase<'a>,
@@ -207,10 +207,10 @@ impl<'a> Blockstore<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config;
-    use database::lmdb::LmdbContext;
-    use proto::batch::{Batch, BatchHeader};
-    use proto::transaction::Transaction;
+    use crate::config;
+    use crate::database::lmdb::LmdbContext;
+    use crate::proto::batch::{Batch, BatchHeader};
+    use crate::proto::transaction::Transaction;
 
     /// Asserts that BLOCKSTORE has a current height of COUNT.
     fn assert_current_height(count: usize, blockstore: &Blockstore) {
