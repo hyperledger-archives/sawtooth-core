@@ -40,7 +40,7 @@ use std::ptr;
 use std::slice;
 use std::time::Duration;
 
-use protobuf::{self, Message};
+use protobuf::Message;
 
 use proto;
 use proto::transaction_receipt::TransactionReceipt;
@@ -59,11 +59,15 @@ pub enum ErrorCode {
 }
 
 macro_rules! check_null {
-    ($($arg:expr) , *) => {
-        $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
-    }
-}
+     ($($arg:expr) , *) => {
+         $(if $arg.is_null() { return ErrorCode::NullPointerProvided; })*
+     }
+ }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_new(
     commit_store: *mut c_void,
@@ -108,7 +112,7 @@ pub unsafe extern "C" fn chain_controller_new(
     let py_consensus_registry = PyObject::from_borrowed_ptr(py, consensus_registry);
 
     let observer_wrappers = if let Ok(py_list) = py_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<ChainObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn ChainObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyChainObserver::new(pyobj))));
@@ -152,14 +156,22 @@ pub unsafe extern "C" fn chain_controller_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
+    let _ = Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
@@ -169,6 +181,10 @@ pub unsafe extern "C" fn chain_controller_start(chain_controller: *mut c_void) -
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_block_validation_result(
     chain_controller: *mut c_void,
@@ -190,6 +206,10 @@ pub unsafe extern "C" fn chain_controller_block_validation_result(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
@@ -200,33 +220,37 @@ pub unsafe extern "C" fn chain_controller_stop(chain_controller: *mut c_void) ->
 }
 
 macro_rules! chain_controller_block_ffi {
-    ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
-        #[no_mangle]
-        pub unsafe extern "C" fn $ffi_fn_name(
-            chain_controller: *mut c_void,
-            block_bytes: *const u8,
-            block_bytes_len: usize,
-        ) -> ErrorCode {
-            check_null!(chain_controller, block_bytes);
+     ($ffi_fn_name:ident, $cc_fn_name:ident, $block:ident, $($block_args:tt)*) => {
+        /// # Safety
+        ///
+        /// This function is unsafe because it takes raw pointers and performs several operations that may cause
+        /// undefined behavior if the pointers are not valid.
+         #[no_mangle]
+         pub unsafe extern "C" fn $ffi_fn_name(
+             chain_controller: *mut c_void,
+             block_bytes: *const u8,
+             block_bytes_len: usize,
+         ) -> ErrorCode {
+             check_null!(chain_controller, block_bytes);
 
-            let $block: Block = {
-                let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-                let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
-                    Ok(block) => block,
-                    Err(err) => {
-                        error!("Failed to parse block bytes: {:?}", err);
-                        return ErrorCode::Unknown;
-                    }
-                };
-                proto_block.into()
-            };
+             let $block: Block = {
+                 let data = slice::from_raw_parts(block_bytes, block_bytes_len);
+                 let proto_block: proto::block::Block = match Message::parse_from_bytes(&data) {
+                     Ok(block) => block,
+                     Err(err) => {
+                         error!("Failed to parse block bytes: {:?}", err);
+                         return ErrorCode::Unknown;
+                     }
+                 };
+                 proto_block.into()
+             };
 
-            (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
+             (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
 
-            ErrorCode::Success
-        }
-    }
-}
+             ErrorCode::Success
+         }
+     }
+ }
 
 chain_controller_block_ffi!(
     chain_controller_validate_block,
@@ -238,6 +262,10 @@ chain_controller_block_ffi!(chain_controller_ignore_block, ignore_block, block, 
 chain_controller_block_ffi!(chain_controller_fail_block, fail_block, block, &block);
 chain_controller_block_ffi!(chain_controller_commit_block, commit_block, block, block);
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_queue_block(
     chain_controller: *mut c_void,
@@ -257,6 +285,13 @@ pub unsafe extern "C" fn chain_controller_queue_block(
 
 /// This is only exposed for the current python tests, it should be removed
 /// when proper rust tests are written for the ChainController
+/// This is only exposed for the current python tests, it should be removed
+/// when proper rust tests are written for the ChainController
+///
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_on_block_received(
     chain_controller: *mut c_void,
@@ -279,6 +314,10 @@ pub unsafe extern "C" fn chain_controller_on_block_received(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn chain_controller_chain_head(
     chain_controller: *mut c_void,
@@ -333,7 +372,6 @@ impl ChainObserver for PyChainObserver {
             .map(|_| ())
             .map_err(|py_err| {
                 pylogger::exception(py, "Unable to call observer.chain_update", py_err);
-                ()
             })
             .unwrap_or(())
     }

@@ -20,13 +20,10 @@ extern crate glob;
 extern crate protoc_rust;
 
 use std::env;
-use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
-
-use protoc_rust::Customize;
 
 const PROTO_FILES_DIR: &str = "../protos";
 const SETTINGS_PROTO_FILES_DIR: &str = "../families/settings/protos";
@@ -49,49 +46,45 @@ struct ProtoFile {
 
 fn main() {
     // Generate protobuf files
-    let mut proto_src_files = glob_simple(&format!("{}/*.proto", PROTO_FILES_DIR));
+    let mut proto_src_files = glob_simple(&format!("{PROTO_FILES_DIR}/*.proto"));
     proto_src_files.append(&mut glob_simple(&format!(
-        "{}/*.proto",
-        SETTINGS_PROTO_FILES_DIR
+        "{SETTINGS_PROTO_FILES_DIR}/*.proto"
     )));
     let last_build_time = read_last_build_time();
 
-    let latest_change =
-        proto_src_files
-            .iter()
-            .fold(Duration::from_secs(0), |max, ref proto_file| {
-                if proto_file.last_modified > max {
-                    proto_file.last_modified
-                } else {
-                    max
-                }
-            });
+    let latest_change = proto_src_files
+        .iter()
+        .fold(Duration::from_secs(0), |max, proto_file| {
+            if proto_file.last_modified > max {
+                proto_file.last_modified
+            } else {
+                max
+            }
+        });
 
     let out_dir = env::var("OUT_DIR").expect("No OUT_DIR env variable");
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME);
 
     if latest_change > last_build_time {
-        println!("{:?}", proto_src_files);
+        println!("{proto_src_files:?}");
         fs::create_dir_all(&dest_path).unwrap();
-        protoc_rust::run(protoc_rust::Args {
-            out_dir: &dest_path.to_str().expect("Invalid proto destination path"),
-            input: &proto_src_files
-                .iter()
-                .map(|proto_file| proto_file.file_path.as_ref())
-                .collect::<Vec<&str>>(),
-            includes: &["src", PROTO_FILES_DIR, SETTINGS_PROTO_FILES_DIR],
-            customize: Customize::default(),
-        })
-        .expect("unable to run protoc");
+        protoc_rust::Codegen::new()
+            .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
+            .inputs(
+                &proto_src_files
+                    .iter()
+                    .map(|proto_file| proto_file.file_path.as_ref())
+                    .collect::<Vec<&str>>(),
+            )
+            .include(PROTO_FILES_DIR)
+            .include(SETTINGS_PROTO_FILES_DIR)
+            .run()
+            .expect("unable to run protoc");
 
         let mod_file_name = format!("{}/mod.rs", &dest_path.to_str().unwrap());
         let mod_file_path = Path::new(&mod_file_name);
-        let mut file = match fs::File::create(&mod_file_path) {
-            Err(err) => panic!(
-                "Unable to create file {}: {}",
-                mod_file_name,
-                err.description()
-            ),
+        let mut file = match fs::File::create(mod_file_path) {
+            Err(err) => panic!("Unable to create file {}: {}", mod_file_name, err),
             Ok(file) => file,
         };
 
@@ -105,12 +98,8 @@ fn main() {
                 .join("\n")
         );
         match file.write_all(content.as_bytes()) {
-            Err(err) => panic!(
-                "Unable to write to {}: {}",
-                mod_file_name,
-                err.description()
-            ),
-            Ok(_) => println!("generated {}", mod_file_name),
+            Err(err) => panic!("Unable to write to {}: {}", mod_file_name, err),
+            Ok(_) => println!("generated {mod_file_name}"),
         }
     } else {
         println!(
@@ -153,11 +142,7 @@ fn read_last_build_time() -> Duration {
     let dest_path = Path::new(&out_dir).join(PROTO_DIR_NAME).join("mod.rs");
     match fs::File::open(Path::new(&dest_path.to_str().unwrap())) {
         Err(err) => {
-            println!(
-                "unable to open {:?}: {}; defaulting to 0",
-                dest_path,
-                err.description()
-            );
+            println!("unable to open {dest_path:?}: {err}; defaulting to 0");
             Duration::new(0, 0)
         }
         Ok(file) => get_modified_time(file),

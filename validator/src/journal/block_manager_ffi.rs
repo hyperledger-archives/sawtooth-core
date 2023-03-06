@@ -26,7 +26,7 @@ use journal::block_manager::{
 };
 use journal::commit_store::CommitStore;
 use proto;
-use protobuf::{self, Message};
+use protobuf::Message;
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -49,6 +49,10 @@ macro_rules! check_null {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_new(block_manager_ptr: *mut *const c_void) -> ErrorCode {
     let block_manager = BlockManager::new();
@@ -58,13 +62,21 @@ pub unsafe extern "C" fn block_manager_new(block_manager_ptr: *mut *const c_void
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_drop(block_manager: *mut c_void) -> ErrorCode {
     check_null!(block_manager);
-    Box::from_raw(block_manager as *mut BlockManager);
+    let _ = Box::from_raw(block_manager as *mut BlockManager);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_contains(
     block_manager: *mut c_void,
@@ -90,6 +102,10 @@ pub unsafe extern "C" fn block_manager_contains(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_add_commit_store(
     block_manager: *mut c_void,
@@ -109,6 +125,10 @@ pub unsafe extern "C" fn block_manager_add_commit_store(
     rc
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_persist(
     block_manager: *mut c_void,
@@ -143,6 +163,10 @@ pub struct PutEntry {
     block_bytes_len: usize,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_put(
     block_manager: *mut c_void,
@@ -152,12 +176,12 @@ pub unsafe extern "C" fn block_manager_put(
     check_null!(block_manager, branch);
 
     let branch_result: Result<Vec<Block>, ErrorCode> = slice::from_raw_parts(branch, branch_len)
-        .into_iter()
+        .iter()
         .map(|ptr| {
             let entry = *ptr as *const PutEntry;
             let payload = slice::from_raw_parts((*entry).block_bytes, (*entry).block_bytes_len);
             let proto_block: proto::block::Block =
-                protobuf::parse_from_bytes(&payload).expect("Failed to parse proto Block bytes");
+                Message::parse_from_bytes(payload).expect("Failed to parse proto Block bytes");
 
             Ok(Block::from(proto_block))
         })
@@ -181,6 +205,10 @@ pub unsafe extern "C" fn block_manager_put(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_ref_block(
     block_manager: *mut c_void,
@@ -204,6 +232,10 @@ pub unsafe extern "C" fn block_manager_ref_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_unref_block(
     block_manager: *mut c_void,
@@ -226,6 +258,10 @@ pub unsafe extern "C" fn block_manager_unref_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_new(
     block_manager: *mut c_void,
@@ -250,14 +286,22 @@ pub unsafe extern "C" fn block_manager_get_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
 
-    Box::from_raw(iterator as *mut GetBlockIterator);
+    let _ = Box::from_raw(iterator as *mut GetBlockIterator);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_get_iterator_next(
     iterator: *mut c_void,
@@ -285,6 +329,10 @@ pub unsafe extern "C" fn block_manager_get_iterator_next(
     ErrorCode::StopIteration
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_new(
     block_manager: *mut c_void,
@@ -306,13 +354,21 @@ pub unsafe extern "C" fn block_manager_branch_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_drop(iterator: *mut c_void) -> ErrorCode {
     check_null!(iterator);
-    Box::from_raw(iterator as *mut BranchIterator);
+    let _ = Box::from_raw(iterator as *mut BranchIterator);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_iterator_next(
     iterator: *mut c_void,
@@ -340,6 +396,10 @@ pub unsafe extern "C" fn block_manager_branch_iterator_next(
     ErrorCode::StopIteration
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
     block_manager: *mut c_void,
@@ -367,15 +427,23 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_drop(
     iterator: *mut c_void,
 ) -> ErrorCode {
     check_null!(iterator);
-    Box::from_raw(iterator as *mut BranchDiffIterator);
+    let _ = Box::from_raw(iterator as *mut BranchDiffIterator);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
     iterator: *mut c_void,
@@ -449,7 +517,7 @@ mod test {
                 assert_eq!(iterator.next(), None);
             }
 
-            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c.clone()]);
+            assert_eq!(store.delete(&["C"]).unwrap(), vec![block_c]);
 
             let chain_head = get_chain_head(&store);
 
@@ -499,7 +567,7 @@ mod test {
         let mut block_header = BlockHeader::new();
         block_header.set_previous_block_id(previous_block_id.to_string());
         block_header.set_block_num(block_num);
-        block_header.set_state_root_hash(format!("state-{}", block_num));
+        block_header.set_state_root_hash(format!("state-{block_num}"));
         Block {
             header_signature: header_signature.into(),
             previous_block_id: block_header.get_previous_block_id().to_string(),
@@ -524,13 +592,13 @@ mod test {
         CommitStore::new(db)
     }
 
-    fn get_chain_head(store: &BlockStore) -> Option<Block> {
+    fn get_chain_head(store: &dyn BlockStore) -> Option<Block> {
         store.iter().expect("Failed to get BlockStore iter").next()
     }
 
-    fn run_test<T>(test: T) -> ()
+    fn run_test<T>(test: T)
     where
-        T: FnOnce(&str) -> () + panic::UnwindSafe,
+        T: FnOnce(&str) + panic::UnwindSafe,
     {
         let dbpath = temp_db_path();
 
@@ -546,7 +614,7 @@ mod test {
         let mut temp_dir = env::temp_dir();
 
         let thread_id = thread::current().id();
-        temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
+        temp_dir.push(format!("merkle-{thread_id:?}.lmdb"));
         temp_dir.to_str().unwrap().to_string()
     }
 }

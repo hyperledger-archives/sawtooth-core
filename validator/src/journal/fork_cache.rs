@@ -66,7 +66,7 @@ impl ForkCache {
             self.cache.insert(head, timestamp);
         }
 
-        expired.into_iter().map(|(key, _)| key).collect()
+        expired.into_keys().collect()
     }
 
     pub fn forks(&self) -> Vec<&String> {

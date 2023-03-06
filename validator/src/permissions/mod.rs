@@ -26,6 +26,7 @@ pub enum Permission {
     DenyKey(String),
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Policy {
     name: String,
@@ -45,6 +46,7 @@ impl Policy {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Role {
     name: String,

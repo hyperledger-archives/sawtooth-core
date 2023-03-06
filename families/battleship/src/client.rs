@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use base64::decode;
+use base64::{engine::general_purpose, Engine as _};
 use dirs::home_dir;
 use failure::Error;
 use game::{Action, Game};
@@ -28,6 +28,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use transaction_builder::TransactionBuilder;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug)]
 enum TransactionState {
     COMMITTED,
@@ -36,12 +37,14 @@ enum TransactionState {
     UNKNOWN,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct InvalidTransaction {
     id: String,
     message: String,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct TransactionData {
     id: String,
@@ -49,6 +52,7 @@ struct TransactionData {
     status: TransactionState,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct TransactionStatus {
     data: Vec<TransactionData>,
@@ -60,7 +64,7 @@ struct TransactionStatus {
 /// Handles talking to the REST API
 pub struct BattleshipClient<'a> {
     url: String,
-    key: Box<PrivateKey>,
+    key: Box<dyn PrivateKey>,
     client: Client,
     builder: TransactionBuilder<'a>,
 }
@@ -83,8 +87,7 @@ impl<'a> BattleshipClient<'a> {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
             Box::new(
-                Secp256k1PrivateKey::from_hex(&contents.trim())
-                    .map_err(|e| format_err!("{}", e))?,
+                Secp256k1PrivateKey::from_hex(contents.trim()).map_err(|e| format_err!("{}", e))?,
             )
         };
 
@@ -99,7 +102,7 @@ impl<'a> BattleshipClient<'a> {
     /// Creates a new client with the given in-memory key
     pub fn new_with_key<S: Into<String>>(
         url: S,
-        key: Box<PrivateKey>,
+        key: Box<dyn PrivateKey>,
     ) -> Result<BattleshipClient<'a>, Error> {
         Ok(BattleshipClient {
             url: url.into(),
@@ -205,8 +208,12 @@ impl<'a> BattleshipClient<'a> {
             .unwrap()
             .iter()
             .map(|json| {
-                let entry: HashMap<String, Game> =
-                    from_slice(&decode(json["data"].as_str().unwrap()).unwrap()).unwrap();
+                let entry: HashMap<String, Game> = from_slice(
+                    &general_purpose::STANDARD
+                        .decode(json["data"].as_str().unwrap())
+                        .unwrap(),
+                )
+                .unwrap();
                 let key = entry.keys().next().unwrap();
                 (key.clone(), entry[key].clone())
             })

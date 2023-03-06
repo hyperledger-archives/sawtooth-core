@@ -59,6 +59,10 @@ macro_rules! check_null {
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_new(
     commit_store_ptr: *mut c_void,
@@ -119,7 +123,7 @@ pub unsafe extern "C" fn block_publisher_new(
     };
 
     let batch_observers = if let Ok(py_list) = batch_observers.extract::<PyList>(py) {
-        let mut res: Vec<Box<BatchObserver>> = Vec::with_capacity(py_list.len(py));
+        let mut res: Vec<Box<dyn BatchObserver>> = Vec::with_capacity(py_list.len(py));
         py_list
             .iter(py)
             .for_each(|pyobj| res.push(Box::new(PyBatchObserver::new(pyobj))));
@@ -156,14 +160,23 @@ pub unsafe extern "C" fn block_publisher_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_drop(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);
-    Box::from_raw(publisher as *mut BlockPublisher);
+    let _publisher = Box::from_raw(publisher as *mut BlockPublisher);
     ErrorCode::Success
 }
 
 // block_publisher_on_batch_received is used in tests
+
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_on_batch_received(
     publisher: *mut c_void,
@@ -180,6 +193,10 @@ pub unsafe extern "C" fn block_publisher_on_batch_received(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_start(
     publisher: *mut c_void,
@@ -194,6 +211,10 @@ pub unsafe extern "C" fn block_publisher_start(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_stop(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);
@@ -201,6 +222,10 @@ pub unsafe extern "C" fn block_publisher_stop(publisher: *mut c_void) -> ErrorCo
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_chain_head_lock(
     publisher_ptr: *mut c_void,
@@ -213,6 +238,10 @@ pub unsafe extern "C" fn block_publisher_chain_head_lock(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_pending_batch_info(
     publisher: *mut c_void,
@@ -228,6 +257,10 @@ pub unsafe extern "C" fn block_publisher_pending_batch_info(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_initialize_block(
     publisher: *mut c_void,
@@ -247,6 +280,10 @@ pub unsafe extern "C" fn block_publisher_initialize_block(
     })
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_finalize_block(
     publisher: *mut c_void,
@@ -272,6 +309,10 @@ pub unsafe extern "C" fn block_publisher_finalize_block(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_summarize_block(
     publisher: *mut c_void,
@@ -296,6 +337,11 @@ pub unsafe extern "C" fn block_publisher_summarize_block(
 }
 
 // convert_on_chain_updated_args is used in tests
+
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 pub unsafe fn convert_on_chain_updated_args(
     py: Python,
     chain_head_ptr: *mut py_ffi::PyObject,
@@ -333,6 +379,11 @@ pub unsafe fn convert_on_chain_updated_args(
 }
 
 // block_publisher_on_chain_updated is used in tests
+
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_on_chain_updated(
     publisher: *mut c_void,
@@ -370,6 +421,10 @@ pub unsafe extern "C" fn block_publisher_on_chain_updated(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_has_batch(
     publisher: *mut c_void,
@@ -387,6 +442,10 @@ pub unsafe extern "C" fn block_publisher_has_batch(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn block_publisher_cancel_block(publisher: *mut c_void) -> ErrorCode {
     check_null!(publisher);

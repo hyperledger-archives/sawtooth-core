@@ -17,7 +17,7 @@
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use protobuf;
+use protobuf::Message;
 
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::ApplyError;
@@ -45,7 +45,7 @@ impl SmallbankTransactionHandler {
         SmallbankTransactionHandler {
             family_name: "smallbank".to_string(),
             family_versions: vec!["1.0".to_string()],
-            namespaces: vec![get_smallbank_prefix().to_string()],
+            namespaces: vec![get_smallbank_prefix()],
         }
     }
 }
@@ -66,7 +66,7 @@ impl TransactionHandler for SmallbankTransactionHandler {
     fn apply(
         &self,
         request: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let mut payload = unpack_payload(request.get_payload())?;
         debug!(
@@ -102,7 +102,7 @@ impl TransactionHandler for SmallbankTransactionHandler {
 }
 
 fn unpack_payload(payload: &[u8]) -> Result<SmallbankTransactionPayload, ApplyError> {
-    protobuf::parse_from_bytes(&payload).map_err(|err| {
+    Message::parse_from_bytes(payload).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal SmallbankTransaction: {:?}",
             err
@@ -116,7 +116,7 @@ fn unpack_payload(payload: &[u8]) -> Result<SmallbankTransactionPayload, ApplyEr
 
 fn apply_create_account(
     mut create_account_data: SmallbankTransactionPayload_CreateAccountTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(create_account_data.get_customer_id(), context)? {
         Some(_) => {
@@ -146,7 +146,7 @@ fn apply_create_account(
 
 fn apply_deposit_checking(
     deposit_checking_data: &SmallbankTransactionPayload_DepositCheckingTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(deposit_checking_data.get_customer_id(), context)? {
         None => {
@@ -163,7 +163,7 @@ fn apply_deposit_checking(
 
 fn apply_write_check(
     write_check_data: &SmallbankTransactionPayload_WriteCheckTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(write_check_data.get_customer_id(), context)? {
         None => {
@@ -180,7 +180,7 @@ fn apply_write_check(
 
 fn apply_transact_savings(
     transact_savings_data: &SmallbankTransactionPayload_TransactSavingsTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(transact_savings_data.get_customer_id(), context)? {
         None => {
@@ -213,7 +213,7 @@ fn apply_transact_savings(
 
 fn apply_send_payment(
     send_payment_data: &SmallbankTransactionPayload_SendPaymentTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
         warn!("Invalid transaction: during SEND_PAYMENT, both source and dest accounts must exist");
@@ -241,7 +241,7 @@ fn apply_send_payment(
 
 fn apply_amalgamate(
     amalgamate_data: &SmallbankTransactionPayload_AmalgamateTransactionData,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
         warn!("Invalid transaction: during AMALGAMATE, both source and dest accounts must exist");
@@ -260,7 +260,7 @@ fn apply_amalgamate(
 }
 
 fn unpack_account(account_data: &[u8]) -> Result<Account, ApplyError> {
-    protobuf::parse_from_bytes(&account_data).map_err(|err| {
+    Message::parse_from_bytes(account_data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal Account: {:?}",
             err
@@ -271,7 +271,7 @@ fn unpack_account(account_data: &[u8]) -> Result<Account, ApplyError> {
 
 fn load_account(
     customer_id: u32,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<Option<Account>, ApplyError> {
     let response = context
         .get_state_entry(&create_smallbank_address(&format!("{}", customer_id)))
@@ -285,7 +285,7 @@ fn load_account(
     }
 }
 
-fn save_account(account: &Account, context: &mut TransactionContext) -> Result<(), ApplyError> {
+fn save_account(account: &Account, context: &mut dyn TransactionContext) -> Result<(), ApplyError> {
     let address = create_smallbank_address(&format!("{}", account.get_customer_id()));
     let data = protobuf::Message::write_to_bytes(account).map_err(|err| {
         warn!(
@@ -310,5 +310,5 @@ fn get_smallbank_prefix() -> String {
 fn create_smallbank_address(payload: &str) -> String {
     let mut sha = Sha512::new();
     sha.input(payload.as_bytes());
-    get_smallbank_prefix() + &sha.result_str()[..64].to_string()
+    get_smallbank_prefix() + &sha.result_str()[..64]
 }

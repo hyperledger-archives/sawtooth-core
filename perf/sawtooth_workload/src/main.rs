@@ -60,7 +60,7 @@ fn main() {
 }
 
 #[inline]
-fn arg_error(msg: &str) -> Result<(), Box<Error>> {
+fn arg_error(msg: &str) -> Result<(), Box<dyn Error>> {
     Err(Box::new(CliError::ArgumentError(String::from(msg))))
 }
 
@@ -108,11 +108,12 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
-    let max_txns: usize = match args.value_of("max-batch-size").unwrap_or("100").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+fn run_batch_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    let max_txns: usize = args
+        .value_of("max-batch-size")
+        .unwrap_or("100")
+        .parse()
+        .unwrap_or(0);
 
     if max_txns == 0 {
         return arg_error("max-batch-size must be a number greater than 0");
@@ -121,14 +122,14 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let mut in_file = File::open(args.value_of("input").unwrap())?;
     let mut out_file = File::create(args.value_of("output").unwrap())?;
 
-    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
 
     let mut buf = String::new();
-    try!(key_file.read_to_string(&mut buf));
+    key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf));
-    let context = try!(signing::create_context("secp256k1"));
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+    let context = signing::create_context("secp256k1")?;
 
     if let Err(err) = generate_signed_batches(
         &mut in_file,
@@ -174,11 +175,8 @@ fn create_submit_subcommand_args<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
-    let rate: usize = match args.value_of("rate").unwrap_or("1").parse() {
-        Ok(n) => n,
-        Err(_) => 0,
-    };
+fn run_submit_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    let rate: usize = args.value_of("rate").unwrap_or("1").parse().unwrap_or(0);
 
     if rate == 0 {
         return arg_error("rate must be a number greater than 0");
@@ -193,7 +191,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Err(_) => String::new(),
     };
 
-    if target == "" {
+    if target.is_empty() {
         return arg_error("target must be a valid http uri");
     }
 
@@ -202,7 +200,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Err(_) => String::new(),
     };
 
-    if input == "" {
+    if input.is_empty() {
         return arg_error("an input file must be specified");
     }
 
@@ -231,13 +229,7 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             CliError::ArgumentError(_) => None,
         }

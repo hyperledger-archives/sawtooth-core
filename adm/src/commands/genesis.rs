@@ -32,7 +32,7 @@ use proto::transaction::TransactionHeader;
 use config;
 use err::CliError;
 
-pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     let genesis_file_path = if args.is_present("output") {
         args.value_of("output")
             .ok_or_else(|| CliError::ArgumentError("Failed to read `output` arg".into()))
@@ -43,8 +43,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     if genesis_file_path.exists() {
         return Err(CliError::EnvironmentError(format!(
-            "File already exists: {:?}",
-            genesis_file_path
+            "File already exists: {genesis_file_path:?}"
         )));
     }
 
@@ -54,15 +53,13 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     let batch_lists = input_files
         .map(|filepath| {
-            let mut file = File::open(filepath).map_err(|err| {
-                CliError::EnvironmentError(format!("Failed to open file: {}", err))
-            })?;
+            let mut file = File::open(filepath)
+                .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {err}")))?;
             let mut packed = Vec::new();
-            file.read_to_end(&mut packed).map_err(|err| {
-                CliError::EnvironmentError(format!("Failed to read file: {}", err))
-            })?;
-            let batch_list: BatchList = protobuf::parse_from_bytes(&packed).map_err(|err| {
-                CliError::ArgumentError(format!("Unable to read {}: {}", filepath, err))
+            file.read_to_end(&mut packed)
+                .map_err(|err| CliError::EnvironmentError(format!("Failed to read file: {err}")))?;
+            let batch_list: BatchList = Message::parse_from_bytes(&packed).map_err(|err| {
+                CliError::ArgumentError(format!("Unable to read {filepath}: {err}"))
             })?;
             Ok(batch_list)
         })
@@ -85,8 +82,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     let buf = genesis_data.write_to_bytes().map_err(|err| {
         CliError::ArgumentError(format!(
-            "Failed to convert BatchLists to GenesisData: {}",
-            err
+            "Failed to convert BatchLists to GenesisData: {err}"
         ))
     })?;
 
@@ -95,11 +91,11 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         .create(true)
         .mode(0o640)
         .open(genesis_file_path.as_path())
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        .map_err(|err| CliError::EnvironmentError(format!("{err}")))?;
 
     genesis_data_file
         .write(&buf)
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        .map_err(|err| CliError::EnvironmentError(format!("{err}")))?;
 
     Ok(())
 }
@@ -109,7 +105,7 @@ fn validate_depedencies(batches: &[Batch]) -> Result<(), CliError> {
     for batch in batches.iter() {
         for txn in batch.transactions.iter() {
             let header: TransactionHeader =
-                protobuf::parse_from_bytes(&txn.header).map_err(|err| {
+                Message::parse_from_bytes(&txn.header).map_err(|err| {
                     CliError::ArgumentError(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
@@ -138,14 +134,14 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
     for batch in batches.iter() {
         for txn in batch.transactions.iter() {
             let txn_header: TransactionHeader =
-                protobuf::parse_from_bytes(&txn.header).map_err(|err| {
+                Message::parse_from_bytes(&txn.header).map_err(|err| {
                     CliError::ArgumentError(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
                     ))
                 })?;
             if txn_header.family_name == "sawtooth_settings" {
-                let settings_payload: SettingsPayload = protobuf::parse_from_bytes(&txn.payload)
+                let settings_payload: SettingsPayload = Message::parse_from_bytes(&txn.payload)
                     .map_err(|err| {
                         CliError::ArgumentError(format!(
                             "Invalid payload for settings txn {}: {}",
@@ -154,10 +150,9 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
                     })?;
                 if let SettingsPayload_Action::PROPOSE = settings_payload.action {
                     let proposal: SettingProposal =
-                        protobuf::parse_from_bytes(&settings_payload.data).map_err(|err| {
+                        Message::parse_from_bytes(&settings_payload.data).map_err(|err| {
                             CliError::ArgumentError(format!(
-                                "Invalid proposal for settings payload: {}",
-                                err
+                                "Invalid proposal for settings payload: {err}"
                             ))
                         })?;
                     required_settings.retain(|setting| setting != &proposal.setting);
@@ -169,8 +164,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
     if !required_settings.is_empty() {
         Err(CliError::ArgumentError(format!(
             "The following setting(s) are required at genesis, but were not included in the \
-             genesis batches: {:?}",
-            required_settings
+             genesis batches: {required_settings:?}"
         )))
     } else {
         Ok(())
@@ -196,7 +190,7 @@ mod tests {
             .iter()
             .enumerate()
             .map(|(idx, setting): (_, &String)| {
-                let txn_id = format!("setting{}", idx);
+                let txn_id = format!("setting{idx}");
 
                 let mut proposal = SettingProposal::new();
                 proposal.set_setting(setting.clone());

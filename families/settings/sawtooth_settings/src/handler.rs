@@ -16,28 +16,28 @@
  */
 
 cfg_if! {
-     if #[cfg(target_arch = "wasm32")] {
-         use sabre_sdk::ApplyError;
-         use sabre_sdk::TransactionContext;
-         use sabre_sdk::TransactionHandler;
-         use sabre_sdk::TpProcessRequest;
-         use sabre_sdk::{WasmPtr, execute_entrypoint};
-         use protos::setting::{ Setting,
-                        Setting_Entry};
-     } else {
-         use sawtooth_sdk::messages::processor::TpProcessRequest;
-         use sawtooth_sdk::processor::handler::ApplyError;
-         use sawtooth_sdk::processor::handler::TransactionContext;
-         use sawtooth_sdk::processor::handler::TransactionHandler;
-         use sawtooth_sdk::messages::setting::{ Setting,
-                                                 Setting_Entry};
-    }
+    if #[cfg(target_arch = "wasm32")] {
+        use sabre_sdk::ApplyError;
+        use sabre_sdk::TransactionContext;
+        use sabre_sdk::TransactionHandler;
+        use sabre_sdk::TpProcessRequest;
+        use sabre_sdk::{WasmPtr, execute_entrypoint};
+        use protos::setting::{ Setting,
+                       Setting_Entry};
+    } else {
+        use sawtooth_sdk::messages::processor::TpProcessRequest;
+        use sawtooth_sdk::processor::handler::ApplyError;
+        use sawtooth_sdk::processor::handler::TransactionContext;
+        use sawtooth_sdk::processor::handler::TransactionHandler;
+        use sawtooth_sdk::messages::setting::{ Setting,
+                                                Setting_Entry};
+   }
 }
 
 extern crate base64;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::Message;
 use protos::settings::{
     SettingCandidate, SettingCandidate_VoteRecord, SettingCandidates, SettingProposal, SettingVote,
     SettingVote_Vote, SettingsPayload, SettingsPayload_Action,
@@ -54,6 +54,10 @@ fn apply(request: &TpProcessRequest, context: &mut TransactionContext) -> Result
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub unsafe fn entrypoint(payload: WasmPtr, signer: WasmPtr, signature: WasmPtr) -> i32 {
@@ -96,7 +100,7 @@ impl TransactionHandler for SettingsTransactionHandler {
     fn apply(
         &self,
         transaction: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let public_key = transaction.get_header().get_signer_public_key();
         let auth_keys = get_auth_keys(context)?;
@@ -110,18 +114,12 @@ impl TransactionHandler for SettingsTransactionHandler {
         let settings_payload: SettingsPayload = unpack_data(transaction.get_payload())?;
 
         match settings_payload.get_action() {
-            SettingsPayload_Action::PROPOSE => apply_proposal(
-                &auth_keys,
-                &public_key,
-                settings_payload.get_data(),
-                context,
-            ),
-            SettingsPayload_Action::VOTE => apply_vote(
-                &auth_keys,
-                &public_key,
-                settings_payload.get_data(),
-                context,
-            ),
+            SettingsPayload_Action::PROPOSE => {
+                apply_proposal(&auth_keys, public_key, settings_payload.get_data(), context)
+            }
+            SettingsPayload_Action::VOTE => {
+                apply_vote(&auth_keys, public_key, settings_payload.get_data(), context)
+            }
             SettingsPayload_Action::ACTION_UNSET => Err(ApplyError::InvalidTransaction(
                 String::from("'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode"),
             )),
@@ -133,7 +131,7 @@ fn apply_proposal(
     auth_keys: &[String],
     public_key: &str,
     setting_proposal_data: &[u8],
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let setting_proposal: SettingProposal = unpack_data(setting_proposal_data)?;
 
@@ -182,7 +180,7 @@ fn apply_vote(
     auth_keys: &[String],
     public_key: &str,
     setting_vote_data: &[u8],
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let setting_vote: SettingVote = unpack_data(setting_vote_data)?;
     let proposal_id = setting_vote.get_proposal_id();
@@ -251,7 +249,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(data).map_err(|err| {
         warn!(
             "Invalid error: Failed to unmarshal SettingsTransaction: {:?}",
             err
@@ -279,7 +277,7 @@ fn get_candidate_index(
 }
 
 fn save_settings_candidates(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     setting_candidates: &SettingCandidates,
 ) -> Result<(), ApplyError> {
     let data = protobuf::Message::write_to_bytes(setting_candidates).map_err(|err| {
@@ -293,7 +291,7 @@ fn save_settings_candidates(
 }
 
 fn set_setting_value(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
     value: &str,
 ) -> Result<(), ApplyError> {
@@ -322,7 +320,7 @@ fn set_setting_value(
 }
 
 fn set_state(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
     value: &str,
     address: &str,
@@ -365,7 +363,7 @@ fn get_entry_index(setting: &Setting, key: &str) -> Option<usize> {
 }
 
 fn get_setting_candidates(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<SettingCandidates, ApplyError> {
     let value = get_setting_value(context, "sawtooth.settings.vote.proposals")?;
     match value {
@@ -414,7 +412,7 @@ fn validate_setting(auth_keys: &[String], setting: &str, value: &str) -> Result<
     Ok(())
 }
 
-fn get_auth_keys(context: &mut TransactionContext) -> Result<Vec<String>, ApplyError> {
+fn get_auth_keys(context: &mut dyn TransactionContext) -> Result<Vec<String>, ApplyError> {
     let auth_keys = get_setting_value(context, "sawtooth.settings.vote.authorized_keys")?;
     match auth_keys {
         None => Ok(vec![]),
@@ -435,7 +433,7 @@ fn proposal_to_hash(value: &[u8]) -> String {
     sha.result_str()
 }
 
-fn get_approval_threshold(context: &mut TransactionContext) -> Result<i32, ApplyError> {
+fn get_approval_threshold(context: &mut dyn TransactionContext) -> Result<i32, ApplyError> {
     let settings_value = get_setting_value(context, "sawtooth.settings.vote.approval_threshold")?;
     match settings_value {
         None => Ok(1), //1 is the default_value for approval_threshold
@@ -451,7 +449,7 @@ fn get_approval_threshold(context: &mut TransactionContext) -> Result<i32, Apply
 }
 
 fn get_setting_value(
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
     key: &str,
 ) -> Result<Option<String>, ApplyError> {
     let address = make_settings_key(key);
@@ -473,7 +471,7 @@ fn get_setting_value(
 
 fn get_setting_data(
     address: &str,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
     context.get_state_entry(address).map_err(|err| {
         warn!("Internal Error: Failed to load state: {:?}", err);

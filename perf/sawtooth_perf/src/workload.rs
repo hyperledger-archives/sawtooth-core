@@ -47,6 +47,7 @@ use batch_submit::BatchReadingError;
 
 use batch_map::BatchMap;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum WorkloadError {
     HttpError(HyperError),
@@ -83,31 +84,15 @@ impl fmt::Display for WorkloadError {
 }
 
 impl error::Error for WorkloadError {
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            WorkloadError::HttpError(ref err) => err.cause(),
-            WorkloadError::UriError(ref err) => err.cause(),
-            WorkloadError::IoError(ref err) => err.cause(),
-            WorkloadError::ProtobufError(ref err) => err.cause(),
-            WorkloadError::BatchReadingError(ref err) => err.cause(),
+            WorkloadError::HttpError(ref err) => Some(err),
+            WorkloadError::UriError(ref err) => Some(err),
+            WorkloadError::IoError(ref err) => Some(err),
+            WorkloadError::ProtobufError(ref err) => Some(err),
+            WorkloadError::BatchReadingError(ref err) => Some(err),
             WorkloadError::NoBatchError => Some(&WorkloadError::NoBatchError),
             WorkloadError::UnknownRestApiError => Some(&WorkloadError::UnknownRestApiError),
-        }
-    }
-
-    fn description(&self) -> &str {
-        match *self {
-            WorkloadError::HttpError(ref err) => err.description(),
-            WorkloadError::UriError(ref err) => err.description(),
-            WorkloadError::IoError(ref err) => err.description(),
-            WorkloadError::ProtobufError(ref err) => err.description(),
-            WorkloadError::BatchReadingError(ref err) => err.description(),
-            WorkloadError::NoBatchError => {
-                "There was an error resulting in lacking a batch to submit."
-            }
-            WorkloadError::UnknownRestApiError => {
-                "The rest api produced an error response that we were not expecting."
-            }
         }
     }
 }
@@ -184,7 +169,7 @@ impl fmt::Display for HTTPRequestCounter {
         write!(
             f,
             "{0}, Sent: {1}, Queue Full {2}",
-            time.format("%h-%d-%Y %H:%M:%S%.3f").to_string(),
+            time.format("%h-%d-%Y %H:%M:%S%.3f"),
             self.sent_count.load(Ordering::Relaxed),
             self.queue_full_count.load(Ordering::Relaxed)
         )
@@ -207,7 +192,7 @@ pub fn log(
 
 /// Call next on the BatchList Iterator and return the batchlist if no error.
 pub fn get_next_batchlist(
-    batch_list_iter: &mut Iterator<Item = BatchListResult>,
+    batch_list_iter: &mut dyn Iterator<Item = BatchListResult>,
     batch_map: &Rc<RefCell<BatchMap>>,
     batches: &Rc<RefCell<Vec<BatchList>>>,
 ) -> Result<BatchList, WorkloadError> {
@@ -236,10 +221,10 @@ pub fn form_request_from_batchlist(
 
     let batchlist_unwrapped = batch_list?;
 
-    let batch_id = match batchlist_unwrapped.batches.last() {
-        Some(batch) => Some(batch.header_signature.clone()),
-        None => None,
-    };
+    let batch_id = batchlist_unwrapped
+        .batches
+        .last()
+        .map(|batch| batch.header_signature.clone());
     let bytes = batchlist_unwrapped.write_to_bytes()?;
     let mut req = Request::new(Method::Post, Uri::from_str(&batch_url)?);
     let content_len = bytes.len() as u64;
@@ -249,7 +234,7 @@ pub fn form_request_from_batchlist(
 
     if let Some(ref basic_auth) = *basic_auth {
         req.headers_mut()
-            .set(Authorization(Basic::from_str(&basic_auth)?));
+            .set(Authorization(Basic::from_str(basic_auth)?));
     }
 
     Ok((req, batch_id))

@@ -53,7 +53,7 @@ pub fn validate_no_duplicate_batches(
     if let Some(batch_id) = block_manager
         .contains_any_batches(branch_head_id, batch_ids)
         .map_err(|err| {
-            ChainCommitStateError::Error(format!("During validate_no_duplicate_batches: {:?}", err))
+            ChainCommitStateError::Error(format!("During validate_no_duplicate_batches: {err:?}"))
         })?
     {
         return Err(ChainCommitStateError::DuplicateBatch(batch_id));
@@ -74,8 +74,7 @@ pub fn validate_no_duplicate_transactions(
         .contains_any_transactions(branch_head_id, transaction_ids)
         .map_err(|err| {
             ChainCommitStateError::Error(format!(
-                "During validate_no_duplicate_transactions: {:?}",
-                err
+                "During validate_no_duplicate_transactions: {err:?}"
             ))
         })?
     {
@@ -97,7 +96,7 @@ pub fn validate_transaction_dependencies(
 
         for dep in &txn.dependencies {
             if !dependencies.contains(&dep) {
-                dependencies.push(&dep);
+                dependencies.push(dep);
             }
         }
     }
@@ -111,8 +110,7 @@ pub fn validate_transaction_dependencies(
             .contains_any_transactions(branch_head_id, &[dep])
             .map_err(|err| {
                 ChainCommitStateError::Error(format!(
-                    "During validate transaction dependencies: {:?}",
-                    err
+                    "During validate transaction dependencies: {err:?}"
                 ))
             })?
             .is_some();
@@ -612,11 +610,11 @@ mod test {
         let batches = vec!["b0", "b1"]
             .into_iter()
             .map(|batch_id: &str| {
-                let batch_header_signature = format!("{}{}", block_id, batch_id);
+                let batch_header_signature = format!("{block_id}{batch_id}");
                 let txns = vec!["t0", "t1", "t2"]
                     .into_iter()
                     .map(|t_id: &str| {
-                        let txn_id = format!("{}{}", batch_header_signature, t_id);
+                        let txn_id = format!("{batch_header_signature}{t_id}");
                         create_transaction(txn_id, vec![])
                     })
                     .collect();
@@ -624,9 +622,7 @@ mod test {
             })
             .collect();
 
-        let block = create_block(block_id, previous_block_id, block_num, batches);
-
-        block
+        create_block(block_id, previous_block_id, block_num, batches)
     }
 
     fn create_block(
@@ -691,7 +687,7 @@ mod test {
         }
         let block_store = Box::new(InMemoryBlockStore::new());
         block_manager
-            .add_store("commit", block_store.clone())
+            .add_store("commit", block_store)
             .expect("The block manager failed to add a blockstore");
 
         block_manager

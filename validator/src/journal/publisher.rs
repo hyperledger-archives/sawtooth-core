@@ -88,8 +88,8 @@ pub trait BatchObserver: Send + Sync {
 }
 
 pub struct BlockPublisherState {
-    pub transaction_executor: Box<ExecutionPlatform>,
-    pub batch_observers: Vec<Box<BatchObserver>>,
+    pub transaction_executor: Box<dyn ExecutionPlatform>,
+    pub batch_observers: Vec<Box<dyn BatchObserver>>,
     pub chain_head: Option<Block>,
     pub candidate_block: Option<CandidateBlock>,
     pub pending_batches: PendingBatchesPool,
@@ -98,8 +98,8 @@ pub struct BlockPublisherState {
 
 impl BlockPublisherState {
     pub fn new(
-        transaction_executor: Box<ExecutionPlatform>,
-        batch_observers: Vec<Box<BatchObserver>>,
+        transaction_executor: Box<dyn ExecutionPlatform>,
+        batch_observers: Vec<Box<dyn BatchObserver>>,
         chain_head: Option<Block>,
         candidate_block: Option<CandidateBlock>,
         pending_batches: PendingBatchesPool,
@@ -401,13 +401,7 @@ impl SyncBlockPublisher {
         let result = match state.candidate_block {
             None => Some(Err(FinalizeBlockError::BlockNotInitialized)),
             Some(ref mut candidate_block) => match candidate_block.summarize(force) {
-                Ok(summary) => {
-                    if let Some(s) = summary {
-                        Some(Ok(s))
-                    } else {
-                        None
-                    }
-                }
+                Ok(summary) => summary.map(Ok),
                 Err(CandidateBlockError::BlockEmpty) => Some(Err(FinalizeBlockError::BlockEmpty)),
             },
         };
@@ -528,11 +522,11 @@ pub struct BlockPublisher {
 }
 
 impl BlockPublisher {
-    #![allow(too_many_arguments)]
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         commit_store: CommitStore,
         block_manager: BlockManager,
-        transaction_executor: Box<ExecutionPlatform>,
+        transaction_executor: Box<dyn ExecutionPlatform>,
         state_view_factory: StateViewFactory,
         block_sender: PyObject,
         batch_publisher: PyObject,
@@ -541,7 +535,7 @@ impl BlockPublisher {
         data_dir: PyObject,
         config_dir: PyObject,
         permission_verifier: PyObject,
-        batch_observers: Vec<Box<BatchObserver>>,
+        batch_observers: Vec<Box<dyn BatchObserver>>,
         batch_injector_factory: PyObject,
     ) -> Self {
         let state = Arc::new(RwLock::new(BlockPublisherState::new(
@@ -732,14 +726,14 @@ impl IncomingBatchSender {
 
 #[derive(Debug)]
 pub enum BatchQueueError {
-    SenderError(SendError<Batch>),
+    SenderError(Box<SendError<Batch>>),
     Timeout,
     MutexPoisonError(String),
 }
 
 impl From<SendError<Batch>> for BatchQueueError {
     fn from(e: SendError<Batch>) -> Self {
-        BatchQueueError::SenderError(e)
+        BatchQueueError::SenderError(Box::from(e))
     }
 }
 
@@ -926,7 +920,7 @@ impl QueueLimit {
             // b. Drained the queue, but the queue was not bigger than the
             //    current running average
 
-            let remainder = queue_length.checked_sub(consumed).unwrap_or(0);
+            let remainder = queue_length.saturating_sub(consumed);
 
             if remainder > self.avg.value() || consumed > self.avg.value() {
                 self.avg.update(consumed);

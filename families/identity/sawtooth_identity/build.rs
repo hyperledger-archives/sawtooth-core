@@ -18,8 +18,6 @@
 extern crate glob;
 extern crate protoc_rust;
 
-use protoc_rust::Customize;
-
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -37,15 +35,13 @@ fn main() {
         "../../../protos/identity.proto",
     ];
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &dest_path.to_str().unwrap(),
-        input: &proto_src_files,
-        includes: &["../../../protos", "../protos"],
-        customize: Customize {
-            ..Default::default()
-        },
-    })
-    .expect("Error generating rust files from identity protos");
+    protoc_rust::Codegen::new()
+        .out_dir(dest_path.to_str().expect("Invalid proto destination path"))
+        .inputs(&proto_src_files)
+        .include("../../../protos")
+        .include("../protos")
+        .run()
+        .expect("unable to run protoc");
 
     // Create mod.rs accordingly
     let mod_file_content = proto_src_files

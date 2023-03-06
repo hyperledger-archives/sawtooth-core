@@ -20,7 +20,7 @@ use std::os::raw::{c_char, c_void};
 use std::slice;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyObject, Python};
-use protobuf::{self, Message, ProtobufEnum};
+use protobuf::{Message, ProtobufEnum};
 use py_ffi;
 
 use block::Block;
@@ -51,7 +51,7 @@ impl NotifierService for PyNotifierService {
     ) -> Result<(), NotifierServiceError> {
         let payload = message
             .write_to_bytes()
-            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+            .map_err(|err| NotifierServiceError(format!("{err:?}")))?;
 
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
@@ -73,7 +73,7 @@ impl NotifierService for PyNotifierService {
     ) -> Result<(), NotifierServiceError> {
         let payload = message
             .write_to_bytes()
-            .map_err(|err| NotifierServiceError(format!("{:?}", err)))?;
+            .map_err(|err| NotifierServiceError(format!("{err:?}")))?;
 
         let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
@@ -179,6 +179,10 @@ pub enum ErrorCode {
     InvalidArgument = 0x02,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_new(
     py_notifier_service_ptr: *mut py_ffi::PyObject,
@@ -196,13 +200,21 @@ pub unsafe extern "C" fn consensus_notifier_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_drop(notifier: *mut c_void) -> ErrorCode {
     check_null!(notifier);
-    Box::from_raw(notifier as *mut BackgroundConsensusNotifier);
+    let _ = Box::from_raw(notifier as *mut BackgroundConsensusNotifier);
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
     notifier: *mut c_void,
@@ -219,6 +231,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_connected(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
     notifier: *mut c_void,
@@ -235,6 +251,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_disconnected(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     notifier: *mut c_void,
@@ -246,7 +266,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     check_null!(notifier, message_bytes, sender_id_bytes);
 
     let message_slice = slice::from_raw_parts(message_bytes, message_len);
-    let message: ConsensusPeerMessage = match protobuf::parse_from_bytes(&message_slice) {
+    let message: ConsensusPeerMessage = match Message::parse_from_bytes(message_slice) {
         Ok(message) => message,
         Err(err) => {
             error!("Failed to parse ConsensusPeerMessage: {:?}", err);
@@ -255,11 +275,15 @@ pub unsafe extern "C" fn consensus_notifier_notify_peer_message(
     };
 
     let sender_id = slice::from_raw_parts(sender_id_bytes, sender_id_len);
-    (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_message(message, &sender_id);
+    (*(notifier as *mut BackgroundConsensusNotifier)).notify_peer_message(message, sender_id);
 
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_new(
     notifier: *mut c_void,
@@ -270,7 +294,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);
@@ -285,6 +309,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_new(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
     notifier: *mut c_void,
@@ -301,6 +329,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_valid(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
     notifier: *mut c_void,
@@ -317,6 +349,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_block_invalid(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
     notifier: *mut c_void,
@@ -327,7 +363,7 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
 
     let block: Block = {
         let data = slice::from_raw_parts(block_bytes, block_bytes_len);
-        let proto_block: proto::block::Block = match protobuf::parse_from_bytes(&data) {
+        let proto_block: proto::block::Block = match Message::parse_from_bytes(data) {
             Ok(block) => block,
             Err(err) => {
                 error!("Failed to parse block bytes: {:?}", err);
@@ -341,6 +377,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_activated(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn consensus_notifier_notify_engine_deactivated(
     notifier: *mut c_void,
@@ -358,6 +398,10 @@ pub unsafe extern "C" fn consensus_notifier_notify_engine_deactivated(
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 unsafe fn deref_cstr<'a>(cstr: *const c_char) -> Result<&'a str, ErrorCode> {
     CStr::from_ptr(cstr)
         .to_str()

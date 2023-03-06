@@ -12,15 +12,15 @@ cfg_if! {
 }
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::Message;
 use std::iter::repeat;
 
 pub struct IdentityState<'a> {
-    context: &'a mut TransactionContext,
+    context: &'a mut dyn TransactionContext,
 }
 
 impl<'a> IdentityState<'a> {
-    pub fn new(context: &'a mut TransactionContext) -> IdentityState {
+    pub fn new(context: &'a mut dyn TransactionContext) -> IdentityState {
         IdentityState { context }
     }
 
@@ -70,7 +70,7 @@ impl<'a> IdentityState<'a> {
             .find(|(_i, policy)| policy.get_name() == policy_name)
         {
             // If policy with same name exists, replace old policy with new policy
-            let mut policy_slice = policy_list.policies.as_mut_slice();
+            let policy_slice = policy_list.policies.as_mut_slice();
             policy_slice[i] = new_policy;
         } else {
             // If policy with same name does not exist, insert new policy
@@ -102,7 +102,7 @@ impl<'a> IdentityState<'a> {
             .find(|(_i, role)| role.get_name() == role_name)
         {
             // If role with same name exists, replace old role with new role
-            let mut role_slice = role_list.roles.as_mut_slice();
+            let role_slice = role_list.roles.as_mut_slice();
             role_slice[i] = new_role;
         } else {
             // If role with same name does not exist, insert new role
@@ -178,7 +178,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err

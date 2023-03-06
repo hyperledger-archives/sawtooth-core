@@ -221,7 +221,7 @@ pub fn parse_args<'a>() -> ArgMatches<'a> {
     app.get_matches()
 }
 
-#[allow(needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn is_positive_integer(arg_value: String) -> Result<(), String> {
     match arg_value.parse::<u32>() {
         Ok(i) if i > 0 => Ok(()),
@@ -229,7 +229,7 @@ fn is_positive_integer(arg_value: String) -> Result<(), String> {
     }
 }
 
-#[allow(needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn is_non_zero_integer(arg_value: String) -> Result<(), String> {
     match arg_value.parse::<u32>() {
         Ok(_) => Ok(()),
@@ -237,7 +237,7 @@ fn is_non_zero_integer(arg_value: String) -> Result<(), String> {
     }
 }
 
-fn parse_roles<'a>(matches: &'a ArgMatches, py: Python) -> Option<PyDict> {
+fn parse_roles(matches: &ArgMatches, py: Python) -> Option<PyDict> {
     match matches.value_of("network_auth") {
         Some(network_auth) => {
             let auth_dict = PyDict::new(py);

@@ -16,7 +16,7 @@
  */
 use std;
 
-use protobuf;
+use protobuf::Message;
 
 use proto;
 
@@ -28,21 +28,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::ParseError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&std::error::Error> {
-        match *self {
-            Error::ParseError(_) => None,
+            Error::ParseError(ref msg) => write!(f, "ParseError: {msg}"),
         }
     }
 }
@@ -60,7 +46,7 @@ pub struct Block {
 
 impl Block {
     pub fn try_from(block: proto::block::Block) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&block.header)
+        Message::parse_from_bytes(&block.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid BlockHeader {}: {}",
@@ -94,7 +80,7 @@ pub struct Batch {
 
 impl Batch {
     pub fn try_from(batch: proto::batch::Batch) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&batch.header)
+        Message::parse_from_bytes(&batch.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid BatchHeader {}: {}",
@@ -134,7 +120,7 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn try_from(transaction: &proto::transaction::Transaction) -> Result<Self, Error> {
-        protobuf::parse_from_bytes(&transaction.header)
+        Message::parse_from_bytes(&transaction.header)
             .map_err(|err| {
                 Error::ParseError(format!(
                     "Invalid TransactionHeader {}: {}",

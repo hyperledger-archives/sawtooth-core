@@ -17,6 +17,7 @@
 
 use std;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum CliError {
     ArgumentError(String),
@@ -27,27 +28,9 @@ pub enum CliError {
 impl std::fmt::Display for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            CliError::ArgumentError(ref msg) => write!(f, "ArgumentError: {}", msg),
-            CliError::EnvironmentError(ref msg) => write!(f, "EnvironmentError: {}", msg),
-            CliError::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for CliError {
-    fn description(&self) -> &str {
-        match *self {
-            CliError::ArgumentError(ref msg) => msg,
-            CliError::EnvironmentError(ref msg) => msg,
-            CliError::ParseError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&std::error::Error> {
-        match *self {
-            CliError::ArgumentError(_) => None,
-            CliError::EnvironmentError(_) => None,
-            CliError::ParseError(_) => None,
+            CliError::ArgumentError(ref msg) => write!(f, "ArgumentError: {msg}"),
+            CliError::EnvironmentError(ref msg) => write!(f, "EnvironmentError: {msg}"),
+            CliError::ParseError(ref msg) => write!(f, "ParseError: {msg}"),
         }
     }
 }

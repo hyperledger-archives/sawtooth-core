@@ -33,7 +33,7 @@ cfg_if! {
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use protobuf;
+use protobuf::Message;
 use protos::identities::{IdentityPayload, IdentityPayload_IdentityType};
 use state::IdentityState;
 use std::iter::repeat;
@@ -48,6 +48,10 @@ fn apply(request: &TpProcessRequest, context: &mut TransactionContext) -> Result
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub unsafe fn entrypoint(payload: WasmPtr, signer: WasmPtr, signature: WasmPtr) -> i32 {
@@ -138,7 +142,7 @@ impl TransactionHandler for IdentityTransactionHandler {
     fn apply(
         &self,
         transaction: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         check_allowed_transactor(transaction, context)?;
 
@@ -147,8 +151,8 @@ impl TransactionHandler for IdentityTransactionHandler {
         let data = payload.get_data();
 
         match payload.get_field_type() {
-            IdentityPayload_IdentityType::ROLE => set_role(&data, &mut state),
-            IdentityPayload_IdentityType::POLICY => set_policy(&data, &mut state),
+            IdentityPayload_IdentityType::ROLE => set_role(data, &mut state),
+            IdentityPayload_IdentityType::POLICY => set_policy(data, &mut state),
             IdentityPayload_IdentityType::IDENTITY_TYPE_UNSET => {
                 Err(ApplyError::InvalidTransaction(String::from(
                     "The IdentityType must be either a ROLE or a POLICY",
@@ -162,7 +166,7 @@ fn unpack_data<T>(data: &[u8]) -> Result<T, ApplyError>
 where
     T: protobuf::Message,
 {
-    protobuf::parse_from_bytes(&data).map_err(|err| {
+    Message::parse_from_bytes(data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal IdentityTransaction: {:?}",
             err
@@ -241,7 +245,7 @@ fn set_role(data: &[u8], state: &mut IdentityState) -> Result<(), ApplyError> {
 
 fn check_allowed_transactor(
     transaction: &TpProcessRequest,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<(), ApplyError> {
     let header = transaction.get_header();
 
@@ -272,7 +276,7 @@ fn check_allowed_transactor(
 
 fn get_state_data(
     address: &str,
-    context: &mut TransactionContext,
+    context: &mut dyn TransactionContext,
 ) -> Result<Option<Vec<u8>>, ApplyError> {
     context.get_state_entry(address).map_err(|err| {
         warn!("Invalid transaction: Failed to load state: {:?}", err);

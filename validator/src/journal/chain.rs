@@ -111,7 +111,7 @@ impl From<ForkResolutionError> for ChainControllerError {
 
 impl From<BlockManagerError> for ChainControllerError {
     fn from(err: BlockManagerError) -> Self {
-        ChainControllerError::ChainUpdateError(format!("{:?}", err))
+        ChainControllerError::ChainUpdateError(format!("{err:?}"))
     }
 }
 
@@ -132,6 +132,7 @@ pub trait ChainReader: Send + Sync {
 }
 
 /// Holds the results of Block Validation.
+#[allow(dead_code)]
 struct ForkResolutionResult<'a> {
     pub block: &'a Block,
     pub chain_head: Option<&'a Block>,
@@ -152,10 +153,10 @@ struct ForkResolutionError(String);
 struct ChainControllerState {
     block_manager: BlockManager,
     block_references: HashMap<String, BlockRef>,
-    chain_reader: Box<ChainReader>,
+    chain_reader: Box<dyn ChainReader>,
     chain_head: Option<BlockRef>,
     chain_id_manager: ChainIdManager,
-    observers: Vec<Box<ChainObserver>>,
+    observers: Vec<Box<dyn ChainObserver>>,
     state_pruning_manager: StatePruningManager,
     fork_cache: ForkCache,
 }
@@ -248,8 +249,8 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone> {
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
 
-    consensus_notifier: Arc<ConsensusNotifier>,
-    consensus_registry: Arc<ConsensusRegistry>,
+    consensus_notifier: Arc<dyn ConsensusNotifier>,
+    consensus_registry: Arc<dyn ConsensusRegistry>,
     state_view_factory: StateViewFactory,
     block_validator: BlockValidator<TEP>,
     block_validation_results: BlockValidationResultStore,
@@ -271,12 +272,12 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
         chain_reader: Box<dyn ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
-        consensus_notifier: Box<ConsensusNotifier>,
-        consensus_registry: Box<ConsensusRegistry>,
+        consensus_notifier: Box<dyn ConsensusNotifier>,
+        consensus_registry: Box<dyn ConsensusRegistry>,
         state_view_factory: StateViewFactory,
         data_dir: String,
         state_pruning_block_depth: u32,
-        observers: Vec<Box<ChainObserver>>,
+        observers: Vec<Box<dyn ChainObserver>>,
         state_pruning_manager: StatePruningManager,
         fork_cache_keep_time: Duration,
     ) -> Self {
@@ -366,7 +367,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                     block.header_signature
                 );
             } else {
-                self.block_validator.validate_block(&block)?;
+                self.block_validator.validate_block(block)?;
 
                 if chain_id.is_none() {
                     state
@@ -394,7 +395,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                             .map(TransactionReceipt::from)
                             .collect();
                         for observer in &mut state.observers {
-                            observer.chain_update(&block, receipts.as_slice());
+                            observer.chain_update(block, receipts.as_slice());
                         }
                     }
                     None => {
@@ -423,7 +424,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                 .expect("No lock holder should have poisoned the lock");
 
             if state.chain_head.is_none() {
-                if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+                if let Some(Some(block)) = state.block_manager.get(&[block_id]).next() {
                     if let Err(err) = self.set_genesis(&mut state, &self.chain_head_lock, &block) {
                         warn!(
                             "Unable to set chain head; genesis block {} is not valid: {:?}",
@@ -443,10 +444,10 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                 .write()
                 .expect("No lock holder should have poisoned the lock");
 
-            if let Some(Some(block)) = state.block_manager.get(&[&block_id]).nth(0) {
+            if let Some(Some(block)) = state.block_manager.get(&[block_id]).next() {
                 // Create Ref-C: Hold this reference until consensus renders a {commit, ignore, or
                 // fail} opinion on the block.
-                match state.block_manager.ref_block(&block_id) {
+                match state.block_manager.ref_block(block_id) {
                     Ok(block_ref) => {
                         state
                             .block_references
@@ -485,7 +486,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             // point the block may be dropped if no other ext. ref's exist.
             if let Some(previous_block_id) = state
                 .fork_cache
-                .insert(&block_id, Some(&block.previous_block_id))
+                .insert(block_id, Some(&block.previous_block_id))
             {
                 // Drop Ref-B: This fork was extended and so this block has an int. ref. count of
                 // at least one, so we can drop the ext. ref. placed on the block to keep the fork
@@ -542,7 +543,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             "Attempted to submit block for validation before starting the chain controller",
         );
         self.block_validator
-            .submit_blocks_for_verification(&[block.clone()], &sender);
+            .submit_blocks_for_verification(&[block.clone()], sender);
     }
 
     pub fn ignore_block(&self, block: &Block) {
@@ -598,9 +599,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             }
         };
 
-        if block_ref.is_none() {
-            return None;
-        }
+        block_ref.as_ref()?;
 
         let mut forks: Vec<Block> = state
             .fork_cache
@@ -692,7 +691,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             ),
         }
 
-        match self.notify_block_validation_results_received(&block) {
+        match self.notify_block_validation_results_received(block) {
             Ok(_) => (),
             Err(err) => warn!("{:?}", err),
         }
@@ -825,7 +824,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                                 .map(TransactionReceipt::from)
                                 .collect();
                             for observer in &mut state.observers {
-                                observer.chain_update(&block, receipts.as_slice());
+                                observer.chain_update(block, receipts.as_slice());
                             }
                         }
                         None => {
@@ -908,7 +907,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             .as_ref()
             .expect("Unable to ref validation_result_sender");
 
-        self.block_validator.process_pending(block, &sender);
+        self.block_validator.process_pending(block, sender);
         Ok(())
     }
 
@@ -958,7 +957,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
             gauge.set_value(&chain_head.header_signature[0..8]);
 
             let mut block_num_guage = COLLECTOR.gauge("ChainController.block_num", None, None);
-            block_num_guage.set_value(&chain_head.block_num);
+            block_num_guage.set_value(chain_head.block_num);
             let mut guard = self.chain_head_lock.acquire();
 
             guard.notify_on_chain_updated(chain_head, vec![], vec![]);
@@ -999,7 +998,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static> ChainController<TEP> {
                 .unwrap();
 
             self.start_validation_result_thread(exit_flag.clone(), validation_result_receiver);
-            self.start_commit_queue_thread(exit_flag.clone(), commit_queue_receiver);
+            self.start_commit_queue_thread(exit_flag, commit_queue_receiver);
         }
     }
 
@@ -1102,9 +1101,7 @@ impl<'a> From<&'a TxnExecutionResult> for TransactionReceipt {
     fn from(result: &'a TxnExecutionResult) -> Self {
         let mut receipt = TransactionReceipt::new();
 
-        receipt.set_data(protobuf::RepeatedField::from_vec(
-            result.data.iter().map(|data| data.clone()).collect(),
-        ));
+        receipt.set_data(protobuf::RepeatedField::from_vec(result.data.to_vec()));
         receipt.set_state_changes(protobuf::RepeatedField::from_vec(
             result.state_changes.clone(),
         ));

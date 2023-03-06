@@ -69,7 +69,7 @@ macro_rules! yaml_map(
 ///
 /// A random seed may be provided to create repeatable, random output.
 pub fn generate_smallbank_playlist(
-    output: &mut Write,
+    output: &mut dyn Write,
     num_accounts: usize,
     num_transactions: usize,
     seed: Option<i32>,
@@ -82,9 +82,9 @@ pub fn generate_smallbank_playlist(
         .collect();
 
     let final_yaml = Yaml::Array(txn_array);
-    try!(emitter
+    emitter
         .dump(&final_yaml)
-        .map_err(PlaylistError::YamlOutputError));
+        .map_err(PlaylistError::YamlOutputError)?;
 
     Ok(())
 }
@@ -95,18 +95,18 @@ pub fn generate_smallbank_playlist(
 /// the `generate_smallbank_playlist` function.  All transactions will be
 /// signed with the given `PrivateKey` instance.
 pub fn process_smallbank_playlist(
-    output: &mut Write,
-    playlist_input: &mut Read,
-    signing_context: &signing::Context,
-    signing_key: &signing::PrivateKey,
+    output: &mut dyn Write,
+    playlist_input: &mut dyn Read,
+    signing_context: &dyn signing::Context,
+    signing_key: &dyn signing::PrivateKey,
 ) -> Result<(), PlaylistError> {
-    let payloads = try!(read_smallbank_playlist(playlist_input));
+    let payloads = read_smallbank_playlist(playlist_input)?;
 
     let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(signing_context
+    let pub_key = signing_context
         .get_public_key(signing_key)
-        .map_err(PlaylistError::SigningError));
+        .map_err(PlaylistError::SigningError)?;
     let pub_key_hex = pub_key.as_hex();
 
     let start = Instant::now();
@@ -125,9 +125,9 @@ pub fn process_smallbank_playlist(
         txn_header.set_inputs(addresses.clone());
         txn_header.set_outputs(addresses.clone());
 
-        let payload_bytes = try!(payload
+        let payload_bytes = payload
             .write_to_bytes()
-            .map_err(PlaylistError::MessageError));
+            .map_err(PlaylistError::MessageError)?;
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
@@ -138,21 +138,20 @@ pub fn process_smallbank_playlist(
         txn_header.set_signer_public_key(pub_key_hex.clone());
         txn_header.set_batcher_public_key(pub_key_hex.clone());
 
-        let header_bytes = try!(txn_header
+        let header_bytes = txn_header
             .write_to_bytes()
-            .map_err(PlaylistError::MessageError));
+            .map_err(PlaylistError::MessageError)?;
 
-        let signature = try!(signer
+        let signature = signer
             .sign(&header_bytes)
-            .map_err(PlaylistError::SigningError));
+            .map_err(PlaylistError::SigningError)?;
 
         txn.set_header(header_bytes);
         txn.set_header_signature(signature);
         txn.set_payload(payload_bytes);
 
-        try!(txn
-            .write_length_delimited_to_writer(output)
-            .map_err(PlaylistError::MessageError))
+        txn.write_length_delimited_to_writer(output)
+            .map_err(PlaylistError::MessageError)?
     }
 
     Ok(())
@@ -199,7 +198,7 @@ pub fn create_smallbank_playlist(
     num_accounts: usize,
     num_transactions: usize,
     seed: Option<i32>,
-) -> Box<Iterator<Item = SmallbankTransactionPayload>> {
+) -> Box<dyn Iterator<Item = SmallbankTransactionPayload>> {
     let rng = match seed {
         Some(seed) => StdRng::seed_from_u64(seed as u64),
         None => StdRng::from_entropy(),
@@ -215,11 +214,11 @@ pub fn create_smallbank_playlist(
 }
 
 pub fn read_smallbank_playlist(
-    input: &mut Read,
+    input: &mut dyn Read,
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
-    let buf = try!(read_yaml(input));
-    let yaml_array = try!(load_yaml_array(&buf));
+    let buf = read_yaml(input)?;
+    let yaml_array = load_yaml_array(&buf)?;
     for yaml in yaml_array.iter() {
         results.push(SmallbankTransactionPayload::from(yaml));
     }
@@ -227,18 +226,18 @@ pub fn read_smallbank_playlist(
     Ok(results)
 }
 
-fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
+fn read_yaml(input: &mut dyn Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
-    try!(input
+    input
         .read_to_string(&mut buf)
-        .map_err(PlaylistError::IoError));
+        .map_err(PlaylistError::IoError)?;
     Ok(buf.into())
 }
 
 fn load_yaml_array(yaml_str: &str) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
-    let mut yaml = try!(YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError));
+    let mut yaml = YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError)?;
     let element = yaml.remove(0);
-    let yaml_array = element.as_vec().cloned().unwrap().clone();
+    let yaml_array = element.as_vec().cloned().unwrap();
 
     Ok(Cow::Owned(yaml_array))
 }
@@ -484,7 +483,7 @@ impl<'a> From<&'a Yaml> for SmallbankTransactionPayload {
                     );
                     payload.set_amalgamate(data);
                 }
-                Some(txn_type) => panic!(format!("unknown transaction_type: {}", txn_type)),
+                Some(txn_type) => panic!("unknown transaction_type: {}", txn_type),
                 None => panic!("No transaction_type specified"),
             }
             payload
@@ -562,6 +561,7 @@ fn next_non_matching_in_range(rng: &mut StdRng, max: u32, exclude: u32) -> u32 {
     selected
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum PlaylistError {
     IoError(StdIoError),
@@ -590,17 +590,7 @@ impl fmt::Display for PlaylistError {
 }
 
 impl error::Error for PlaylistError {
-    fn description(&self) -> &str {
-        match *self {
-            PlaylistError::IoError(ref err) => err.description(),
-            PlaylistError::YamlOutputError(_) => "Yaml Output Error",
-            PlaylistError::YamlInputError(_) => "Yaml Input Error",
-            PlaylistError::MessageError(ref err) => err.description(),
-            PlaylistError::SigningError(ref err) => err.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             PlaylistError::IoError(ref err) => Some(err),
             PlaylistError::YamlOutputError(_) => None,
@@ -612,14 +602,12 @@ impl error::Error for PlaylistError {
 }
 
 struct FmtWriter<'a> {
-    writer: Box<&'a mut Write>,
+    writer: &'a mut dyn Write,
 }
 
 impl<'a> FmtWriter<'a> {
-    pub fn new(writer: &'a mut Write) -> Self {
-        FmtWriter {
-            writer: Box::new(writer),
-        }
+    pub fn new(writer: &'a mut dyn Write) -> Self {
+        FmtWriter { writer }
     }
 }
 

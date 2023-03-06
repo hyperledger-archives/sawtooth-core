@@ -35,7 +35,7 @@ where
     T: Message,
 {
     /// Creates a new `LengthDelimitedMessageSource` from a given reader.
-    pub fn new(source: &'a mut Read) -> Self {
+    pub fn new(source: &'a mut dyn Read) -> Self {
         let source = protobuf::CodedInputStream::new(source);
         LengthDelimitedMessageSource {
             source,
@@ -54,10 +54,10 @@ where
             }
 
             // read the delimited length
-            let next_len = try!(self.source.read_raw_varint32());
-            let buf = try!(self.source.read_raw_bytes(next_len));
+            let next_len = self.source.read_raw_varint32()?;
+            let buf = self.source.read_raw_bytes(next_len)?;
 
-            let msg = try!(protobuf::parse_from_bytes(&buf));
+            let msg = Message::parse_from_bytes(&buf)?;
             results.push(msg);
         }
         Ok(results)

@@ -15,7 +15,7 @@ pub extern "C" fn chain_head_lock_drop(chain_head_lock_ptr: *mut c_void) -> Erro
         return ErrorCode::NullPointerProvided;
     }
     unsafe {
-        Box::from_raw(chain_head_lock_ptr as *mut ChainHeadLock);
+        let _ = Box::from_raw(chain_head_lock_ptr as *mut ChainHeadLock);
     }
     ErrorCode::Success
 }

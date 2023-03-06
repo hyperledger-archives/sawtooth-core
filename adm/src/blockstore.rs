@@ -16,7 +16,6 @@
  */
 
 use proto::block::{Block, BlockHeader};
-use protobuf;
 use protobuf::Message;
 
 use database::error::DatabaseError;
@@ -33,13 +32,12 @@ impl<'a> Blockstore<'a> {
 
     pub fn get(&self, block_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let packed = reader.get(&block_id.as_bytes()).ok_or_else(|| {
-            DatabaseError::NotFoundError(format!("Block not found: {}", block_id))
-        })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let packed = reader
+            .get(block_id.as_bytes())
+            .ok_or_else(|| DatabaseError::NotFoundError(format!("Block not found: {block_id}")))?;
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
-                "Could not interpret stored data as a block: {}",
-                err
+                "Could not interpret stored data as a block: {err}"
             ))
         })?;
         Ok(block)
@@ -47,21 +45,20 @@ impl<'a> Blockstore<'a> {
 
     pub fn get_by_height(&self, height: u64) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let block_num = format!("0x{:0>16x}", height);
+        let block_num = format!("0x{height:0>16x}");
         let block_id = reader
-            .index_get("index_block_num", &block_num.as_bytes())
+            .index_get("index_block_num", block_num.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
-                    DatabaseError::NotFoundError(format!("Block not found: {}", height))
+                    DatabaseError::NotFoundError(format!("Block not found: {height}"))
                 })
             })?;
         let packed = reader.get(&block_id).ok_or_else(|| {
-            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+            DatabaseError::CorruptionError(format!("Block not found: {block_id:?}"))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
-                "Could not interpret stored data as a block: {}",
-                err
+                "Could not interpret stored data as a block: {err}"
             ))
         })?;
         Ok(block)
@@ -70,19 +67,18 @@ impl<'a> Blockstore<'a> {
     pub fn get_by_batch(&self, batch_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_id = reader
-            .index_get("index_batch", &batch_id.as_bytes())
+            .index_get("index_batch", batch_id.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
-                    DatabaseError::NotFoundError(format!("Batch not found: {}", batch_id))
+                    DatabaseError::NotFoundError(format!("Batch not found: {batch_id}"))
                 })
             })?;
         let packed = reader.get(&block_id).ok_or_else(|| {
-            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+            DatabaseError::CorruptionError(format!("Block not found: {block_id:?}"))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
-                "Could not interpret stored data as a block: {}",
-                err
+                "Could not interpret stored data as a block: {err}"
             ))
         })?;
         Ok(block)
@@ -91,22 +87,18 @@ impl<'a> Blockstore<'a> {
     pub fn get_by_transaction(&self, transaction_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_id = reader
-            .index_get("index_transaction", &transaction_id.as_bytes())
+            .index_get("index_transaction", transaction_id.as_bytes())
             .and_then(|block_id| {
                 block_id.ok_or_else(|| {
-                    DatabaseError::NotFoundError(format!(
-                        "Transaction not found: {}",
-                        transaction_id
-                    ))
+                    DatabaseError::NotFoundError(format!("Transaction not found: {transaction_id}"))
                 })
             })?;
         let packed = reader.get(&block_id).ok_or_else(|| {
-            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+            DatabaseError::CorruptionError(format!("Block not found: {block_id:?}"))
         })?;
-        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+        let block: Block = Message::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
-                "Could not interpret stored data as a block: {}",
-                err
+                "Could not interpret stored data as a block: {err}"
             ))
         })?;
         Ok(block)
@@ -114,30 +106,30 @@ impl<'a> Blockstore<'a> {
 
     pub fn put(&self, block: &Block) -> Result<(), DatabaseError> {
         let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header).map_err(|err| {
-                DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+            Message::parse_from_bytes(&block.header).map_err(|err| {
+                DatabaseError::CorruptionError(format!("Invalid block header: {err}"))
             })?;
         let mut writer = self.db.writer()?;
         // Add block to main db
         let packed = block.write_to_bytes().map_err(|err| {
-            DatabaseError::WriterError(format!("Failed to serialize block: {}", err))
+            DatabaseError::WriterError(format!("Failed to serialize block: {err}"))
         })?;
-        writer.put(&block.header_signature.as_bytes(), &packed)?;
+        writer.put(block.header_signature.as_bytes(), &packed)?;
 
         // Add block to block num index
         let block_num_index = format!("0x{:0>16x}", block_header.block_num);
         writer.index_put(
             "index_block_num",
-            &block_num_index.as_bytes(),
-            &block.header_signature.as_bytes(),
+            block_num_index.as_bytes(),
+            block.header_signature.as_bytes(),
         )?;
 
         for batch in block.batches.iter() {
             for txn in batch.transactions.iter() {
                 writer.index_put(
                     "index_transaction",
-                    &txn.header_signature.as_bytes(),
-                    &block.header_signature.as_bytes(),
+                    txn.header_signature.as_bytes(),
+                    block.header_signature.as_bytes(),
                 )?;
             }
         }
@@ -146,8 +138,8 @@ impl<'a> Blockstore<'a> {
         for batch in block.batches.iter() {
             writer.index_put(
                 "index_batch",
-                &batch.header_signature.as_bytes(),
-                &block.header_signature.as_bytes(),
+                batch.header_signature.as_bytes(),
+                block.header_signature.as_bytes(),
             )?;
         }
 
@@ -158,27 +150,27 @@ impl<'a> Blockstore<'a> {
         let block = self.get(block_id)?;
         let block_id = &block.header_signature;
         let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header).map_err(|err| {
-                DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+            Message::parse_from_bytes(&block.header).map_err(|err| {
+                DatabaseError::CorruptionError(format!("Invalid block header: {err}"))
             })?;
         // Delete block from main db
         let mut writer = self.db.writer()?;
-        writer.delete(&block_id.as_bytes())?;
+        writer.delete(block_id.as_bytes())?;
 
         // Delete block from block_num index
         let block_num_index = format!("0x{:0>16x}", block_header.block_num);
-        writer.index_delete("index_block_num", &block_num_index.as_bytes())?;
+        writer.index_delete("index_block_num", block_num_index.as_bytes())?;
 
         // Delete block from transaction index
         for batch in block.batches.iter() {
             for txn in batch.transactions.iter() {
-                writer.index_delete("index_transaction", &txn.header_signature.as_bytes())?;
+                writer.index_delete("index_transaction", txn.header_signature.as_bytes())?;
             }
         }
 
         // Delete block from batch index
         for batch in block.batches.iter() {
-            writer.index_delete("index_batch", &batch.header_signature.as_bytes())?;
+            writer.index_delete("index_batch", batch.header_signature.as_bytes())?;
         }
         writer.commit()
     }
@@ -191,7 +183,7 @@ impl<'a> Blockstore<'a> {
             .last()
             .ok_or_else(|| DatabaseError::NotFoundError("No chain head".into()))?;
         String::from_utf8(val).map_err(|err| {
-            DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err))
+            DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {err}"))
         })
     }
 
@@ -247,14 +239,14 @@ mod tests {
         // Set the file size to 10MB, so as to support file systems that do
         // not support sparse files.
         let ctx = LmdbContext::new(blockstore_path, 3, Some(10 * 1024 * 1024))
-            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .map_err(|err| DatabaseError::InitError(format!("{err}")))
             .unwrap();
 
         let database = LmdbDatabase::new(
             &ctx,
             &["index_batch", "index_transaction", "index_block_num"],
         )
-        .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        .map_err(|err| DatabaseError::InitError(format!("{err}")))
         .unwrap();
 
         let blockstore = Blockstore::new(database);
@@ -265,7 +257,7 @@ mod tests {
         // Add 5 blocks.
         for i in 0..5 {
             let mut block = Block::new();
-            block.set_header_signature(format!("block-{}", i));
+            block.set_header_signature(format!("block-{i}"));
             let mut header = BlockHeader::new();
             header.set_block_num(i);
             block.set_header(header.write_to_bytes().unwrap());
@@ -273,7 +265,7 @@ mod tests {
             blockstore.put(&block).unwrap();
 
             assert_current_height(i as usize + 1, &blockstore);
-            assert_chain_head(format!("block-{}", i), &blockstore);
+            assert_chain_head(format!("block-{i}"), &blockstore);
         }
 
         assert_current_height(5, &blockstore);
@@ -282,7 +274,7 @@ mod tests {
         for i in 0..5 {
             let block = blockstore.get_by_height(i).unwrap();
 
-            assert_header_signature(block, format!("block-{}", i));
+            assert_header_signature(block, format!("block-{i}"));
         }
 
         // Get a block.

@@ -63,13 +63,12 @@ fn main() {
         .value_of("connect")
         .unwrap_or("tcp://localhost:4004");
 
-    let console_log_level;
-    match matches.occurrences_of("verbose") {
-        0 => console_log_level = LevelFilter::Warn,
-        1 => console_log_level = LevelFilter::Info,
-        2 => console_log_level = LevelFilter::Debug,
-        3 | _ => console_log_level = LevelFilter::Trace,
-    }
+    let console_log_level = match matches.occurrences_of("verbose") {
+        0 => LevelFilter::Warn,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    };
 
     let stdout = ConsoleAppender::builder()
         .encoder(Box::new(PatternEncoder::new(

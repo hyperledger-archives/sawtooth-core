@@ -38,6 +38,10 @@ pub enum ErrorCode {
     Disconnected = 0x03,
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn incoming_batch_sender_send(
     sender_ptr: *mut c_void,
@@ -66,6 +70,10 @@ pub unsafe extern "C" fn incoming_batch_sender_send(
     })
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn incoming_batch_sender_has_batch(
     sender_ptr: *mut c_void,
@@ -89,12 +97,16 @@ pub unsafe extern "C" fn incoming_batch_sender_has_batch(
     ErrorCode::Success
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[no_mangle]
 pub unsafe extern "C" fn incoming_batch_sender_drop(sender_ptr: *mut c_void) -> ErrorCode {
     if sender_ptr.is_null() {
         return ErrorCode::NullPointerProvided;
     }
 
-    Box::from_raw(sender_ptr as *mut IncomingBatchSender);
+    let _sender_ptr = Box::from_raw(sender_ptr as *mut IncomingBatchSender);
     ErrorCode::Success
 }

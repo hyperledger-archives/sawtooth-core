@@ -150,7 +150,7 @@ enum BlockLocation {
 struct BlockManagerState {
     block_by_block_id: RwLock<HashMap<String, Block>>,
 
-    blockstore_by_name: RwLock<HashMap<String, Box<IndexedBlockStore>>>,
+    blockstore_by_name: RwLock<HashMap<String, Box<dyn IndexedBlockStore>>>,
 
     references_by_block_id: RwLock<HashMap<String, RefCount>>,
 }
@@ -158,7 +158,7 @@ struct BlockManagerState {
 impl BlockManagerState {
     fn contains(
         references_block_id: &HashMap<String, RefCount>,
-        blockstore_by_name: &HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
     ) -> Result<bool, BlockManagerError> {
         let block_is_null_block = block_id == NULL_BLOCK_IDENTIFIER;
@@ -275,7 +275,7 @@ impl BlockManagerState {
             );
             block_by_block_id.insert(last_block.header_signature.clone(), last_block.clone());
 
-            blocks_with_references.into_iter().for_each(|block| {
+            blocks_with_references.iter().for_each(|block| {
                 block_by_block_id.insert(block.header_signature.clone(), block.clone());
 
                 references_by_block_id.insert(
@@ -305,8 +305,8 @@ impl BlockManagerState {
             .read()
             .expect("Acquiring blockstore by name read lock; lock poisoned");
         let block = block_by_block_id.get(block_id).cloned();
-        if block.is_some() {
-            BlockLocation::MainCache(block.unwrap())
+        if let Some(block) = block {
+            BlockLocation::MainCache(block)
         } else {
             let name: Option<String> = blockstore_by_name
                 .iter()
@@ -331,7 +331,7 @@ impl BlockManagerState {
         let block = blockstore
             .ok_or(BlockManagerError::UnknownBlockStore)?
             .get(&[block_id])?
-            .nth(0);
+            .next();
         Ok(block)
     }
 
@@ -367,7 +367,7 @@ impl BlockManagerState {
                 block.previous_block_id.clone(),
             );
             rc.increase_external_ref_count();
-            references_by_block_id.insert(block.header_signature.clone(), rc);
+            references_by_block_id.insert(block.header_signature, rc);
             return Ok(());
         }
 
@@ -459,7 +459,7 @@ impl BlockManagerState {
         let mut block_id = tip;
         let pointed_to;
         loop {
-            if let Some(ref ref_block) = references_by_block_id.get(block_id) {
+            if let Some(ref_block) = references_by_block_id.get(block_id) {
                 if ref_block.internal_ref_count >= 2 || ref_block.external_ref_count >= 1 {
                     pointed_to = Some(block_id.into());
                     break;
@@ -479,7 +479,7 @@ impl BlockManagerState {
     fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         let mut references_by_block_id = self
             .references_by_block_id
@@ -497,7 +497,7 @@ impl BlockManagerState {
                     head.header_signature.clone(),
                     RefCount::new_unreffed_block(
                         head.header_signature.clone(),
-                        head.previous_block_id.clone(),
+                        head.previous_block_id,
                     ),
                 );
             }
@@ -531,7 +531,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn transaction_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -555,7 +555,7 @@ impl BlockManager {
     /// consideration to be exclusive with respect to writes.
     fn batch_index_contains(
         &self,
-        index: &IndexedBlockStore,
+        index: &dyn IndexedBlockStore,
         block_id: &str,
         id: &str,
     ) -> Result<bool, BlockManagerError> {
@@ -681,9 +681,9 @@ impl BlockManager {
 
     fn persisted_branch_contains_block<'a>(
         &self,
-        blockstore_by_name: &'a HashMap<String, Box<IndexedBlockStore>>,
+        blockstore_by_name: &'a HashMap<String, Box<dyn IndexedBlockStore>>,
         block_id: &str,
-    ) -> Result<Option<&'a IndexedBlockStore>, BlockManagerError> {
+    ) -> Result<Option<&'a dyn IndexedBlockStore>, BlockManagerError> {
         if let Some((_, store)) = blockstore_by_name
             .iter()
             .find(|(_, store)| store.get(&[block_id]).map(|res| res.count()).unwrap_or(0) > 0)
@@ -696,7 +696,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_transactions(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -710,7 +710,7 @@ impl BlockManager {
 
     fn persisted_branch_contains_any_batches(
         &self,
-        store: &IndexedBlockStore,
+        store: &dyn IndexedBlockStore,
         block_id: &str,
         ids: &[&String],
     ) -> Result<Option<String>, BlockManagerError> {
@@ -751,7 +751,7 @@ impl BlockManager {
         self.state.put(branch)
     }
 
-    pub fn get(&self, block_ids: &[&str]) -> Box<Iterator<Item = Option<Block>>> {
+    pub fn get(&self, block_ids: &[&str]) -> Box<dyn Iterator<Item = Option<Block>>> {
         Box::new(GetBlockIterator::new(Arc::clone(&self.state), block_ids))
     }
 
@@ -763,7 +763,7 @@ impl BlockManager {
         self.state.get_block_from_blockstore(block_id, store_name)
     }
 
-    pub fn branch(&self, tip: &str) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    pub fn branch(&self, tip: &str) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchIterator::new(
             Arc::clone(&self.state),
             tip.into(),
@@ -774,7 +774,7 @@ impl BlockManager {
         &self,
         tip: &str,
         exclude: &str,
-    ) -> Result<Box<Iterator<Item = Block>>, BlockManagerError> {
+    ) -> Result<Box<dyn Iterator<Item = Block>>, BlockManagerError> {
         Ok(Box::new(BranchDiffIterator::new(
             Arc::clone(&self.state),
             tip,
@@ -797,12 +797,12 @@ impl BlockManager {
     pub fn add_store(
         &self,
         store_name: &str,
-        store: Box<IndexedBlockStore>,
+        store: Box<dyn IndexedBlockStore>,
     ) -> Result<(), BlockManagerError> {
         self.state.add_store(store_name, store)
     }
 
-    #[allow(needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     fn remove_blocks_from_blockstore(
         &self,
         to_be_removed: Vec<Block>,
@@ -815,7 +815,7 @@ impl BlockManager {
                 .blockstore_by_name
                 .write()
                 .expect("Acquiring blockstore write lock; lock poisoned");
-            let mut blockstore = blockstore_by_name
+            let blockstore = blockstore_by_name
                 .get_mut(store_name)
                 .ok_or(BlockManagerError::UnknownBlockStore)?;
 
@@ -890,7 +890,7 @@ impl BlockManager {
                 .get(store_name)
                 .expect("Blockstore removed during persist operation")
                 .iter()?;
-            block_store_iter.nth(0).map(|b| b.header_signature.clone())
+            block_store_iter.next().map(|b| b.header_signature)
         };
         if let Some(head_block_in_blockstore) = head_block_in_blockstore {
             let other = head_block_in_blockstore.as_str();
@@ -946,7 +946,7 @@ impl Iterator for GetBlockIterator {
         let block_id = &self.block_ids[self.index];
         let block: Option<Block> = match self
             .state
-            .get_block_from_main_cache_or_blockstore_name(&block_id)
+            .get_block_from_main_cache_or_blockstore_name(block_id)
         {
             BlockLocation::MainCache(block) => Some(block),
 
@@ -1026,7 +1026,7 @@ impl Iterator for BranchIterator {
             {
                 BlockLocation::MainCache(block) => {
                     self.next_block_id = block.previous_block_id.clone();
-                    Some(block.clone())
+                    Some(block)
                 }
                 BlockLocation::InStore(blockstore_name) => {
                     self.blockstore = Some(blockstore_name.clone());
@@ -1050,7 +1050,7 @@ impl Iterator for BranchIterator {
 
             if let Some(block) = block_option {
                 self.next_block_id = block.previous_block_id.clone();
-                Some(block.clone())
+                Some(block)
             } else {
                 None
             }
@@ -1088,7 +1088,7 @@ impl BranchDiffIterator {
         };
         if difference < 0 {
             // seek to the same height on the exclude side
-            right_iterator.nth(difference.abs() as usize - 1);
+            right_iterator.nth(difference.unsigned_abs() as usize - 1);
         }
 
         Ok(BranchDiffIterator {
@@ -1179,9 +1179,9 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![d]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block D: C"
-            )))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block D: C".to_string()
+            ))
         );
 
         let e = create_block("E", "B", 2);
@@ -1203,7 +1203,7 @@ mod tests {
         let f_block_id = &f.header_signature.clone();
 
         let block_manager = BlockManager::new();
-        block_manager.put(vec![a.clone(), b, c]).unwrap();
+        block_manager.put(vec![a, b, c]).unwrap();
         block_manager.put(vec![d]).unwrap();
         block_manager.put(vec![e, f]).unwrap();
 
@@ -1220,9 +1220,9 @@ mod tests {
         let g = create_block("G", "A", 1);
         assert_eq!(
             block_manager.put(vec![g]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block G: A"
-            )))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block G: A".to_string()
+            ))
         );
     }
 
@@ -1242,9 +1242,9 @@ mod tests {
         let b = create_block("B", "A", 55);
         assert_eq!(
             block_manager.put(vec![a, b]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block A: o"
-            )))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block A: o".to_string()
+            ))
         );
     }
 
@@ -1255,9 +1255,7 @@ mod tests {
         let b = create_block("B", "A", 1);
         let c = create_block("C", "B", 2);
 
-        block_manager
-            .put(vec![a.clone(), b.clone(), c.clone()])
-            .unwrap();
+        block_manager.put(vec![a.clone(), b, c.clone()]).unwrap();
 
         let mut get_block_iter = block_manager.get(&["A", "C", "D"]);
 
@@ -1268,9 +1266,9 @@ mod tests {
 
         // Should only return the items that are found.
         let mut get_block_with_unknowns = block_manager.get(&["A", "X", "C"]);
-        assert_eq!(get_block_with_unknowns.next(), Some(Some(a.clone())));
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(a)));
         assert_eq!(get_block_with_unknowns.next(), Some(None));
-        assert_eq!(get_block_with_unknowns.next(), Some(Some(c.clone())));
+        assert_eq!(get_block_with_unknowns.next(), Some(Some(c)));
         assert_eq!(get_block_with_unknowns.next(), None);
     }
 
@@ -1308,18 +1306,18 @@ mod tests {
         let d = create_block("D", "C", 2);
         let e = create_block("E", "D", 3);
 
-        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
+        block_manager.put(vec![a, b.clone()]).unwrap();
         block_manager.put(vec![c.clone()]).unwrap();
         block_manager.put(vec![d.clone(), e.clone()]).unwrap();
 
         let mut branch_diff_iter = block_manager.branch_diff("C", "B").unwrap();
 
-        assert_eq!(branch_diff_iter.next(), Some(c.clone()));
+        assert_eq!(branch_diff_iter.next(), Some(c));
         assert_eq!(branch_diff_iter.next(), None);
 
         let mut branch_diff_iter2 = block_manager.branch_diff("B", "E").unwrap();
 
-        assert_eq!(branch_diff_iter2.next(), Some(b.clone()));
+        assert_eq!(branch_diff_iter2.next(), Some(b));
         assert_eq!(branch_diff_iter2.next(), None);
 
         let mut branch_diff_iter3 = block_manager.branch_diff("C", "E").unwrap();
@@ -1328,8 +1326,8 @@ mod tests {
 
         let mut branch_diff_iter4 = block_manager.branch_diff("E", "C").unwrap();
 
-        assert_eq!(branch_diff_iter4.next(), Some(e.clone()));
-        assert_eq!(branch_diff_iter4.next(), Some(d.clone()));
+        assert_eq!(branch_diff_iter4.next(), Some(e));
+        assert_eq!(branch_diff_iter4.next(), Some(d));
         assert_eq!(branch_diff_iter4.next(), None);
 
         // Test that it will return an error if a block is missing
@@ -1356,11 +1354,9 @@ mod tests {
         let q = create_block("Q", "F", 3);
         let p = create_block("P", "E", 4);
 
-        block_manager.put(vec![a.clone(), b.clone()]).unwrap();
-        block_manager
-            .put(vec![c.clone(), d.clone(), e.clone()])
-            .unwrap();
-        block_manager.put(vec![f.clone()]).unwrap();
+        block_manager.put(vec![a, b]).unwrap();
+        block_manager.put(vec![c, d, e]).unwrap();
+        block_manager.put(vec![f]).unwrap();
 
         let blockstore = Box::new(InMemoryBlockStore::new());
         block_manager.add_store("commit", blockstore).unwrap();
@@ -1369,7 +1365,7 @@ mod tests {
         block_manager.persist("B", "commit").unwrap();
 
         {
-            let d_ref = block_manager.ref_block("D").unwrap();
+            let _d_ref = block_manager.ref_block("D").unwrap();
 
             block_manager.persist("C", "commit").unwrap();
             block_manager.unref_block("B").unwrap();
@@ -1386,16 +1382,16 @@ mod tests {
 
         assert_eq!(
             block_manager.put(vec![q]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block Q: F"
-            )))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block Q: F".to_string()
+            ))
         );
 
         assert_eq!(
             block_manager.put(vec![p]),
-            Err(BlockManagerError::MissingPredecessor(format!(
-                "During Put, missing predecessor of block P: E"
-            )))
+            Err(BlockManagerError::MissingPredecessor(
+                "During Put, missing predecessor of block P: E".to_string()
+            ))
         );
     }
 
@@ -1414,12 +1410,10 @@ mod tests {
         // Ext. Ref. = 1
 
         {
-            let d_ref = blockman.ref_block("D").unwrap();
+            let _d_ref = blockman.ref_block("D").unwrap();
             // Ext. Ref. = 2
 
-            blockman
-                .put(vec![a.clone(), b.clone(), c.clone(), d.clone()])
-                .unwrap();
+            blockman.put(vec![a, b, c, d]).unwrap();
             // Ext. Ref. = 2
         }
         // Ext. Ref. = 1 (dropped d_ref)

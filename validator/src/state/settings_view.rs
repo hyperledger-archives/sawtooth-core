@@ -22,6 +22,7 @@ use std::num::ParseIntError;
 use hashlib::sha256_digest_str;
 use protobuf;
 
+use protobuf::Message;
 use state::StateDatabaseError;
 use state::StateReader;
 
@@ -60,7 +61,7 @@ impl From<ParseIntError> for SettingsViewError {
 }
 
 pub struct SettingsView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
     cache: RefCell<HashMap<String, Option<String>>>,
 }
 
@@ -71,7 +72,7 @@ unsafe impl Sync for SettingsView {}
 
 impl SettingsView {
     /// Creates a new SettingsView with a given StateReader
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView {
             state_reader,
             cache: RefCell::new(HashMap::new()),
@@ -109,7 +110,7 @@ impl SettingsView {
             let cache = self.cache.borrow();
             if cache.contains_key(key) {
                 return if let Some(str_value) = cache.get(key).unwrap() {
-                    Ok(Some(value_parser(&str_value)?))
+                    Ok(Some(value_parser(str_value)?))
                 } else {
                     Ok(default_value)
                 };
@@ -121,12 +122,12 @@ impl SettingsView {
             Err(err) => return Err(SettingsViewError::from(err)),
         };
         let setting_opt = if let Some(bytes) = bytes_opt {
-            Some(protobuf::parse_from_bytes::<Setting>(&bytes)?)
+            Some(Message::parse_from_bytes(&bytes)?)
         } else {
             None
         };
 
-        let optional_str_value: Option<String> = setting_opt.and_then(|setting| {
+        let optional_str_value: Option<String> = setting_opt.and_then(|setting: Setting| {
             setting
                 .get_entries()
                 .iter()
@@ -148,8 +149,8 @@ impl SettingsView {
     }
 }
 
-impl From<Box<StateReader>> for SettingsView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for SettingsView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         SettingsView::new(state_reader)
     }
 }
@@ -325,14 +326,14 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self
                 .state
                 .iter()
                 .filter(|(key, _)| key.starts_with(prefix.unwrap_or("")))
-                .map(|(key, value)| Ok((key.clone().to_string(), value.clone())))
+                .map(|(key, value)| Ok((key.clone(), value.clone())))
                 .collect();
 
             Ok(Box::new(iterable.into_iter()))

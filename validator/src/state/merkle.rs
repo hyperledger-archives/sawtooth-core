@@ -80,7 +80,7 @@ impl MerkleDatabase {
     /// Returns a list of addresses that were deleted
     pub fn prune(db: &LmdbDatabase, merkle_root: &str) -> Result<Vec<String>, StateDatabaseError> {
         let root_bytes = ::hex::decode(merkle_root).map_err(|_| {
-            StateDatabaseError::InvalidHash(format!("{} is not a valid hash", merkle_root))
+            StateDatabaseError::InvalidHash(format!("{merkle_root} is not a valid hash"))
         })?;
         let mut db_writer = db.writer()?;
         let change_log = get_change_log(&db_writer, &root_bytes)?;
@@ -124,7 +124,7 @@ impl MerkleDatabase {
                     .collect::<Vec<_>>();
                 parent_change_log.set_successors(protobuf::RepeatedField::from_vec(new_successors));
 
-                write_change_log(&mut db_writer, parent_root_bytes, &parent_change_log)?;
+                write_change_log(&mut db_writer, parent_root_bytes, parent_change_log)?;
             }
 
             deletion_candidates.into_iter().collect()
@@ -161,7 +161,7 @@ impl MerkleDatabase {
         deletions: protobuf::RepeatedField<Vec<u8>>,
     ) -> Result<(Vec<StateHash>, Vec<StateHash>), StateDatabaseError> {
         Ok(deletions.into_iter().partition(|key| {
-            if let Ok(count) = get_ref_count(db_writer, &key) {
+            if let Ok(count) = get_ref_count(db_writer, key) {
                 count == 0
             } else {
                 false
@@ -253,7 +253,7 @@ impl MerkleDatabase {
         for del_address in delete_items.iter() {
             path_map.remove(del_address);
             let (mut parent_address, mut path_branch) = parent_and_branch(del_address);
-            while parent_address != "" {
+            while !parent_address.is_empty() {
                 let remove_parent = {
                     let parent_node = path_map
                         .get_mut(parent_address)
@@ -280,7 +280,7 @@ impl MerkleDatabase {
                 parent_address = next_parent;
                 path_branch = next_branch;
 
-                if parent_address == "" {
+                if parent_address.is_empty() {
                     let parent_node = path_map
                         .get_mut(parent_address)
                         .expect("Path map not correctly generated or entry is deleted");
@@ -294,7 +294,7 @@ impl MerkleDatabase {
 
         let mut sorted_paths: Vec<_> = path_map.keys().cloned().collect();
         // Sort by longest to shortest
-        sorted_paths.sort_by(|a, b| b.len().cmp(&a.len()));
+        sorted_paths.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
         // initializing this to empty, to make the compiler happy
         let mut key_hash = Vec::with_capacity(0);
@@ -306,9 +306,9 @@ impl MerkleDatabase {
             let (hash_key, packed) = encode_and_hash(node)?;
             key_hash = hash_key.clone();
 
-            if path != "" {
+            if !path.is_empty() {
                 let (parent_address, path_branch) = parent_and_branch(&path);
-                let mut parent = path_map
+                let parent = path_map
                     .get_mut(parent_address)
                     .expect("Path map not correctly generated or entry is deleted");
                 if let Some(old_hash_key) = parent
@@ -346,8 +346,8 @@ impl MerkleDatabase {
         // We expect this to be hex, since we generated it
         let root_hash_bytes = ::hex::decode(&self.root_hash).expect("Improper hex");
 
-        for &(ref key, ref value) in batch {
-            match db_writer.put(::hex::encode(key).as_bytes(), &value) {
+        for (key, value) in batch {
+            match db_writer.put(::hex::encode(key).as_bytes(), value) {
                 Ok(_) => continue,
                 Err(DatabaseError::DuplicateEntry) => {
                     increment_ref_count(&mut db_writer, key)?;
@@ -358,7 +358,7 @@ impl MerkleDatabase {
 
         let mut current_change_log = get_change_log(&db_writer, &root_hash_bytes)?;
         if let Some(change_log) = current_change_log.as_mut() {
-            let mut successors = change_log.mut_successors();
+            let successors = change_log.mut_successors();
             let mut successor = ChangeLogEntry_Successor::new();
             successor.set_successor(Vec::from(successor_root_hash));
             successor.set_deletions(protobuf::RepeatedField::from_slice(deletions));
@@ -370,7 +370,7 @@ impl MerkleDatabase {
         next_change_log.set_additions(protobuf::RepeatedField::from(
             batch
                 .iter()
-                .map(|&(ref hash, _)| hash.clone())
+                .map(|(hash, _)| hash.clone())
                 .collect::<Vec<Vec<u8>>>(),
         ));
 
@@ -588,7 +588,7 @@ where
     let log_bytes = db_reader.index_get(CHANGE_LOG_INDEX, root_hash)?;
 
     Ok(match log_bytes {
-        Some(bytes) => Some(protobuf::parse_from_bytes(&bytes)?),
+        Some(bytes) => Some(Message::parse_from_bytes(&bytes)?),
         None => None,
     })
 }
@@ -642,12 +642,12 @@ fn get_ref_count(
 }
 
 fn to_bytes(num: u64) -> [u8; 8] {
-    unsafe { ::std::mem::transmute(num.to_le()) }
+    num.to_le().to_ne_bytes()
 }
 
 fn from_bytes(bytes: &[u8]) -> u64 {
     let mut num_bytes = [0u8; 8];
-    num_bytes.copy_from_slice(&bytes);
+    num_bytes.copy_from_slice(bytes);
     u64::from_le(unsafe { ::std::mem::transmute(num_bytes) })
 }
 
@@ -747,12 +747,7 @@ impl Node {
         let children = self
             .children
             .into_iter()
-            .map(|(k, v)| {
-                (
-                    Key::Text(Text::Text(k.to_string())),
-                    Value::Text(Text::Text(v.to_string())),
-                )
-            })
+            .map(|(k, v)| (Key::Text(Text::Text(k)), Value::Text(Text::Text(v))))
             .collect();
 
         map.insert(Key::Text(Text::Text("c".to_string())), Value::Map(children));
@@ -782,7 +777,7 @@ impl Node {
         };
 
         let children = match children_raw {
-            Some(Value::Map(mut child_map)) => {
+            Some(Value::Map(child_map)) => {
                 let mut result = BTreeMap::new();
                 for (k, v) in child_map {
                     result.insert(key_to_string(k)?, text_to_string(v)?);
@@ -829,7 +824,6 @@ mod tests {
     use database::lmdb::LmdbDatabase;
     use proto::merkle::ChangeLogEntry;
 
-    use protobuf;
     use rand::{seq, thread_rng};
     use std::env;
     use std::fs::remove_file;
@@ -851,7 +845,7 @@ mod tests {
             .into_bytes()
             .unwrap()
             .iter()
-            .map(|b| format!("{:x}", b))
+            .map(|b| format!("{b:x}"))
             .collect::<Vec<_>>()
             .join("");
         // This expected output was generated using the python structures
@@ -903,7 +897,7 @@ mod tests {
     #[test]
     fn merkle_trie_root_advance() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).unwrap();
 
             let orig_root = merkle_db.get_merkle_root();
@@ -935,7 +929,7 @@ mod tests {
                     .index_get(CHANGE_LOG_INDEX, new_root_bytes)
                     .expect("A database error occurred")
                     .expect("Did not return a change log entry");
-                protobuf::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
+                Message::parse_from_bytes(entry_bytes).expect("Failed to parse change log entry")
             };
 
             assert_eq!(orig_root_bytes, &change_log.get_parent());
@@ -952,7 +946,7 @@ mod tests {
     #[test]
     fn merkle_trie_delete() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let mut merkle_db = make_db(merkle_path);
 
             let new_root = merkle_db.set("1234", "deletable".as_bytes()).unwrap();
             merkle_db.set_merkle_root(new_root).unwrap();
@@ -973,20 +967,20 @@ mod tests {
     #[test]
     fn merkle_trie_update() {
         run_test(|merkle_path| {
-            let mut merkle_db = make_db(&merkle_path);
+            let mut merkle_db = make_db(merkle_path);
             let init_root = merkle_db.get_merkle_root();
 
             let key_hashes = (0..1000)
                 .map(|i| {
-                    let key = format!("{:016x}", i);
+                    let key = format!("{i:016x}");
                     let hash = hex_hash(key.as_bytes());
                     (key, hash)
                 })
                 .collect::<Vec<_>>();
 
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+            for (key, hashed) in key_hashes.iter() {
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.clone(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -997,7 +991,7 @@ mod tests {
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
             for i in seq::sample_iter(&mut rng, 0..500, 50).unwrap() {
-                let hash_key = hex_hash(format!("{:016x}", i).as_bytes());
+                let hash_key = hex_hash(format!("{i:016x}").as_bytes());
                 set_items.insert(hash_key.clone(), "5.0".as_bytes().to_vec());
                 values.insert(hash_key.clone(), "5.0".to_string());
             }
@@ -1006,7 +1000,7 @@ mod tests {
             let delete_items = seq::sample_iter(&mut rng, 500..1000, 50)
                 .unwrap()
                 .into_iter()
-                .map(|i| hex_hash(format!("{:016x}", i).as_bytes()))
+                .map(|i| hex_hash(format!("{i:016x}").as_bytes()))
                 .collect::<Vec<String>>();
 
             for hash in delete_items.iter() {
@@ -1076,8 +1070,8 @@ mod tests {
                 ),
             ];
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+            for (key, hashed) in key_hashes.iter() {
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -1085,9 +1079,9 @@ mod tests {
             assert_ne!(init_root, merkle_db.get_merkle_root());
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for &(_, ref key_hash) in key_hashes.iter() {
-                set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
-                values.insert(key_hash.clone().to_string(), "2.0".to_string());
+            for (_, key_hash) in key_hashes.iter() {
+                set_items.insert(key_hash.to_string(), "2.0".as_bytes().to_vec());
+                values.insert(key_hash.to_string(), "2.0".to_string());
             }
 
             // The first item below(e55420...89b9) shares a common prefix
@@ -1163,8 +1157,8 @@ mod tests {
                 ),
             ];
             let mut values = HashMap::new();
-            for &(ref key, ref hashed) in key_hashes.iter() {
-                let new_root = merkle_db.set(&hashed, key.as_bytes()).unwrap();
+            for (key, hashed) in key_hashes.iter() {
+                let new_root = merkle_db.set(hashed, key.as_bytes()).unwrap();
                 values.insert(hashed.to_string(), key.to_string());
                 merkle_db.set_merkle_root(new_root).unwrap();
             }
@@ -1177,9 +1171,9 @@ mod tests {
             )];
             let mut set_items = HashMap::new();
             // Perform some updates on the lower keys
-            for &(_, ref key_hash) in key_hash_to_be_inserted.iter() {
-                set_items.insert(key_hash.clone().to_string(), "2.0".as_bytes().to_vec());
-                values.insert(key_hash.clone().to_string(), "2.0".to_string());
+            for (_, key_hash) in key_hash_to_be_inserted.iter() {
+                set_items.insert(key_hash.to_string(), "2.0".as_bytes().to_vec());
+                values.insert(key_hash.to_string(), "2.0".to_string());
             }
 
             // The first item below(e55420...89b9) shares a common prefix
@@ -1229,7 +1223,7 @@ mod tests {
     /// - verifies that the parent trie's ChangeLogEntry is deleted
     fn merkle_trie_pruning_parent() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
             updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
@@ -1311,7 +1305,7 @@ mod tests {
     ///   persisted
     fn merkle_trie_pruinng_successors() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let mut updates: HashMap<String, Vec<u8>> = HashMap::with_capacity(3);
             updates.insert("ab0000".to_string(), "0001".as_bytes().to_vec());
@@ -1323,7 +1317,7 @@ mod tests {
                 .expect("Update failed to work");
             let parent_root_bytes = ::hex::decode(parent_root.clone()).expect("Proper hex");
 
-            merkle_db.set_merkle_root(parent_root.clone()).unwrap();
+            merkle_db.set_merkle_root(parent_root).unwrap();
             assert_value_at_address(&merkle_db, "ab0000", "0001");
             assert_value_at_address(&merkle_db, "ab0a01", "0002");
             assert_value_at_address(&merkle_db, "abff00", "0003");
@@ -1338,7 +1332,7 @@ mod tests {
                 .set("ab0a01", "right".as_bytes())
                 .expect("Set failed to work");
             let successor_root_right_bytes =
-                ::hex::decode(successor_root_right.clone()).expect("proper hex");
+                ::hex::decode(successor_root_right).expect("proper hex");
 
             let mut parent_change_log = expect_change_log(&db, &parent_root_bytes);
             let successor_left_change_log = expect_change_log(&db, &successor_root_left_bytes);
@@ -1372,7 +1366,7 @@ mod tests {
     /// initial root, the duplicate leaf node is not pruned as well.
     fn merkle_trie_pruning_duplicate_leaves() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
@@ -1400,9 +1394,7 @@ mod tests {
                 .expect("Update failed to work");
 
             // create the last root
-            merkle_db
-                .set_merkle_root(successor_root_middle.clone())
-                .unwrap();
+            merkle_db.set_merkle_root(successor_root_middle).unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db
                 .set("ab0000", "0001".as_bytes())
@@ -1432,7 +1424,7 @@ mod tests {
     /// last root, the duplicate leaf node is not pruned as well.
     fn merkle_trie_pruning_successor_duplicate_leaves() {
         run_test(|merkle_path| {
-            let db = make_lmdb(&merkle_path);
+            let db = make_lmdb(merkle_path);
             let mut merkle_db = MerkleDatabase::new(db.clone(), None).expect("No db errors");
             let updates: HashMap<String, Vec<u8>> = vec![
                 ("ab0000".to_string(), "0001".as_bytes().to_vec()),
@@ -1459,9 +1451,7 @@ mod tests {
                 .expect("Update failed to work");
 
             // create the last root
-            merkle_db
-                .set_merkle_root(successor_root_middle.clone())
-                .unwrap();
+            merkle_db.set_merkle_root(successor_root_middle).unwrap();
             // Set the value back to the original
             let successor_root_last = merkle_db
                 .set("ab0000", "0001".as_bytes())
@@ -1485,7 +1475,7 @@ mod tests {
 
     fn expect_change_log(db: &LmdbDatabase, root_hash: &[u8]) -> ChangeLogEntry {
         let reader = db.reader().unwrap();
-        protobuf::parse_from_bytes(
+        Message::parse_from_bytes(
             &reader
                 .index_get(CHANGE_LOG_INDEX, root_hash)
                 .expect("No db errors")
@@ -1505,11 +1495,11 @@ mod tests {
                 }
             }
             if !has_root {
-                panic!(format!(
+                panic!(
                     "Root {} not found in change log {:?}",
                     ::hex::encode(successor_root),
                     change_log
-                ));
+                );
             }
         }
     }
@@ -1565,9 +1555,9 @@ mod tests {
         })
     }
 
-    fn run_test<T>(test: T) -> ()
+    fn run_test<T>(test: T)
     where
-        T: FnOnce(&str) -> () + panic::UnwindSafe,
+        T: FnOnce(&str) + panic::UnwindSafe,
     {
         let dbpath = temp_db_path();
 
@@ -1581,7 +1571,9 @@ mod tests {
 
     fn assert_value_at_address(merkle_db: &MerkleDatabase, address: &str, expected_value: &str) {
         let value = merkle_db.get(address);
-        assert!(value.is_ok(), format!("Value not returned: {:?}", value));
+        if value.is_err() {
+            panic!("Value not returned: {:?}", value.unwrap())
+        }
         assert_eq!(Ok(expected_value), from_utf8(&value.unwrap().unwrap()));
     }
 
@@ -1591,10 +1583,10 @@ mod tests {
             INDEXES.len(),
             Some(120 * 1024 * 1024),
         )
-        .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+        .map_err(|err| DatabaseError::InitError(format!("{err}")))
         .unwrap();
         LmdbDatabase::new(ctx, &INDEXES)
-            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .map_err(|err| DatabaseError::InitError(format!("{err}")))
             .unwrap()
     }
 
@@ -1606,7 +1598,7 @@ mod tests {
         let mut temp_dir = env::temp_dir();
 
         let thread_id = thread::current().id();
-        temp_dir.push(format!("merkle-{:?}.lmdb", thread_id));
+        temp_dir.push(format!("merkle-{thread_id:?}.lmdb"));
         temp_dir.to_str().unwrap().to_string()
     }
 

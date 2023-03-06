@@ -28,7 +28,7 @@ impl Default for BattleshipTransactionHandler {
         Self {
             family_name: "battleship".to_string(),
             family_versions: vec!["1.0".to_string()],
-            namespaces: vec![game::get_battleship_prefix().to_string()],
+            namespaces: vec![game::get_battleship_prefix()],
         }
     }
 }
@@ -42,7 +42,7 @@ impl BattleshipTransactionHandler {
 
     /// Retrieves a single game by name
     fn get_game(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
     ) -> Result<Option<game::Game>, ApplyError> {
         let address = game::get_battleship_address(name);
@@ -61,7 +61,7 @@ impl BattleshipTransactionHandler {
 
     /// Stores a single game
     fn store_game(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         game: &game::Game,
     ) -> Result<(), ApplyError> {
@@ -80,12 +80,12 @@ impl BattleshipTransactionHandler {
 
     /// Handles CREATE action
     fn handle_create(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         ships: Vec<String>,
     ) -> Result<(), ApplyError> {
         match name.len() {
-            1...255 => {}
+            1..=255 => {}
             len => Err(ApplyError::InvalidTransaction(format!(
                 "Game name must be between 1 - 255 characters, {} is too many",
                 len
@@ -118,7 +118,7 @@ impl BattleshipTransactionHandler {
 
     /// Handles JOIN action
     fn handle_join(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         player: String,
         board: Vec<Vec<String>>,
@@ -188,7 +188,7 @@ impl BattleshipTransactionHandler {
 
     /// Handles FIRE action
     fn handle_fire(
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
         name: &str,
         player: &str,
         column: String,
@@ -248,15 +248,15 @@ impl BattleshipTransactionHandler {
             // Every turn after the first should hit this, unless the client tried giving
             // incomplete information.
             (Some(lfc), Some(lfr), Some(rs), Some(rn)) => {
-                let last_row = game::parse_row(&lfr).ok_or_else(|| {
+                let last_row = game::parse_row(lfr).ok_or_else(|| {
                     ApplyError::InvalidTransaction(format!("Invalid row {}", row))
                 })?;
 
-                let last_col = game::parse_column(&lfc).ok_or_else(|| {
+                let last_col = game::parse_column(lfc).ok_or_else(|| {
                     ApplyError::InvalidTransaction(format!("Invalid column {}", column))
                 })?;
 
-                let space_hash = game::get_space_hash(rs, &rn);
+                let space_hash = game::get_space_hash(rs, rn);
 
                 let hashed_board = match game.state.as_ref() {
                     "P1-NEXT" => &game.hashed_board_1,
@@ -340,7 +340,7 @@ impl TransactionHandler for BattleshipTransactionHandler {
     fn apply(
         &self,
         request: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let payload = request.get_payload();
         let action: game::Action = serde_json::from_slice(payload).map_err(|err| {

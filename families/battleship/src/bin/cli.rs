@@ -154,7 +154,7 @@ fn run() -> Result<(), Error> {
             let col = fire_matches.value_of("col").expect("Column is required!");
             let wait = parse_wait_flag(fire_matches)?;
 
-            let game = client.get_game(&name)?;
+            let game = client.get_game(name)?;
             let board = Board::load_or_generate(format!("{}-{}", name, key), &game.ships)?;
             let (reveal_space, reveal_nonce) = game.get_last_fire_row_col(&board)?;
 
@@ -182,8 +182,8 @@ fn run() -> Result<(), Error> {
             for (name, game) in games {
                 table.add_row(row![
                     name,
-                    game.player_1.unwrap_or_else(String::new),
-                    game.player_2.unwrap_or_else(String::new),
+                    game.player_1.unwrap_or_default(),
+                    game.player_2.unwrap_or_default(),
                     game.state
                 ]);
             }
@@ -244,7 +244,7 @@ fn run() -> Result<(), Error> {
 
             match (
                 game.player_1 == Some(pub_key.clone()),
-                game.player_2 == Some(pub_key.clone()),
+                game.player_2 == Some(pub_key),
                 board,
             ) {
                 (true, true, _) => Err(format_err!("You can't play with yourself!"))?,

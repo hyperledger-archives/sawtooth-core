@@ -156,7 +156,7 @@ fn do_xaty(transactions: &[&Transaction], arguments: &[&str]) -> bool {
         return true;
     };
 
-    let txn = get_transaction_from_index(&transactions, position, "XatY".to_string());
+    let txn = get_transaction_from_index(transactions, position, "XatY".to_string());
 
     match txn {
         Some(transaction) => {
@@ -194,7 +194,7 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
     }
 
     for index in indices.unwrap() {
-        let txn = get_transaction_from_index(&transactions, index, "local".to_string());
+        let txn = get_transaction_from_index(transactions, index, "local".to_string());
         match txn {
             Some(transaction) => {
                 if transaction.signer_public_key != expected_signer {
@@ -209,7 +209,7 @@ fn do_local(transactions: &[&Transaction], expected_signer: &str, arguments: &[&
             _ => continue,
         }
     }
-    return true;
+    true
 }
 
 /// Splits up a rule string in the form of "<rule_type>:<rule_arg>,*"
@@ -232,7 +232,7 @@ fn get_transaction_from_index(
     rule: String,
 ) -> Option<Transaction> {
     let absolute_index: usize = if index < 0 {
-        (index * -1) as usize
+        -index as usize
     } else {
         index as usize
     };
@@ -250,7 +250,7 @@ fn get_transaction_from_index(
         return Some(transactions[transactions.len() - absolute_index].clone());
     }
 
-    return Some(transactions[absolute_index].clone());
+    Some(transactions[absolute_index].clone())
 }
 
 #[cfg(test)]
@@ -466,7 +466,7 @@ mod tests {
                 dependencies: vec![],
                 payload: vec![],
                 payload_sha512: String::new(),
-                header_signature: format!("{}_{}", family, i),
+                header_signature: format!("{family}_{i}"),
                 nonce: String::new(),
 
                 header_bytes: vec![],
@@ -478,7 +478,7 @@ mod tests {
                 .iter()
                 .map(|t| t.header_signature.clone())
                 .collect(),
-            transactions: transactions,
+            transactions,
             signer_public_key: pubkey.to_string(),
             trace: false,
             header_bytes: vec![],

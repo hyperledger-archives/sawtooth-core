@@ -51,14 +51,14 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn main() {
     match SimpleLogger::init(LevelFilter::Warn, Config::default()) {
         Ok(_) => (),
-        Err(err) => println!("Failed to load logger: {}", err.description()),
+        Err(err) => println!("Failed to load logger: {}", err),
     }
 
     let arg_matches = get_arg_matches();
 
     match run_load_command(&arg_matches) {
         Ok(_) => (),
-        Err(err) => println!("{}", err.description()),
+        Err(err) => println!("{}", err),
     }
 }
 
@@ -182,7 +182,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
 }
 
 fn err_if_out_of_range(val: f32) -> Result<f32, IntKeyCliError> {
-    if val < 0.0 || val > 1.0 {
+    if !(0.0..=1.0).contains(&val) {
         return Err(IntKeyCliError {
             msg: "Value must be between 0.0 and 1.0, inclusively".to_string(),
         });
@@ -208,7 +208,7 @@ fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
     Ok(val)
 }
 
-fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let batch_size: usize = args
         .value_of("batch-size")
         .unwrap_or("1")
@@ -228,10 +228,10 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         .unwrap_or("http://127.0.0.1:8008")
         .parse()
         .map_err(|_| String::from("urls are a comma separated list of strings"))
-        .and_then(|st| {
+        .map(|st| {
             let s: String = st;
             let split: Split<char> = s.split(',');
-            Ok(split.map(|s| s.to_string()).collect())
+            split.map(|s| s.to_string()).collect()
         })?;
 
     let rate: usize = args
@@ -296,20 +296,21 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let context = signing::create_context("secp256k1")?;
 
-    let private_key: Result<Box<signing::PrivateKey>, Box<Error>> = match args.value_of("key") {
-        Some(file) => {
-            let mut key_file = File::open(file)?;
-            let mut buf = String::new();
-            key_file.read_to_string(&mut buf)?;
-            buf.pop(); // remove the new line
-            let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
-            Ok(Box::new(private_key))
-        }
-        None => {
-            let private_key = context.new_random_private_key()?;
-            Ok(private_key)
-        }
-    };
+    let private_key: Result<Box<dyn signing::PrivateKey>, Box<dyn Error>> =
+        match args.value_of("key") {
+            Some(file) => {
+                let mut key_file = File::open(file)?;
+                let mut buf = String::new();
+                key_file.read_to_string(&mut buf)?;
+                buf.pop(); // remove the new line
+                let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+                Ok(Box::new(private_key))
+            }
+            None => {
+                let private_key = context.new_random_private_key()?;
+                Ok(private_key)
+            }
+        };
 
     let priv_key = private_key?;
 
@@ -363,22 +364,22 @@ struct IntKeyCliError {
     msg: String,
 }
 
-impl Error for IntKeyCliError {
-    fn description(&self) -> &str {
-        self.msg.as_str()
+impl fmt::Display for IntKeyCliError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format_args!("IntKeyCliError {}", self.msg))
     }
 }
 
-impl fmt::Display for IntKeyCliError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("IntKeyCliError {}", self.msg))
+impl Error for IntKeyCliError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
     }
 }
 
 impl From<ParseIntError> for IntKeyCliError {
     fn from(error: ParseIntError) -> Self {
         IntKeyCliError {
-            msg: error.description().to_string(),
+            msg: error.to_string(),
         }
     }
 }
@@ -386,7 +387,7 @@ impl From<ParseIntError> for IntKeyCliError {
 impl From<ParseFloatError> for IntKeyCliError {
     fn from(error: ParseFloatError) -> Self {
         IntKeyCliError {
-            msg: error.description().to_string(),
+            msg: error.to_string(),
         }
     }
 }

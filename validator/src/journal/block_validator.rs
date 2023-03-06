@@ -112,20 +112,17 @@ impl From<ChainCommitStateError> for ValidationError {
         match other {
             ChainCommitStateError::DuplicateBatch(ref batch_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, duplicate batch {}",
-                    batch_id
+                    "Validation failure, duplicate batch {batch_id}"
                 ))
             }
             ChainCommitStateError::DuplicateTransaction(ref txn_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, duplicate transaction {}",
-                    txn_id
+                    "Validation failure, duplicate transaction {txn_id}"
                 ))
             }
             ChainCommitStateError::MissingDependency(ref txn_id) => {
                 ValidationError::BlockValidationFailure(format!(
-                    "Validation failure, missing dependency {}",
-                    txn_id
+                    "Validation failure, missing dependency {txn_id}"
                 ))
             }
             ChainCommitStateError::Error(reason) => ValidationError::BlockValidationError(reason),
@@ -181,7 +178,7 @@ impl<TEP: ExecutionPlatform + 'static> BlockValidator<TEP>
 where
     TEP: Clone,
 {
-    #[allow(too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         block_manager: BlockManager,
         transaction_executor: TEP,
@@ -216,11 +213,11 @@ where
     ) {
         let backgroundthread = thread::Builder::new();
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
         let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
@@ -348,11 +345,11 @@ where
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), ValidationError> {
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(
             DuplicatesAndDependenciesValidation::new(self.block_manager.clone()),
         );
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
         let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
@@ -423,14 +420,14 @@ trait BlockValidation: Send {
 
 struct BlockValidationProcessor<SBV: BlockValidation<ReturnValue = BlockValidationResult>> {
     block_manager: BlockManager,
-    validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+    validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
     state_validation: SBV,
 }
 
 impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationProcessor<SBV> {
     fn new(
         block_manager: BlockManager,
-        validations: Vec<Box<BlockValidation<ReturnValue = ()>>>,
+        validations: Vec<Box<dyn BlockValidation<ReturnValue = ()>>>,
         state_validation: SBV,
     ) -> Self {
         BlockValidationProcessor {
@@ -446,17 +443,17 @@ impl<SBV: BlockValidation<ReturnValue = BlockValidationResult>> BlockValidationP
             .get(&[&block.previous_block_id])
             .next()
             .unwrap_or(None)
-            .map(|b| b.state_root_hash.clone());
+            .map(|b| b.state_root_hash);
 
         for validation in &self.validations {
-            match validation.validate_block(&block, previous_blocks_state_hash.as_ref()) {
+            match validation.validate_block(block, previous_blocks_state_hash.as_ref()) {
                 Ok(()) => (),
                 Err(err) => return Err(err),
             }
         }
 
         self.state_validation
-            .validate_block(&block, previous_blocks_state_hash.as_ref())
+            .validate_block(block, previous_blocks_state_hash.as_ref())
     }
 }
 
@@ -496,15 +493,13 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
             })?;
 
         let greatest_batch_index = block.batches.len() - 1;
-        let mut index = 0;
-        for batch in &block.batches {
+        for (index, batch) in block.batches.iter().enumerate() {
             if index < greatest_batch_index {
                 scheduler
                     .add_batch(batch.clone(), None, false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
-                            "While adding a batch to the schedule: {:?}",
-                            err
+                            "While adding a batch to the schedule: {err:?}"
                         ))
                     })?;
             } else {
@@ -512,25 +507,21 @@ impl<TEP: ExecutionPlatform> BlockValidation for BatchesInBlockValidation<TEP> {
                     .add_batch(batch.clone(), Some(ending_state_hash), false)
                     .map_err(|err| {
                         ValidationError::BlockValidationError(format!(
-                            "While adding the last batch to the schedule: {:?}",
-                            err
+                            "While adding the last batch to the schedule: {err:?}"
                         ))
                     })?;
             }
-            index += 1;
         }
         scheduler.finalize(false).map_err(|err| {
             ValidationError::BlockValidationError(format!(
-                "During call to scheduler.finalize: {:?}",
-                err
+                "During call to scheduler.finalize: {err:?}"
             ))
         })?;
         let execution_results = scheduler
             .complete(true)
             .map_err(|err| {
                 ValidationError::BlockValidationError(format!(
-                    "During call to scheduler.complete: {:?}",
-                    err
+                    "During call to scheduler.complete: {err:?}"
                 ))
             })?
             .ok_or_else(|| {
@@ -714,8 +705,7 @@ impl BlockValidation for OnChainRulesValidation {
             let settings_view: SettingsView =
                 self.view_factory.create_view(state_root).map_err(|err| {
                     ValidationError::BlockValidationError(format!(
-                        "During validate_on_chain_rules, error creating settings view: {:?}",
-                        err
+                        "During validate_on_chain_rules, error creating settings view: {err:?}"
                     ))
                 })?;
             let batches: Vec<&Batch> = block.batches.iter().collect();
@@ -745,9 +735,9 @@ mod test {
         let block_manager = BlockManager::new();
         let block_a = create_block("A", NULL_BLOCK_IDENTIFIER, vec![]);
 
-        let validation1: Box<BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
+        let validation1: Box<dyn BlockValidation<ReturnValue = ()>> = Box::new(Mock1::new(Ok(())));
 
-        let validation2: Box<BlockValidation<ReturnValue = ()>> =
+        let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(Mock2::new(Ok(()), Ok(())));
         let validations = vec![validation1, validation2];
         let state_block_validation = Mock1::new(Ok(BlockValidationResult::new(
@@ -842,14 +832,14 @@ mod test {
     }
 
     impl BlockStore for Mock1<Option<Block>> {
-        fn iter(&self) -> Result<Box<Iterator<Item = Block>>, BlockStoreError> {
+        fn iter(&self) -> Result<Box<dyn Iterator<Item = Block>>, BlockStoreError> {
             Ok(Box::new(self.result.clone().into_iter()))
         }
 
         fn get<'a>(
             &'a self,
             _block_ids: &[&str],
-        ) -> Result<Box<Iterator<Item = Block> + 'a>, BlockStoreError> {
+        ) -> Result<Box<dyn Iterator<Item = Block> + 'a>, BlockStoreError> {
             unimplemented!();
         }
 

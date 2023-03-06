@@ -25,6 +25,7 @@ use proto::identity::PolicyList;
 use proto::identity::Role;
 use proto::identity::RoleList;
 
+use protobuf::Message;
 use state::StateDatabaseError;
 use state::StateReader;
 
@@ -57,12 +58,12 @@ impl From<protobuf::ProtobufError> for IdentityViewError {
 /// into the corresponding addresses, and returns the deserialized values from
 /// state.
 pub struct IdentityView {
-    state_reader: Box<StateReader>,
+    state_reader: Box<dyn StateReader>,
 }
 
 impl IdentityView {
     /// Creates an IdentityView from a given StateReader.
-    pub fn new(state_reader: Box<StateReader>) -> Self {
+    pub fn new(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView { state_reader }
     }
 
@@ -95,30 +96,30 @@ impl IdentityView {
         I: Named,
         L: ProtobufList<I>,
     {
-        if !self.state_reader.contains(&address)? {
+        if !self.state_reader.contains(address)? {
             return Ok(None);
         }
 
         self.state_reader
-            .get(&address)
+            .get(address)
             .map_err(IdentityViewError::StateDatabaseError)
             .and_then(|bytes_opt| {
                 Ok(if let Some(bytes) = bytes_opt {
-                    Some(protobuf::parse_from_bytes::<L>(&bytes)?)
+                    Some(Message::parse_from_bytes(&bytes)?)
                 } else {
                     None
                 })
             })
-            .and_then(|list_opt| {
+            .map(|list_opt: Option<L>| {
                 if let Some(list) = list_opt {
                     for item in list.values() {
                         if item.name() == name {
-                            return Ok(Some(item.clone()));
+                            return Some(item.clone());
                         }
                     }
                 }
                 // We didn't find the item, so return None
-                Ok(None)
+                None
             })
     }
 
@@ -130,7 +131,7 @@ impl IdentityView {
         let mut res = Vec::new();
         for state_value in self.state_reader.leaves(Some(prefix))? {
             let (_, bytes) = state_value?;
-            let item_list = protobuf::parse_from_bytes::<L>(&bytes)?;
+            let item_list: L = Message::parse_from_bytes(&bytes)?;
             for item in item_list.values() {
                 res.push(item.clone());
             }
@@ -140,8 +141,8 @@ impl IdentityView {
     }
 }
 
-impl From<Box<StateReader>> for IdentityView {
-    fn from(state_reader: Box<StateReader>) -> Self {
+impl From<Box<dyn StateReader>> for IdentityView {
+    fn from(state_reader: Box<dyn StateReader>) -> Self {
         IdentityView::new(state_reader)
     }
 }
@@ -395,14 +396,14 @@ mod tests {
             &self,
             prefix: Option<&str>,
         ) -> Result<
-            Box<Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
+            Box<dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>>,
             StateDatabaseError,
         > {
             let iterable: Vec<_> = self
                 .state
                 .iter()
                 .filter(|(key, _)| key.starts_with(prefix.unwrap_or("")))
-                .map(|(key, value)| Ok((key.clone().to_string(), value.clone())))
+                .map(|(key, value)| Ok((key.clone(), value.clone())))
                 .collect();
 
             Ok(Box::new(iterable.into_iter()))

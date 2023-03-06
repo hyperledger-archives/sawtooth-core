@@ -183,7 +183,7 @@ impl TransactionHandler for BlockInfoTransactionHandler {
     fn apply(
         &self,
         request: &TpProcessRequest,
-        context: &mut TransactionContext,
+        context: &mut dyn TransactionContext,
     ) -> Result<(), ApplyError> {
         let payload = BlockInfoPayload::new(request.get_payload())?;
         let mut state = BlockInfoState::new(context);
@@ -202,6 +202,10 @@ fn apply(request: &TpProcessRequest, context: &mut TransactionContext) -> Result
     }
 }
 
+/// # Safety
+///
+/// This function is unsafe because it takes raw pointers and performs several operations that may cause
+/// undefined behavior if the pointers are not valid.
 #[cfg(target_arch = "wasm32")]
 #[no_mangle]
 pub unsafe fn entrypoint(payload: WasmPtr, signer: WasmPtr, signature: WasmPtr) -> i32 {

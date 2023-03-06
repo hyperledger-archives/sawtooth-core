@@ -17,6 +17,7 @@
 
 use std;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum DatabaseError {
     InitError(String),
@@ -29,33 +30,11 @@ pub enum DatabaseError {
 impl std::fmt::Display for DatabaseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            DatabaseError::InitError(ref msg) => write!(f, "InitError: {}", msg),
-            DatabaseError::ReaderError(ref msg) => write!(f, "ReaderError: {}", msg),
-            DatabaseError::WriterError(ref msg) => write!(f, "WriterError: {}", msg),
-            DatabaseError::CorruptionError(ref msg) => write!(f, "CorruptionError: {}", msg),
-            DatabaseError::NotFoundError(ref msg) => write!(f, "NotFoundError: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for DatabaseError {
-    fn description(&self) -> &str {
-        match *self {
-            DatabaseError::InitError(ref msg) => msg,
-            DatabaseError::ReaderError(ref msg) => msg,
-            DatabaseError::WriterError(ref msg) => msg,
-            DatabaseError::CorruptionError(ref msg) => msg,
-            DatabaseError::NotFoundError(ref msg) => msg,
-        }
-    }
-
-    fn cause(&self) -> Option<&std::error::Error> {
-        match *self {
-            DatabaseError::InitError(_) => None,
-            DatabaseError::ReaderError(_) => None,
-            DatabaseError::WriterError(_) => None,
-            DatabaseError::CorruptionError(_) => None,
-            DatabaseError::NotFoundError(_) => None,
+            DatabaseError::InitError(ref msg) => write!(f, "InitError: {msg}"),
+            DatabaseError::ReaderError(ref msg) => write!(f, "ReaderError: {msg}"),
+            DatabaseError::WriterError(ref msg) => write!(f, "WriterError: {msg}"),
+            DatabaseError::CorruptionError(ref msg) => write!(f, "CorruptionError: {msg}"),
+            DatabaseError::NotFoundError(ref msg) => write!(f, "NotFoundError: {msg}"),
         }
     }
 }

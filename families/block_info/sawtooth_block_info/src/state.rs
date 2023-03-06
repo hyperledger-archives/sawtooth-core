@@ -48,10 +48,10 @@ pub struct BlockInfo {
 }
 
 pub struct BlockInfoState<'a> {
-    context: &'a mut TransactionContext,
+    context: &'a mut dyn TransactionContext,
 }
 impl<'a> BlockInfoState<'a> {
-    pub fn new(context: &'a mut TransactionContext) -> BlockInfoState {
+    pub fn new(context: &'a mut dyn TransactionContext) -> BlockInfoState {
         BlockInfoState { context }
     }
 
@@ -69,13 +69,14 @@ impl<'a> BlockInfoState<'a> {
         };
 
         match block_config {
-            Some(ref d) => Ok(Some(
-                ::protobuf::parse_from_bytes::<protos::block_info::BlockInfoConfig>(d)
-                    .map_err(|_| {
+            Some(ref d) => {
+                let x: protos::block_info::BlockInfoConfig =
+                    Message::parse_from_bytes(d).map_err(|_| {
                         ApplyError::InternalError("Failed to deserialize BlockInfoConfig".into())
-                    })?
-                    .into(),
-            )),
+                    })?;
+
+                Ok(Some(x.into()))
+            }
             None => Ok(None),
         }
     }
@@ -96,12 +97,14 @@ impl<'a> BlockInfoState<'a> {
         };
 
         match block_data {
-            Some(ref d) => Ok(Some(
-                (&::protobuf::parse_from_bytes::<protos::block_info::BlockInfo>(d).map_err(
-                    |_| ApplyError::InternalError("Failed to deserialize BlockInfo".into()),
-                )?)
-                    .into(),
-            )),
+            Some(ref d) => {
+                let x: &protos::block_info::BlockInfo =
+                    &Message::parse_from_bytes(d).map_err(|_| {
+                        ApplyError::InternalError("Failed to deserialize BlockInfo".into())
+                    })?;
+
+                Ok(Some(x.into()))
+            }
             None => Ok(None),
         }
     }
