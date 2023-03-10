@@ -19,14 +19,14 @@ use std::collections::HashMap;
 use std::iter::repeat;
 use std::num::ParseIntError;
 
-use hashlib::sha256_digest_str;
+use crate::hashlib::sha256_digest_str;
 use protobuf;
 
+use crate::state::StateDatabaseError;
+use crate::state::StateReader;
 use protobuf::Message;
-use state::StateDatabaseError;
-use state::StateReader;
 
-use proto::setting::Setting;
+use crate::proto::setting::Setting;
 
 const CONFIG_STATE_NAMESPACE: &str = "000000";
 const MAX_KEY_PARTS: usize = 4;
@@ -177,12 +177,12 @@ fn short_hash(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::setting::Setting;
-    use proto::setting::Setting_Entry;
+    use crate::proto::setting::Setting;
+    use crate::proto::setting::Setting_Entry;
+    use crate::state::StateDatabaseError;
+    use crate::state::StateReader;
     use protobuf;
     use protobuf::Message;
-    use state::StateDatabaseError;
-    use state::StateReader;
     use std::collections::HashMap;
 
     #[test]

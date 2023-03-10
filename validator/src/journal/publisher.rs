@@ -17,8 +17,8 @@
 
 #![allow(unknown_lints)]
 
-use batch::Batch;
-use block::Block;
+use crate::batch::Batch;
+use crate::block::Block;
 
 use cpython::{NoArgs, ObjectProtocol, PyClone, PyDict, PyList, PyObject, Python};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -30,16 +30,16 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
-use execution::execution_platform::ExecutionPlatform;
-use ffi::py_import_class;
-use journal::block_manager::{BlockManager, BlockRef};
-use journal::candidate_block::{CandidateBlock, CandidateBlockError};
-use journal::chain_commit_state::TransactionCommitCache;
-use journal::chain_head_lock::ChainHeadLock;
-use journal::commit_store::CommitStore;
-use metrics;
-use state::settings_view::SettingsView;
-use state::state_view_factory::StateViewFactory;
+use crate::execution::execution_platform::ExecutionPlatform;
+use crate::ffi::py_import_class;
+use crate::journal::block_manager::{BlockManager, BlockRef};
+use crate::journal::candidate_block::{CandidateBlock, CandidateBlockError};
+use crate::journal::chain_commit_state::TransactionCommitCache;
+use crate::journal::chain_head_lock::ChainHeadLock;
+use crate::journal::commit_store::CommitStore;
+use crate::metrics;
+use crate::state::settings_view::SettingsView;
+use crate::state::state_view_factory::StateViewFactory;
 
 const NUM_PUBLISH_COUNT_SAMPLES: usize = 5;
 const INITIAL_PUBLISH_COUNT: usize = 30;
@@ -425,7 +425,7 @@ impl SyncBlockPublisher {
         self.block_sender
             .call_method(py, "send", (block, injected_batches), None)
             .map_err(|py_err| {
-                ::pylogger::exception(py, "{:?}", py_err);
+                crate::pylogger::exception(py, "{:?}", py_err);
             })
             .expect("BlockSender.send() raised an exception");
 

@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-use state::BlockInfo;
+use crate::state::BlockInfo;
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -25,8 +25,8 @@ cfg_if! {
     }
 }
 
+use crate::protos::block_info::BlockInfoTxn;
 use protobuf::Message;
-use protos::block_info::BlockInfoTxn;
 
 fn validate_hex(string: &str, length: usize) -> bool {
     hex::decode(string).is_ok() && string.len() == length

@@ -30,8 +30,8 @@ use libc;
 
 use sawtooth_sdk::signing;
 
-use config;
-use err::CliError;
+use crate::config;
+use crate::err::CliError;
 
 pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     let path_config = config::get_path_config();

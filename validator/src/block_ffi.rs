@@ -14,19 +14,17 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use batch::Batch;
-use block::Block;
-use cpython;
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::proto::batch::Batch as ProtoBatch;
+use crate::proto::batch::BatchHeader;
+use crate::proto::block::Block as ProtoBlock;
+use crate::proto::block::BlockHeader;
+use crate::proto::transaction::Transaction as ProtoTxn;
+use crate::proto::transaction::TransactionHeader;
+use crate::transaction::Transaction;
 use cpython::{FromPyObject, ObjectProtocol, PyObject, Python, PythonObject, ToPyObject};
-use proto::batch::Batch as ProtoBatch;
-use proto::batch::BatchHeader;
-use proto::block::Block as ProtoBlock;
-use proto::block::BlockHeader;
-use proto::transaction::Transaction as ProtoTxn;
-use proto::transaction::TransactionHeader;
-use protobuf;
 use protobuf::Message;
-use transaction::Transaction;
 
 impl<'source> FromPyObject<'source> for Block {
     fn extract(py: Python, obj: &'source PyObject) -> cpython::PyResult<Self> {

@@ -16,6 +16,7 @@
 name = "sawtooth_perf"
 version = "0.1.0"
 authors = ["Intel Corporation"]
+edition = '2021'
 
 [dependencies]
 sawtooth-sdk = "0.3"

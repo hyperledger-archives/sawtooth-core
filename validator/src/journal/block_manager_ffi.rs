@@ -20,12 +20,12 @@ use std::mem;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 
-use block::Block;
-use journal::block_manager::{
+use crate::block::Block;
+use crate::journal::block_manager::{
     BlockManager, BlockManagerError, BranchDiffIterator, BranchIterator, GetBlockIterator,
 };
-use journal::commit_store::CommitStore;
-use proto;
+use crate::journal::commit_store::CommitStore;
+use crate::proto;
 use protobuf::Message;
 
 #[repr(u32)]
@@ -474,11 +474,11 @@ pub unsafe extern "C" fn block_manager_branch_diff_iterator_next(
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
-    use database::lmdb::{LmdbContext, LmdbDatabase};
-    use journal::block_store::BlockStore;
-    use journal::commit_store::CommitStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::block::Block;
+    use crate::database::lmdb::{LmdbContext, LmdbDatabase};
+    use crate::journal::block_store::BlockStore;
+    use crate::journal::commit_store::CommitStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
     use proto::block::BlockHeader;
 
     use protobuf::Message;

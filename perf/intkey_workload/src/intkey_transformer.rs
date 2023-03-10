@@ -15,11 +15,11 @@
  * ------------------------------------------------------------------------------
  */
 
+use crate::intkey_addresser::IntKeyAddresser;
+use crate::intkey_iterator::IntKeyPayload;
 use cbor::GenericEncoder;
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use intkey_addresser::IntKeyAddresser;
-use intkey_iterator::IntKeyPayload;
 use protobuf::{Message, RepeatedField};
 use rand::prelude::*;
 use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
@@ -186,7 +186,7 @@ impl<'a> IntKeyTransformer<'a> {
 #[cfg(test)]
 mod tests {
     use super::IntKeyTransformer;
-    use intkey_iterator::IntKeyIterator;
+    use crate::intkey_iterator::IntKeyIterator;
     use protobuf::Message;
     use sawtooth_sdk::messages::transaction::TransactionHeader;
     use sawtooth_sdk::signing;

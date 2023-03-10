@@ -19,6 +19,7 @@ name = "sawtooth-smallbank-tp-rust"
 version = "1.0.0"
 authors = ["Intel Corporation"]
 build = "build.rs"
+edition = '2021'
 
 [[bin]]
 name = "smallbank-tp-rust"

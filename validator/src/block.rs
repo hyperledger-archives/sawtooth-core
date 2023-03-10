@@ -15,8 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use batch::Batch;
-use proto;
+use crate::batch::Batch;
+use crate::proto;
 use protobuf::{self, Message};
 use std::fmt;
 

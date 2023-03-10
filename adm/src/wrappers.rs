@@ -14,11 +14,9 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use std;
-
 use protobuf::Message;
 
-use proto;
+use crate::proto;
 
 #[derive(Debug)]
 pub enum Error {

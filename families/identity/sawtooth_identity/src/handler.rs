@@ -31,11 +31,11 @@ cfg_if! {
     }
 }
 
+use crate::protos::identities::{IdentityPayload, IdentityPayload_IdentityType};
+use crate::state::IdentityState;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use protobuf::Message;
-use protos::identities::{IdentityPayload, IdentityPayload_IdentityType};
-use state::IdentityState;
 use std::iter::repeat;
 
 #[cfg(target_arch = "wasm32")]

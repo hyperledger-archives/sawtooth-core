@@ -15,9 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 
-use addressing::{create_block_address, get_config_addr};
+use crate::addressing::{create_block_address, get_config_addr};
+use crate::protos;
 use protobuf::Message;
-use protos;
 
 pub const DEFAULT_SYNC_TOLERANCE: u64 = 60 * 5;
 pub const DEFAULT_TARGET_COUNT: u64 = 256;

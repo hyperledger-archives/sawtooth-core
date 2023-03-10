@@ -21,10 +21,12 @@ use std::collections::{HashMap, HashSet};
 use std::iter::{FromIterator, Peekable};
 use std::sync::{Arc, RwLock};
 
-use block::Block;
-use journal::block_store::{BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex};
-use journal::NULL_BLOCK_IDENTIFIER;
-use metrics;
+use crate::block::Block;
+use crate::journal::block_store::{
+    BatchIndex, BlockStoreError, IndexedBlockStore, TransactionIndex,
+};
+use crate::journal::NULL_BLOCK_IDENTIFIER;
+use crate::metrics;
 
 lazy_static! {
     static ref COLLECTOR: metrics::MetricsCollectorHandle =
@@ -1141,9 +1143,9 @@ impl Iterator for BranchDiffIterator {
 mod tests {
 
     use super::{BlockManager, BlockManagerError};
-    use block::Block;
-    use journal::block_store::InMemoryBlockStore;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::block::Block;
+    use crate::journal::block_store::InMemoryBlockStore;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, previous_block_id: &str, block_num: u64) -> Block {
         Block {

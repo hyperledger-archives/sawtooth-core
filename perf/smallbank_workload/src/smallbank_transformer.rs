@@ -29,9 +29,11 @@ use protobuf::Message;
 use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
 use sawtooth_sdk::signing;
 
-use playlist::bytes_to_hex_str;
-use playlist::make_addresses;
-use protos::smallbank::{SmallbankTransactionPayload, SmallbankTransactionPayload_PayloadType};
+use crate::playlist::bytes_to_hex_str;
+use crate::playlist::make_addresses;
+use crate::protos::smallbank::{
+    SmallbankTransactionPayload, SmallbankTransactionPayload_PayloadType,
+};
 
 /// Transforms SmallbankTransactionPayloads into Sawtooth Transactions.
 pub struct SBPayloadTransformer<'a> {
@@ -171,7 +173,7 @@ mod tests {
     use sawtooth_sdk::messages::transaction::TransactionHeader;
     use sawtooth_sdk::signing;
 
-    use playlist::SmallbankGeneratingIter;
+    use crate::playlist::SmallbankGeneratingIter;
 
     const NUM_CREATE_ACCOUNTS: usize = 100;
     const NUM_TO_CONSIDER: usize = 1_000;

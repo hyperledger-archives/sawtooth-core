@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use game;
+use crate::game;
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 use sawtooth_sdk::processor::handler::{ApplyError, TransactionContext, TransactionHandler};
 use serde_json;

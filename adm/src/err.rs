@@ -15,8 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std;
-
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 pub enum CliError {

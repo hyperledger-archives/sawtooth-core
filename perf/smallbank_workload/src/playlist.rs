@@ -36,9 +36,9 @@ use self::yaml_rust::YamlEmitter;
 use self::yaml_rust::YamlLoader;
 use rand::prelude::*;
 
-use protos::smallbank;
-use protos::smallbank::SmallbankTransactionPayload;
-use protos::smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
+use crate::protos::smallbank;
+use crate::protos::smallbank::SmallbankTransactionPayload;
+use crate::protos::smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
 
 use protobuf;
 use protobuf::Message;

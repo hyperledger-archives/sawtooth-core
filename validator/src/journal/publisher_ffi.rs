@@ -22,17 +22,17 @@ use std::slice;
 
 use cpython::{ObjectProtocol, PyClone, PyList, PyObject, Python};
 
-use batch::Batch;
-use block::Block;
-use execution::py_executor::PyExecutor;
-use ffi::py_import_class;
-use journal::block_manager::BlockManager;
-use journal::commit_store::CommitStore;
-use journal::publisher::{
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::execution::py_executor::PyExecutor;
+use crate::ffi::py_import_class;
+use crate::journal::block_manager::BlockManager;
+use crate::journal::commit_store::CommitStore;
+use crate::journal::publisher::{
     BatchObserver, BlockPublisher, FinalizeBlockError, IncomingBatchSender, InitializeBlockError,
 };
 
-use state::state_view_factory::StateViewFactory;
+use crate::state::state_view_factory::StateViewFactory;
 
 lazy_static! {
     static ref PY_BATCH_PUBLISHER_CLASS: PyObject = py_import_class(

@@ -1,6 +1,6 @@
-use batch::Batch;
-use block::Block;
-use journal::publisher::{BlockPublisherState, SyncBlockPublisher};
+use crate::batch::Batch;
+use crate::block::Block;
+use crate::journal::publisher::{BlockPublisherState, SyncBlockPublisher};
 use std::sync::RwLockWriteGuard;
 
 /// Abstracts acquiring the lock used by the BlockPublisher without exposing access to the

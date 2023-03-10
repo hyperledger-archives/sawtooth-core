@@ -20,6 +20,7 @@ version = "1.0.0"
 authors = ["Bitwise IO"]
 build = "build.rs"
 description = "The Sawtooth Block Info transaction processor"
+edition = '2021'
 
 [package.metadata.deb]
 depends = "$auto"

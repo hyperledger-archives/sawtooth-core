@@ -24,7 +24,7 @@ pub mod state_pruning_manager;
 pub mod state_view_factory;
 pub mod state_view_ffi;
 
-use state::error::StateDatabaseError;
+use crate::state::error::StateDatabaseError;
 pub type StateIter = dyn Iterator<Item = Result<(String, Vec<u8>), StateDatabaseError>>;
 
 pub trait StateReader: Send + Sync {

@@ -14,10 +14,10 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-use database::lmdb::LmdbDatabase;
-use state::error::StateDatabaseError;
-use state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
-use state::StateReader;
+use crate::database::lmdb::LmdbDatabase;
+use crate::state::error::StateDatabaseError;
+use crate::state::merkle::{DecodedMerkleStateReader, MerkleDatabase};
+use crate::state::StateReader;
 
 /// The StateViewFactory produces StateViews for a particular merkle root.
 ///

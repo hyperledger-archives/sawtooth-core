@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 
 use std::collections::HashMap;
 
-use block::Block;
+use crate::block::Block;
 
 #[derive(Debug)]
 pub enum BlockStoreError {
@@ -251,8 +251,8 @@ impl Iterator for InMemoryIter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use block::Block;
-    use journal::NULL_BLOCK_IDENTIFIER;
+    use crate::block::Block;
+    use crate::journal::NULL_BLOCK_IDENTIFIER;
 
     fn create_block(header_signature: &str, block_num: u64, previous_block_id: &str) -> Block {
         Block {

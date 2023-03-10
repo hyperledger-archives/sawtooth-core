@@ -19,11 +19,11 @@ use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 
-use proto::events::Event;
-use proto::transaction_receipt::StateChange;
+use crate::proto::events::Event;
+use crate::proto::transaction_receipt::StateChange;
 
+use crate::scheduler::TxnExecutionResult;
 use protobuf::Message;
-use scheduler::TxnExecutionResult;
 
 #[derive(Clone)]
 pub struct PyBatchExecutionResult {
