@@ -84,7 +84,7 @@ pub fn run(args: &ArgMatches) -> Result<(), CliError> {
             .mode(0o640)
             .open(private_key_path.as_path())?;
 
-        private_key_file.write(private_key.as_hex().as_bytes())?;
+        private_key_file.write_all(private_key.as_hex().as_bytes())?;
     }
 
     {
@@ -99,7 +99,7 @@ pub fn run(args: &ArgMatches) -> Result<(), CliError> {
             .mode(0o644)
             .open(public_key_path.as_path())?;
 
-        public_key_file.write(public_key.as_hex().as_bytes())?;
+        public_key_file.write_all(public_key.as_hex().as_bytes())?;
     }
 
     chown(private_key_path.as_path(), key_dir_uid, key_dir_gid)?;
