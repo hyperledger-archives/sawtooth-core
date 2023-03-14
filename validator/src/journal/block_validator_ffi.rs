@@ -145,7 +145,8 @@ pub unsafe extern "C" fn block_validator_stop(block_validator_ptr: *mut c_void) 
 pub unsafe extern "C" fn block_validator_drop(block_validator_ptr: *mut c_void) -> ErrorCode {
     check_null!(block_validator_ptr);
 
-    let _ = Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor>);
+    let _ =
+        Box::from_raw(block_validator_ptr as *mut BlockValidator<PyExecutor, PyPermissionVerifier>);
 
     ErrorCode::Success
 }

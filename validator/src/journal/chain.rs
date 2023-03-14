@@ -272,7 +272,7 @@ impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 
     pub fn new(
         block_manager: BlockManager,
         block_validator: BlockValidator<TEP, PV>,
-        chain_reader: Box<ChainReader>,
+        chain_reader: Box<dyn ChainReader>,
         chain_head_lock: ChainHeadLock,
         block_validation_results: BlockValidationResultStore,
         consensus_notifier: Box<dyn ConsensusNotifier>,

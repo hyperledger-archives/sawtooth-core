@@ -166,7 +166,8 @@ pub unsafe extern "C" fn chain_controller_new(
 pub unsafe extern "C" fn chain_controller_drop(chain_controller: *mut c_void) -> ErrorCode {
     check_null!(chain_controller);
 
-    let _ = Box::from_raw(chain_controller as *mut ChainController<PyExecutor>);
+    let _ =
+        Box::from_raw(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>);
     ErrorCode::Success
 }
 
@@ -248,7 +249,7 @@ macro_rules! chain_controller_block_ffi {
                  proto_block.into()
              };
 
-             (*(chain_controller as *mut ChainController<PyExecutor>)).$cc_fn_name($($block_args)*);
+             (*(chain_controller as *mut ChainController<PyExecutor, PyPermissionVerifier>)).$cc_fn_name($($block_args)*);
 
              ErrorCode::Success
          }

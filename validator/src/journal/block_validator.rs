@@ -222,7 +222,7 @@ where
         let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
         let validations = vec![validation1, validation2, validation3];
@@ -354,7 +354,7 @@ where
         let validation2: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(OnChainRulesValidation::new(self.view_factory.clone()));
 
-        let validation3: Box<BlockValidation<ReturnValue = ()>> =
+        let validation3: Box<dyn BlockValidation<ReturnValue = ()>> =
             Box::new(PermissionValidation::new(self.permission_verifier.clone()));
 
         let validations = vec![validation1, validation2, validation3];
