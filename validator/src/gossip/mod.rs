@@ -15,21 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
-<<<<<<< HEAD:validator/src/gossip/mod.rs
-pub mod permission_verifier;
-=======
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 pub enum IdentityError {
+    #[error("Unable to read: {0}")]
     ReadError(String),
 }
-
-impl Error for IdentityError {}
-
-impl fmt::Display for IdentityError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            IdentityError::ReadError(s) => write!(f, "Unable to read: {s}"),
-        }
-    }
-}
->>>>>>> 40b0b330e (Fix uninlined_format_args warnings):validator/src/permissions/error.rs
