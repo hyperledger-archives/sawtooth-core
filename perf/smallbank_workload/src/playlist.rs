@@ -40,7 +40,6 @@ use crate::protos::smallbank;
 use crate::protos::smallbank::SmallbankTransactionPayload;
 use crate::protos::smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
 
-use protobuf;
 use protobuf::Message;
 
 use sawtooth_sdk::messages::transaction::Transaction;
