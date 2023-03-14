@@ -34,6 +34,7 @@ const ADDRESS_PART_SIZE: usize = 16;
 
 #[derive(Debug)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 pub enum SettingsViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),

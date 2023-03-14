@@ -48,6 +48,7 @@ const BLOCK_VALIDATOR_THREAD_NUM: u64 = 2;
 const BLOCK_VALIDATION_RESULT_CACHE_SIZE: usize = 512;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::enum_variant_names)]
 pub enum ValidationError {
     BlockValidationFailure(String),
     BlockValidationError(String),

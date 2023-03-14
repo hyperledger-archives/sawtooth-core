@@ -39,6 +39,7 @@ const MAX_KEY_PARTS: usize = 4;
 
 #[derive(Debug)]
 #[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 pub enum IdentityViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),

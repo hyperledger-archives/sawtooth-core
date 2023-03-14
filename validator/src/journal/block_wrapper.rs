@@ -21,19 +21,14 @@ use std::fmt;
 
 use cpython::{self, ObjectProtocol, PyClone, PyObject};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum BlockStatus {
+    #[default]
     Unknown = 0,
     Invalid = 1,
     Valid = 2,
     Missing = 3,
     InValidation = 5,
-}
-
-impl Default for BlockStatus {
-    fn default() -> Self {
-        BlockStatus::Unknown
-    }
 }
 
 #[derive(Debug)]
