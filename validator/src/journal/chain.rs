@@ -41,7 +41,7 @@ use crate::block::Block;
 use crate::consensus::notifier::ConsensusNotifier;
 use crate::consensus::registry::ConsensusRegistry;
 use crate::execution::execution_platform::ExecutionPlatform;
-use gossip::permission_verifier::PermissionVerifier;
+use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal;
 use crate::metrics;
 use crate::state::state_pruning_manager::StatePruningManager;

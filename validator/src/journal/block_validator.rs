@@ -20,7 +20,7 @@
 use crate::batch::Batch;
 use crate::block::Block;
 use crate::execution::execution_platform::{ExecutionPlatform, NULL_STATE_HASH};
-use gossip::permission_verifier::PermissionVerifier;
+use crate::gossip::permission_verifier::PermissionVerifier;
 use crate::journal::block_scheduler::BlockScheduler;
 use crate::journal::chain_commit_state::{
     validate_no_duplicate_batches, validate_no_duplicate_transactions,
@@ -28,10 +28,14 @@ use crate::journal::chain_commit_state::{
 };
 use crate::journal::validation_rule_enforcer::enforce_validation_rules;
 use crate::journal::{block_manager::BlockManager, block_wrapper::BlockStatus};
-use crate::permissions::verifier::PermissionVerifier;
 use crate::scheduler::TxnExecutionResult;
-use crate::state::{
-    identity_view::IdentityView, settings_view::SettingsView, state_view_factory::StateViewFactory,
+use crate::state::{settings_view::SettingsView, state_view_factory::StateViewFactory};
+use std::sync::atomic::Ordering;
+use std::sync::mpsc::{channel, RecvTimeoutError};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize},
+    mpsc::{Receiver, Sender},
+    Arc, Mutex,
 };
 use std::thread;
 use std::time::Duration;

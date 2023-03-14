@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+pub(crate) mod permission_verifier;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

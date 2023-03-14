@@ -16,7 +16,7 @@
  */
 
 use crate::execution::py_executor::PyExecutor;
-use gossip::permission_verifier::PyPermissionVerifier;
+use crate::gossip::permission_verifier::PyPermissionVerifier;
 use crate::journal::{
     block_manager::BlockManager,
     block_validator::{BlockValidationResultStore, BlockValidator},

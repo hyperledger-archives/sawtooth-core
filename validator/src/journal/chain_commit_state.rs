@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::collections::HashSet;
 
 use crate::batch::Batch;
 use crate::journal::block_manager::BlockManager;
