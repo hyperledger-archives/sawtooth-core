@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use cpython;
 use cpython::FromPyObject;
 use cpython::ObjectProtocol;
 

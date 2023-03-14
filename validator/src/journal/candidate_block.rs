@@ -19,7 +19,6 @@
 
 use std::collections::HashSet;
 
-use cpython;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::Python;
