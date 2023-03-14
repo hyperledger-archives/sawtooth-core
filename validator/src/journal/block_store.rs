@@ -59,6 +59,7 @@ pub struct InMemoryBlockStore {
     state: Arc<Mutex<InMemoryBlockStoreState>>,
 }
 
+#[allow(dead_code)]
 impl InMemoryBlockStore {
     pub fn new() -> Self {
         InMemoryBlockStore::default()

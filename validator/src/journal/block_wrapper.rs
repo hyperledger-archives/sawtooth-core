@@ -52,6 +52,7 @@ impl Clone for BlockWrapper {
     }
 }
 
+#[allow(dead_code)]
 impl BlockWrapper {
     pub fn header_signature(&self) -> String {
         let gil = cpython::Python::acquire_gil();

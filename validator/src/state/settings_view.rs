@@ -33,6 +33,7 @@ const MAX_KEY_PARTS: usize = 4;
 const ADDRESS_PART_SIZE: usize = 16;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum SettingsViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),

@@ -66,6 +66,7 @@ impl<B: BlockStatusStore> BlockScheduler<B> {
             .done(block_id)
     }
 
+    #[allow(dead_code)]
     pub fn contains(&self, block_id: &str) -> bool {
         self.state
             .lock()

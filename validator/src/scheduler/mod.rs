@@ -66,6 +66,7 @@ pub struct TxnExecutionResult {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum SchedulerError {
     /// The scheduler transition is not allowed by the Finite State Machine.
     FSMError(String),

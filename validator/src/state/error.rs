@@ -24,6 +24,7 @@ use protobuf::ProtobufError;
 use crate::database::error::DatabaseError;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum StateDatabaseError {
     NotFound(String),
     DeserializationError(DecodeError),

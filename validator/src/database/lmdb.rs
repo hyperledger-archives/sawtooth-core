@@ -208,6 +208,7 @@ pub struct LmdbDatabaseReaderCursor<'a> {
     cursor: lmdb::Cursor<'a, 'a>,
 }
 
+#[allow(dead_code)]
 impl<'a> LmdbDatabaseReaderCursor<'a> {
     pub fn seek_first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor

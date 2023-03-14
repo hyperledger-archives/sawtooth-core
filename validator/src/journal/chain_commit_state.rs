@@ -23,6 +23,7 @@ use crate::journal::commit_store::CommitStore;
 use crate::transaction::Transaction;
 
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum ChainCommitStateError {
     MissingDependency(String),
     DuplicateTransaction(String),

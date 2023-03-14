@@ -30,6 +30,7 @@ pub struct ForkCache {
     cache: HashMap<String, Instant>,
 }
 
+#[allow(dead_code)]
 impl ForkCache {
     /// Create a new ForkCache which will call `on_expired` whenever a Fork expires from the cache.
     pub fn new(keep_time: Duration) -> Self {

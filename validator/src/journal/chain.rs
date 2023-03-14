@@ -68,6 +68,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ChainControllerError {
     QueueRecvError(RecvError),
     ChainIdError(io::Error),
@@ -246,6 +247,7 @@ impl ChainControllerState {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifier + Clone> {
     state: Arc<RwLock<ChainControllerState>>,
     stop_handle: Arc<Mutex<Option<ChainThreadStopHandle>>>,
@@ -265,6 +267,7 @@ pub struct ChainController<TEP: ExecutionPlatform + Clone, PV: PermissionVerifie
     chain_head_lock: ChainHeadLock,
 }
 
+#[allow(dead_code)]
 impl<TEP: ExecutionPlatform + Clone + 'static, PV: PermissionVerifier + Clone + 'static>
     ChainController<TEP, PV>
 {

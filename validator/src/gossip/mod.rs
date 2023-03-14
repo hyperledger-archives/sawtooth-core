@@ -20,6 +20,7 @@ pub(crate) mod permission_verifier;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum IdentityError {
     #[error("Unable to read: {0}")]
     ReadError(String),

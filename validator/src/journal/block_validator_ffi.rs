@@ -28,6 +28,7 @@ use std::os::raw::c_void;
 
 #[repr(u32)]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,

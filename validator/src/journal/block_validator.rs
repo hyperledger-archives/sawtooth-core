@@ -173,6 +173,7 @@ pub struct BlockValidator<TEP: ExecutionPlatform, PV: PermissionVerifier> {
     permission_verifier: PV,
 }
 
+#[allow(dead_code)]
 impl<TEP: ExecutionPlatform + 'static, PV: PermissionVerifier + 'static> BlockValidator<TEP, PV>
 where
     TEP: Clone,

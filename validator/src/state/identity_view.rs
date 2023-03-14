@@ -30,11 +30,15 @@ use crate::state::StateReader;
 use protobuf::Message;
 
 /// The namespace for storage
+#[allow(dead_code)]
 const POLICY_NS: &str = "00001d00";
+#[allow(dead_code)]
 const ROLE_NS: &str = "00001d01";
+#[allow(dead_code)]
 const MAX_KEY_PARTS: usize = 4;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum IdentityViewError {
     StateDatabaseError(StateDatabaseError),
     EncodingError(protobuf::ProtobufError),
@@ -57,10 +61,12 @@ impl From<protobuf::ProtobufError> for IdentityViewError {
 /// Provides a view into global state which translates Role and Policy names
 /// into the corresponding addresses, and returns the deserialized values from
 /// state.
+#[allow(dead_code)]
 pub struct IdentityView {
     state_reader: Box<dyn StateReader>,
 }
 
+#[allow(dead_code)]
 impl IdentityView {
     /// Creates an IdentityView from a given StateReader.
     pub fn new(state_reader: Box<dyn StateReader>) -> Self {

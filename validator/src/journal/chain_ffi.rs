@@ -48,6 +48,7 @@ use proto::transaction_receipt::TransactionReceipt;
 
 #[repr(u32)]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ErrorCode {
     Success = 0,
     NullPointerProvided = 0x01,

@@ -74,6 +74,7 @@ pub enum FinalizeBlockError {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum StartError {
     Disconnected,
 }
@@ -96,6 +97,7 @@ pub struct BlockPublisherState {
     block_references: HashMap<String, BlockRef>,
 }
 
+#[allow(dead_code)]
 impl BlockPublisherState {
     pub fn new(
         transaction_executor: Box<dyn ExecutionPlatform>,
@@ -725,6 +727,7 @@ impl IncomingBatchSender {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum BatchQueueError {
     SenderError(Box<SendError<Batch>>),
     Timeout,
@@ -751,6 +754,7 @@ pub struct PendingBatchesPool {
     gauge: metrics::Gauge,
 }
 
+#[allow(dead_code)]
 impl PendingBatchesPool {
     pub fn new(sample_size: usize, initial_value: usize) -> PendingBatchesPool {
         PendingBatchesPool {
