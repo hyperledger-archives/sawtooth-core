@@ -37,3 +37,14 @@ path = "./src/main.rs"
 [build-dependencies]
 protoc-rust = "2.0"
 glob = "0.3"
+
+[features]
+default = []
+
+stable = []
+
+experimental = [
+    # The experimental feature extends stable:
+    "stable",
+    # The following features are experimental:
+]
