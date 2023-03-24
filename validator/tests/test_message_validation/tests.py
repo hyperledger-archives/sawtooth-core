@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+from secrets import randbelow, choice
 import unittest
 import hashlib
-import random
 import string
 
 import cbor
@@ -56,8 +56,8 @@ class TestMessageValidation(unittest.TestCase):
         for _ in range(count):
             payload = {
                 'Verb': 'set',
-                'Name': 'name' + str(random.randint(0, 100)),
-                'Value': random.randint(0, 100)
+                'Name': 'name' + str(randbelow(100)),
+                'Value': randbelow(100)
             }
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
@@ -102,7 +102,7 @@ class TestMessageValidation(unittest.TestCase):
 
     def _generate_id(self):
         return hashlib.sha512(''.join(
-            [random.choice(string.ascii_letters)
+            [choice(string.ascii_letters)
                 for _ in range(0, 1024)]).encode()).hexdigest()
 
     def _create_batches(self, batch_count, txn_count,

@@ -15,8 +15,8 @@
 
 # pylint: disable=consider-using-enumerate
 
+from secrets import randbelow, choice
 import logging
-import random
 import string
 import hashlib
 
@@ -125,13 +125,13 @@ class BoardLayout:
             while not success:
                 attempts += 1
 
-                orientation = random.choice(["horizontal", "vertical"])
+                orientation = choice(["horizontal", "vertical"])
                 if orientation == "horizontal":
-                    row = random.randrange(0, size)
-                    col = random.randrange(0, size - len(ship) + 1)
+                    row = randbelow(size)
+                    col = randbelow(size - len(ship) + 1)
                 else:
-                    row = random.randrange(0, size - len(ship) + 1)
-                    col = random.randrange(0, size)
+                    row = randbelow(size - len(ship) + 1)
+                    col = randbelow(size)
 
                 position = ShipPosition(text=ship, row=row, column=col, orientation=orientation)
 
@@ -180,7 +180,7 @@ class ShipPosition:
 def create_nonces(board_size):
     return [
         [
-            "".join([random.choice(string.ascii_letters) for _ in range(0, 10)])
+            "".join([choice(string.ascii_letters) for _ in range(0, 10)])
             for _ in range(board_size)
         ]
         for _ in range(board_size)
