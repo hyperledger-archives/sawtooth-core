@@ -13,10 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from secrets import SystemRandom, choice
 import hashlib
 import os
 import unittest
-import random
 import shutil
 import tempfile
 from string import ascii_lowercase
@@ -104,10 +104,10 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
             hashed: {
                 key: 5.0
             }
-            for key, hashed in random.sample(key_hashes.items(), 50)
+            for key, hashed in SystemRandom().sample(key_hashes.items(), 50)
         }
         values.update(set_items)
-        delete_items = set(random.sample(list(key_hashes.values()), 50))
+        delete_items = set(SystemRandom().sample(list(key_hashes.values()), 50))
 
         # make sure there are no sets and deletes of the same key
         delete_items = delete_items - set_items.keys()
@@ -223,4 +223,4 @@ def _hash(key):
 
 
 def _random_string(length):
-    return ''.join(random.choice(ascii_lowercase) for _ in range(length))
+    return ''.join(choice(ascii_lowercase) for _ in range(length))

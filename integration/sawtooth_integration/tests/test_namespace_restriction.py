@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from secrets import randbelow
 import unittest
 import logging
 import json
@@ -22,7 +23,6 @@ import urllib.request
 import urllib.error
 import base64
 import hashlib
-import random
 
 import cbor
 
@@ -153,7 +153,7 @@ def create_transaction(signer, verb, name, value):
 
     addresses = [make_intkey_address(name)]
 
-    nonce = hex(random.randint(0, 2**64))
+    nonce = hex(randbelow(2**64))
 
     txn_pub_key = signer.get_public_key().as_hex()
     header = TransactionHeader(

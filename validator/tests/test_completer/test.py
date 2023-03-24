@@ -15,8 +15,8 @@
 
 # pylint: disable=protected-access
 
+from secrets import SystemRandom, randbelow
 import unittest
-import random
 import hashlib
 import os
 import tempfile
@@ -83,8 +83,8 @@ class TestCompleter(unittest.TestCase):
         for _ in range(count):
             payload = {
                 'Verb': 'set',
-                'Name': 'name' + str(random.randint(0, 100)),
-                'Value': random.randint(0, 100)
+                'Name': 'name' + str(randbelow(100)),
+                'Value': randbelow(100)
             }
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
@@ -271,7 +271,7 @@ class TestCompleter(unittest.TestCase):
         """
         block = self._create_blocks(1, 6)[0]
         batches = list(block.batches)
-        random.shuffle(batches)
+        SystemRandom().shuffle(batches)
         del block.batches[:]
         block.batches.extend(batches)
         self.completer.add_block(block)

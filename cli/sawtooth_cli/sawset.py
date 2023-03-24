@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from secrets import randbelow
 import argparse
 from base64 import b64decode
 import csv
@@ -23,7 +24,6 @@ import logging
 import os
 import sys
 import traceback
-import random
 import yaml
 
 import pkg_resources
@@ -327,7 +327,7 @@ def _create_propose_txn(signer, setting_key_value):
     key and value.
     """
     setting_key, setting_value = setting_key_value
-    nonce = hex(random.randint(0, 2**64))
+    nonce = hex(randbelow(2**64))
     proposal = SettingProposal(
         setting=setting_key,
         value=setting_value,

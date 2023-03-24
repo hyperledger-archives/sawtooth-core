@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+from secrets import choice
 import logging
 import copy
 import time
-import random
 import os
 import binascii
 from threading import Lock
@@ -622,7 +622,7 @@ class ConnectionManager(InstrumentedThread):
 
             if unpeered_candidates:
                 self._attempt_to_peer_with_endpoint(
-                    random.choice(unpeered_candidates))
+                    choice(unpeered_candidates))
 
     def retry_static_peering(self):
         with self._lock:

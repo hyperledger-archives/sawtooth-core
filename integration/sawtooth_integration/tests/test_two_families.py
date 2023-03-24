@@ -15,6 +15,7 @@
 
 # pylint: disable=attribute-defined-outside-init
 
+from secrets import randbelow
 import unittest
 import logging
 import operator
@@ -25,7 +26,6 @@ import urllib.error
 import json
 from base64 import b64decode
 import hashlib
-import random
 
 import cbor
 
@@ -194,7 +194,7 @@ def create_transaction(signer, verb, name, value):
 
     addresses = [make_intkey_address(name)]
 
-    nonce = hex(random.randint(0, 2**64))
+    nonce = hex(randbelow(2**64))
 
     txn_pub_key = signer.get_public_key().as_hex()
     header = TransactionHeader(
