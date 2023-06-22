@@ -107,13 +107,13 @@ If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
 
   .. important::
 
-     In the Docker environment, the REST API is at ``http://rest-api:8008``.
-     You must add ``--url http://rest-api:8008`` to all ``xo`` commands in this
+     In the Docker environment, the REST API is at ``http://rest-api-1:8008``.
+     You must add ``--url http://rest-api-1:8008`` to all ``xo`` commands in this
      procedure. For example:
 
         .. code-block:: console
 
-           $ xo create my-game --username jack --url http://rest-api:8008
+           $ xo create my-game --username jack --url http://rest-api-1:8008
 
 * Kubernetes: See :ref:`confirming-connectivity-k8s-label`
 
