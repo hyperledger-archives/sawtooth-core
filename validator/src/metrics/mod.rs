@@ -32,15 +32,10 @@ pub fn get_collector<S: AsRef<str>>(name: S) -> MetricsCollectorHandle {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub enum Level {
+    #[default]
     Info,
-}
-
-impl Default for Level {
-    fn default() -> Self {
-        Level::Info
-    }
 }
 
 fn into_level_str(level: Level) -> &'static str {
