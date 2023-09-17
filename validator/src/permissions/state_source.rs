@@ -41,12 +41,10 @@ impl IdentitySource for IdentityView {
                 .map(|mut entry| match entry.get_field_type() {
                     Policy_EntryType::PERMIT_KEY => Ok(Permission::PermitKey(entry.take_key())),
                     Policy_EntryType::DENY_KEY => Ok(Permission::DenyKey(entry.take_key())),
-                    Policy_EntryType::ENTRY_TYPE_UNSET => {
-                        return Err(IdentityError::ReadError(format!(
-                            "policy {} is contains invalid type",
-                            entry.get_key()
-                        )))
-                    }
+                    Policy_EntryType::ENTRY_TYPE_UNSET => Err(IdentityError::ReadError(format!(
+                        "policy {} is contains invalid type",
+                        entry.get_key()
+                    ))),
                 })
                 .collect();
 
