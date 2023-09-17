@@ -562,3 +562,74 @@ impl ChainReader for CommitStore {
             .map_err(|err| ChainReadError::GeneralReadError(format!("{err:?}")))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::database::error::DatabaseError;
+
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct TestBatch {
+        // pub header_signature: String,
+        // pub transactions: Vec<Transaction>,
+        // pub signer_public_key: String,
+        pub transaction_ids: Vec<String>,
+        // pub trace: bool,
+
+        // pub header_bytes: Vec<u8>,
+    }
+
+    pub struct TestBlock {
+        // pub header_signature: String,
+        pub batches: Vec<TestBatch>,
+        // pub state_root_hash: String,
+        // pub consensus: Vec<u8>,
+        // pub batch_ids: Vec<String>,
+        // pub signer_public_key: String,
+        // pub previous_block_id: String,
+        // pub block_num: u64,
+
+        // pub header_bytes: Vec<u8>,
+    }
+
+    // Copies logic of `sawtooth_validator::journal::commit_store::CommitStore::get_batch_by_transaction`
+    fn mock_get_batch_by_transaction(
+        transaction_id: &str,
+        block: TestBlock,
+    ) -> Result<TestBatch, DatabaseError> {
+        // self.get_by_transaction_id(transaction_id)
+        // .and_then(|block| {
+        block
+            .batches
+            .into_iter()
+            .find(|batch| {
+                !batch
+                    .transaction_ids
+                    .iter()
+                    .any(|txn_id| txn_id == transaction_id)
+            })
+            .ok_or_else(|| DatabaseError::CorruptionError("Transaction index corrupted".into()))
+        // })
+    }
+
+    #[test]
+    fn test_get_batch_by_transaction_ok() {
+        let block = TestBlock {
+            batches: vec![TestBatch {
+                transaction_ids: vec!["1".to_string()],
+            }],
+        };
+        let transaction_id = "1";
+        assert!(mock_get_batch_by_transaction(transaction_id, block).is_ok());
+    }
+
+    #[test]
+    fn test_get_batch_by_transaction_should_err() {
+        let block = TestBlock {
+            batches: vec![TestBatch {
+                transaction_ids: vec!["1".to_string()],
+            }],
+        };
+        let transaction_id = "nope";
+        assert!(mock_get_batch_by_transaction(transaction_id, block).is_err());
+    }
+}
