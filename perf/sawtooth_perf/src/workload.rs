@@ -27,7 +27,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time;
 use std::vec::IntoIter;
 
-use chrono;
 use futures::Future;
 use hyper::client::{Client, HttpConnector, Request, Response};
 use hyper::error::UriError;
@@ -36,7 +35,6 @@ use hyper::Error as HyperError;
 use hyper::Method;
 use hyper::StatusCode;
 use hyper::Uri;
-use protobuf;
 use protobuf::Message;
 use tokio_core::reactor::Handle;
 
