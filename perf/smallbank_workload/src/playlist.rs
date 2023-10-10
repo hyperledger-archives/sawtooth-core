@@ -613,7 +613,7 @@ impl<'a> FmtWriter<'a> {
 impl<'a> fmt::Write for FmtWriter<'a> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         let w = &mut *self.writer;
-        w.write_all(s.as_bytes()).map_err(|_| fmt::Error::default())
+        w.write_all(s.as_bytes()).map_err(|_| fmt::Error)
     }
 }
 
