@@ -319,7 +319,7 @@ impl CommitStore {
                     .batches
                     .into_iter()
                     .find(|batch| {
-                        !batch
+                        batch
                             .transaction_ids
                             .iter()
                             .any(|txn_id| txn_id == transaction_id)
@@ -605,7 +605,7 @@ mod tests {
                 !batch
                     .transaction_ids
                     .iter()
-                    .any(|txn_id| txn_id == transaction_id)
+                    .all(|txn_id| txn_id != transaction_id)
             })
             .ok_or_else(|| DatabaseError::CorruptionError("Transaction index corrupted".into()))
         // })
