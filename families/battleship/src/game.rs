@@ -41,7 +41,7 @@ pub fn get_battleship_name_hash(name: &str) -> String {
 
 /// Get a state address for a given game of battleship
 pub fn get_battleship_address(name: &str) -> String {
-    vec![get_battleship_prefix(), get_battleship_name_hash(name)].join("")
+    [get_battleship_prefix(), get_battleship_name_hash(name)].join("")
 }
 
 /// Hash the value and nonce for a revealed space

@@ -1041,8 +1041,7 @@ mod tests {
         run_test(|merkle_path| {
             let mut merkle_db = make_db(merkle_path);
             let init_root = merkle_db.get_merkle_root();
-            let key_hashes = vec![
-                // matching prefix e55420
+            let key_hashes = [
                 (
                     "asdfg",
                     "e5542002d3e2892516fa461cde69e05880609fbad3d38ab69435a189e126de672b620c",
@@ -1133,7 +1132,7 @@ mod tests {
         run_test(|merkle_path| {
             let mut merkle_db = make_db(merkle_path);
             let init_root = merkle_db.get_merkle_root();
-            let key_hashes = vec![
+            let key_hashes = [
                 (
                     "qwert",
                     "c946ee72d38b8c51328f1a5f31eb5bd3300362ad0ca69dab54eff996775c7069216bda",
@@ -1165,7 +1164,7 @@ mod tests {
             assert_ne!(init_root, merkle_db.get_merkle_root());
 
             // matching prefix e55420, however this will be newly added and not set already in trie
-            let key_hash_to_be_inserted = vec![(
+            let key_hash_to_be_inserted = [(
                 "asdfg",
                 "e5542002d3e2892516fa461cde69e05880609fbad3d38ab69435a189e126de672b620c",
             )];
@@ -1517,7 +1516,7 @@ mod tests {
                 );
             }
 
-            let addresses = vec!["ab0000", "aba001", "abff02"];
+            let addresses = ["ab0000", "aba001", "abff02"];
             for (i, key) in addresses.iter().enumerate() {
                 let new_root = merkle_db
                     .set(key, format!("{:04x}", i * 10).as_bytes())

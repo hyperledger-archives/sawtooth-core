@@ -653,18 +653,13 @@ impl BlockManager {
     }
 
     fn block_contains_any_transaction(&self, block: &Block, ids: &[&String]) -> Option<String> {
-        let transaction_ids: HashSet<&String> = HashSet::from_iter(
-            block
-                .batches
-                .iter()
-                .fold(vec![], |mut arr, b| {
-                    for transaction in &b.transactions {
-                        arr.push(&transaction.header_signature)
-                    }
-                    arr
-                })
-                .into_iter(),
-        );
+        let transaction_ids: HashSet<&String> =
+            HashSet::from_iter(block.batches.iter().fold(vec![], |mut arr, b| {
+                for transaction in &b.transactions {
+                    arr.push(&transaction.header_signature)
+                }
+                arr
+            }));
         let comparison_transaction_ids: HashSet<&String> = HashSet::from_iter(ids.iter().cloned());
         transaction_ids
             .intersection(&comparison_transaction_ids)

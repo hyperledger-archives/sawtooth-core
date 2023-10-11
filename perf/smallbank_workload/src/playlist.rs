@@ -40,7 +40,6 @@ use crate::protos::smallbank;
 use crate::protos::smallbank::SmallbankTransactionPayload;
 use crate::protos::smallbank::SmallbankTransactionPayload_PayloadType as SBPayloadType;
 
-use protobuf;
 use protobuf::Message;
 
 use sawtooth_sdk::messages::transaction::Transaction;
@@ -614,7 +613,7 @@ impl<'a> FmtWriter<'a> {
 impl<'a> fmt::Write for FmtWriter<'a> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         let w = &mut *self.writer;
-        w.write_all(s.as_bytes()).map_err(|_| fmt::Error::default())
+        w.write_all(s.as_bytes()).map_err(|_| fmt::Error)
     }
 }
 
