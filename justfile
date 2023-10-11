@@ -37,6 +37,9 @@ features := '\
 build:
     #!/usr/bin/env sh
     set -e
+    cmd="./bin/protogen"
+    echo "\033[1m$cmd\033[0m"
+    $cmd
     for feature in $(echo {{features}})
     do
         for crate in $(echo {{crates}})
