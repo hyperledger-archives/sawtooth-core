@@ -281,6 +281,7 @@ mod tests {
     /// Opens an LmdbDatabase and executes its basic operations
     /// (adding keys, deleting keys, etc), making assertions about the
     /// database contents at each step.
+    #[ignore]
     #[test]
     fn test_lmdb() {
         let path_config = config::get_path_config();

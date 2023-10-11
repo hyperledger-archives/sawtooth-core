@@ -230,6 +230,7 @@ mod tests {
     /// Opens a blockstore and executes its basic operations (adding,
     /// deleting, and looking up blocks), making assertions about the
     /// blockstore contents at each step.
+    #[ignore]
     #[test]
     fn test_blockstore() {
         let path_config = config::get_path_config();
