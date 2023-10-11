@@ -107,6 +107,7 @@ test:
             echo "\033[1m$cmd\033[0m"
             $cmd
             cmd="cd $crate && cargo test $feature"
+            export PYTHONPATH=.
             echo "\033[1m$cmd\033[0m"
             (eval $cmd)
         done
