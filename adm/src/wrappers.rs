@@ -15,20 +15,14 @@
  * ------------------------------------------------------------------------------
  */
 use protobuf::Message;
+use thiserror::Error;
 
 use crate::proto;
 
-#[derive(Debug)]
-pub enum Error {
-    ParseError(String),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            Error::ParseError(ref msg) => write!(f, "ParseError: {msg}"),
-        }
-    }
+#[derive(Error, Debug)]
+pub enum WrappersError {
+    #[error("Protobuf error: {0}")]
+    Protobuf(#[from] protobuf::ProtobufError),
 }
 
 #[derive(Serialize)]
@@ -43,28 +37,21 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn try_from(block: proto::block::Block) -> Result<Self, Error> {
-        Message::parse_from_bytes(&block.header)
-            .map_err(|err| {
-                Error::ParseError(format!(
-                    "Invalid BlockHeader {}: {}",
-                    block.header_signature, err
-                ))
-            })
-            .and_then(|block_header: proto::block::BlockHeader| {
-                block
-                    .get_batches()
-                    .iter()
-                    .map(|batch| Batch::try_from(batch.clone()))
-                    .collect::<Result<Vec<Batch>, Error>>()
-                    .map(move |batches| Block {
-                        batches,
-                        block_num: block_header.get_block_num(),
-                        consensus: Vec::from(block_header.get_consensus()),
-                        header_signature: String::from(block.get_header_signature()),
-                        previous_block_id: String::from(block_header.get_previous_block_id()),
-                        state_root_hash: String::from(block_header.get_state_root_hash()),
-                    })
+    pub fn try_from(block: proto::block::Block) -> Result<Self, WrappersError> {
+        let block_header: proto::block::BlockHeader = Message::parse_from_bytes(&block.header)?;
+
+        block
+            .get_batches()
+            .iter()
+            .map(|batch| Batch::try_from(batch.clone()))
+            .collect::<Result<Vec<Batch>, WrappersError>>()
+            .map(move |batches| Block {
+                batches,
+                block_num: block_header.get_block_num(),
+                consensus: Vec::from(block_header.get_consensus()),
+                header_signature: String::from(block.get_header_signature()),
+                previous_block_id: String::from(block_header.get_previous_block_id()),
+                state_root_hash: String::from(block_header.get_state_root_hash()),
             })
     }
 }
@@ -77,25 +64,17 @@ pub struct Batch {
 }
 
 impl Batch {
-    pub fn try_from(batch: proto::batch::Batch) -> Result<Self, Error> {
-        Message::parse_from_bytes(&batch.header)
-            .map_err(|err| {
-                Error::ParseError(format!(
-                    "Invalid BatchHeader {}: {}",
-                    batch.header_signature, err
-                ))
-            })
-            .and_then(|batch_header: proto::batch::BatchHeader| {
-                batch
-                    .get_transactions()
-                    .iter()
-                    .map(|transaction| Transaction::try_from(&transaction.clone()))
-                    .collect::<Result<Vec<Transaction>, Error>>()
-                    .map(move |transactions| Batch {
-                        header_signature: String::from(batch.get_header_signature()),
-                        signer_public_key: String::from(batch_header.get_signer_public_key()),
-                        transactions,
-                    })
+    pub fn try_from(batch: proto::batch::Batch) -> Result<Self, WrappersError> {
+        let batch_header: proto::batch::BatchHeader = Message::parse_from_bytes(&batch.header)?;
+        batch
+            .get_transactions()
+            .iter()
+            .map(|transaction| Transaction::try_from(&transaction.clone()))
+            .collect::<Result<Vec<Transaction>, WrappersError>>()
+            .map(move |transactions| Batch {
+                header_signature: String::from(batch.get_header_signature()),
+                signer_public_key: String::from(batch_header.get_signer_public_key()),
+                transactions,
             })
     }
 }
@@ -117,28 +96,21 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn try_from(transaction: &proto::transaction::Transaction) -> Result<Self, Error> {
-        Message::parse_from_bytes(&transaction.header)
-            .map_err(|err| {
-                Error::ParseError(format!(
-                    "Invalid TransactionHeader {}: {}",
-                    transaction.header_signature, err
-                ))
-            })
-            .map(
-                |transaction_header: proto::transaction::TransactionHeader| Transaction {
-                    batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
-                    dependencies: transaction_header.get_dependencies().to_vec(),
-                    family_name: String::from(transaction_header.get_family_name()),
-                    family_version: String::from(transaction_header.get_family_version()),
-                    header_signature: String::from(transaction.get_header_signature()),
-                    inputs: transaction_header.get_inputs().to_vec(),
-                    nonce: String::from(transaction_header.get_nonce()),
-                    outputs: transaction_header.get_outputs().to_vec(),
-                    payload: Vec::from(transaction.get_payload()),
-                    payload_sha512: String::from(transaction_header.get_payload_sha512()),
-                    signer_public_key: String::from(transaction_header.get_signer_public_key()),
-                },
-            )
+    pub fn try_from(transaction: &proto::transaction::Transaction) -> Result<Self, WrappersError> {
+        let transaction_header: proto::transaction::TransactionHeader =
+            Message::parse_from_bytes(&transaction.header)?;
+        Ok(Transaction {
+            batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
+            dependencies: transaction_header.get_dependencies().to_vec(),
+            family_name: String::from(transaction_header.get_family_name()),
+            family_version: String::from(transaction_header.get_family_version()),
+            header_signature: String::from(transaction.get_header_signature()),
+            inputs: transaction_header.get_inputs().to_vec(),
+            nonce: String::from(transaction_header.get_nonce()),
+            outputs: transaction_header.get_outputs().to_vec(),
+            payload: Vec::from(transaction.get_payload()),
+            payload_sha512: String::from(transaction_header.get_payload_sha512()),
+            signer_public_key: String::from(transaction_header.get_signer_public_key()),
+        })
     }
 }

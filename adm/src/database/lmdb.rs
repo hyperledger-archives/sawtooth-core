@@ -34,23 +34,16 @@ impl LmdbContext {
 
         let filepath_str = filepath
             .to_str()
-            .ok_or_else(|| DatabaseError::InitError(format!("Invalid filepath: {filepath:?}")))?;
+            .ok_or_else(|| DatabaseError::Init(format!("Invalid filepath: {filepath:?}")))?;
 
-        let mut builder = lmdb::EnvBuilder::new().map_err(|err| {
-            DatabaseError::InitError(format!("Failed to initialize environment: {err}"))
-        })?;
-        builder
-            .set_maxdbs(indexes + 1)
-            .map_err(|err| DatabaseError::InitError(format!("Failed to set MAX_DBS: {err}")))?;
-        builder
-            .set_mapsize(size.unwrap_or(DEFAULT_SIZE))
-            .map_err(|err| DatabaseError::InitError(format!("Failed to set MAP_SIZE: {err}")))?;
+        let mut builder = lmdb::EnvBuilder::new()?;
 
-        let env = unsafe {
-            builder
-                .open(filepath_str, flags, 0o600)
-                .map_err(|err| DatabaseError::InitError(format!("Database not found: {err}")))
-        }?;
+        builder.set_maxdbs(indexes + 1)?;
+
+        builder.set_mapsize(size.unwrap_or(DEFAULT_SIZE))?;
+
+        let env = unsafe { builder.open(filepath_str, flags, 0o600) }?;
+
         Ok(LmdbContext { env })
     }
 }
@@ -67,8 +60,7 @@ impl<'e> LmdbDatabase<'e> {
             &ctx.env,
             Some("main"),
             &lmdb::DatabaseOptions::new(lmdb::db::CREATE),
-        )
-        .map_err(|err| DatabaseError::InitError(format!("Failed to open database: {err:?}")))?;
+        )?;
 
         let mut index_dbs = HashMap::with_capacity(indexes.len());
         for name in indexes {
@@ -76,8 +68,7 @@ impl<'e> LmdbDatabase<'e> {
                 &ctx.env,
                 Some(name),
                 &lmdb::DatabaseOptions::new(lmdb::db::CREATE),
-            )
-            .map_err(|err| DatabaseError::InitError(format!("Failed to open database: {err:?}")))?;
+            )?;
             index_dbs.insert(String::from(*name), db);
         }
         Ok(LmdbDatabase {
@@ -88,14 +79,12 @@ impl<'e> LmdbDatabase<'e> {
     }
 
     pub fn reader(&self) -> Result<LmdbDatabaseReader, DatabaseError> {
-        let txn = lmdb::ReadTransaction::new(&self.ctx.env)
-            .map_err(|err| DatabaseError::ReaderError(format!("Failed to create reader: {err}")))?;
+        let txn = lmdb::ReadTransaction::new(&self.ctx.env)?;
         Ok(LmdbDatabaseReader { db: self, txn })
     }
 
     pub fn writer(&self) -> Result<LmdbDatabaseWriter, DatabaseError> {
-        let txn = lmdb::WriteTransaction::new(&self.ctx.env)
-            .map_err(|err| DatabaseError::WriterError(format!("Failed to create writer: {err}")))?;
+        let txn = lmdb::WriteTransaction::new(&self.ctx.env)?;
         Ok(LmdbDatabaseWriter { db: self, txn })
     }
 }
@@ -117,7 +106,7 @@ impl<'a> LmdbDatabaseReader<'a> {
             .db
             .indexes
             .get(index)
-            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {index}")))?;
+            .ok_or_else(|| DatabaseError::Reader(format!("Not an index: {index}")))?;
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(index, key);
         Ok(val.ok().map(Vec::from))
@@ -128,22 +117,15 @@ impl<'a> LmdbDatabaseReader<'a> {
             .db
             .indexes
             .get(index)
-            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {index}")))?;
-        let cursor = self
-            .txn
-            .cursor(index)
-            .map_err(|err| DatabaseError::ReaderError(format!("{err}")))?;
+            .ok_or_else(|| DatabaseError::Reader(format!("Not an index: {index}")))?;
+        let cursor = self.txn.cursor(index)?;
         let access = self.txn.access();
         Ok(LmdbDatabaseReaderCursor { access, cursor })
     }
 
     pub fn count(&self) -> Result<usize, DatabaseError> {
-        self.txn
-            .db_stat(&self.db.main)
-            .map_err(|err| {
-                DatabaseError::CorruptionError(format!("Failed to get database stats: {err}"))
-            })
-            .map(|stat| stat.entries)
+        let stat = self.txn.db_stat(&self.db.main)?;
+        Ok(stat.entries)
     }
 
     pub fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
@@ -151,13 +133,9 @@ impl<'a> LmdbDatabaseReader<'a> {
             .db
             .indexes
             .get(index)
-            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {index}")))?;
-        self.txn
-            .db_stat(index)
-            .map_err(|err| {
-                DatabaseError::CorruptionError(format!("Failed to get database stats: {err}"))
-            })
-            .map(|stat| stat.entries)
+            .ok_or_else(|| DatabaseError::Reader(format!("Not an index: {index}")))?;
+        let stat = self.txn.db_stat(index)?;
+        Ok(stat.entries)
     }
 }
 
@@ -182,17 +160,14 @@ pub struct LmdbDatabaseWriter<'a> {
 
 impl<'a> LmdbDatabaseWriter<'a> {
     pub fn put(&mut self, key: &[u8], value: &[u8]) -> Result<(), DatabaseError> {
-        self.txn
+        Ok(self
+            .txn
             .access()
-            .put(&self.db.main, key, value, lmdb::put::Flags::empty())
-            .map_err(|err| DatabaseError::WriterError(format!("{err}")))
+            .put(&self.db.main, key, value, lmdb::put::Flags::empty())?)
     }
 
     pub fn delete(&mut self, key: &[u8]) -> Result<(), DatabaseError> {
-        self.txn
-            .access()
-            .del_key(&self.db.main, key)
-            .map_err(|err| DatabaseError::WriterError(format!("{err}")))
+        Ok(self.txn.access().del_key(&self.db.main, key)?)
     }
 
     pub fn index_put(
@@ -205,11 +180,11 @@ impl<'a> LmdbDatabaseWriter<'a> {
             .db
             .indexes
             .get(index)
-            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {index}")))?;
-        self.txn
+            .ok_or_else(|| DatabaseError::Writer(format!("Not an index: {index}")))?;
+        Ok(self
+            .txn
             .access()
-            .put(index, key, value, lmdb::put::Flags::empty())
-            .map_err(|err| DatabaseError::WriterError(format!("{err}")))
+            .put(index, key, value, lmdb::put::Flags::empty())?)
     }
 
     pub fn index_delete(&mut self, index: &str, key: &[u8]) -> Result<(), DatabaseError> {
@@ -217,17 +192,12 @@ impl<'a> LmdbDatabaseWriter<'a> {
             .db
             .indexes
             .get(index)
-            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {index}")))?;
-        self.txn
-            .access()
-            .del_key(index, key)
-            .map_err(|err| DatabaseError::WriterError(format!("{err}")))
+            .ok_or_else(|| DatabaseError::Writer(format!("Not an index: {index}")))?;
+        Ok(self.txn.access().del_key(index, key)?)
     }
 
     pub fn commit(self) -> Result<(), DatabaseError> {
-        self.txn
-            .commit()
-            .map_err(|err| DatabaseError::WriterError(format!("{err}")))
+        Ok(self.txn.commit()?)
     }
 }
 
@@ -283,51 +253,47 @@ mod tests {
     /// database contents at each step.
     #[ignore]
     #[test]
-    fn test_lmdb() {
+    fn test_lmdb() -> Result<(), DatabaseError> {
         let path_config = config::get_path_config();
 
         let blockstore_path = &path_config.data_dir.join(String::from("unit-lmdb.lmdb"));
 
-        let ctx = LmdbContext::new(blockstore_path, 3, None)
-            .map_err(|err| DatabaseError::InitError(format!("{err}")))
-            .unwrap();
+        let ctx = LmdbContext::new(blockstore_path, 3, None)?;
 
-        let database = LmdbDatabase::new(&ctx, &["a", "b"])
-            .map_err(|err| DatabaseError::InitError(format!("{err}")))
-            .unwrap();
+        let database = LmdbDatabase::new(&ctx, &["a", "b"])?;
 
         assert_database_count(0, &database);
         assert_not_in_database(3, &database);
         assert_not_in_database(5, &database);
 
         // Add {3: 4}
-        let mut writer = database.writer().unwrap();
-        writer.put(&[3], &[4]).unwrap();
+        let mut writer = database.writer()?;
+        writer.put(&[3], &[4])?;
 
         assert_database_count(0, &database);
         assert_not_in_database(3, &database);
 
-        writer.commit().unwrap();
+        writer.commit()?;
 
         assert_database_count(1, &database);
         assert_key_value(3, 4, &database);
 
         // Add {5: 6}
-        let mut writer = database.writer().unwrap();
-        writer.put(&[5], &[6]).unwrap();
-        writer.commit().unwrap();
+        let mut writer = database.writer()?;
+        writer.put(&[5], &[6])?;
+        writer.commit()?;
 
         assert_database_count(2, &database);
         assert_key_value(5, 6, &database);
         assert_key_value(3, 4, &database);
 
         // Delete {3: 4}
-        let mut writer = database.writer().unwrap();
-        writer.delete(&[3]).unwrap();
+        let mut writer = database.writer()?;
+        writer.delete(&[3])?;
 
         assert_database_count(2, &database);
 
-        writer.commit().unwrap();
+        writer.commit()?;
 
         assert_database_count(1, &database);
         assert_key_value(5, 6, &database);
@@ -339,15 +305,15 @@ mod tests {
         assert_not_in_index("a", 5, &database);
         assert_not_in_index("b", 5, &database);
 
-        let mut writer = database.writer().unwrap();
-        writer.index_put("a", &[55], &[5]).unwrap();
+        let mut writer = database.writer()?;
+        writer.index_put("a", &[55], &[5])?;
 
         assert_index_count("a", 0, &database);
         assert_index_count("b", 0, &database);
         assert_not_in_index("a", 5, &database);
         assert_not_in_index("b", 5, &database);
 
-        writer.commit().unwrap();
+        writer.commit()?;
 
         assert_index_count("a", 1, &database);
         assert_index_count("b", 0, &database);
@@ -358,15 +324,15 @@ mod tests {
         assert_not_in_database(3, &database);
 
         // Delete {55: 5} in "a"
-        let mut writer = database.writer().unwrap();
-        writer.index_delete("a", &[55]).unwrap();
+        let mut writer = database.writer()?;
+        writer.index_delete("a", &[55])?;
 
         assert_index_count("a", 1, &database);
         assert_index_count("b", 0, &database);
         assert_index_key_value("a", 55, 5, &database);
         assert_not_in_index("b", 5, &database);
 
-        writer.commit().unwrap();
+        writer.commit()?;
 
         assert_index_count("a", 0, &database);
         assert_index_count("b", 0, &database);
@@ -375,5 +341,7 @@ mod tests {
         assert_database_count(1, &database);
         assert_key_value(5, 6, &database);
         assert_not_in_database(3, &database);
+
+        Ok(())
     }
 }

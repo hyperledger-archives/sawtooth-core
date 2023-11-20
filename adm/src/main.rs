@@ -30,7 +30,7 @@ mod blockstore;
 mod commands;
 mod config;
 mod database;
-mod err;
+pub(crate) mod err;
 mod proto;
 mod wrappers;
 

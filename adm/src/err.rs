@@ -15,20 +15,30 @@
  * ------------------------------------------------------------------------------
  */
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Debug)]
-pub enum CliError {
-    ArgumentError(String),
-    EnvironmentError(String),
-    ParseError(String),
-}
+use thiserror::Error;
 
-impl std::fmt::Display for CliError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            CliError::ArgumentError(ref msg) => write!(f, "ArgumentError: {msg}"),
-            CliError::EnvironmentError(ref msg) => write!(f, "EnvironmentError: {msg}"),
-            CliError::ParseError(ref msg) => write!(f, "ParseError: {msg}"),
-        }
-    }
+use crate::database;
+
+#[derive(Error, Debug)]
+pub enum CliError {
+    #[error("Argument error: {0}")]
+    Argument(String),
+
+    #[error("Database error: {0}")]
+    Database(#[from] database::error::DatabaseError),
+
+    #[error("Environment error: {0}")]
+    Environment(String),
+
+    #[error("Io error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Nul error: {0}")]
+    Nul(#[from] std::ffi::NulError),
+
+    #[error("Parse error: {0}")]
+    Parse(String),
+
+    #[error("Signing error: {0}")]
+    Signing(#[from] sawtooth_sdk::signing::Error),
 }

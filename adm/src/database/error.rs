@@ -15,26 +15,30 @@
  * ------------------------------------------------------------------------------
  */
 
-use std;
+use std::string::FromUtf8Error;
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 pub enum DatabaseError {
-    InitError(String),
-    ReaderError(String),
-    WriterError(String),
-    CorruptionError(String),
-    NotFoundError(String),
-}
+    #[error("Init error: {0}")]
+    Init(String),
 
-impl std::fmt::Display for DatabaseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            DatabaseError::InitError(ref msg) => write!(f, "InitError: {msg}"),
-            DatabaseError::ReaderError(ref msg) => write!(f, "ReaderError: {msg}"),
-            DatabaseError::WriterError(ref msg) => write!(f, "WriterError: {msg}"),
-            DatabaseError::CorruptionError(ref msg) => write!(f, "CorruptionError: {msg}"),
-            DatabaseError::NotFoundError(ref msg) => write!(f, "NotFoundError: {msg}"),
-        }
-    }
+    #[error("LmDb error: {0}")]
+    Lmdb(#[from] lmdb_zero::error::Error),
+
+    #[error("Could not interpret stored data as a block: {0}")]
+    Protobuf(#[from] protobuf::ProtobufError),
+
+    #[error("Reader error: {0}")]
+    Reader(String),
+
+    #[error("Writer error: {0}")]
+    Writer(String),
+
+    #[error("Chain head block id is corrupt: {0}")]
+    Corruption(#[from] FromUtf8Error),
+
+    #[error("Unable to read chain head: {0}")]
+    NotFound(String),
 }

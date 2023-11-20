@@ -35,32 +35,31 @@ use crate::err::CliError;
 pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     let genesis_file_path = if args.is_present("output") {
         args.value_of("output")
-            .ok_or_else(|| CliError::ArgumentError("Failed to read `output` arg".into()))
+            .ok_or_else(|| CliError::Argument("Failed to read `output` arg".into()))
             .map(|pathstr| Path::new(pathstr).to_path_buf())
     } else {
         Ok(config::get_path_config().data_dir.join("genesis.batch"))
     }?;
 
     if genesis_file_path.exists() {
-        return Err(CliError::EnvironmentError(format!(
+        return Err(CliError::Environment(format!(
             "File already exists: {genesis_file_path:?}"
         )));
     }
 
     let input_files = args
         .values_of("input_file")
-        .ok_or_else(|| CliError::ArgumentError("No input files passed".into()))?;
+        .ok_or_else(|| CliError::Argument("No input files passed".into()))?;
 
     let batch_lists = input_files
         .map(|filepath| {
             let mut file = File::open(filepath)
-                .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {err}")))?;
+                .map_err(|err| CliError::Environment(format!("Failed to open file: {err}")))?;
             let mut packed = Vec::new();
             file.read_to_end(&mut packed)
-                .map_err(|err| CliError::EnvironmentError(format!("Failed to read file: {err}")))?;
-            let batch_list: BatchList = Message::parse_from_bytes(&packed).map_err(|err| {
-                CliError::ArgumentError(format!("Unable to read {filepath}: {err}"))
-            })?;
+                .map_err(|err| CliError::Environment(format!("Failed to read file: {err}")))?;
+            let batch_list: BatchList = Message::parse_from_bytes(&packed)
+                .map_err(|err| CliError::Argument(format!("Unable to read {filepath}: {err}")))?;
             Ok(batch_list)
         })
         .collect::<Result<Vec<BatchList>, CliError>>()?;
@@ -81,7 +80,7 @@ pub fn run(args: &ArgMatches) -> Result<(), CliError> {
     genesis_data.set_batches(protobuf::RepeatedField::from_vec(batches));
 
     let buf = genesis_data.write_to_bytes().map_err(|err| {
-        CliError::ArgumentError(format!(
+        CliError::Argument(format!(
             "Failed to convert BatchLists to GenesisData: {err}"
         ))
     })?;
@@ -91,11 +90,11 @@ pub fn run(args: &ArgMatches) -> Result<(), CliError> {
         .create(true)
         .mode(0o640)
         .open(genesis_file_path.as_path())
-        .map_err(|err| CliError::EnvironmentError(format!("{err}")))?;
+        .map_err(|err| CliError::Environment(format!("{err}")))?;
 
     genesis_data_file
         .write(&buf)
-        .map_err(|err| CliError::EnvironmentError(format!("{err}")))?;
+        .map_err(|err| CliError::Environment(format!("{err}")))?;
 
     Ok(())
 }
@@ -106,14 +105,14 @@ fn validate_depedencies(batches: &[Batch]) -> Result<(), CliError> {
         for txn in batch.transactions.iter() {
             let header: TransactionHeader =
                 Message::parse_from_bytes(&txn.header).map_err(|err| {
-                    CliError::ArgumentError(format!(
+                    CliError::Argument(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
                     ))
                 })?;
             for dep in header.dependencies.iter() {
                 if !txn_ids.contains(dep) {
-                    return Err(CliError::ArgumentError(format!(
+                    return Err(CliError::Argument(format!(
                         "Unsatisfied dependency in given transaction {}: {}",
                         &txn.header_signature, dep
                     )));
@@ -135,7 +134,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
         for txn in batch.transactions.iter() {
             let txn_header: TransactionHeader =
                 Message::parse_from_bytes(&txn.header).map_err(|err| {
-                    CliError::ArgumentError(format!(
+                    CliError::Argument(format!(
                         "Invalid transaction header for txn {}: {}",
                         &txn.header_signature, err
                     ))
@@ -143,7 +142,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
             if txn_header.family_name == "sawtooth_settings" {
                 let settings_payload: SettingsPayload = Message::parse_from_bytes(&txn.payload)
                     .map_err(|err| {
-                        CliError::ArgumentError(format!(
+                        CliError::Argument(format!(
                             "Invalid payload for settings txn {}: {}",
                             &txn.header_signature, err
                         ))
@@ -151,7 +150,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
                 if let SettingsPayload_Action::PROPOSE = settings_payload.action {
                     let proposal: SettingProposal =
                         Message::parse_from_bytes(&settings_payload.data).map_err(|err| {
-                            CliError::ArgumentError(format!(
+                            CliError::Argument(format!(
                                 "Invalid proposal for settings payload: {err}"
                             ))
                         })?;
@@ -162,7 +161,7 @@ fn check_required_settings(batches: &[Batch]) -> Result<(), CliError> {
     }
 
     if !required_settings.is_empty() {
-        Err(CliError::ArgumentError(format!(
+        Err(CliError::Argument(format!(
             "The following setting(s) are required at genesis, but were not included in the \
              genesis batches: {required_settings:?}"
         )))
