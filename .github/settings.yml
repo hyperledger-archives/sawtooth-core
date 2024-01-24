@@ -19,6 +19,7 @@ repository:
   homepage: https://wiki.hyperledger.org/display/sawtooth
   topics: hyperledger, distributed-ledger, sawtooth, sawtooth-lake
   private: false
+  archived: true
   has_issues: true
   has_projects: false
   has_wiki: false
