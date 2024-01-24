@@ -1,37 +1,18 @@
+# Hyperledger Sawtooth
 
-![Hyperledger Sawtooth](images/sawtooth_logo_light_blue-small.png)
+This project has moved (see below).
 
-Hyperledger Sawtooth
--------------
+Hyperledger Sawtooth was a project to provide an enterprise solution for
+building, deploying, and running distributed ledgers (also called blockchains).
 
-Hyperledger Sawtooth is an enterprise solution for building, deploying, and
-running distributed ledgers (also called blockchains). It provides an extremely
-modular and flexible platform for implementing transaction-based updates to
-shared state between untrusted parties coordinated by consensus algorithms.
+# Project Status
 
-Documentation
--------------
+This Hyperledger project, Hyperledger Sawtooth, has been archived and is no
+longer active within Hyperledger.
 
-Documentation for how to run and extend Sawtooth is available here:
-https://sawtooth.hyperledger.org/docs/
+Sawtooth is now maintained by the Splinter community. For more information,
+visit: https://github.com/splintercommunity/sawtooth-core/
 
-Hyperledger Sawtooth Core Developers Setup Guide can be found here: [BUILD.md](BUILD.md)
-
-Running examples of Sawtooth blockchains can be found here:
-https://sawtooth.hyperledger.org/examples/
-
-
-Project Status
------------------
-
-This project is an _active_ Hyperledger project. It was proposed to the
-community and documented [here](https://docs.google.com/document/d/1j7YcGLJH6LkzvWdOYFIt2kpkVlLEmILErXL6t-Ky2zU/edit).
-Information on what _Active_ entails can be found in the
-[Hyperledger Project Lifecycle document](https://wiki.hyperledger.org/display/HYP/Project+Lifecycle).
-
-License
--------
+# License
 
 Hyperledger Sawtooth software is licensed under the [Apache License Version 2.0](LICENSE) software license.
-
-![Open Source Award Badge](images/rookies16-small.png)
