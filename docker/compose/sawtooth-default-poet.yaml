@@ -24,8 +24,7 @@ services:
     container_name: sawtooth-shell-default
     entrypoint: "bash -c \"\
         sawtooth keygen && \
-        tail -f /dev/null \
-        \""
+        tail -f /dev/null \\""
 
   validator-0:
     image: hyperledger/sawtooth-validator:nightly
@@ -71,8 +70,7 @@ services:
           --peering static \
           --endpoint tcp://validator-0:8800 \
           --scheduler parallel \
-          --network-auth trust
-    \""
+          --network-auth trust \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -101,8 +99,7 @@ services:
             --endpoint tcp://validator-1:8800 \
             --peers tcp://validator-0:8800 \
             --scheduler parallel \
-            --network-auth trust
-      "
+            --network-auth trust"
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -131,8 +128,7 @@ services:
             --endpoint tcp://validator-2:8800 \
             --peers tcp://validator-0:8800,tcp://validator-1:8800 \
             --scheduler parallel \
-            --network-auth trust
-      "
+            --network-auth trust"
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -161,8 +157,7 @@ services:
             --endpoint tcp://validator-3:8800 \
             --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800 \
             --scheduler parallel \
-            --network-auth trust
-      "
+            --network-auth trust"
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -191,8 +186,7 @@ services:
             --endpoint tcp://validator-4:8800 \
             --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
             --scheduler parallel \
-            --network-auth trust
-      "
+            --network-auth trust"
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
@@ -208,8 +202,7 @@ services:
       bash -c "
         sawtooth-rest-api \
           --connect tcp://validator-0:4004 \
-          --bind rest-api-0:8008
-      "
+          --bind rest-api-0:8008"
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -221,8 +214,7 @@ services:
       bash -c "
         sawtooth-rest-api \
           --connect tcp://validator-1:4004 \
-          --bind rest-api-1:8008
-      "
+          --bind rest-api-1:8008"
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -234,8 +226,7 @@ services:
       bash -c "
         sawtooth-rest-api \
           --connect tcp://validator-2:4004 \
-          --bind rest-api-2:8008
-      "
+          --bind rest-api-2:8008"
     stop_signal: SIGKILL
 
   rest-api-3:
@@ -247,8 +238,7 @@ services:
       bash -c "
         sawtooth-rest-api \
           --connect tcp://validator-3:4004 \
-          --bind rest-api-3:8008
-      "
+          --bind rest-api-3:8008"
     stop_signal: SIGKILL
 
   rest-api-4:
@@ -260,8 +250,7 @@ services:
       bash -c "
         sawtooth-rest-api \
           --connect tcp://validator-4:4004 \
-          --bind rest-api-4:8008
-      "
+          --bind rest-api-4:8008"
     stop_signal: SIGKILL
 
   intkey-tp-0:
@@ -402,8 +391,7 @@ services:
         while [ ! -f /poet-shared/validator-0/keys/validator.priv ]; do sleep 1; done && \
         cp -a /poet-shared/validator-0/keys /etc/sawtooth && \
         poet registration create -k /etc/sawtooth/keys/validator.priv -o /poet-shared/poet.batch && \
-        poet-engine -C tcp://validator-0:5050 --component tcp://validator-0:4004 \
-    \""
+        poet-engine -C tcp://validator-0:5050 --component tcp://validator-0:4004 \\""
 
   poet-engine-1:
     image: hyperledger/sawtooth-poet-engine:nightly
@@ -413,8 +401,7 @@ services:
     command: "bash -c \"\
         while [ ! -f /poet-shared/validator-1/keys/validator.priv ]; do sleep 1; done && \
         cp -a /poet-shared/validator-1/keys /etc/sawtooth && \
-        poet-engine -C tcp://validator-1:5050 --component tcp://validator-1:4004 \
-    \""
+        poet-engine -C tcp://validator-1:5050 --component tcp://validator-1:4004 \\""
 
   poet-engine-2:
     image: hyperledger/sawtooth-poet-engine:nightly
@@ -424,8 +411,7 @@ services:
     command: "bash -c \"\
         while [ ! -f /poet-shared/validator-2/keys/validator.priv ]; do sleep 1; done && \
         cp -a /poet-shared/validator-2/keys /etc/sawtooth && \
-        poet-engine -C tcp://validator-2:5050 --component tcp://validator-2:4004 \
-    \""
+        poet-engine -C tcp://validator-2:5050 --component tcp://validator-2:4004 \\""
 
   poet-engine-3:
     image: hyperledger/sawtooth-poet-engine:nightly
@@ -435,8 +421,7 @@ services:
     command: "bash -c \"\
         while [ ! -f /poet-shared/validator-3/keys/validator.priv ]; do sleep 1; done && \
         cp -a /poet-shared/validator-3/keys /etc/sawtooth && \
-        poet-engine -C tcp://validator-3:5050 --component tcp://validator-3:4004 \
-    \""
+        poet-engine -C tcp://validator-3:5050 --component tcp://validator-3:4004 \\""
 
   poet-engine-4:
     image: hyperledger/sawtooth-poet-engine:nightly
@@ -446,8 +431,7 @@ services:
     command: "bash -c \"\
         while [ ! -f /poet-shared/validator-4/keys/validator.priv ]; do sleep 1; done && \
         cp -a /poet-shared/validator-4/keys /etc/sawtooth && \
-        poet-engine -C tcp://validator-4:5050 --component tcp://validator-4:4004 \
-    \""
+        poet-engine -C tcp://validator-4:5050 --component tcp://validator-4:4004 \\""
 
   poet-validator-registry-tp-0:
     image: hyperledger/sawtooth-poet-validator-registry-tp:nightly
